@@ -1,0 +1,178 @@
+---
+title: "Disease investigated by ancestry"
+output:
+  workflowr::wflow_html:
+    toc: false
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup_2, message = FALSE, warning= FALSE}
+
+library(dplyr)
+library(ggplot2)
+
+gwas_study_info = data.table::fread("data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv", 
+                                    sep = "\t", 
+                                    quote = "")
+
+gwas_ancest_info = data.table::fread("./data/gwas_catalog/gwas_catalog-ancestry_r2022-02-02.tsv", 
+                                     sep = "\t", 
+                                     quote = "")
+
+# Set up custom theme for ggplots
+custom_theme <-
+  list(
+    theme_bw() +
+      theme(
+        panel.border = element_blank(),
+        axis.line = element_line(),
+        text = element_text(size = 16),
+        legend.position = "bottom",
+        strip.background = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+      )
+  )
+
+```
+
+## Plot figure Martin et al. 2019 like
+
+### For all ancestries 
+
+```{r plot_like_martin_et_al_2019_not_grouped}
+
+# code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
+
+# Order GWAS catalog by date 
+gwas_ancest_info <- gwas_ancest_info %>% arrange(DATE)
+
+# calculate cumulative number of individuals
+gwas_ancest_info = gwas_ancest_info %>%  
+                   mutate(cum_num = cumsum(ifelse(is.na(`NUMBER OF INDIVDUALS`), 0, `NUMBER OF INDIVDUALS`)))
+
+
+# plot cumulative numbers
+gwas_ancest_info %>%  
+  group_by(DATE) %>% 
+  slice_max(`NUMBER OF INDIVDUALS`) %>% 
+  ggplot(aes(x=DATE,y=cum_num/1e6)) + 
+  geom_line() +
+  #geom_area(position = 'stack') + 
+  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
+  custom_theme + 
+  labs(x = "Year", y = "Individuals in GWAS catalog (millons)")
+
+```
+
+### Group ancestry into broader categories
+
+```{r grouped_ancest}
+
+grouped_ancest = vector()
+
+for(study_ancest in unique(gwas_ancest_info$`BROAD ANCESTRAL CATEGORY`)){
+  
+    if(study_ancest %in% c('Sub-Saharan African, African American or Afro-Caribbean',
+                           'Sub-Saharan African, African unspecified',
+                           'African-American or Afro-Caribbean')){
+      
+      
+      grouped_ancest = append(grouped_ancest,'African')
+      
+      
+    } else if(study_ancest %in% c('East Asian, Asian unspecified', 
+                                  'South Asian, East Asian ',
+                                  'South Asian, South East Asian', 
+                                  'South Asian, South East Asian, East Asian',
+                                   'South East Asian, East Asian', 
+                                  'South East Asian, South Asian, East Asian')) {
+      
+      
+      grouped_ancest = append(grouped_ancest,'Asian unspecified')
+      
+      
+    } else if(study_ancest == 'Greater Middle Eastern (Middle Eastern, North African or Persian)') {
+      
+      
+      grouped_ancest = append(grouped_ancest,'Middle Eastern')
+      
+      
+    } else if(study_ancest %in% c('Aboriginal Australian', 'Oceanian')) {
+      
+      
+      grouped_ancest = append(grouped_ancest,'Oceanic')
+      
+      
+    } else if(grepl(", ", study_ancest)) {
+      
+      
+      grouped_ancest = append(grouped_ancest,'Multiple')
+      
+      
+    } else if(study_ancest %in% "Hispanic or Latin American"){
+      
+      
+      grouped_ancest = append(grouped_ancest,'Hispanic/Latin American')
+      
+      
+     } else {
+      
+      grouped_ancest = append(grouped_ancest,study_ancest)
+    }
+  
+    
+  
+  }
+
+
+ancest_group = data.frame(group_ancest = grouped_ancest,
+                         `BROAD ANCESTRAL CATEGORY` = unique(gwas_ancest_info$`BROAD ANCESTRAL CATEGORY`))
+
+gwas_ancest_info = inner_join(
+            gwas_ancest_info %>% mutate(BROAD.ANCESTRAL.CATEGORY = `BROAD ANCESTRAL CATEGORY`),
+            ancest_group)
+
+gwas_ancest_info %>% 
+  group_by(group_ancest) %>% 
+  summarise(n = sum(`NUMBER OF INDIVDUALS`, na.rm = TRUE))
+
+gwas_ancest_info %>% 
+  group_by(group_ancest) %>% 
+  mutate(ancest_cumsum = cumsum(`NUMBER OF INDIVDUALS`)) %>% 
+  ggplot(aes(x=DATE,y=ancest_cumsum/(10^6), fill = group_ancest)) + 
+  #geom_area() + 
+  geom_area() + 
+  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
+  theme_classic() + 
+  labs(x = "Year", y = "Individuals in GWAS catalog (millons)") + 
+  scale_fill_brewer(palette = "Set1")
+
+inner_join(
+           gwas_study_info %>% select(`STUDY ACCESSION`, `DISEASE/TRAIT`, `MAPPED_TRAIT`),
+           gwas_ancest_info %>% select(`STUDY ACCESSION`, `NUMBER OF INDIVDUALS`, `BROAD ANCESTRAL CATEGORY`)) %>% 
+  group_by(`BROAD ANCESTRAL CATEGORY`, `DISEASE/TRAIT`) %>% 
+  summarise(n = sum(`NUMBER OF INDIVDUALS`)) %>% 
+  group_by(`BROAD ANCESTRAL CATEGORY`) %>% 
+  slice_max(n,n = 5)
+
+```
+
+## Disease statistics CDC
+
+```{r disease_stats_cdc, message = FALSE, warning=FALSE}
+
+
+cdc_stats = data.table::fread("data/cdc/Underlying Cause of Death, 1999-2020.txt",
+                              drop = c("Notes", "Race Code", "Cause of death Code")) %>% 
+             filter(!if_any(everything(), ~.x == ""))
+
+cdc_stats %>% 
+  group_by(Race) %>% 
+  slice_max(Deaths,n=10)
+
+```
