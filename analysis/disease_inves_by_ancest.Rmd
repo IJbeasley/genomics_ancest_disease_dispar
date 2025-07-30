@@ -11,6 +11,8 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Load data
+
 ```{r setup_2, message = FALSE, warning= FALSE}
 
 library(dplyr)
@@ -23,6 +25,12 @@ gwas_study_info = data.table::fread("data/gwas_catalog/gwas-catalog-v1.0.3-studi
 gwas_ancest_info = data.table::fread("./data/gwas_catalog/gwas_catalog-ancestry_r2022-02-02.tsv", 
                                      sep = "\t", 
                                      quote = "")
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_all(~gsub(" ", "_", .x))
+
+gwas_ancest_info = gwas_ancest_info |>
+  dplyr::rename_all(~gsub(" ", "_", .x))
 
 # Set up custom theme for ggplots
 custom_theme <-
@@ -48,18 +56,34 @@ custom_theme <-
 
 # code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
 
+# https://github.com/armartin/prs_disparities/blob/master/gwas_sfs_pop.R
+# gwas cat
+# http://bioconductor.org/packages/release/bioc/html/gwascat.html
+
+
+# following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
+
+# wonder cdc 
+# https://wonder.cdc.gov/wonder/help/QuickStart.html#
+# https://wonder.cdc.gov/controller/datarequest/D76;jsessionid=2A56E973A3DF13BC5DFDD9C43725
+
+# https://cran.r-project.org/web/packages/whomds/index.html
+# whomds: Calculate Results from WHO Model Disability Survey Data
+
+
 # Order GWAS catalog by date 
 gwas_ancest_info <- gwas_ancest_info %>% arrange(DATE)
 
 # calculate cumulative number of individuals
 gwas_ancest_info = gwas_ancest_info %>%  
-                   mutate(cum_num = cumsum(ifelse(is.na(`NUMBER OF INDIVDUALS`), 0, `NUMBER OF INDIVDUALS`)))
+                   mutate(cum_num = cumsum(ifelse(is.na(NUMBER_OF_INDIVDUALS), 0, NUMBER_OF_INDIVDUALS))
+                          )
 
 
 # plot cumulative numbers
 gwas_ancest_info %>%  
   group_by(DATE) %>% 
-  slice_max(`NUMBER OF INDIVDUALS`) %>% 
+  slice_max(NUMBER_OF_INDIVDUALS) %>% 
   ggplot(aes(x=DATE,y=cum_num/1e6)) + 
   geom_line() +
   #geom_area(position = 'stack') + 
@@ -73,78 +97,77 @@ gwas_ancest_info %>%
 
 ```{r grouped_ancest}
 
-grouped_ancest = vector()
-
-for(study_ancest in unique(gwas_ancest_info$`BROAD ANCESTRAL CATEGORY`)){
+group_ancestry_fn = function(study_ancest){
   
-    if(study_ancest %in% c('Sub-Saharan African, African American or Afro-Caribbean',
+    case_when(study_ancest %in% c('Sub-Saharan African, African American or Afro-Caribbean',
                            'Sub-Saharan African, African unspecified',
-                           'African-American or Afro-Caribbean')){
+                           'African-American or Afro-Caribbean') ~ 'African',
+      #grouped_ancest = append(grouped_ancest,'African')
       
       
-      grouped_ancest = append(grouped_ancest,'African')
-      
-      
-    } else if(study_ancest %in% c('East Asian, Asian unspecified', 
+    study_ancest %in% c('East Asian, Asian unspecified', 
                                   'South Asian, East Asian ',
                                   'South Asian, South East Asian', 
                                   'South Asian, South East Asian, East Asian',
                                    'South East Asian, East Asian', 
-                                  'South East Asian, South Asian, East Asian')) {
+                                  'South East Asian, South Asian, East Asian') ~'Asian unspecified',
+      #grouped_ancest = append(grouped_ancest,'Asian unspecified')
       
       
-      grouped_ancest = append(grouped_ancest,'Asian unspecified')
+    study_ancest == 'Greater Middle Eastern (Middle Eastern, North African or Persian)' ~'Middle Eastern',
+      #grouped_ancest = append(grouped_ancest,'Middle Eastern')
+   study_ancest %in% c('Aboriginal Australian', 'Oceanian') ~'Oceanic',
+      #grouped_ancest = append(grouped_ancest,'Oceanic')
       
       
-    } else if(study_ancest == 'Greater Middle Eastern (Middle Eastern, North African or Persian)') {
+  grepl(", ", study_ancest) ~ 'Multiple',
+      #grouped_ancest = append(grouped_ancest,'Multiple')
       
       
-      grouped_ancest = append(grouped_ancest,'Middle Eastern')
+  study_ancest %in% "Hispanic or Latin American" ~'Hispanic/Latin American',
+      #grouped_ancest = append(grouped_ancest,'Hispanic/Latin American')
       
       
-    } else if(study_ancest %in% c('Aboriginal Australian', 'Oceanian')) {
-      
-      
-      grouped_ancest = append(grouped_ancest,'Oceanic')
-      
-      
-    } else if(grepl(", ", study_ancest)) {
-      
-      
-      grouped_ancest = append(grouped_ancest,'Multiple')
-      
-      
-    } else if(study_ancest %in% "Hispanic or Latin American"){
-      
-      
-      grouped_ancest = append(grouped_ancest,'Hispanic/Latin American')
-      
-      
-     } else {
-      
-      grouped_ancest = append(grouped_ancest,study_ancest)
-    }
+  TRUE~study_ancest
+      #grouped_ancest = append(grouped_ancest,study_ancest)
+    )
   
     
   
-  }
+}
 
 
-ancest_group = data.frame(group_ancest = grouped_ancest,
-                         `BROAD ANCESTRAL CATEGORY` = unique(gwas_ancest_info$`BROAD ANCESTRAL CATEGORY`))
+grouped_ancest = vector()
 
-gwas_ancest_info = inner_join(
-            gwas_ancest_info %>% mutate(BROAD.ANCESTRAL.CATEGORY = `BROAD ANCESTRAL CATEGORY`),
-            ancest_group)
+for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
+  
+grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
+
+}
+
+
+# ancest_group = data.frame(group_ancest = grouped_ancest,
+#                          BROAD_ANCESTRAL_CATEGORY =
+#                            unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY))
+# 
+# }
+
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+                                )
+
+gwas_ancest_info = dplyr::left_join(
+            gwas_ancest_info,
+            grouped_ancest_map)
 
 gwas_ancest_info %>% 
-  group_by(group_ancest) %>% 
-  summarise(n = sum(`NUMBER OF INDIVDUALS`, na.rm = TRUE))
+  group_by(ancestry_group) %>% 
+  summarise(n = sum(NUMBER_OF_INDIVDUALS, na.rm = TRUE))
 
 gwas_ancest_info %>% 
-  group_by(group_ancest) %>% 
-  mutate(ancest_cumsum = cumsum(`NUMBER OF INDIVDUALS`)) %>% 
-  ggplot(aes(x=DATE,y=ancest_cumsum/(10^6), fill = group_ancest)) + 
+  group_by(ancestry_group) %>% 
+  mutate(ancest_cumsum = cumsum(NUMBER_OF_INDIVDUALS)) %>% 
+  ggplot(aes(x=DATE,y=ancest_cumsum/(10^6), fill = ancestry_group)) + 
   #geom_area() + 
   geom_area() + 
   scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
@@ -153,11 +176,17 @@ gwas_ancest_info %>%
   scale_fill_brewer(palette = "Set1")
 
 inner_join(
-           gwas_study_info %>% select(`STUDY ACCESSION`, `DISEASE/TRAIT`, `MAPPED_TRAIT`),
-           gwas_ancest_info %>% select(`STUDY ACCESSION`, `NUMBER OF INDIVDUALS`, `BROAD ANCESTRAL CATEGORY`)) %>% 
-  group_by(`BROAD ANCESTRAL CATEGORY`, `DISEASE/TRAIT`) %>% 
-  summarise(n = sum(`NUMBER OF INDIVDUALS`)) %>% 
-  group_by(`BROAD ANCESTRAL CATEGORY`) %>% 
+           gwas_study_info %>% select(STUDY_ACCESSION, 
+                                      `DISEASE/TRAIT`, 
+                                      MAPPED_TRAIT),
+           gwas_ancest_info %>% select(STUDY_ACCESSION, 
+                                       NUMBER_OF_INDIVDUALS,
+                                       BROAD_ANCESTRAL_CATEGORY,
+                                       ancestry_group)) %>% 
+  group_by(BROAD_ANCESTRAL_CATEGORY, 
+           `DISEASE/TRAIT`) %>% 
+  summarise(n = sum(NUMBER_OF_INDIVDUALS)) %>% 
+  group_by(BROAD_ANCESTRAL_CATEGORY) %>% 
   slice_max(n,n = 5)
 
 ```
@@ -174,5 +203,14 @@ cdc_stats = data.table::fread("data/cdc/Underlying Cause of Death, 1999-2020.txt
 cdc_stats %>% 
   group_by(Race) %>% 
   slice_max(Deaths,n=10)
+
+
+# wonder cdc 
+# https://wonder.cdc.gov/wonder/help/QuickStart.html#
+# https://wonder.cdc.gov/controller/datarequest/D76;jsessionid=2A56E973A3DF13BC5DFDD9C43725
+
+# https://cran.r-project.org/web/packages/whomds/index.html
+# whomds: Calculate Results from WHO Model Disability Survey Data
+
 
 ```
