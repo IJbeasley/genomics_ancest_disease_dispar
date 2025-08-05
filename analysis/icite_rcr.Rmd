@@ -1,0 +1,292 @@
+---
+title: "Fetching iCite Metrics for GWAS Catalog Publications"
+author: "Isobel Beasley"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(data.table)
+library(purrr)
+library(ggplot2)
+
+```
+
+## Overview
+ - Retrieves citation metrics from NIH's iCite API for publications listed in the GWAS Catalog (like in Reales & Wallace, 2023 - sharing gwas data results in more citations)
+- Due to iCite API limitations, PMIDs of papers in the GWAS catalog are queried in chunks.
+- Note: tried iciteR R package (as I believe Reales & Wallace do) but found it didn't retrieve the complete set of metrics - I think because adding &format=csv to api call seems to cause problems 
+example call: iCiteR::get_metrics("27599104")
+
+
+### 1. Define Function to Query iCite API
+Define a helper function that accepts a chunk of PMIDs and returns a data frame with citation data.
+
+```{r fetch_icite_fn}
+# Function to fetch a chunk of PMIDs from the iCite API
+fetch_icite_chunk <- function(pmid_chunk) {
+  pmid_vec <- paste0(pmid_chunk, collapse = ",")
+  
+  # Construct API URL
+  url <- paste0("https://icite.od.nih.gov/api/pubs?pmids=", 
+                pmid_vec)
+  
+  # Perform GET request
+  response <- GET(url)
+  
+  # Parse the response content as JSON
+  data_list <- fromJSON(content(response, "text"), flatten = TRUE)
+  
+  # Convert to data frame
+  pub_df <- as.data.frame(data_list)
+  
+  # Remove "data." prefix from column names
+  pub_df <- pub_df |> rename_all(~gsub("data.", "", .x))
+  
+  # Drop large nested citation data (optional)
+  pub_df <- pub_df |> select(-c(citedByPmidsByYear))
+  
+  return(pub_df)
+}
+
+```
+
+### 2. Load and Clean GWAS Catalog Study Data
+Extract unique PMIDs for papers from the GWAS catalog
+
+```{r get_gwas_data}
+# Load GWAS Catalog studies
+gwas_study_info <- fread("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv",
+                         sep = "\t", quote = "")
+
+# Standardize column names (remove spaces)
+gwas_study_info <- gwas_study_info |> rename_all(~gsub(" ", "_", .x))
+
+# Extract unique publication information
+gwas_study_info <- gwas_study_info |>
+  select(FIRST_AUTHOR, DATE, JOURNAL, PUBMED_ID) |>
+  distinct()
+
+# Vector of PMIDs
+pmid <- gwas_study_info$PUBMED_ID
+
+```
+
+### 3. Fetch Citation Metrics from iCite
+To comply with iCite rate limits, we split the PMIDs into batches (≤ 400 per request) and apply our fetch function.
+
+```{r get_icite_metrics}
+
+# Split PMIDs into chunks of 400
+pmid_chunks <- split(pmid, ceiling(seq_along(pmid) / 400))
+
+# Fetch citation metrics for all chunks
+all_results <- map_dfr(pmid_chunks, fetch_icite_chunk)
+
+```
+
+
+### Confirm RCR calculations match provided equation
+
+```{r}
+# Check if RCR ≈ citations_per_year / expected_citations_per_year
+check = all_results |>
+  select(field_citation_rate,
+         expected_citations_per_year,
+         citations_per_year,
+         relative_citation_ratio) |>
+  mutate(calculated_rcr = citations_per_year / expected_citations_per_year)
+
+head(check)
+
+check = check |> 
+        filter(!is.na(relative_citation_ratio))
+
+sum(check$calculated_rcr == check$relative_citation_ratio)
+
+nrow(check)
+```
+
+## Visual exploration of data 
+
+### 4. Distribution of citation metrics
+
+```{r plot_dist}
+
+# Example: Distribution of Relative Citation Ratios (RCR)
+ggplot(all_results, aes(x = relative_citation_ratio)) +
+  geom_histogram(bins = 50) +
+  theme_minimal() +
+  labs(title = "Distribution of RCR among GWAS publications",
+       x = "Relative Citation Ratio (RCR)",
+       y = "Count")
+
+# Summary of citation counts
+summary(all_results$relative_citation_ratio)
+
+# Distribution of raw citation counts
+ggplot(all_results, aes(x = citation_count)) +
+  geom_histogram() +
+  theme_bw() + 
+  labs(title = "Distribution of Raw Citation Counts among GWAS catalog publications")
+
+# Summary of citation counts
+summary(all_results$citation_count)
+
+```
+
+### 5. Investigate Missing and Zero RCRs
+
+```{r missing_rcrs}
+
+# Publication Year of Papers with NA RCR
+all_results |>
+  filter(is.na(relative_citation_ratio)) |>
+  ggplot(aes(x = year)) +
+  geom_histogram() +
+  scale_x_continuous(breaks = seq(min(all_results$year, na.rm = TRUE),
+                                  max(all_results$year, na.rm = TRUE), 1)) +
+  theme_bw() +
+  labs(title = "Publication Year of Papers with NA RCR")
+
+
+# Count of NA RCR publications
+all_results |>
+  filter(is.na(relative_citation_ratio)) |>
+  nrow()
+
+# Values for other citation metrics for papers with
+# NA RCR 
+all_results |>
+  filter(is.na(relative_citation_ratio)) |>
+  select(field_citation_rate,
+         expected_citations_per_year,
+         citation_count,
+         citations_per_year,
+         relative_citation_ratio)
+
+
+# Publication Year of Paper with zero RCR
+all_results |>
+  filter(relative_citation_ratio == 0) |>
+  ggplot(aes(x = year)) +
+  geom_histogram() +
+  scale_x_continuous(breaks = seq(min(all_results$year, na.rm = TRUE),
+                                  max(all_results$year, na.rm = TRUE), 1)) +
+  theme_bw() + 
+  labs(title = "Publication Year of Papers with Zero RCR")
+
+# Count of zero RCR publications
+all_results |>
+  filter(relative_citation_ratio == 0) |>
+  nrow()
+
+# Values for other citation metrics for papers with
+# zero RCR 
+all_results |>
+  filter(relative_citation_ratio == 0) |>
+  select(field_citation_rate,
+         expected_citations_per_year,
+         citation_count,
+         citations_per_year,
+         relative_citation_ratio)
+
+```
+
+### 6. Correlations Between Citation Metrics
+
+```{r cor}
+
+# Spearman correlation: citation count vs RCR
+cor(all_results$citation_count,
+    all_results$relative_citation_ratio,
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+# Spearman correlation: citations per year vs RCR
+cor(all_results$citations_per_year,
+    all_results$relative_citation_ratio,
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+```
+
+
+### 7. Relationships between citation metrics (scatterplots)
+
+```{r metric_relat}
+
+# RCR vs citation count (log x-axis)
+ggplot(all_results, aes(x = citation_count + 1, y = relative_citation_ratio)) +
+  scale_x_log10() +
+  geom_point() +
+  theme_bw()
+
+# RCR vs expected citations per year
+ggplot(all_results, aes(x = expected_citations_per_year, y = relative_citation_ratio)) +
+  scale_x_log10() +
+  geom_point() +
+  theme_bw()
+
+# RCR vs field citation rate
+ggplot(all_results, aes(x = field_citation_rate, y = relative_citation_ratio)) +
+  scale_x_log10() +
+  geom_point() +
+  theme_bw()
+
+
+
+```
+
+### 8. RCR Over Time (Like in Reales & Wallace)
+
+Reales & Wallace observe bump in the RCR of papers published in the last two years (their conclusion is that citation metrics stabilise after two year) - do we observe the same trend?
+
+```{r rcr_over_time}
+
+# RCR vs publication year (raw scale)
+all_results |>
+  filter(!is.na(relative_citation_ratio), relative_citation_ratio != 0) |>
+  ggplot(aes(x = year, y = relative_citation_ratio)) +
+  geom_point() +
+  theme_bw() + 
+  labs(x = 'Year')
+
+# RCR vs year (log y-axis)
+all_results |>
+  filter(!is.na(relative_citation_ratio), relative_citation_ratio != 0) |>
+  ggplot(aes(x = year, y = relative_citation_ratio)) +
+  scale_y_log10() +
+  geom_point() +
+  theme_bw() + 
+  labs(title = "RCR over time",
+       x = 'Year')
+
+# Boxplot of RCRs per year
+all_results |>
+  filter(!is.na(relative_citation_ratio), relative_citation_ratio != 0) |>
+  ggplot(aes(x = factor(year), y = relative_citation_ratio)) +
+  geom_boxplot(outlier.size = 0.5) +
+  scale_y_log10() +
+  theme_bw() + 
+  labs(x = 'Year')
+
+# Citations per year over time
+all_results |>
+  filter(!is.na(relative_citation_ratio), relative_citation_ratio != 0) |>
+  ggplot(aes(x = year, y = citations_per_year)) +
+  geom_point() +
+  theme_bw()
+
+
+
+```
