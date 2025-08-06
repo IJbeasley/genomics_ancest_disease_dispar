@@ -1,0 +1,491 @@
+---
+title: "UK Biobank GWAS Studies: Cohorts and Bibliometric Analysis"
+author: "Isobel Beasley"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
+```
+
+# Overview / introduction:
+
+I'm interested in identifying which studies use the same cohort/samples
+in the GWAS catalogue. Why? To produce ancestry proportion information
+that controls for the same samples (particularly big biobanks) being
+reused many times.
+
+Within the same research article, this will likely be easier to achieve
+as:
+
+-   Labelling of the cohort is likely to be consistent within the same
+    research article (for e.g. one article will likely refer to UKBB
+    samples as UKBB always, and not sometimes UK Biobank)
+
+-   Many papers study the same cohort across diseases. Thus, this kind
+    of cohort reuse can be identified by noticing that these papers have
+    the same or similar sample sizes across diseases
+
+-   Many papers use the same cohort/s, and then study particular
+    subsamples and the overall cohort. This kind of sample reuse cohort
+    can be identified when it involves, e.g. ancestry groups, as the
+    overall study sample demographics are provided and can be matched to
+    the study subsamples
+
+-   (?) I believe the GWAS catalog somewhat reduces / identifys cohort
+    overlap in the same study when producing ancestry metadata for the
+    whole catalog
+
+More recently, the GWAS catalog has allowed authors to supply cohort
+label information (e.g. UK Biobank). However, this doesn't make it
+necessarily easier to compare across studies as:
+
+-   Not all studies provide cohort information/label (especially studies
+    before this policy was implemented)
+
+-   Studies inconsistency label the same cohort (e.g. UK Biobank is
+    listed as UKBB, UKB etc.) - Many studies use multiple cohorts
+
+I believe I will be able to identify when the same samples are used
+across different research articles by matching sample sizes (e.g., does
+their sample description match the cohort of the UK Biobank), citation
+patterns (e.g., cite the UK Biobank dataset papers), etc. This will
+likely require considering publication date, as the sample sizes of
+biobanks/cohorts and the canonical dataset papers to cite will change
+over time.
+
+This page aims to investigate how feasible this analysis will be.
+
+Specifically, for sample re-use in the same study:
+
+-   Can I easily categorise it into: subsample use / testing, & re-use
+    across disease?
+
+-   Are there papers which don't match either of these categories?
+
+For sample re-use across study:
+
+-   How much missingness is there in cohort labelling?
+
+-   Can I identify the UK Biobank dataset papers?
+
+## 1. Load / pre-process GWAS Catalog data
+
+```{r load_gwas}
+# Load GWAS Catalog studies
+gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+                         sep = "\t", quote = "")
+
+gwas_ancest_info <-  fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
+                         sep = "\t", quote = "")
+
+# Standardize column names (remove spaces)
+gwas_study_info <- gwas_study_info |>
+  rename_all(~gsub(" ", "_", .x))
+
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, " \\| ", "|")) |>
+mutate(COHORT = str_replace_all(COHORT, "\\| ", "|")) |>
+  mutate(COHORT = str_replace_all(COHORT, " \\|", "|"))
+
+# Correct for discrepancies within same paper
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "AWI-Gen", "AWI-GEN")) |> # PUBMED ID :40229280
+  mutate(COHORT = str_replace_all(COHORT, "AddHealth", "Add Health")) |> # PUBMED ID: 37494057
+  mutate(COHORT = str_replace_all(COHORT, fixed("EB|FinnGen|UKBB"), "EB|FinnGen|UKB")) |> # 39067062
+  mutate(COHORT = str_replace_all(COHORT, "Estonian Biobank", "EB")) |> # PUBMED ID: 39500877
+  mutate(COHORT = str_replace_all(COHORT, "AWIGEN", "AWI-GEN")) |> # 40229280
+  mutate(COHORT = str_replace_all(COHORT, "Other", "other")) |> 
+  mutate(COHORT = str_replace_all(COHORT, "OTHER", "other")) |>
+  mutate(COHORT = str_replace_all(COHORT, "others", "other")) |>
+  mutate(COHORT = str_replace_all(COHORT, "EPIC-Norfolk cohort", "EPIC-Norfolk")) |>
+  mutate(COHORT = str_replace_all(COHORT, "TWINS-UK", "TwinsUK")) |>
+  mutate(COHORT = str_replace_all(COHORT, "TWINSUK", "TwinsUK")) |>
+  mutate(COHORT = str_replace_all(COHORT, ", ", "|")) |>
+  mutate(COHORT = str_replace_all(COHORT, "TWINGENE", "TwinGene")) |>
+  mutate(COHORT = str_replace_all(COHORT, "QSkin|Qskin", "QSKIN")) |>
+  mutate(COHORT = str_replace(COHORT, "23ANDME", "23andMe"))
+
+
+	
+
+	
+
+gwas_ancest_info <- gwas_ancest_info |>
+  rename_all(~gsub(" ", "_", .x))
+```
+
+### Comparing study info to ancestry info datasets: 
+
+```{r study_accession_compare}
+
+gwas_study_info$STUDY_ACCESSION |> unique() |> length()
+
+gwas_study_info$STUDY_ACCESSION |> length()
+
+gwas_ancest_info$STUDY_ACCESSION |> unique() |> length()
+
+gwas_ancest_info$STUDY_ACCESSION |> length()
+
+```
+
+
+```{r}
+
+gwas_ancest_info |> 
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  pull(n) |>
+  summary()
+
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  pull() |>
+  summary()
+
+# PUBMED_ID, FIRST_AUTHOR, DATE (deposition date), STUDY_ACCESSION are the only consistent
+# across ancestry and study metadata
+colnames(gwas_ancest_info)[colnames(gwas_ancest_info) %in% colnames(gwas_study_info)]
+
+colnames(gwas_study_info)[colnames(gwas_study_info) %in% colnames(gwas_ancest_info)]
+
+```
+
+More rows in gwas ancestry dataset, corresponding to multiple rows (sometimes) for the same study accession - done when multiple ancestries for the same cohort. 
+
+## 2. Cohort Summary
+
+```{r cohort_overview}
+
+# Number of unique cohorts
+length(unique(gwas_study_info$COHORT))
+
+# Studies per cohort
+studies_per_cohort = gwas_study_info |>
+  group_by(COHORT) |>
+  summarise(n_studies = n()) |>
+  arrange(desc(n_studies)) 
+
+summary(studies_per_cohort$n_studies)
+
+studies_per_cohort |>
+  ggplot(aes(x=n_studies)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(title = "Distribution of the number of studies per cohort label")
+
+
+dplyr::slice_head(studies_per_cohort, n = 10)
+
+```
+
+#### One to one relationship between COHORT and STUDY accession? 
+
+
+```{r}
+
+gwas_study_info |>
+  group_by(COHORT, STUDY_ACCESSION) |>
+  summarise(n = n()) |>
+  pull(n) |>
+  summary()
+# yep - for the same study accession, same cohort
+
+```
+
+### One-to-one relationship between study accession and pubmed?
+
+```{r}
+# not true for pubmed i believe .... 
+gwas_study_info |>
+  select(PUBMED_ID, COHORT) |>
+  distinct() |>
+  group_by(PUBMED_ID) |>
+  summarise(n_pubmed = n()) |>
+  pull(n_pubmed) |>
+  summary()
+
+pubmed_multi_cohort = 
+gwas_study_info |>
+  select(PUBMED_ID, COHORT) |>
+  distinct() |>
+  group_by(PUBMED_ID) |>
+  summarise(n_pubmed = n()) |>
+  filter(n_pubmed > 1) |>
+  pull(PUBMED_ID) 
+  
+gwas_study_info |>
+  filter(PUBMED_ID %in% pubmed_multi_cohort) |>
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION) |>
+  head()
+
+# in below study, unlisted cohort is combination of two cohorts
+gwas_study_info |>
+  filter(PUBMED_ID  == 32605384) |>
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 30510241) |>
+    select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+# if go to supplement, can see made up of many many many studies - I believe includes other all other subsamples
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 33307546) |>
+    select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+# COVID-19 Host Genetics Initiative (HGI) is this hispanic individuals I believe
+#  European ancestry from the ‘broad respiratory phenotype’ study of 23andMe
+# See replication section of https://www.nature.com/articles/s41586-020-03065-y#Sec4
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 38184787) |> 
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+
+# cohorts listed are for
+
+
+
+```
+
+#### Checking cohort subsetting in same study
+
+```{r}
+
+# Step 3: Function to check if any cohort is a subset of another
+is_subsampling_cohort <- function(cohort_list) {
+  # Split by pipe and compare sets
+  split_cohorts <- lapply(cohort_list, function(x) str_split(x, "\\|")[[1]] |> sort())
+  
+  
+  # Compare all pairwise sets
+  for (i in seq_along(split_cohorts)) {
+    for (j in seq_along(split_cohorts)) {
+      if (i != j) {
+        # if cohort i is a subset of j
+        if (all(split_cohorts[[i]] %in% split_cohorts[[j]]) &&
+            length(split_cohorts[[i]]) < length(split_cohorts[[j]])) {
+          return(TRUE)
+        }
+      }
+    }
+  }
+  return(FALSE)
+}
+
+# Step 4: Apply logic to flag possible subsampling
+cohort_counts <- gwas_study_info |>
+  filter(PUBMED_ID %in% pubmed_multi_cohort) |>
+  mutate(pipe_count = str_count(COHORT, "\\|")) |>
+  group_by(PUBMED_ID) |>
+  summarise(subsampling_possible = is_subsampling_cohort(COHORT)) 
+
+# How many with possible sub-sampling?
+cohort_counts |> filter(subsampling_possible) |> nrow()
+
+cohort_counts |> filter(!subsampling_possible) |> nrow()
+
+
+```
+
+```{r}
+
+set.seed(10)
+
+example_no_subsampling =
+cohort_counts |> 
+  filter(!subsampling_possible) |> 
+  dplyr::slice_sample(n = 5) |>
+  dplyr::pull(PUBMED_ID)
+
+for(example in example_no_subsampling){
+  
+  print(gwas_study_info |>
+    filter(PUBMED_ID == example) |>
+    select(PUBMED_ID, COHORT) |>
+  distinct())
+}
+
+```
+
+### No sub-sampling but multi-cohort ... 
+
+```{r}
+
+no_subsampling = cohort_counts |> filter(!subsampling_possible) |> pull(PUBMED_ID)
+
+n_blank_cohorts = 
+gwas_study_info |>
+  filter(PUBMED_ID %in% no_subsampling) |>
+  mutate(blank_cohort = ifelse(COHORT=="", 1,0)) |>
+  group_by(PUBMED_ID) |>
+  summarise(n_blank_cohort = sum(blank_cohort)) 
+
+n_blank_cohorts|>
+  pull(n_blank_cohort) |>
+  summary()
+
+not_blank_example_subsampling = 
+n_blank_cohorts |>
+  filter(n_blank_cohort == 0) |>
+  pull(PUBMED_ID)
+
+gwas_study_info |>
+  filter(PUBMED_ID %in% not_blank_example_subsampling) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+
+
+
+
+```
+
+```{r}
+gwas_study_info |> 
+  filter(PUBMED_ID == 24816252) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+```
+
+### Unlabelled cohorts 
+
+```{r}
+
+gwas_study_info |>
+  select(COHORT, DATE, PUBMED_ID) |>
+  distinct() |>
+  mutate(COHORT_TYPE = case_when(COHORT == "" | COHORT == "other" ~ "Not reported",
+                                 COHORT == "multiple" | 
+                                 grepl("\\|",COHORT) | 
+                                 COHORT == "(Multiple cohorts)" ~ "Multiple",
+                                 TRUE~"Reported")
+         ) |>
+  arrange(DATE) |>
+  mutate(n_row = row_number()) |>
+  ggplot(aes(x =DATE, y=n_row, fill = COHORT_TYPE)) + 
+  geom_area() + 
+  theme_bw()
+
+
+```
+
+
+```{r}
+
+gwas_study_info |>
+  filter(COHORT == "other") |>
+  arrange(DATE) |>
+  mutate(n_row = row_number()) |>
+  ggplot(aes(x =DATE, y=n_row)) + 
+  geom_area()
+
+```
+## Number of cohorts per study
+
+```{r}
+
+# most papers have just 1 study / cohort
+n_cohorts_per_study = 
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) 
+
+n_cohorts_per_study |>
+  dplyr::pull(n) |>
+  summary()
+
+100 * 
+  nrow(n_cohorts_per_study |> filter(n > 1)) / 
+  nrow(n_cohorts_per_study)
+# ~39% of papers have more than 1 cohort
+
+quantile(n_cohorts_per_study$n, probs = c(0.5, 0.98))
+
+
+multi_cohort_studies = n_cohorts_per_study |> 
+                       filter(n > 1) |>
+                       pull(PUBMED_ID)
+
+cohorts_per_trait = 
+gwas_study_info |>
+  dplyr::filter(PUBMED_ID %in% multi_cohort_studies) |>
+  group_by(PUBMED_ID, MAPPED_TRAIT, MAPPED_BACKGROUND_TRAIT) |>
+  summarise(n = n())
+
+cohorts_per_trait |>
+  ggplot(aes(x = n)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(title = "Number of cohorts for the same PUBMED ID and trait")
+
+summary(cohorts_per_trait$n)
+
+cohorts_per_trait |>
+  filter(n > 1) |>
+  nrow()
+
+quantile(cohorts_per_trait$n, probs = c(0.75, 0.77,0.78, 0.79, 0.8))
+
+# 80% of papers with multiple cohorts - likely explained by multiple diseases, same cohort
+cohorts_per_trait |>
+  filter(n == 1) |> 
+  pull(PUBMED_ID)
+
+# study accession is unqiue
+gwas_study_info |>
+  group_by(PUBMED_ID, STUDY_ACCESSION) |>
+  summarise(n = n()) |>
+  pull(n) |>
+  summary()
+
+
+
+```
+
+
+
+
+```{r}
+
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  ggplot(aes(x = n)) + 
+  geom_histogram() + 
+  theme_bw(
+  ) +
+  labs(title = "Number of studies per PUBMED ID")
+
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |> 
+  head(
+  )
+
+
+
+
+
+#cohorts per study
+gwas_study_info |>
+  group_by(PUBMED_ID)
+
+
+
+```
