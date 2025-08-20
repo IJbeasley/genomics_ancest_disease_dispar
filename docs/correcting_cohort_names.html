@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+
+<title>Harmonizing Cohort Labels</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Harmonizing Cohort Labels</h1>
+<h4 class="author">Isobel Beasley</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2025-08-20
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree1969e6b5cb87f44a26e5195aa6eb46adc2fa3f06targetblank1969e6ba">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/1969e6b5cb87f44a26e5195aa6eb46adc2fa3f06" target="_blank">1969e6b</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree1969e6b5cb87f44a26e5195aa6eb46adc2fa3f06targetblank1969e6ba"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/1969e6b5cb87f44a26e5195aa6eb46adc2fa3f06" target="_blank">1969e6b</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rproj.user/
+    Ignored:    data/gwas_catalog/
+
+Untracked files:
+    Untracked:  data/.DS_Store
+    Untracked:  renv/
+
+Unstaged changes:
+    Modified:   .Rprofile
+    Modified:   analysis/collapse_cohorts.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/correcting_cohort_names.Rmd</code>) and HTML
+(<code>docs/correcting_cohort_names.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/1969e6b5cb87f44a26e5195aa6eb46adc2fa3f06/analysis/correcting_cohort_names.Rmd" target="_blank">1969e6b</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-08-20
+</td>
+<td>
+More corrections / harmonisation of cohort names in gwas catalog
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)</code></pre>
+<div id="load-pre-process-gwas-catalog-data" class="section level1"
+number="1">
+<h1><span class="header-section-number">1</span> Load / pre-process GWAS
+Catalog data</h1>
+<pre class="r"><code># Load GWAS Catalog studies
+gwas_study_info &lt;- fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv&quot;),
+                         sep = &quot;\t&quot;, quote = &quot;&quot;)
+
+# Standardize column names (remove spaces)
+gwas_study_info &lt;- gwas_study_info |&gt;
+  rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot; \\| &quot;, &quot;|&quot;)) |&gt;
+mutate(COHORT = str_replace_all(COHORT, &quot;\\| &quot;, &quot;|&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot; \\|&quot;, &quot;|&quot;))</code></pre>
+</div>
+<div
+id="accounting-for-some-discrepancies-in-cohort-names-across-studies"
+class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Accounting for some
+discrepancies in cohort names across studies</h1>
+<div id="check-in-how-many-unique-cohorts-now" class="section level2"
+number="2.1">
+<h2><span class="header-section-number">2.1</span> Check in: how many
+unique cohorts now?</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+unique(all_cohorts) |&gt; length()</code></pre>
+<pre><code>[1] 1183</code></pre>
+</div>
+<div
+id="accounting-for-some-discrepancies-in-cohort-names-across-studies-1"
+class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Accounting for some
+discrepancies in cohort names across studies</h2>
+<pre class="r"><code># Correct for discrepancies within same paper
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;AWI-Gen&quot;, &quot;AWI-GEN&quot;)) |&gt; # PUBMED ID :40229280
+  mutate(COHORT = str_replace_all(COHORT, &quot;AddHealth&quot;, &quot;Add Health&quot;)) |&gt; # PUBMED ID: 37494057
+  mutate(COHORT = str_replace_all(COHORT, fixed(&quot;EB|FinnGen|UKBB&quot;), &quot;EB|FinnGen|UKB&quot;)) |&gt; # 39067062
+  mutate(COHORT = str_replace_all(COHORT, &quot;Estonian Biobank&quot;, &quot;EB&quot;)) |&gt; # PUBMED ID: 39500877
+  mutate(COHORT = str_replace_all(COHORT, &quot;AWIGEN&quot;, &quot;AWI-GEN&quot;))  # 40229280
+
+# making other be the same  
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Other&quot;, &quot;other&quot;)) |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;OTHER&quot;, &quot;other&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;others&quot;, &quot;other&quot;)) 
+
+# making &quot;multiple&quot; designation to be the same
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, 
+                                   &quot;(\\(Multiple cohorts\\))|(\\(multiple\\))|Multiple&quot;,
+                                  &quot;multiple&quot;)) 
+
+
+# some use commas instead of | to designate multiple cohorts
+gwas_study_info &lt;- gwas_study_info |&gt;
+    mutate(COHORT = str_replace_all(COHORT, &quot;, &quot;, &quot;|&quot;)) 
+
+# Makes TwinsUK consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;TWINS-UK|TWINSUK&quot;, &quot;TwinsUK&quot;)) 
+
+# Make epic norfolk consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;EPIC-Norfolk cohort&quot;, &quot;EPIC-Norfolk&quot;)) 
+
+# Make emerge consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;EMERGE&quot;, &quot;eMERGE&quot;)) 
+
+# Make twingene consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;TWINGENE&quot;, &quot;TwinGene&quot;))
+
+# Make QSkin consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;QSkin|Qskin&quot;, &quot;QSKIN&quot;)) 
+
+# Make 23andme consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;23ANDME&quot;, &quot;23andMe&quot;)) 
+
+# Make PopGen consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;PopGen&quot;, &quot;POPGEN&quot;)) 
+
+# Make decode consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+ mutate(COHORT = str_replace_all(COHORT, &quot;DECODE|deCode|DeCODE&quot;, &quot;deCODE&quot;))
+
+# Make FinnGen consistent
+gwas_study_info &lt;- gwas_study_info |&gt;
+mutate(COHORT = str_replace_all(COHORT, &quot;Finngen|FINNGEN&quot;, &quot;FinnGen&quot;)) 
+
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;genomicc&quot;, &quot;GenOMICC&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;IPSYCH&quot;, &quot;iPSYCH&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;SIMES&quot;, &quot;SiMES&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;HELIX&quot;, &quot;Helix&quot;)) 
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;FINLAND&quot;, &quot;Finland&quot;))</code></pre>
+</div>
+<div id="check-in-how-many-unique-cohorts-now-1" class="section level2"
+number="2.3">
+<h2><span class="header-section-number">2.3</span> Check in: how many
+unique cohorts now?</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+unique(all_cohorts) |&gt; length()</code></pre>
+<pre><code>[1] 1153</code></pre>
+</div>
+</div>
+<div id="correcting-for-cardiogram-cohort-meta-analyses"
+class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Correcting for
+cardiogram cohort meta-analyses</h1>
+<pre class="r"><code># CARDIoGRAMplusC4D cohort includes both CARDIoGRAM and C4D cohorts
+# see: https://cardiogramplusc4d.org/data-downloads/
+# for coding, therefore, we change this to CARDIoGRAM|C4D
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;CARDIoGRAMplusC4D&quot;, &quot;CARDIoGRAM|C4D&quot;))</code></pre>
+</div>
+<div id="correcting-for-uk-biobank-naming-differences"
+class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Correcting for UK
+Biobank naming differences …</h1>
+<pre class="r"><code>all_cohorts[grep(&quot;ukb&quot;, tolower(all_cohorts))] |&gt; unique()</code></pre>
+<pre><code>[1] &quot;UKB&quot;                &quot;UKBB&quot;               &quot;UKBB White British&quot;
+[4] &quot;UKBS&quot;               &quot;UKB-PPP&quot;           </code></pre>
+<pre class="r"><code>  gwas_study_info |&gt;
+  filter(grepl(&quot;UKBS&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  37653029
+2:  34127860
+                                                                                                                                                                                        COHORT
+                                                                                                                                                                                        &lt;char&gt;
+1:                                                                                                                                other|GenEPA|CHOP|EPICURE|HBCS|KORA|ILM|PoBI|POPGEN|TSS|UKBS
+2: BC58|BDA|NIHR Cambridge BioResource|GRID|UKBS|BRI|CLEAR|EDIC|GoKinD|NYCP|NIMH|SEARCH|TrialNet|T1DGC|UAB|UC|UCSF|IDDMGEN|T1DGEN|MCW|GRID-NI|Young Hearts-NI|Steno Diabetes Center|HSG|HapMap</code></pre>
+<pre class="r"><code># for PUBMED_ID: 37653029
+# UKBS seems to be UK Biobank Bank
+
+# for pubmed id: 34127860
+# UKBS is UK Blood Service (UKBS)
+
+ gwas_study_info |&gt;
+   filter(grepl(&quot;UKB-PPP&quot;, COHORT)) |&gt;
+   select(PUBMED_ID, COHORT) |&gt;
+   distinct()</code></pre>
+<pre><code>   PUBMED_ID  COHORT
+       &lt;int&gt;  &lt;char&gt;
+1:  37794183 UKB-PPP</code></pre>
+<pre class="r"><code># pubmed id 37794183 is uk biobank - protein
+ 
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = ifelse(COHORT == &quot;UKB-PPP&quot;, &quot;UKB&quot;, COHORT)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;UKBB White British&quot;, &quot;UKB&quot;)) |&gt;
+  mutate(COHORT = gsub(&quot;\\bUKB\\b&quot;, &quot;UKBB&quot;, COHORT))</code></pre>
+<div id="check-in-how-many-unique-cohorts-now-2" class="section level2"
+number="4.1">
+<h2><span class="header-section-number">4.1</span> Check in: how many
+unique cohorts now?</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+unique(all_cohorts) |&gt; length()</code></pre>
+<pre><code>[1] 1150</code></pre>
+</div>
+</div>
+<div
+id="correcting-for-naming-cohort-differences-across-studies-confirmed-by-checking-papers"
+class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Correcting for naming
+cohort differences across studies (Confirmed by checking papers)</h1>
+<div id="nihr-bioresource" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> NIHR BioResource</h2>
+<pre class="r"><code># seems NIHR Cambridge BioResource &amp; NIHR BIORESOURCE are the same
+# https://www.cambridgebioresource.group.cam.ac.uk/ 
+
+gwas_study_info |&gt;
+  filter(grepl(&quot;NIHR Cambridge BioResource&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) </code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  34127860
+2:  34127860
+                                                                                                                                                                                        COHORT
+                                                                                                                                                                                        &lt;char&gt;
+1: BC58|BDA|NIHR Cambridge BioResource|GRID|UKBS|BRI|CLEAR|EDIC|GoKinD|NYCP|NIMH|SEARCH|TrialNet|T1DGC|UAB|UC|UCSF|IDDMGEN|T1DGEN|MCW|GRID-NI|Young Hearts-NI|Steno Diabetes Center|HSG|HapMap
+2: BC58|BDA|NIHR Cambridge BioResource|GRID|UKBS|BRI|CLEAR|EDIC|GoKinD|NYCP|NIMH|SEARCH|TrialNet|T1DGC|UAB|UC|UCSF|IDDMGEN|T1DGEN|MCW|GRID-NI|Young Hearts-NI|Steno Diabetes Center|HSG|HapMap</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+    filter(grepl(&quot;NIHR BIORESOURCE&quot;, COHORT)) |&gt;
+    select(PUBMED_ID, COHORT) |&gt; 
+    distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  39891803
+2:  40205036
+                                                                                                                                                                                                                                                     COHORT
+                                                                                                                                                                                                                                                     &lt;char&gt;
+1:                                                                                                                                                                                                                      UKBB|CHARGE|ALSPAC|NIHR BIORESOURCE
+2: arcOGEN|ARGO|UKHLS|China Kadoorie Biobank|deCODE|CHB|DBDS|eMERGE|EB|FinnGen|MyCode|GS:SFHS|HRS|HKDDDPC|HUNT|Bunkyo|HerediGene|RIKEN|Shimane-CoHRE|JOCO|LifeLines|NEO|NHS|MGBB|QIMR|RS|SHIP|SIMPLER|ToMMo|TwinsUK|UKBB|BioMe|G&amp;H|NIHR BIORESOURCE|MVP|OAI</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+    filter(grepl(tolower(&quot;BIORESOURCE&quot;), tolower(COHORT))) |&gt;
+    select(PUBMED_ID, COHORT) |&gt;
+    distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  39891803
+2:  40205036
+3:  34127860
+                                                                                                                                                                                                                                                     COHORT
+                                                                                                                                                                                                                                                     &lt;char&gt;
+1:                                                                                                                                                                                                                      UKBB|CHARGE|ALSPAC|NIHR BIORESOURCE
+2: arcOGEN|ARGO|UKHLS|China Kadoorie Biobank|deCODE|CHB|DBDS|eMERGE|EB|FinnGen|MyCode|GS:SFHS|HRS|HKDDDPC|HUNT|Bunkyo|HerediGene|RIKEN|Shimane-CoHRE|JOCO|LifeLines|NEO|NHS|MGBB|QIMR|RS|SHIP|SIMPLER|ToMMo|TwinsUK|UKBB|BioMe|G&amp;H|NIHR BIORESOURCE|MVP|OAI
+3:                                                              BC58|BDA|NIHR Cambridge BioResource|GRID|UKBS|BRI|CLEAR|EDIC|GoKinD|NYCP|NIMH|SEARCH|TrialNet|T1DGC|UAB|UC|UCSF|IDDMGEN|T1DGEN|MCW|GRID-NI|Young Hearts-NI|Steno Diabetes Center|HSG|HapMap</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;NIHR Cambridge BioResource|NIHR BIORESOURCE&quot; , &quot;NIHR BioResource&quot;))</code></pre>
+</div>
+<div id="living-biobank-typo" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> Living biobank
+typo</h2>
+<pre class="r"><code># Leivin biobank appears to a typo - for Living Biobank
+# see PUBMED ID 34059833; https://pmc.ncbi.nlm.nih.gov/articles/PMC7610958/#SD1
+gwas_study_info |&gt; filter(grepl(&quot;Leivin Biobank&quot;, COHORT))</code></pre>
+<pre><code>   DATE_ADDED_TO_CATALOG PUBMED_ID FIRST_AUTHOR       DATE   JOURNAL
+                  &lt;IDat&gt;     &lt;int&gt;       &lt;char&gt;     &lt;IDat&gt;    &lt;char&gt;
+1:            2021-06-10  34059833       Chen J 2021-05-31 Nat Genet
+                                   LINK
+                                 &lt;char&gt;
+1: www.ncbi.nlm.nih.gov/pubmed/34059833
+                                                          STUDY   DISEASE/TRAIT
+                                                         &lt;char&gt;          &lt;char&gt;
+1: The trans-ancestral genomic architecture of glycemic traits. Fasting glucose
+                      INITIAL_SAMPLE_SIZE REPLICATION_SAMPLE_SIZE
+                                   &lt;char&gt;                  &lt;char&gt;
+1: 35,619 East Asian ancestry individuals                    &lt;NA&gt;
+                  PLATFORM_[SNPS_PASSING_QC] ASSOCIATION_COUNT
+                                      &lt;char&gt;             &lt;int&gt;
+1: Affymetrix, Illumina [15438438] (imputed)                15
+          MAPPED_TRAIT                     MAPPED_TRAIT_URI STUDY_ACCESSION
+                &lt;char&gt;                               &lt;char&gt;          &lt;char&gt;
+1: glucose measurement http://www.ebi.ac.uk/efo/EFO_0004468    GCST90002231
+                                                                               GENOTYPING_TECHNOLOGY
+                                                                                              &lt;char&gt;
+1: Genome-wide genotyping array, Targeted genotyping array [Genome-wide genotyping array|Metabochip]
+   SUBMISSION_DATE STATISTICAL_MODEL BACKGROUND_TRAIT MAPPED_BACKGROUND_TRAIT
+            &lt;lgcl&gt;            &lt;lgcl&gt;           &lt;lgcl&gt;                  &lt;char&gt;
+1:              NA                NA               NA                        
+   MAPPED_BACKGROUND_TRAIT_URI
+                        &lt;char&gt;
+1:                            
+                                                                                                                  COHORT
+                                                                                                                  &lt;char&gt;
+1: AASC|BES|CAGE-GWAS1|CAGE|CLHNS|CHNS|KARE|Leivin Biobank|MESA|Nagahama Study|NHAPC|SCES|SiMES|SP2|TAICHI|CRC|SBCS|SMHS
+   FULL_SUMMARY_STATISTICS
+                    &lt;char&gt;
+1:                     yes
+                                                                              SUMMARY_STATS_LOCATION
+                                                                                              &lt;char&gt;
+1: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90002001-GCST90003000/GCST90002231
+      GXE
+   &lt;char&gt;
+1:     no</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Leivin Biobank&quot;, &quot;Living Biobank&quot;))</code></pre>
+</div>
+<div id="ghana-prostate" class="section level2" number="5.3">
+<h2><span class="header-section-number">5.3</span> Ghana Prostate</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;Ghana&quot;, COHORT)) |&gt;
+  select(PUBMED_ID,COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID                                                    COHORT
+       &lt;int&gt;                                                    &lt;char&gt;
+1:  39358599                           MADCaP|Ghana_Prostate|PRACTICAL
+2:  36872133 AAPC|ELLIPSE|Ghana|other|eMERGE|BioVU|BioMe|MVP|ProHealth</code></pre>
+<pre class="r"><code># if look at papers they are referring to the same cohorts: 
+# PUBMED_ID: 36872133 https://pmc.ncbi.nlm.nih.gov/articles/PMC10424812/#S9
+# PUBMED_ID: 39358599 https://www.nature.com/articles/s41588-024-01931-3#Sec12
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Ghana_Prostate&quot;, &quot;Ghana&quot;))</code></pre>
+</div>
+<div id="sardinia" class="section level2" number="5.4">
+<h2><span class="header-section-number">5.4</span> Sardinia</h2>
+<pre class="r"><code># from reading sup table: https://pmc.ncbi.nlm.nih.gov/articles/instance/7611832/bin/EMS136340-supplement-Supplementary_Information.pdf
+# for pubmed 34349265
+# seems SARDINIA should be combined into SardiNIA
+gwas_study_info |&gt;
+  filter(grepl(&quot;SARDINIA&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  34349265
+                                                                                                                                                                                                                                   COHORT
+                                                                                                                                                                                                                                   &lt;char&gt;
+1: ALSPAC|ARIC|other|CHS|CILENTO|COLAUS|EGCUT|EPIC-Norfolk|FHS|INGI-FVG|GS:SFHS|HealthABC|HRS|INCHIANTI|InterAct|KORA|LifeLines|NEO|NHS|NTR|ORCADES|QIMR|RS|SARDINIA|SHIP|SHIP-TREND|TwinGene|TwinsUK|INGI-Val_Borbera|WGHS|WHI|BCAC|UKBB</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;SardiNIA&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>    PUBMED_ID
+        &lt;int&gt;
+ 1:  36477530
+ 2:  36477530
+ 3:  36477530
+ 4:  36477530
+ 5:  36477530
+ 6:  36477530
+ 7:  36477530
+ 8:  36477530
+ 9:  36477530
+10:  36477530
+11:  36376304
+12:  36050321
+13:  36050321
+14:  34718232
+15:  32929287
+                                                                                                                                                                                                                                      COHORT
+                                                                                                                                                                                                                                      &lt;char&gt;
+ 1:                                                                      23andMe|ALSPAC|ARIC|CADD|deCODE|EGCUT|eMERGE|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NTR|SardiNIA|UKBB|NINDS|FINRISK|AMISH|GeneSTAR|GOLDN|CHS|HVH|JHS|WGHS|WHI|GFG|other
+ 2:                                                                                  23andMe|ALSPAC|ARIC|CADD|COGEND|COPDGene|deCODE|EGCUT|Harvard|HRS|HUNT|METSIM|NTR|QIMR|SardiNIA|UKBB|FINRISK|AMISH|CFS|ECLIPSE|GeneSTAR|GOLDN|WHI|other
+ 3:                                                     23andMe|ALSPAC|ARIC|CADD|COGEND|COPDGene|deCODE|EGCUT|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NTR|PAGE|QIMR|SardiNIA|UKBB|FINRISK|AMISH|CFS|ECLIPSE|GeneSTAR|GOLDN|CHS|HCHS|SOL|WHI|other
+ 4:                                                  23andMe|ALSPAC|ARIC|CADD|COGEND|COPDGene|deCODE|EGCUT|eMERGE|Harvard|HUNT|MCTFR|METSIM|NTR|SardiNIA|UKBB|NINDS|FINRISK|AMISH|CFS|ECLIPSE|GeneSTAR|GOLDN|CHS|HCHS|SOL|HVH|WGHS|WHI|other
+ 5:                                                                                                            23andMe|ALSPAC|ARIC|CADD|COGEND|deCODE|EGCUT|GERA|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NTR|QIMR|SardiNIA|UKBB|FINRISK|WHI|other
+ 6:                23andMe|ALSPAC|ARIC|BLTS|CADD|deCODE|EGCUT|eMERGE|GFG|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NTR|SardiNIA|UKBB|WHI|FINRISK|NINDS|BBJ|CKB|AMISH|CFS|CHS|GENSalt|GOLDN|HCHS|SOL|HVH|HyperGEN|JHS|GeneSTAR|GENOA|SARP|WGHS|other
+ 7:                                23andMe|ALSPAC|ARIC|BLTS|CADD|COGEND|COPDGene|deCODE|EGCUT|GFG|Harvard|HRS|HUNT|MESA|METSIM|NTR|OZALC|SardiNIA|UKBB|WHI|FINRISK|BBJ|CKB|AMISH|CFS|ECLIPSE|GENSalt|GOLDN|HyperGEN|JHS|GeneSTAR|GENOA|other
+ 8:        23andMe|ALSPAC|ARIC|BLTS|CADD|COGEND|COPDGene|deCODE|EGCUT|GFG|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NTR|OZALC|SardiNIA|UKBB|WHI|FINRISK|PAGE|BBJ|CKB|AMISH|CFS|CHS|ECLIPSE|GENSalt|GOLDN|HCHS|SOL|HyperGEN|JHS|GeneSTAR|GENOA|other
+ 9: 23andMe|ALSPAC|ARIC|BLTS|CADD|COGEND|COPDGene|deCODE|EGCUT|eMERGE|GFG|Harvard|HUNT|MCTFR|MESA|METSIM|NTR|SardiNIA|UKBB|WHI|FINRISK|NINDS|BBJ|CKB|AMISH|CFS|CHS|ECLIPSE|GENSalt|GOLDN|HCHS|SOL|HVH|HyperGEN|JHS|GeneSTAR|GENOA|WGHS|other
+10:                                                                                               23andMe|ALSPAC|ARIC|CADD|COGEND|deCODE|EGCUT|GERA|GFG|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NTR|OZALC|SardiNIA|UKBB|WHI|FINRISK|BBJ|CKB|other
+11:                                                                              23andMe|ALSPAC|ARIC|BLS|CADD|COGEND|COPDGene|deCODE|EGCUT|FHS|FTC|GERA|GFG|Harvard|HRS|HUNT|MCTFR|MESA|METSIM|NESCOG|FTC|NAG-FIN|NTR|QIMR|SardiNIA|UKBB|WHI
+12:                       ARIC|other|BioMe|BRIGHT|CHRIS|CHS|ERF|FINCAVAS|GAPP|HCHS|SOL|HealthABC|INGI-Carlantino|INGI-FVG|Inter99|JHS|KORA|LifeLines|MESA|NEO|OOA|ORCADES|PIVUS|PREVEND|PROSPER|RS|SardiNIA|SHIP|TwinsUK|UKBB|VIKING|WHI|YFS
+13:                                    ARIC|BioMe|BRIGHT|other|CHRIS|CHS|ERF|FINCAVAS|GAPP|HealthABC|INGI-Carlantino|INGI-FVG|Inter99|KORA|LifeLines|MESA|NEO|OOA|ORCADES|PIVUS|PREVEND|PROSPER|RS|SardiNIA|SHIP|TwinsUK|UKBB|VIKING|WHI|YFS
+14:                                                                                                                                                                                                                                 SardiNIA
+15:                                                                                                                                                                                                                                 SardiNIA</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;SARDINIA&quot;, &quot;SardiNIA&quot;))
+
+gwas_study_info |&gt;
+  filter(grepl(&quot;Sardinia&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  33830302
+                                                                                                                                                                     COHORT
+                                                                                                                                                                     &lt;char&gt;
+1: GRID|British 1958 birth cohort|National blood service|WTCCC - Bipolar disease cases|Oxford Regional Prospective Study of Childhood Diabetes (ORPS)|Sardinia case-control</code></pre>
+<pre class="r"><code># not sure about case control Sardinia ... 
+# see second sup table from https://pmc.ncbi.nlm.nih.gov/articles/PMC8099827/#_ad93_
+# Sardinia</code></pre>
+</div>
+<div id="odd-naming-convention-in-pubmed_id-32949544"
+class="section level2" number="5.5">
+<h2><span class="header-section-number">5.5</span> Odd naming convention
+in PUBMED_ID 32949544</h2>
+<p>Seems like mentioned ancestry groups, rather than cohorts (e.g. UKBB
+is used in this study)</p>
+<p>see cohort information here: <a
+href="https://pmc.ncbi.nlm.nih.gov/articles/instance/8220892/bin/NIHMS1709432-supplement-Supp_Materials.pdf"
+class="uri">https://pmc.ncbi.nlm.nih.gov/articles/instance/8220892/bin/NIHMS1709432-supplement-Supp_Materials.pdf</a></p>
+<pre class="r"><code>gwas_study_info |&gt;
+  dplyr::filter(PUBMED_ID == 32949544)</code></pre>
+<pre><code>   DATE_ADDED_TO_CATALOG PUBMED_ID FIRST_AUTHOR       DATE       JOURNAL
+                  &lt;IDat&gt;     &lt;int&gt;       &lt;char&gt;     &lt;IDat&gt;        &lt;char&gt;
+1:            2020-10-01  32949544      Jones E 2020-09-16 Lancet Neurol
+                                   LINK
+                                 &lt;char&gt;
+1: www.ncbi.nlm.nih.gov/pubmed/32949544
+                                                                                                                            STUDY
+                                                                                                                           &lt;char&gt;
+1: Identification of novel risk loci and causal insights for sporadic Creutzfeldt-Jakob disease: a genome-wide association study.
+                          DISEASE/TRAIT
+                                 &lt;char&gt;
+1: Creutzfeldt-Jakob disease (sporadic)
+                                                INITIAL_SAMPLE_SIZE
+                                                             &lt;char&gt;
+1: 4,110 European ancestry cases, 13,569 European ancestry controls
+                                              REPLICATION_SAMPLE_SIZE
+                                                               &lt;char&gt;
+1: 1,098 European ancestry cases, 498 ,016 European ancestry controls
+                 PLATFORM_[SNPS_PASSING_QC] ASSOCIATION_COUNT
+                                     &lt;char&gt;             &lt;int&gt;
+1: Affymetrix, Illumina [6314492] (imputed)                 4
+                        MAPPED_TRAIT                     MAPPED_TRAIT_URI
+                              &lt;char&gt;                               &lt;char&gt;
+1: sporadic Creutzfeld Jacob disease http://www.ebi.ac.uk/efo/EFO_1000656
+   STUDY_ACCESSION        GENOTYPING_TECHNOLOGY SUBMISSION_DATE
+            &lt;char&gt;                       &lt;char&gt;          &lt;lgcl&gt;
+1:    GCST90001389 Genome-wide genotyping array              NA
+   STATISTICAL_MODEL BACKGROUND_TRAIT MAPPED_BACKGROUND_TRAIT
+              &lt;lgcl&gt;           &lt;lgcl&gt;                  &lt;char&gt;
+1:                NA               NA                        
+   MAPPED_BACKGROUND_TRAIT_URI
+                        &lt;char&gt;
+1:                            
+                                                                                                                                                                    COHORT
+                                                                                                                                                                    &lt;char&gt;
+1: Dutch controls|French controls|German controls|Italian controls|Spanish controls|UK controls|US controls|UK sCJD cases|US sCJD cases|German sCJD cases|other sCJD cases
+   FULL_SUMMARY_STATISTICS
+                    &lt;char&gt;
+1:                     yes
+                                                                              SUMMARY_STATS_LOCATION
+                                                                                              &lt;char&gt;
+1: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90001001-GCST90002000/GCST90001389
+      GXE
+   &lt;char&gt;
+1:     no</code></pre>
+<pre class="r"><code>gwas_study_info = 
+    rows_update(gwas_study_info ,tibble(PUBMED_ID = 32949544, COHORT = &quot;multiple&quot;), unmatched = &quot;ignore&quot;)</code></pre>
+</div>
+<div id="odd-naming-convention-in-pubmed-id-33649486"
+class="section level2" number="5.6">
+<h2><span class="header-section-number">5.6</span> Odd naming convention
+in PUBMED ID 33649486</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;Multiethnic samples from the UK&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID                          COHORT
+       &lt;int&gt;                          &lt;char&gt;
+1:  33649486 Multiethnic samples from the UK</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+    filter(PUBMED_ID == 33649486)</code></pre>
+<pre><code>   DATE_ADDED_TO_CATALOG PUBMED_ID  FIRST_AUTHOR       DATE     JOURNAL
+                  &lt;IDat&gt;     &lt;int&gt;        &lt;char&gt;     &lt;IDat&gt;      &lt;char&gt;
+1:            2021-03-22  33649486 Hardcastle AJ 2021-03-01 Commun Biol
+                                   LINK
+                                 &lt;char&gt;
+1: www.ncbi.nlm.nih.gov/pubmed/33649486
+                                                                                                                                 STUDY
+                                                                                                                                &lt;char&gt;
+1: A multi-ethnic genome-wide association study implicates collagen matrix integrity and cell differentiation pathways in keratoconus.
+   DISEASE/TRAIT
+          &lt;char&gt;
+1:   Keratoconus
+                                                INITIAL_SAMPLE_SIZE
+                                                             &lt;char&gt;
+1: 2,116 European ancestry cases, 24,626 European ancestry controls
+                                                                                                                                                                               REPLICATION_SAMPLE_SIZE
+                                                                                                                                                                                                &lt;char&gt;
+1: 1, 389 European ancestry cases, 79,727 European ancestry controls, 759 South Asian ancestry cases, 8,009 South Asian ancestry controls, 405 African ancestry cases, 4,185 African ancestry controls
+       PLATFORM_[SNPS_PASSING_QC] ASSOCIATION_COUNT MAPPED_TRAIT
+                           &lt;char&gt;             &lt;int&gt;       &lt;char&gt;
+1: Affymetrix [7701190] (imputed)                36  keratoconus
+                               MAPPED_TRAIT_URI STUDY_ACCESSION
+                                         &lt;char&gt;          &lt;char&gt;
+1: http://purl.obolibrary.org/obo/MONDO_0015486    GCST90013442
+          GENOTYPING_TECHNOLOGY SUBMISSION_DATE STATISTICAL_MODEL
+                         &lt;char&gt;          &lt;lgcl&gt;            &lt;lgcl&gt;
+1: Genome-wide genotyping array              NA                NA
+   BACKGROUND_TRAIT MAPPED_BACKGROUND_TRAIT MAPPED_BACKGROUND_TRAIT_URI
+             &lt;lgcl&gt;                  &lt;char&gt;                      &lt;char&gt;
+1:               NA                                                    
+                            COHORT FULL_SUMMARY_STATISTICS
+                            &lt;char&gt;                  &lt;char&gt;
+1: Multiethnic samples from the UK                     yes
+                                                                              SUMMARY_STATS_LOCATION
+                                                                                              &lt;char&gt;
+1: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90013001-GCST90014000/GCST90013442
+      GXE
+   &lt;char&gt;
+1:     no</code></pre>
+<pre class="r"><code># looking at this study, discovery
+# controls come from UKBB
+# cases recruited from various places across the UK - so 
+
+gwas_study_info = 
+rows_update(gwas_study_info ,tibble(PUBMED_ID = 33649486, COHORT = &quot;UKBB|other&quot;), 
+            unmatched = &quot;ignore&quot;)</code></pre>
+</div>
+<div id="gaint-to-giant" class="section level2" number="5.7">
+<h2><span class="header-section-number">5.7</span> GAINT to GIANT</h2>
+<pre class="r"><code># GAINT appears to be a typo 
+# see PUBMED_ID:    36376304 (https://pmc.ncbi.nlm.nih.gov/articles/PMC9663411/)
+
+gwas_study_info |&gt;
+filter(grepl(&quot;GAINT&quot;, COHORT)) |&gt;
+select(PUBMED_ID, COHORT) |&gt;
+ distinct()</code></pre>
+<pre><code>   PUBMED_ID     COHORT
+       &lt;int&gt;     &lt;char&gt;
+1:  36376304 UKBB|GAINT</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;GAINT&quot;, &quot;GIANT&quot;))</code></pre>
+</div>
+<div id="pelotas-brazil-birth-cohort-study" class="section level2"
+number="5.8">
+<h2><span class="header-section-number">5.8</span> 1982 Pelotas (Brazil)
+Birth Cohort Study</h2>
+<pre class="r"><code>unique(all_cohorts)[grepl(&quot;1982&quot;, unique(all_cohorts))]</code></pre>
+<pre><code>[1] &quot;1982 PELOTAS&quot;                            
+[2] &quot;1982 Pelotas (Brazil) Birth Cohort Study&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;1982&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  40537477
+2:  39885687
+3:  35399580
+4:  35399580
+                                                                                                                                                                                                                  COHORT
+                                                                                                                                                                                                                  &lt;char&gt;
+1:               ARIC|CARDIA|CHS|GENOA|HABC|HANDLS|JHS|MESA|WHI|SP2|other|BAEPENDI|1982 PELOTAS|AGES|ERF|FHS|HyperGEN|NEO|RS|WHI-GARNET|GeneSTAR|HRS|SMHS|SWHS|CoLaus|KORA|LBC|Lifelines|NESDA|SHIP-Trend|TRAILS|YFS|SOL
+2:                                                                                                                                                       ZOE2.0|SLS|BioVU|MyCode|VFA|SOLYouth|1982 PELOTAS|CCHC|EGG|MOBA
+3:             BioMe|Baependi|CANDELA|NC-BCFR|SFBCS|FIND|HCHS|SOL|Los Angeles Latino Eye Study|MEC|MESA|Mexico City 1|Mexico City 2|MHS|1982 Pelotas (Brazil) Birth Cohort Study|SAFS|STARR COUNTY|T2D SIGMA Studies|WHI
+4: BioMe|Baependi|CANDELA|NC-BCFR|SFBCS|FIND|HCHS|SOL|Los Angeles Latino Eye Study|MEC|MESA|Mexico City 1|Mexico City 2|MHS|1982 Pelotas (Brazil) Birth Cohort Study|SAFS|STARR COUNTY|T2D SIGMA Studies|WHI|AAAGC|GIANT</code></pre>
+<pre class="r"><code># can confirm, 39885687 (https://pmc.ncbi.nlm.nih.gov/articles/PMC11875162/) 
+# 1982 PELOTAS refers to 1982 Pelotas (Brazil) Birth Cohort Study
+
+# can confirm: 40537477 (https://pmc.ncbi.nlm.nih.gov/articles/PMC12179276/#MOESM2)
+# 1982 PELOTAS refers to 1982 Pelotas (Brazil) Birth Cohort Study
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;1982 Pelotas (Brazil) Birth Cohort Study&quot;, &quot;1982 PELOTAS&quot;))
+
+gwas_study_info |&gt;
+  filter(grepl(&quot;\\bPELOTAS\\b&quot;, COHORT)) |&gt;
+  filter(!grepl(&quot;1982&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID                           COHORT
+       &lt;int&gt;                           &lt;char&gt;
+1:  34059833 BioMe|IRAS|MESA|PELOTAS|HCHS|SOL</code></pre>
+<pre class="r"><code># can confirm: 34059833 
+# PELOTAS refers to the 1982 PELOTAS study
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;(?&lt;!1982 )PELOTAS&quot;, &quot;1982 PELOTAS&quot;))</code></pre>
+</div>
+<div id="grace" class="section level2" number="5.9">
+<h2><span class="header-section-number">5.9</span> <a
+href="mailto:GR@ACE" class="email">GR@ACE</a></h2>
+<pre class="r"><code># i notice there are studies with cohort listed as
+# GR@CE &amp; GR@ACE - perhaps these are the same?
+
+# checking GR@CE - as there is fewer of these studies listed ... 
+gwas_study_info |&gt;
+filter(grepl(&quot;GR@CE&quot;, COHORT)) |&gt;
+select(PUBMED_ID, COHORT) |&gt;
+distinct() </code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  35379992
+2:  39046104
+3:  39046104
+                                                                                                 COHORT
+                                                                                                 &lt;char&gt;
+1:                                        EADB|GR@CE|EADI|GERAD|PERADES|DemGene|Bonn|RS|CCHS|UKBB|other
+2: 3C|AGES|ARIC|ASPREE|CHS|FVG|FHS|GR@CE|Apulia|HKOS|HUNT|MEMENTO|MYHAT|ROSMAP|RS|ADGC|UKBB|other|SALSA
+3:             3C|AGES|ARIC|ASPREE|CHS|FVG|FHS|GR@CE|Apulia|HKOS|HUNT|MEMENTO|MYHAT|ROSMAP|RS|ADGC|UKBB</code></pre>
+<pre class="r"><code># 35379992 -GR@CE appears to be a typo, should be: GR@ACE (https://pmc.ncbi.nlm.nih.gov/articles/PMC9005347/#Sec8)
+
+# 39046104 - GR@CE also appears to be a typo,  should be: GR@ACE
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC11497727/#alz14115-sec-0080
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;GR@CE&quot;, &quot;GR@ACE&quot;))</code></pre>
+</div>
+<div id="tohoku-medical-megabank" class="section level2" number="5.10">
+<h2><span class="header-section-number">5.10</span> Tohoku Medical
+Megabank</h2>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(&quot;tohoku&quot;, tolower(COHORT))) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID                          COHORT
+       &lt;int&gt;                          &lt;char&gt;
+1:  40226751         Tohoku Medical Megabank
+2:  34782693 Tohoku Medical Megabank Project</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Tohoku Medical Megabank Project&quot;, &quot;Tohoku Medical Megabank&quot;))</code></pre>
+</div>
+<div id="steno-diabetes" class="section level2" number="5.11">
+<h2><span class="header-section-number">5.11</span> Steno Diabetes</h2>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(&quot;steno&quot;, tolower(COHORT))) |&gt;
+  select(PUBMED_ID, COHORT, `DISEASE/TRAIT`) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  34127860
+2:  35627254
+                                                                                                                                                                              COHORT
+                                                                                                                                                                              &lt;char&gt;
+1: BC58|BDA|NIHR BioResource|GRID|UKBS|BRI|CLEAR|EDIC|GoKinD|NYCP|NIMH|SEARCH|TrialNet|T1DGC|UAB|UC|UCSF|IDDMGEN|T1DGEN|MCW|GRID-NI|Young Hearts-NI|Steno Diabetes Center|HSG|HapMap
+2:                                                                                                                                                                       Steno|other
+                                           DISEASE/TRAIT
+                                                  &lt;char&gt;
+1:                                       Type 1 diabetes
+2: Neuropeptide Y autoantibody levels in type 1 diabetes</code></pre>
+<pre class="r"><code>all_cohorts[grep(&quot;steno&quot;, tolower(all_cohorts))] |&gt; unique()</code></pre>
+<pre><code>[1] &quot;Steno Diabetes Center&quot; &quot;Steno&quot;                </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Steno Diabetes Center&quot;, &quot;Steno&quot;))</code></pre>
+</div>
+<div id="nagahama" class="section level2" number="5.12">
+<h2><span class="header-section-number">5.12</span> Nagahama</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;nagahama&quot;, tolower(COHORT))) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  35551307
+2:  34059833
+3:  34059833
+4:  34887591
+5:  40181193
+6:  38277453
+                                                                                                                                                                                                                             COHORT
+                                                                                                                                                                                                                             &lt;char&gt;
+1:                                                                                                               AASC|BBJ|BES|CAGE|CHNS|CKB|CLHNS|DC|SP2|HKDR|KARE|other|MESA|Nagahama Study|SBCS|SWHS|SCES|SCHS|SiMES|TAICHI|TWT2D
+2:                                                                                                            AASC|BES|CAGE-GWAS1|CAGE|CLHNS|CHNS|KARE|Living Biobank|MESA|Nagahama Study|NHAPC|SCES|SiMES|SP2|TAICHI|CRC|SBCS|SMHS
+3:                                                                                                                                  CAGE-GWAS1|CAGE|CHNS|KARE|LivingBiobank|MESA|NagahamaStudy|NHAPC|SCES|SiMES|SP2|TAICHI|CRC|TWSC
+4:                                                                                      BAS|BBJ|BES|CAGE|CAS|CHNS|CKB|SDCS|JPDSC|KARE|Living-biobank|MESA|Nagahama Study|NHAPC|SBCS|SCES|SCHS|SiMES|SINDI|SP2|SWHS|TUDR|TWT2D|other
+5: AGES|ALSPAC|ARIC|BHS_b|CARDIA|CCHC|CFS|CHS|COLAUS|DIACORE|DRS_EXTRA|EPIC-Norfolk|EB|FHS|Fenland|GAPP|GENSALT|HANDLS|HCS|IRASFS|JHS|KOGES|LBC|LifeLines|LLFS|MESA|MVP|Nagahama_Study|NEO|NESDA|SHIP|SOL|SWAN|TwinsUK|UKBB|WHI|YFS
+6:                                                                                                                                                                                           HERPACC|J-MICC|JPHC|ToMMo|Nagahama|BBJ</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Nagahama_Study|NagahamaStudy&quot;, &quot;Nagahama Study&quot;)) |&gt; 
+  # ? maybe check Nagahama == Nagahama Study
+  mutate(COHORT = str_replace_all(COHORT, &quot;Nagahama Study&quot;, &quot;Nagahama&quot;)) </code></pre>
+</div>
+<div id="wtccc---bipolar-disease-cases" class="section level2"
+number="5.13">
+<h2><span class="header-section-number">5.13</span> WTCCC - Bipolar
+disease cases</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;WTCCC - Bipolar disease cases&quot;, COHORT)) |&gt;
+  select(1:5)</code></pre>
+<pre><code>   DATE_ADDED_TO_CATALOG PUBMED_ID FIRST_AUTHOR       DATE      JOURNAL
+                  &lt;IDat&gt;     &lt;int&gt;       &lt;char&gt;     &lt;IDat&gt;       &lt;char&gt;
+1:            2021-04-23  33830302   Inshaw JRJ 2021-04-08 Diabetologia</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(PUBMED_ID == 33830302) |&gt;
+  select(PUBMED_ID, COHORT)</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  33830302
+2:  33830302
+                                                                                                                                                                     COHORT
+                                                                                                                                                                     &lt;char&gt;
+1: GRID|British 1958 birth cohort|National blood service|WTCCC - Bipolar disease cases|Oxford Regional Prospective Study of Childhood Diabetes (ORPS)|Sardinia case-control
+2:                                                                                                                                                                         </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;WTCCC - Bipolar disease cases&quot;, &quot;WTCCC&quot;))</code></pre>
+</div>
+<div id="qatar-genome-project" class="section level2" number="5.14">
+<h2><span class="header-section-number">5.14</span> Qatar Genome
+Project</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;QGP&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID                     COHORT
+       &lt;int&gt;                     &lt;char&gt;
+1:  33623009 Qatar Genome Program (QGP)
+2:  36168886                        QGP</code></pre>
+<pre class="r"><code># Checked 36168886 - QGP is Qatar Genome Project
+
+# so 
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Qatar Genome Program (QGP)&quot;, &quot;QGP&quot;))</code></pre>
+</div>
+<div id="check-in-how-many-unique-cohorts-now-3" class="section level2"
+number="5.15">
+<h2><span class="header-section-number">5.15</span> Check in: how many
+unique cohorts now?</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+unique(all_cohorts) |&gt; length()</code></pre>
+<pre><code>[1] 1125</code></pre>
+</div>
+</div>
+<div id="discrepancies-corrected-across-papers-not-checked-but-likely"
+class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Discrepancies corrected
+across papers (Not checked but likely):</h1>
+<div id="canscad-example" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> canSCAD example:</h2>
+<pre class="r"><code># canSCAD&quot;  &quot;CanSCAD cases and MGI controls&quot; 
+gwas_study_info |&gt;
+  filter(grepl(&quot;CanSCAD cases and MGI controls&quot;, COHORT)) |&gt;
+select(PUBMED_ID, COHORT) |&gt;
+ distinct()</code></pre>
+<pre><code>   PUBMED_ID                         COHORT
+       &lt;int&gt;                         &lt;char&gt;
+1:  32887874 CanSCAD cases and MGI controls</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;CanSCAD cases and MGI controls&quot;, &quot;canSCAD|MGI&quot;))</code></pre>
+</div>
+<div
+id="potentionally-simple-checking-similar-names-just-differ-in-capitalisation"
+class="section level2" number="6.2">
+<h2><span class="header-section-number">6.2</span> Potentionally simple
+checking similar names (just differ in capitalisation)</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+unique_cohort_names = unique(all_cohorts) 
+# Convert to lowercase and check duplicates
+dup_groups &lt;- tapply(unique_cohort_names, tolower(unique_cohort_names), I)
+
+# Keep only groups with &gt;1 element (i.e., capitalization differences)
+dup_groups[lengths(dup_groups) &gt; 1]</code></pre>
+<pre><code>$airwave
+[1] &quot;Airwave&quot; &quot;AIRWAVE&quot;
+
+$allofus
+[1] &quot;AllofUs&quot; &quot;AllOfUs&quot;
+
+$baependi
+[1] &quot;BAEPENDI&quot; &quot;Baependi&quot;
+
+$biome
+[1] &quot;BioMe&quot; &quot;BioME&quot; &quot;BIOME&quot;
+
+$biovu
+[1] &quot;BioVU&quot; &quot;BioVu&quot; &quot;BIOVU&quot;
+
+$cilento
+[1] &quot;CILENTO&quot; &quot;Cilento&quot;
+
+$colaus
+[1] &quot;CoLaus&quot; &quot;COLAUS&quot;
+
+$`croatia-korcula`
+[1] &quot;CROATIA-KORCULA&quot; &quot;CROATIA-Korcula&quot;
+
+$famhs
+[1] &quot;FamHS&quot; &quot;FAMHS&quot;
+
+$fenland
+[1] &quot;Fenland&quot; &quot;FENLAND&quot;
+
+$gel
+[1] &quot;GEL&quot; &quot;GeL&quot;
+
+$genestar
+[1] &quot;GeneSTAR&quot; &quot;GENESTAR&quot; &quot;GeneStar&quot;
+
+$gensalt
+[1] &quot;GENSalt&quot; &quot;GENSALT&quot; &quot;GenSalt&quot;
+
+$godarts
+[1] &quot;GoDARTS&quot; &quot;GODARTS&quot;
+
+$hypergen
+[1] &quot;HyperGEN&quot; &quot;HyperGen&quot; &quot;HYPERGEN&quot;
+
+$inchianti
+[1] &quot;InCHIANTI&quot; &quot;INCHIANTI&quot;
+
+$inter99
+[1] &quot;Inter99&quot; &quot;INTER99&quot;
+
+$koges
+[1] &quot;KoGES&quot; &quot;KOGES&quot;
+
+$`life-heart`
+[1] &quot;LIFE-HEART&quot; &quot;LIFE-Heart&quot;
+
+$lifelines
+[1] &quot;LifeLines&quot; &quot;Lifelines&quot;
+
+$`mayo-vdb`
+[1] &quot;MAYO-VDB&quot; &quot;Mayo-VDB&quot;
+
+$moba
+[1] &quot;MOBA&quot; &quot;MoBa&quot;
+
+$nugene
+[1] &quot;Nugene&quot; &quot;NUGENE&quot;
+
+$orcades
+[1] &quot;ORCADES&quot; &quot;Orcades&quot;
+
+$panscan
+[1] &quot;PANSCAN&quot; &quot;PanScan&quot;
+
+$raine
+[1] &quot;RAINE&quot; &quot;Raine&quot;
+
+$`ship-trend`
+[1] &quot;SHIP-TREND&quot; &quot;SHIP-Trend&quot;
+
+$sign
+[1] &quot;SiGN&quot; &quot;SIGN&quot;
+
+$viva
+[1] &quot;Viva&quot; &quot;VIVA&quot;</code></pre>
+</div>
+<div
+id="potentionally-simple-checking-similar-names-just-different-in-spaces-and-_"
+class="section level2" number="6.3">
+<h2><span class="header-section-number">6.3</span> Potentionally simple
+checking similar names (just different in spaces and _)</h2>
+<pre class="r"><code># Normalize by removing spaces and underscores
+normalized &lt;- gsub(&quot;[ _]&quot;, &quot;&quot;, sort(unique_cohort_names))
+
+# Group by normalized value
+dup_groups &lt;- tapply(sort(unique_cohort_names), normalized, I)
+
+# Keep only groups with &gt;1 element (i.e. variants)
+dup_groups[lengths(dup_groups) &gt; 1]</code></pre>
+<pre><code>$DRSEXTRA
+[1] &quot;DRS_EXTRA&quot; &quot;DRSEXTRA&quot; 
+
+$GALAII
+[1] &quot;GALA II&quot; &quot;GALA_II&quot;
+
+$Health2000
+[1] &quot;Health 2000&quot; &quot;Health2000&quot; 
+
+$HealthABC
+[1] &quot;Health ABC&quot; &quot;HealthABC&quot; 
+
+$`INGI-ValBorbera`
+[1] &quot;INGI-Val Borbera&quot; &quot;INGI-Val_Borbera&quot;
+
+$LivingBiobank
+[1] &quot;Living Biobank&quot; &quot;LivingBiobank&quot; </code></pre>
+</div>
+<div id="airwave" class="section level2" number="6.4">
+<h2><span class="header-section-number">6.4</span> Airwave</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;AIRWAVE&quot;, &quot;Airwave&quot;))</code></pre>
+</div>
+<div id="allofus" class="section level2" number="6.5">
+<h2><span class="header-section-number">6.5</span> AllOfUs</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;AllOfUs&quot;, &quot;AllofUs&quot;))</code></pre>
+</div>
+<div id="baependi" class="section level2" number="6.6">
+<h2><span class="header-section-number">6.6</span> Baependi</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;Baependi&quot;), &quot;Baependi&quot;))</code></pre>
+</div>
+</div>
+<div id="biome" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> BioMe</h1>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;BIOME|BioME&quot;, &quot;BioMe&quot;))</code></pre>
+<div id="biovu" class="section level2" number="7.1">
+<h2><span class="header-section-number">7.1</span> BioVU</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;BIOVU|BioVu&quot;, &quot;BioVU&quot;))</code></pre>
+</div>
+<div id="cilento" class="section level2" number="7.2">
+<h2><span class="header-section-number">7.2</span> Cilento</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;Cilento&quot;), &quot;Cilento&quot;))</code></pre>
+</div>
+<div id="colaus" class="section level2" number="7.3">
+<h2><span class="header-section-number">7.3</span> Colaus</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;COLAUS&quot;, &quot;CoLaus&quot;))</code></pre>
+</div>
+<div id="croatia-korcula" class="section level2" number="7.4">
+<h2><span class="header-section-number">7.4</span> CROATIA-Korcula</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;CROATIA-KORCULA&quot;, &quot;CROATIA-Korcula&quot;))</code></pre>
+</div>
+<div id="drs_extra" class="section level2" number="7.5">
+<h2><span class="header-section-number">7.5</span> DRS_EXTRA</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;DRSEXTRA&quot;, &quot;DRS_EXTRA&quot;))</code></pre>
+</div>
+<div id="famhs" class="section level2" number="7.6">
+<h2><span class="header-section-number">7.6</span> FamHS</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;FamHS&quot;), &quot;FamHS&quot;))</code></pre>
+</div>
+<div id="fenland" class="section level2" number="7.7">
+<h2><span class="header-section-number">7.7</span> Fenland</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;FENLAND&quot;, &quot;Fenland&quot;))</code></pre>
+</div>
+<div id="gala-ii" class="section level2" number="7.8">
+<h2><span class="header-section-number">7.8</span> GALA II</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;GALA_II&quot;, &quot;GALA II&quot;))</code></pre>
+</div>
+<div id="gel" class="section level2" number="7.9">
+<h2><span class="header-section-number">7.9</span> GEL</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;GeL&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID COHORT
+       &lt;int&gt; &lt;char&gt;
+1:  36124557    GeL</code></pre>
+<pre class="r"><code># Only one study uses GeL (36124557)- from 
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC9512401/#s4 
+# Appears to be typo, for Genomics England (GEL)
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;GeL&quot;, &quot;GEL&quot;))</code></pre>
+</div>
+<div id="genestar" class="section level2" number="7.10">
+<h2><span class="header-section-number">7.10</span> GeneSTAR</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;GENESTAR|GeneStar&quot;, &quot;GeneSTAR&quot;))</code></pre>
+</div>
+<div id="gensalt" class="section level2" number="7.11">
+<h2><span class="header-section-number">7.11</span> GENSalt</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;GENSALT|GenSalt&quot;, &quot;GENSalt&quot;))</code></pre>
+</div>
+<div id="godarts" class="section level2" number="7.12">
+<h2><span class="header-section-number">7.12</span> GoDARTS</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;godarts&quot;), &quot;GoDARTS&quot;))</code></pre>
+</div>
+<div id="inchianti" class="section level2" number="7.13">
+<h2><span class="header-section-number">7.13</span> InCHIANTI</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;InCHIANTI&quot;), &quot;InCHIANTI&quot;))</code></pre>
+</div>
+<div id="inter99" class="section level2" number="7.14">
+<h2><span class="header-section-number">7.14</span> Inter99</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;Inter99&quot;), &quot;Inter99&quot;))</code></pre>
+</div>
+<div id="health-abc" class="section level2" number="7.15">
+<h2><span class="header-section-number">7.15</span> “Health ABC”</h2>
+<pre class="r"><code>gwas_study_info  = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Health ABC&quot;, &quot;HealthABC&quot;)) </code></pre>
+</div>
+<div id="health-2000" class="section level2" number="7.16">
+<h2><span class="header-section-number">7.16</span> “Health 2000”</h2>
+<pre class="r"><code>gwas_study_info  = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Health 2000&quot;, &quot;Health2000&quot;)) </code></pre>
+</div>
+<div id="hypergen" class="section level2" number="7.17">
+<h2><span class="header-section-number">7.17</span> HyperGen</h2>
+<pre class="r"><code>gwas_study_info  = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;HyperGEN|HYPERGEN&quot;, &quot;HyperGen&quot;)) 
+
+# ? LifeLines Deep</code></pre>
+</div>
+<div id="ingi-val-borbera" class="section level2" number="7.18">
+<h2><span class="header-section-number">7.18</span> INGI-Val
+Borbera</h2>
+<pre class="r"><code>gwas_study_info  = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;INGI-Val_Borbera&quot;, &quot;INGI-Val Borbera&quot;)) 
+
+# ? LifeLines Deep</code></pre>
+</div>
+<div id="koges" class="section level2" number="7.19">
+<h2><span class="header-section-number">7.19</span> KoGES</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;KoGES&quot;), &quot;KoGES&quot;))</code></pre>
+</div>
+<div id="lifeheart" class="section level2" number="7.20">
+<h2><span class="header-section-number">7.20</span> Lifeheart</h2>
+<pre class="r"><code>gwas_study_info  = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;LIFE-HEART&quot;, &quot;LIFE-Heart&quot;))</code></pre>
+</div>
+<div id="lifelines" class="section level2" number="7.21">
+<h2><span class="header-section-number">7.21</span> LifeLines</h2>
+<pre class="r"><code>gwas_study_info  = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Lifelines&quot;, &quot;LifeLines&quot;)) 
+
+# ? LifeLines Deep</code></pre>
+</div>
+<div id="living-biobank" class="section level2" number="7.22">
+<h2><span class="header-section-number">7.22</span> Living Biobank</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Living-biobank|LivingBiobank&quot;, &quot;Living Biobank&quot;))</code></pre>
+</div>
+<div id="mayo-vdb" class="section level2" number="7.23">
+<h2><span class="header-section-number">7.23</span> Mayo-VDB</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;Mayo-VDB&quot;), &quot;Mayo-VDB&quot;))</code></pre>
+</div>
+<div id="moba" class="section level2" number="7.24">
+<h2><span class="header-section-number">7.24</span> MoBa</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;MoBa&quot;), &quot;MoBa&quot;))</code></pre>
+</div>
+<div id="nugene" class="section level2" number="7.25">
+<h2><span class="header-section-number">7.25</span> Nugene</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Nugene&quot;, &quot;NUGENE&quot;))</code></pre>
+</div>
+<div id="orcades" class="section level2" number="7.26">
+<h2><span class="header-section-number">7.26</span> Orcades</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;Orcades&quot;), &quot;Orcades&quot;))</code></pre>
+</div>
+<div id="panscan" class="section level2" number="7.27">
+<h2><span class="header-section-number">7.27</span> PanScan</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;PanScan&quot;), &quot;PanScan&quot;))</code></pre>
+</div>
+<div id="raine" class="section level2" number="7.28">
+<h2><span class="header-section-number">7.28</span> Raine</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, toupper(&quot;Raine&quot;), &quot;Raine&quot;))</code></pre>
+</div>
+<div id="rosmap" class="section level2" number="7.29">
+<h2><span class="header-section-number">7.29</span> ROSMAP</h2>
+<pre class="r"><code>all_cohorts[grep(&quot;rosmap&quot;, tolower(all_cohorts))] |&gt; unique()</code></pre>
+<pre><code>[1] &quot;ROSMAP&quot;   &quot;ROSMAP 1&quot; &quot;ROSMAP 2&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;ROSMAP 1|ROSMAP 2&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct()</code></pre>
+<pre><code>   PUBMED_ID
+       &lt;int&gt;
+1:  33510174
+                                                                                                                                                                      COHORT
+                                                                                                                                                                      &lt;char&gt;
+1: ARIC|BASE-II|BPROOF|CHS|EPIC-Norfolk|FHS|HRS|InCHIANTI|LASA I|LASA II|Long Life Family Study|MrOS Gothenburg|MrOS Malmo|ROSMAP 1|ROSMAP 2|RS|RSI|RSII|SHIP|TSHA|UKBB|WLS|</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;ROSMAP 1|ROSMAP 2&quot;, &quot;ROSMAP&quot;))</code></pre>
+</div>
+<div id="ship-trend" class="section level2" number="7.30">
+<h2><span class="header-section-number">7.30</span> SHIP trend</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;SHIP-Trend&quot;, &quot;SHIP-TREND&quot;))
+
+# ? &quot;SHIPNATREND&quot;  - comes from one study
+gwas_study_info |&gt;
+ filter(grepl(&quot;SHIPNATREND&quot;, COHORT)) |&gt;
+ select(PUBMED_ID, COHORT) |&gt;
+ distinct() </code></pre>
+<pre><code>    PUBMED_ID
+        &lt;int&gt;
+ 1:  32888493
+ 2:  32888493
+ 3:  32888493
+ 4:  32888493
+ 5:  32888493
+ 6:  32888493
+ 7:  32888493
+ 8:  32888493
+ 9:  32888493
+10:  32888493
+11:  32888493
+12:  32888493
+13:  32888493
+14:  32888493
+15:  32888493
+16:  32888493
+17:  32888493
+18:  32888493
+19:  32888493
+20:  32888493
+21:  32888493
+22:  32888493
+    PUBMED_ID
+                                                                                                                                                                                                                 COHORT
+                                                                                                                                                                                                                 &lt;char&gt;
+ 1:                                                                                     Airwave|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|INTERVAL|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIPNATREND|UKBB|WHI
+ 2:                                                                      Airwave|BBJ|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIPNATREND|UKBB|WHI
+ 3:                                                                                           Airwave|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|INTERVAL|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+ 4:                                                                            Airwave|BBJ|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|HANDLS|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+ 5:                                                                                       Airwave|BioMe|CaPS|CHS|Estonia|Estonia|FHS|FINCAVAS|INTERVAL|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+ 6:                                                                    Airwave|BBJ|BioMe|CaPS|CHS|CHS|Estonia|Estonia|FHS|FINCAVAS|HANDLS|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+ 7:                                                                            Airwave|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|INTERVAL|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+ 8:                                                             Airwave|BBJ|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+ 9:                                                                                                              Airwave|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|INTERVAL|MESA|MHIphase1|MHIphase2|SHIPNATREND|UKBB|WHI
+10:                                                                                               Airwave|BBJ|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|HANDLS|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|SHIPNATREND|UKBB|WHI
+11:                                                                        Airwave|BioMe|CaPS|CHS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|INTERVAL|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+12:                                                         Airwave|BBJ|BioMe|CaPS|CHS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+13:                                       Airwave|BioMe|CaPS|CHS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|Health2006|Health2008|Health2010|INTERVAL|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+14:                   Airwave|BBJ|BioMe|CaPS|CHNS|CHS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|HANDLS|Health2006|Health2008|Health2010|INTERVAL|JHS|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI|YFS
+15:                                                                                                                     Airwave|BioMe|CaPS|Estonia|FHS|INTERVAL|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI
+16:                                                                               Airwave|BioMe|BioMe|BioMe|CaPS|Estonia|FHS|HANDLS|INTERVAL|JHS|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|UKBB|UKBB|UKBB|WHI
+17:                                                                                               Airwave|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|INTERVAL|MESA|MHIphase1|MHIphase2|SHIPNATREND|UKBB|WHI
+18:                                 Airwave|BBJ|BioMe|BioMe|BioMe|CaPS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MESA|MESA|MESA|MHIphase1|MHIphase2|SHIPNATREND|UKBB|UKBB|UKBB|UKBB|WHI
+19: Airwave|BBJ|BioMe|BioMe|BioMe|CaPS|CHNS|CHS|CHS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MESA|MESA|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|UKBB|UKBB|UKBB|WHI|YFS
+20:         Airwave|BBJ|BioMe|BioMe|BioMe|CaPS|CHNS|Estonia|Estonia|FHS|FINCAVAS|GERA|GERA|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MESA|MESA|MESA|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|UKBB|UKBB|UKBB|WHI|YFS
+21:                                                                                                              Airwave|BioMe|CaPS|FHS|GERA|GERA|GERA|INTERVAL|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|WHI
+22:                                                              Airwave|BioMe|BioMe|BioMe|CaPS|FHS|GERA|GERA|GERA|GERA|GERA|HANDLS|INTERVAL|JHS|MHIphase1|MHIphase2|RS|RS|RSI|SHIP|SHIPNATREND|UKBB|UKBB|UKBB|UKBB|WHI
+                                                                                                                                                                                                                 COHORT</code></pre>
+<pre class="r"><code># from sup table, seems like SHIPNATREND is SHIP-TREND - 
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC7480402/#SD1
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;SHIPNATREND&quot;, &quot;SHIP-TREND&quot;))</code></pre>
+</div>
+<div id="sign" class="section level2" number="7.31">
+<h2><span class="header-section-number">7.31</span> Sign</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;SIGN&quot;, &quot;SiGN&quot;))</code></pre>
+</div>
+<div id="viva" class="section level2" number="7.32">
+<h2><span class="header-section-number">7.32</span> VIVA</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Viva&quot;, &quot;VIVA&quot;))</code></pre>
+</div>
+<div id="other---rotterdam" class="section level2" number="7.33">
+<h2><span class="header-section-number">7.33</span> Other -
+Rotterdam</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;Rotterdam&quot;, COHORT))</code></pre>
+<pre><code>   DATE_ADDED_TO_CATALOG PUBMED_ID FIRST_AUTHOR       DATE   JOURNAL
+                  &lt;IDat&gt;     &lt;int&gt;       &lt;char&gt;     &lt;IDat&gt;    &lt;char&gt;
+1:            2025-03-11  40050429    Roselli C 2025-03-06 Nat Genet
+                                   LINK
+                                 &lt;char&gt;
+1: www.ncbi.nlm.nih.gov/pubmed/40050429
+                                                                                                                         STUDY
+                                                                                                                        &lt;char&gt;
+1: Meta-analysis of genome-wide associations and polygenic risk prediction for atrial fibrillation in more than 180,000 cases.
+         DISEASE/TRAIT
+                &lt;char&gt;
+1: Atrial fibrillation
+                                                                                                                                                                                                                                                                                                                                                                                      INITIAL_SAMPLE_SIZE
+                                                                                                                                                                                                                                                                                                                                                                                                   &lt;char&gt;
+1: 1,782 Admix African and African American cases, 9,356 Admix African and African American controls, 11,350 East Asian ancestry cases, 137,515 East Asian ancestry controls, 166,322 European ancestry cases, 1,313,950 European ancestry controls, 1,774 Hispanic or Latin American cases, 7,665 Hispanic or Latin American controls, 218 South Asian ancestry cases, 413 South Asian ancestry controls
+   REPLICATION_SAMPLE_SIZE                PLATFORM_[SNPS_PASSING_QC]
+                    &lt;char&gt;                                    &lt;char&gt;
+1:                    &lt;NA&gt; Affymetrix, Illumina [29789980] (imputed)
+   ASSOCIATION_COUNT        MAPPED_TRAIT                     MAPPED_TRAIT_URI
+               &lt;int&gt;              &lt;char&gt;                               &lt;char&gt;
+1:               355 atrial fibrillation http://www.ebi.ac.uk/efo/EFO_0000275
+   STUDY_ACCESSION        GENOTYPING_TECHNOLOGY SUBMISSION_DATE
+            &lt;char&gt;                       &lt;char&gt;          &lt;lgcl&gt;
+1:    GCST90559230 Genome-wide genotyping array              NA
+   STATISTICAL_MODEL BACKGROUND_TRAIT MAPPED_BACKGROUND_TRAIT
+              &lt;lgcl&gt;           &lt;lgcl&gt;                  &lt;char&gt;
+1:                NA               NA                        
+   MAPPED_BACKGROUND_TRAIT_URI
+                        &lt;char&gt;
+1:                            
+                                                                                                                                                                                                                                 COHORT
+                                                                                                                                                                                                                                 &lt;char&gt;
+1: AGES|ARIC|BioMe|Broad CVDi|BBJ|CHS|MESA|SiGN|ENGAGE_AF-TIMI_48|SPHFC|CCAF|CHB|MyCode|EGCUT|FHS|GAPP|GS:SFHS|HRS|LURIC|HUNT|MGI|PHB|PIVUS|PREVEND|PROSPER|Rotterdam|SHIP|SiGN|TwinGene|ULSAM|Vanderbilt|WGHS|WTCCC|FinnGen|UKBB|other
+   FULL_SUMMARY_STATISTICS SUMMARY_STATS_LOCATION    GXE
+                    &lt;char&gt;                 &lt;char&gt; &lt;char&gt;
+1:                      no                   &lt;NA&gt;     no</code></pre>
+<pre class="r"><code># Rotterdam study is typically listed as &quot;RS&quot;
+
+# see e.g. 36568030 https://pmc.ncbi.nlm.nih.gov/articles/PMC9772568/
+gwas_study_info |&gt;
+  filter(grepl(&quot;\\bRS\\b&quot;, COHORT))</code></pre>
+<pre><code>     DATE_ADDED_TO_CATALOG PUBMED_ID FIRST_AUTHOR       DATE
+                    &lt;IDat&gt;     &lt;int&gt;       &lt;char&gt;     &lt;IDat&gt;
+  1:            2023-03-21  36662418     Faber BG 2023-01-20
+  2:            2023-05-12  36918541     Young WJ 2023-03-14
+  3:            2023-05-12  36918541     Young WJ 2023-03-14
+  4:            2023-05-12  36918541     Young WJ 2023-03-14
+  5:            2023-05-12  36918541     Young WJ 2023-03-14
+ ---                                                        
+332:            2023-01-31  36568030     Young KL 2022-11-25
+333:            2023-01-31  36568030     Young KL 2022-11-25
+334:            2023-01-31  36568030     Young KL 2022-11-25
+335:            2023-01-31  36568030     Young KL 2022-11-25
+336:            2023-01-31  36568030     Young KL 2022-11-25
+                 JOURNAL                                 LINK
+                  &lt;char&gt;                               &lt;char&gt;
+  1: Arthritis Rheumatol www.ncbi.nlm.nih.gov/pubmed/36662418
+  2:          Nat Commun www.ncbi.nlm.nih.gov/pubmed/36918541
+  3:          Nat Commun www.ncbi.nlm.nih.gov/pubmed/36918541
+  4:          Nat Commun www.ncbi.nlm.nih.gov/pubmed/36918541
+  5:          Nat Commun www.ncbi.nlm.nih.gov/pubmed/36918541
+ ---                                                         
+332:             HGG Adv www.ncbi.nlm.nih.gov/pubmed/36568030
+333:             HGG Adv www.ncbi.nlm.nih.gov/pubmed/36568030
+334:             HGG Adv www.ncbi.nlm.nih.gov/pubmed/36568030
+335:             HGG Adv www.ncbi.nlm.nih.gov/pubmed/36568030
+336:             HGG Adv www.ncbi.nlm.nih.gov/pubmed/36568030
+                                                                                                                                 STUDY
+                                                                                                                                &lt;char&gt;
+  1: A GWAS meta-analysis of alpha angle suggests cam-type morphology may be a specific feature of hip osteoarthritis in older adults.
+  2:        Genetic architecture of spatial electrical biomarkers for cardiac arrhythmia and relationship with cardiovascular disease.
+  3:        Genetic architecture of spatial electrical biomarkers for cardiac arrhythmia and relationship with cardiovascular disease.
+  4:        Genetic architecture of spatial electrical biomarkers for cardiac arrhythmia and relationship with cardiovascular disease.
+  5:        Genetic architecture of spatial electrical biomarkers for cardiac arrhythmia and relationship with cardiovascular disease.
+ ---                                                                                                                                  
+332:    Whole-exome sequence analysis of anthropometric traits illustrates challenges in identifying effects of rare genetic variants.
+333:    Whole-exome sequence analysis of anthropometric traits illustrates challenges in identifying effects of rare genetic variants.
+334:    Whole-exome sequence analysis of anthropometric traits illustrates challenges in identifying effects of rare genetic variants.
+335:    Whole-exome sequence analysis of anthropometric traits illustrates challenges in identifying effects of rare genetic variants.
+336:    Whole-exome sequence analysis of anthropometric traits illustrates challenges in identifying effects of rare genetic variants.
+           DISEASE/TRAIT
+                  &lt;char&gt;
+  1:         Alpha angle
+  2: Frontal QRS-T angle
+  3: Spatial QRS-T angle
+  4: Spatial QRS-T angle
+  5: Frontal QRS-T angle
+ ---                    
+332:     Waist-hip ratio
+333:     Waist-hip ratio
+334:     Waist-hip ratio
+335:     Waist-hip ratio
+336:     Waist-hip ratio
+                                                                     INITIAL_SAMPLE_SIZE
+                                                                                  &lt;char&gt;
+  1:                                                44,214 European ancestry individuals
+  2: 159,715 European ancestry, African ancestry, Hispanic or Latin American individuals
+  3:                                                96,562 European ancestry individuals
+  4: 118,780 European ancestry, African ancestry, Hispanic or Latin American individuals
+  5:                                               134,567 European ancestry individuals
+ ---                                                                                    
+332:                                                15,503 European ancestry individuals
+333:                                                       8,678 European ancestry women
+334:                                                         6,825 European ancestry men
+335:                         2,987 African ancestry women, 8,678 European ancestry women
+336:                             1,307 African ancestry men, 6,825 European ancestry men
+                                       REPLICATION_SAMPLE_SIZE
+                                                        &lt;char&gt;
+  1:                                                      &lt;NA&gt;
+  2:                                                      &lt;NA&gt;
+  3:                                                      &lt;NA&gt;
+  4:                                                      &lt;NA&gt;
+  5:                                                      &lt;NA&gt;
+ ---                                                          
+332:                       1,229 European ancestry individuals
+333:                               771 European ancestry women
+334:                                 758 European ancestry men
+335: 771 European ancestry women, 2,308 African American women
+336:     758 European ancestry men, 1,239 African American men
+                   PLATFORM_[SNPS_PASSING_QC] ASSOCIATION_COUNT
+                                       &lt;char&gt;             &lt;int&gt;
+  1: Affymetrix, Illumina [9134976] (imputed)                 8
+  2: Affymetrix, Illumina [8299259] (imputed)                11
+  3: Affymetrix, Illumina [8603009] (imputed)                51
+  4: Affymetrix, Illumina [9052360] (imputed)                61
+  5: Affymetrix, Illumina [7954211] (imputed)                 9
+ ---                                                           
+332:                               NR [67633]                 0
+333:                               NR [67633]                 0
+334:                               NR [67633]                 0
+335:                               NR [67633]                 0
+336:                               NR [67633]                 0
+                MAPPED_TRAIT                     MAPPED_TRAIT_URI
+                      &lt;char&gt;                               &lt;char&gt;
+  1: alpha angle measurement http://www.ebi.ac.uk/efo/EFO_0020071
+  2:             QRS-T angle http://www.ebi.ac.uk/efo/EFO_0020097
+  3:             QRS-T angle http://www.ebi.ac.uk/efo/EFO_0020097
+  4:             QRS-T angle http://www.ebi.ac.uk/efo/EFO_0020097
+  5:             QRS-T angle http://www.ebi.ac.uk/efo/EFO_0020097
+ ---                                                             
+332:         waist-hip ratio http://www.ebi.ac.uk/efo/EFO_0004343
+333:         waist-hip ratio http://www.ebi.ac.uk/efo/EFO_0004343
+334:         waist-hip ratio http://www.ebi.ac.uk/efo/EFO_0004343
+335:         waist-hip ratio http://www.ebi.ac.uk/efo/EFO_0004343
+336:         waist-hip ratio http://www.ebi.ac.uk/efo/EFO_0004343
+     STUDY_ACCESSION        GENOTYPING_TECHNOLOGY SUBMISSION_DATE
+              &lt;char&gt;                       &lt;char&gt;          &lt;lgcl&gt;
+  1:    GCST90129635 Genome-wide genotyping array              NA
+  2:    GCST90246319 Genome-wide genotyping array              NA
+  3:    GCST90246320 Genome-wide genotyping array              NA
+  4:    GCST90246318 Genome-wide genotyping array              NA
+  5:    GCST90246321 Genome-wide genotyping array              NA
+ ---                                                             
+332:    GCST90245813        Exome-wide sequencing              NA
+333:    GCST90245814        Exome-wide sequencing              NA
+334:    GCST90245815        Exome-wide sequencing              NA
+335:    GCST90245816        Exome-wide sequencing              NA
+336:    GCST90245817        Exome-wide sequencing              NA
+     STATISTICAL_MODEL BACKGROUND_TRAIT MAPPED_BACKGROUND_TRAIT
+                &lt;lgcl&gt;           &lt;lgcl&gt;                  &lt;char&gt;
+  1:                NA               NA                        
+  2:                NA               NA                        
+  3:                NA               NA                        
+  4:                NA               NA                        
+  5:                NA               NA                        
+ ---                                                           
+332:                NA               NA                        
+333:                NA               NA                        
+334:                NA               NA                        
+335:                NA               NA                        
+336:                NA               NA                        
+     MAPPED_BACKGROUND_TRAIT_URI
+                          &lt;char&gt;
+  1:                            
+  2:                            
+  3:                            
+  4:                            
+  5:                            
+ ---                            
+332:                            
+333:                            
+334:                            
+335:                            
+336:                            
+                                                                                                                         COHORT
+                                                                                                                         &lt;char&gt;
+  1:                                                                                                                    UKBB|RS
+  2: ARIC|other|BRIGHT|CHRIS|CHS|ERF|GS:SFHS|HCHS|SOL|Inter99|JHS|LifeLines|MESA|NEO|Orcades|PREVEND|PROSPER|RS|UKBB|VIKING|WHI
+  3: ARIC|other|BRIGHT|CHRIS|CHS|ERF|GS:SFHS|HCHS|SOL|Inter99|JHS|LifeLines|MESA|NEO|Orcades|PREVEND|PROSPER|RS|UKBB|VIKING|WHI
+  4: ARIC|other|BRIGHT|CHRIS|CHS|ERF|GS:SFHS|HCHS|SOL|Inter99|JHS|LifeLines|MESA|NEO|Orcades|PREVEND|PROSPER|RS|UKBB|VIKING|WHI
+  5: ARIC|other|BRIGHT|CHRIS|CHS|ERF|GS:SFHS|HCHS|SOL|Inter99|JHS|LifeLines|MESA|NEO|Orcades|PREVEND|PROSPER|RS|UKBB|VIKING|WHI
+ ---                                                                                                                           
+332:                                                                                            ARIC|CHS|ERF|FHS|GOLDN|RS|other
+333:                                                                                            ARIC|CHS|ERF|FHS|GOLDN|RS|other
+334:                                                                                            ARIC|CHS|ERF|FHS|GOLDN|RS|other
+335:                                                                                            ARIC|CHS|ERF|FHS|GOLDN|RS|other
+336:                                                                                            ARIC|CHS|ERF|FHS|GOLDN|RS|other
+     FULL_SUMMARY_STATISTICS
+                      &lt;char&gt;
+  1:                     yes
+  2:                     yes
+  3:                     yes
+  4:                     yes
+  5:                     yes
+ ---                        
+332:                      no
+333:                      no
+334:                      no
+335:                      no
+336:                      no
+                                                                                SUMMARY_STATS_LOCATION
+                                                                                                &lt;char&gt;
+  1: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90129001-GCST90130000/GCST90129635
+  2: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90246001-GCST90247000/GCST90246319
+  3: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90246001-GCST90247000/GCST90246320
+  4: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90246001-GCST90247000/GCST90246318
+  5: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90246001-GCST90247000/GCST90246321
+ ---                                                                                                  
+332:                                                                                              &lt;NA&gt;
+333:                                                                                              &lt;NA&gt;
+334:                                                                                              &lt;NA&gt;
+335:                                                                                              &lt;NA&gt;
+336:                                                                                              &lt;NA&gt;
+        GXE
+     &lt;char&gt;
+  1:     no
+  2:     no
+  3:     no
+  4:     no
+  5:     no
+ ---       
+332:     no
+333:     no
+334:     no
+335:     no
+336:     no</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Rotterdam&quot;, &quot;RS&quot;))</code></pre>
+</div>
+<div id="china-kadoorie-biobank" class="section level2" number="7.34">
+<h2><span class="header-section-number">7.34</span> China Kadoorie
+Biobank</h2>
+<pre class="r"><code># CKB is the acronym for the China Kadoorie Biobank (see:pubmed id 36777997) https://pmc.ncbi.nlm.nih.gov/articles/PMC9903787/#tbl1
+
+gwas_study_info |&gt;
+  filter(grepl(&quot;\\bCKB\\b&quot;, COHORT)) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct() |&gt;
+  tail()</code></pre>
+<pre><code>   PUBMED_ID                                                             COHORT
+       &lt;int&gt;                                                             &lt;char&gt;
+1:  34586374                                                          CKB|other
+2:  34586374                                                     CKB|other|UKBB
+3:  34586374                                                      CKB|WHI|other
+4:  33766948                                                                CKB
+5:  36777997    BBJ|BioMe|BioVU|CCPM|CKB|EB|FinnGen|G&amp;H|HUNT|MGBB|MGI|UCLA|UKBB
+6:  36777997 BBJ|BioMe|BioVU|CCPM|CKB|EB|FinnGen|G&amp;H|HUNT|MGBB|MGI|UCLA|UKBB|NR</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;China Kadoorie Biobank&quot;, &quot;CKB&quot;))</code></pre>
+</div>
+<div id="check-in-how-many-unique-cohorts-now-4" class="section level2"
+number="7.35">
+<h2><span class="header-section-number">7.35</span> Check in: how many
+unique cohorts now?</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+unique(all_cohorts) |&gt; length()</code></pre>
+<pre><code>[1] 1078</code></pre>
+</div>
+<div
+id="check-in-have-we-corrected-the-simple-changes-we-sought-to-corect"
+class="section level2" number="7.36">
+<h2><span class="header-section-number">7.36</span> Check in: have we
+corrected the simple changes we sought to corect?</h2>
+<pre class="r"><code>unique_cohort_names = unique(all_cohorts) 
+
+# Convert to lowercase and check duplicates
+dup_groups &lt;- tapply(unique_cohort_names, tolower(unique_cohort_names), I)
+
+# Keep only groups with &gt;1 element (i.e., capitalization differences)
+dup_groups[lengths(dup_groups) &gt; 1]</code></pre>
+<pre><code>named character(0)</code></pre>
+<pre class="r"><code>normalized &lt;- gsub(&quot;[ _]&quot;, &quot;&quot;, sort(unique_cohort_names))
+
+# Group by normalized value
+dup_groups &lt;- tapply(sort(unique_cohort_names), normalized, I)
+
+# Keep only groups with &gt;1 element (i.e. variants)
+dup_groups[lengths(dup_groups) &gt; 1]</code></pre>
+<pre><code>named character(0)</code></pre>
+</div>
+<div id="now-additional-checks" class="section level2" number="7.37">
+<h2><span class="header-section-number">7.37</span> Now additional
+checks:</h2>
+<pre class="r"><code>normalized &lt;- gsub(&quot;[ _]&quot;, &quot;&quot;, sort(unique_cohort_names))
+
+# Group by normalized value
+dup_groups &lt;- tapply(sort(unique_cohort_names), tolower(normalized), I)
+
+# Keep only groups with &gt;1 element (i.e. variants)
+dup_groups[lengths(dup_groups) &gt; 1]</code></pre>
+<pre><code>named character(0)</code></pre>
+</div>
+</div>
+<div
+id="check-in-how-many-cohorts-are-only-used-in-one-pubmed-id-indicating-possibly-misnaming-error"
+class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Check in: how many
+cohorts are only used in one PUBMED ID (indicating possibly misnaming
+error?)</h1>
+<pre class="r"><code>single_use_cohorts  =   
+data.frame(cohort = all_cohorts) |&gt;
+  group_by(cohort) |&gt;
+  summarise(n_studies = n()) |&gt;
+  filter(n_studies == 1) |&gt;
+  pull(cohort)
+
+length(single_use_cohorts)</code></pre>
+<pre><code>[1] 208</code></pre>
+</div>
+<div id="others-to-look-into" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Others to look
+into:</h1>
+<pre class="r"><code># ?CALGB  
+# &quot;SIGNET-REGARDS&quot;  &gt;? &quot;SIGNET&quot;  
+
+
+
+# &quot;RISC&quot; &amp; &quot;RISK&quot; appear to be different
+# Relationship Between Insulin Sensitivity and Cardiovascular Disease Risk (RISC)
+
+# Risk Stratification and Identification of Immunogenetic and Microbial Markers of Rapid Disease Progression in Children with Crohn’s Disease (RISK) 
+
+
+
+ &quot;CKB&quot; 
+
+ [231] &quot;COHRA&quot;                                                                                                                                                    
+ [232] &quot;COHRA1&quot;                                                                                                                                                   
+ [233] &quot;COHRA2&quot;  
+
+# UK Blood Service (UKBS)
+
+ [294] &quot;DiscovEHR&quot;                                                                                                                                                
+ [295] &quot;DISCOVeRY-BMT&quot;   
+
+ [330] &quot;ELSA&quot;                                                                                                                                                     
+ [331] &quot;ELSA-Brasil&quot;   
+
+ [340] &quot;EPIC&quot;                                                                                                                                                     
+ [341] &quot;EPIC_CAD&quot;                                                                                                                                                 
+ [342] &quot;EPIC_Obs&quot;                                                                                                                                                 
+ [343] &quot;EPIC-Norfolk&quot;                                                                                                                                             
+ [344] &quot;EPICURE&quot;        
+
+ [372] &quot;FinnTwin&quot;                                                                                                                                                 
+ [373] &quot;FinnTwin12&quot;  
+
+ [463] &quot;GOCS&quot;                                                                                                                                                     
+ [464] &quot;GOCS_Chilean&quot; 
+
+ [480] &quot;GRAAD&quot;                                                                                                                                                    
+ [481] &quot;GRaD&quot; 
+
+# Colo2&amp;3
+
+ [513] &quot;HELIC&quot;                                                                                                                                                    
+ [514] &quot;HELIC-MANOLIS&quot;                                                                                                                                            
+ [515] &quot;HELIC-Pomak&quot;   </code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] stringr_1.5.1     ggplot2_3.5.2     dplyr_1.1.4       data.table_1.17.8
+[5] workflowr_1.7.1  
+
+loaded via a namespace (and not attached):
+ [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1     renv_1.0.3        
+ [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2      
+ [9] callr_3.7.6        later_1.4.2        jquerylib_0.1.4    scales_1.4.0      
+[13] yaml_2.3.10        fastmap_1.2.0      here_1.0.1         R6_2.6.1          
+[17] generics_0.1.4     knitr_1.50         tibble_3.3.0       rprojroot_2.1.0   
+[21] RColorBrewer_1.1-3 bslib_0.9.0        pillar_1.11.0      rlang_1.1.6       
+[25] cachem_1.1.0       stringi_1.8.7      httpuv_1.6.16      xfun_0.52         
+[29] getPass_0.2-4      fs_1.6.6           sass_0.4.10        cli_3.6.5         
+[33] withr_3.0.2        magrittr_2.0.3     ps_1.9.1           grid_4.3.1        
+[37] digest_0.6.37      processx_3.8.6     rstudioapi_0.17.1  lifecycle_1.0.4   
+[41] vctrs_0.6.5        evaluate_1.0.4     glue_1.8.0         farver_2.1.2      
+[45] whisker_0.4.1      rmarkdown_2.29     httr_1.4.7         tools_4.3.1       
+[49] pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
