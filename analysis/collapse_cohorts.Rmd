@@ -85,8 +85,10 @@ For sample re-use across study:
 
 ```{r load_gwas}
 # Load GWAS Catalog studies
-gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
-                         sep = "\t", quote = "")
+# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+#                          sep = "\t", quote = "")
+gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+
 
 gwas_ancest_info <-  fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
                          sep = "\t", quote = "")
@@ -103,46 +105,6 @@ gwas_ancest_info <- gwas_ancest_info |>
 ### Accounting for some discrepancies in cohort names across studies 
 
 ```{r correcting_basic_cohort_discrep}
-
-gwas_study_info <- gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, " \\| ", "|")) |>
-mutate(COHORT = str_replace_all(COHORT, "\\| ", "|")) |>
-  mutate(COHORT = str_replace_all(COHORT, " \\|", "|"))
-
-
-# Correct for discrepancies within same paper
-gwas_study_info <- gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "AWI-Gen", "AWI-GEN")) |> # PUBMED ID :40229280
-  mutate(COHORT = str_replace_all(COHORT, "AddHealth", "Add Health")) |> # PUBMED ID: 37494057
-  mutate(COHORT = str_replace_all(COHORT, fixed("EB|FinnGen|UKBB"), "EB|FinnGen|UKB")) |> # 39067062
-  mutate(COHORT = str_replace_all(COHORT, "Estonian Biobank", "EB")) |> # PUBMED ID: 39500877
-  mutate(COHORT = str_replace_all(COHORT, "AWIGEN", "AWI-GEN")) |> # 40229280
-  mutate(COHORT = str_replace_all(COHORT, "Other", "other")) |> 
-  mutate(COHORT = str_replace_all(COHORT, "OTHER", "other")) |>
-  mutate(COHORT = str_replace_all(COHORT, "others", "other")) |>
-  mutate(COHORT = str_replace_all(COHORT, "EPIC-Norfolk cohort", "EPIC-Norfolk")) |>  
-  mutate(COHORT = str_replace_all(COHORT, "EMERGE", "eMERGE")) |>   
-  mutate(COHORT = str_replace_all(COHORT, "(Multiple cohorts)", "multiple")) |>
-  mutate(COHORT = str_replace_all(COHORT, "TWINS-UK", "TwinsUK")) |>
-  mutate(COHORT = str_replace_all(COHORT, "TWINSUK", "TwinsUK")) |>
-  mutate(COHORT = str_replace_all(COHORT, ", ", "|")) |>
-  mutate(COHORT = str_replace_all(COHORT, "TWINGENE", "TwinGene")) |>
-  mutate(COHORT = str_replace_all(COHORT, "QSkin|Qskin", "QSKIN")) |>
-  mutate(COHORT = str_replace_all(COHORT, "23ANDME", "23andMe")) |>
-  mutate(COHORT = str_replace_all(COHORT, "PopGen", "POPGEN")) |>
-  mutate(COHORT = str_replace_all(COHORT, "genomicc", "GenOMICC")) |>
-  mutate(COHORT = str_replace_all(COHORT, "IPSYCH", "iPSYCH")) |>
-  mutate(COHORT = str_replace_all(COHORT, "DECODE", "deCODE")) |>
-  mutate(COHORT = str_replace_all(COHORT, "deCode", "deCODE")) |>
-  mutate(COHORT = str_replace_all(COHORT, "SIMES", "SiMES")) |>
-  mutate(COHORT = str_replace_all(COHORT, "HELIX", "Helix")) |>
-  mutate(COHORT = str_replace_all(COHORT, "Finngen", "FinnGen")) 
-  
-
-
-	
-
-	
 
 ```
 
@@ -268,33 +230,9 @@ unique(all_cohorts) |> length()
 ```
 
 
-```{r}
-gwas_study_info |>
-  filter(grepl("QGP", COHORT)) |>
-  select(PUBMED_ID, COHORT) |>
-  distinct()
-# Checked 36168886 - QGP is Qatar Genome Project
 
-# so 
-gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "Qatar Genome Program (QGP)", "QGP"))
-
-```
 
 ```{r}
-gwas_study_info |>
-  filter(grepl("WTCCC - Bipolar disease cases", COHORT)) |>
-  select(1:5)
-
-
-gwas_study_info |>
-  filter(PUBMED_ID == 33830302) |>
-  select(PUBMED_ID, COHORT)
-
-gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "WTCCC - Bipolar disease cases", "WTCCC"))
-
-
 gwas_study_info |>
   filter(grepl("ORPS", COHORT))
 
@@ -316,63 +254,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-```{r}
 
-# UK Biobank ==  ?UK controls
-gwas_study_info |> filter(grepl("UK controls", COHORT)) |> select(1:5)
-gwas_study_info |> filter(grepl("UK sCJD cases", COHORT)) |> select(1:5)
-
-gwas_study_info |> filter(grepl("UK controls", COHORT))  |> pull(COHORT)
-
-gwas_study_info |>
-  ungroup() |>
-  dplyr::filter(PUBMED_ID == 32949544)
-# see cohort information here: 
-# https://pmc.ncbi.nlm.nih.gov/articles/instance/8220892/bin/NIHMS1709432-supplement-Supp_Materials.pdf
-
-```
-
-
-```{r}
-gwas_study_info |> 
-  filter(grepl("tohoku", tolower(COHORT))) |>
-  select(PUBMED_ID, COHORT) |>
-  distinct()
-
-gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "Tohoku Medical Megabank Project", "Tohoku Medical Megabank"))
-
-
-```
-
-```{r}
-
-gwas_study_info |> 
-  filter(grepl("steno", tolower(COHORT))) |>
-  select(PUBMED_ID, COHORT, `DISEASE/TRAIT`) |>
-  distinct()
-
-grep("Steno", single_use_cohorts, value = T)
-
-gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "Steno Diabetes Center", "Steno"))
-  
-
-```
-
-```{r}
-
-gwas_study_info |>
-  filter(grepl("nagahama", tolower(COHORT))) |>
-  select(PUBMED_ID, COHORT) |>
-  distinct()
-
-gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "Nagahama_Study", "Nagahama Study")) |> 
-  # ? maybe check Nagahama == Nagahama Study
-  mutate(COHORT = str_replace_all(COHORT, "Nagahama Study", "Nagahama")) 
-
-```
 
 ```{r}
 
@@ -416,7 +298,6 @@ gwas_study_info |>
   filter(grepl("spiromics", tolower(COHORT))) |>
     select(PUBMED_ID, COHORT, `DISEASE/TRAIT`) |>
   distinct()
-
 
 ```
 
