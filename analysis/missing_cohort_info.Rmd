@@ -1,0 +1,378 @@
+---
+title: "Missing cohort information"
+author: "Isobel Beasley"
+date: "2025-08-21"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+#  Load / pre-process GWAS Catalog data
+
+```{r load_gwas}
+# Load GWAS Catalog studies
+# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+#                          sep = "\t", quote = "")
+gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+
+# Standardize column names (remove spaces)
+gwas_study_info <- gwas_study_info |>
+  rename_all(~gsub(" ", "_", .x))
+
+```
+
+## Missingness in cohort information over time 
+
+```{r}
+gwas_study_info = 
+gwas_study_info |> 
+  mutate(MISSING_COHORT_INFO = ifelse(COHORT == ""|COHORT == "mutiple"|COHORT == "other",
+                                      T,
+                                      F)
+  )
+         
+gwas_study_info |>
+  arrange(DATE) |>
+  mutate(n_row = row_number()) |>
+  ggplot(aes(x =DATE, y=n_row, fill = MISSING_COHORT_INFO)) + 
+  geom_area(position = 'stack') + 
+  theme_bw() + 
+  labs(y = "Number of studies")
+
+```
+
+
+```{r}
+
+gwas_study_info |>
+  filter(MISSING_COHORT_INFO) |>
+  group_by(PUBMED_ID) |>
+  summarise(n_studies = n()) |>
+  arrange(desc(n_studies))
+
+
+# 34648354
+# Fenland
+
+
+# 36482414
+# PrecisionLink Biobank
+# BCH Biobank
+
+```
+
+
+# Data used in PUBMED ID: 36324656  
+
+```{r}
+
+gwas_study_info |> 
+  filter(grepl("\\bUK\\b", COHORT)) |> 
+  select(PUBMED_ID, COHORT) |> 
+  distinct() |>
+  tail()
+
+# Pappa study: https://onlinelibrary.wiley.com/doi/10.1002/ajmg.b.32333
+gwas_study_info |> 
+    filter(grepl("Pappa", FIRST_AUTHOR)) |> 
+    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
+    distinct()
+
+gwas_study_info |> 
+    filter(PUBMED_ID == "26087016") |> 
+    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
+    distinct()
+
+gwas_study_info = rows_update(gwas_study_info,
+                              tibble(PUBMED_ID = 26087016, COHORT = "EAGLE"),
+                              unmatched = "ignore")
+
+# Karlsson Linnér https://pmc.ncbi.nlm.nih.gov/articles/PMC6713272/#ABS1
+gwas_study_info |> 
+  filter(grepl("Karlsson", FIRST_AUTHOR)) |> 
+  filter(grepl("Genome-wide association analyses of risk tolerance and risky behaviors", STUDY)) |> select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
+  distinct()
+
+gwas_study_info |>
+  filter(PUBMED_ID == 30643258) |>
+  select(`DISEASE/TRAIT`, STUDY_ACCESSION, COHORT) |>
+  distinct()
+
+karlsson_study_update = 
+tibble(
+  STUDY_ACCESSION = c('GCST007322', 'GCST007324',
+                      'GCST007329', 'GCST007328', 'GCST007326',
+                      'GCST007327'),
+  `DISEASE/TRAIT` = c("General risk toleranc", "Adventurousness", 
+                      "Automobile speeding propensity", 
+                      "Alcohol consumption (drinks per week)", 
+                      "Number of sexual partners",
+                      "Smoking status (ever vs never smokers)"),
+       COHORT = c("UKBB|23andMe", "23andMe", 
+                  "UKBB", "UKBB", "UKBB",
+                  "UKBB|TAG")
+       )
+
+gwas_study_info = rows_update(gwas_study_info, 
+                              karlsson_study_update,
+                              unmatched = "ignore")
+
+
+# Pasman: https://pmc.ncbi.nlm.nih.gov/articles/PMC6386176/#S7
+gwas_study_info |> 
+    filter(grepl("Pasman", FIRST_AUTHOR)) |> 
+    filter(grepl("GWAS of lifetime cannabis use reveals new risk loci, genetic overlap with psychiatric traits", STUDY)) |>
+    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
+    distinct()
+
+gwas_study_info = 
+    rows_update(gwas_study_info, 
+                tibble(PUBMED_ID = 30150663, 
+                       COHORT = "ICC|23andME|UKBB"), 
+                unmatched = "ignore")
+
+
+```
+
+#### Checking cohort subsetting in same study
+
+```{r, eval = F}
+
+# Step 3: Function to check if any cohort is a subset of another
+is_subsampling_cohort <- function(cohort_list) {
+  # Split by pipe and compare sets
+  split_cohorts <- lapply(cohort_list, function(x) str_split(x, "\\|")[[1]] |> sort())
+  
+  
+  # Compare all pairwise sets
+  for (i in seq_along(split_cohorts)) {
+    for (j in seq_along(split_cohorts)) {
+      if (i != j) {
+        # if cohort i is a subset of j
+        if (all(split_cohorts[[i]] %in% split_cohorts[[j]]) &&
+            length(split_cohorts[[i]]) < length(split_cohorts[[j]])) {
+          return(TRUE)
+        }
+      }
+    }
+  }
+  return(FALSE)
+}
+
+# Step 4: Apply logic to flag possible subsampling
+cohort_counts <- gwas_study_info |>
+  filter(PUBMED_ID %in% pubmed_multi_cohort) |>
+  mutate(pipe_count = str_count(COHORT, "\\|")) |>
+  group_by(PUBMED_ID) |>
+  summarise(subsampling_possible = is_subsampling_cohort(COHORT)) 
+
+# How many with possible sub-sampling?
+cohort_counts |> filter(subsampling_possible) |> nrow()
+
+cohort_counts |> filter(!subsampling_possible) |> nrow()
+
+
+```
+
+```{r, eval=F}
+
+set.seed(10)
+
+example_no_subsampling =
+cohort_counts |> 
+  filter(!subsampling_possible) |> 
+  dplyr::slice_sample(n = 5) |>
+  dplyr::pull(PUBMED_ID)
+
+for(example in example_no_subsampling){
+  
+  print(gwas_study_info |>
+    filter(PUBMED_ID == example) |>
+    select(PUBMED_ID, COHORT) |>
+  distinct())
+}
+
+```
+
+### No sub-sampling but multi-cohort ... 
+
+```{r, eval=FALSE}
+
+no_subsampling = cohort_counts |> filter(!subsampling_possible) |> pull(PUBMED_ID)
+
+n_blank_cohorts = 
+gwas_study_info |>
+  filter(PUBMED_ID %in% no_subsampling) |>
+  mutate(blank_cohort = ifelse(COHORT=="", 1,0)) |>
+  group_by(PUBMED_ID) |>
+  summarise(n_blank_cohort = sum(blank_cohort)) 
+
+n_blank_cohorts|>
+  pull(n_blank_cohort) |>
+  summary()
+
+not_blank_example_subsampling = 
+n_blank_cohorts |>
+  filter(n_blank_cohort == 0) |>
+  pull(PUBMED_ID)
+
+gwas_study_info |>
+  filter(PUBMED_ID %in% not_blank_example_subsampling) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+
+
+
+
+```
+
+```{r}
+gwas_study_info |> 
+  filter(PUBMED_ID == 24816252) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+```
+
+### Unlabelled cohorts 
+
+```{r}
+
+gwas_study_info |>
+  select(COHORT, DATE, PUBMED_ID) |>
+  distinct() |>
+  mutate(COHORT_TYPE = case_when(COHORT == "" | COHORT == "other" ~ "Not reported",
+                                 COHORT == "multiple" | 
+                                 grepl("\\|",COHORT) | 
+                                 COHORT == "(Multiple cohorts)" ~ "Multiple",
+                                 TRUE~"Reported")
+         ) |>
+  arrange(DATE) |>
+  mutate(n_row = row_number()) |>
+  ggplot(aes(x =DATE, y=n_row, fill = COHORT_TYPE)) + 
+  geom_area() + 
+  theme_bw()
+
+
+```
+
+
+```{r}
+
+gwas_study_info |>
+  filter(COHORT == "other") |>
+  arrange(DATE) |>
+  mutate(n_row = row_number()) |>
+  ggplot(aes(x =DATE, y=n_row)) + 
+  geom_area()
+
+```
+## Number of cohorts per study
+
+```{r}
+
+# most papers have just 1 study / cohort
+n_cohorts_per_study = 
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) 
+
+n_cohorts_per_study |>
+  dplyr::pull(n) |>
+  summary()
+
+100 * 
+  nrow(n_cohorts_per_study |> filter(n > 1)) / 
+  nrow(n_cohorts_per_study)
+# ~39% of papers have more than 1 cohort
+
+quantile(n_cohorts_per_study$n, probs = c(0.5, 0.98))
+
+
+multi_cohort_studies = n_cohorts_per_study |> 
+                       filter(n > 1) |>
+                       pull(PUBMED_ID)
+
+cohorts_per_trait = 
+gwas_study_info |>
+  dplyr::filter(PUBMED_ID %in% multi_cohort_studies) |>
+  group_by(PUBMED_ID, MAPPED_TRAIT, MAPPED_BACKGROUND_TRAIT) |>
+  summarise(n = n())
+
+cohorts_per_trait |>
+  ggplot(aes(x = n)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(title = "Number of cohorts for the same PUBMED ID and trait")
+
+summary(cohorts_per_trait$n)
+
+cohorts_per_trait |>
+  filter(n > 1) |>
+  nrow()
+
+quantile(cohorts_per_trait$n, probs = c(0.75, 0.77,0.78, 0.79, 0.8))
+
+# 80% of papers with multiple cohorts - likely explained by multiple diseases, same cohort
+cohorts_per_trait |>
+  filter(n == 1) |> 
+  pull(PUBMED_ID)
+
+# study accession is unqiue
+gwas_study_info |>
+  group_by(PUBMED_ID, STUDY_ACCESSION) |>
+  summarise(n = n()) |>
+  pull(n) |>
+  summary()
+
+
+
+```
+
+
+
+
+```{r}
+
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  ggplot(aes(x = n)) + 
+  geom_histogram() + 
+  theme_bw(
+  ) +
+  labs(title = "Number of studies per PUBMED ID")
+
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |> 
+  head(
+  )
+
+
+
+
+
+#cohorts per study
+gwas_study_info |>
+  group_by(PUBMED_ID)
+
+
+
+```
