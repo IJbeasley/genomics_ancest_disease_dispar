@@ -296,7 +296,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-07-30
+<strong>Last updated:</strong> 2025-08-21
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -428,15 +428,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree72172e35a53558385850a7967b1d415b69be6834targetblank72172e3a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefa9a4daca664acf271eb0b33e79dbcda8d80cf78targetblankfa9a4daa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/72172e35a53558385850a7967b1d415b69be6834" target="_blank">72172e3</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fa9a4daca664acf271eb0b33e79dbcda8d80cf78" target="_blank">fa9a4da</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree72172e35a53558385850a7967b1d415b69be6834targetblank72172e3a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefa9a4daca664acf271eb0b33e79dbcda8d80cf78targetblankfa9a4daa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -446,7 +446,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/72172e35a53558385850a7967b1d415b69be6834" target="_blank">72172e3</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fa9a4daca664acf271eb0b33e79dbcda8d80cf78" target="_blank">fa9a4da</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -462,18 +462,18 @@ were generated:
 <pre><code>
 Ignored files:
     Ignored:    .Rproj.user/
-    Ignored:    data/cdc/
+    Ignored:    analysis/figure/
     Ignored:    data/gwas_catalog/
+    Ignored:    output/gwas_study_info_cohort_corrected.csv
 
 Untracked files:
+    Untracked:  data/.DS_Store
+    Untracked:  gwas_time.pdf
     Untracked:  renv/
 
 Unstaged changes:
     Modified:   .Rprofile
-    Modified:   README.md
-    Modified:   analysis/_site.yml
-    Deleted:    analysis/about.Rmd
-    Deleted:    analysis/license.Rmd
+    Modified:   code/collapse_diseases.R
 
 </code></pre>
 <p>
@@ -519,6 +519,41 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/fa9a4daca664acf271eb0b33e79dbcda8d80cf78/analysis/disease_inves_by_ancest.Rmd" target="_blank">fa9a4da</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-08-21
+</td>
+<td>
+Starting test of relationship between proportion european and total
+sample size
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/f5087d26cfd6a40b0d36c0e613a92061d8e81f81/docs/disease_inves_by_ancest.html" target="_blank">f5087d2</a>
+</td>
+<td>
+IJBeasley
+</td>
+<td>
+2025-07-30
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -580,21 +615,27 @@ Add initial plotting using gwas cat stats
 <div id="load-data" class="section level2">
 <h2>Load data</h2>
 <pre class="r"><code>library(dplyr)
+library(data.table)
 library(ggplot2)
+# 
+# gwas_study_info = data.table::fread(&quot;data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv&quot;, 
+#                                     sep = &quot;\t&quot;, 
+#                                     quote = &quot;&quot;)
+ 
+gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_cohort_corrected.csv&quot;))
 
-gwas_study_info = data.table::fread(&quot;data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv&quot;, 
-                                    sep = &quot;\t&quot;, 
-                                    quote = &quot;&quot;)
-
-gwas_ancest_info = data.table::fread(&quot;./data/gwas_catalog/gwas_catalog-ancestry_r2022-02-02.tsv&quot;, 
-                                     sep = &quot;\t&quot;, 
-                                     quote = &quot;&quot;)
+gwas_ancest_info &lt;-  fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv&quot;),
+                         sep = &quot;\t&quot;, quote = &quot;&quot;)
 
 gwas_study_info = gwas_study_info |&gt;
   dplyr::rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
 
 gwas_ancest_info = gwas_ancest_info |&gt;
   dplyr::rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_ancest_info = gwas_ancest_info |&gt; arrange(DATE)
+
+gwas_study_info = gwas_study_info |&gt; arrange(DATE)
 
 # Set up custom theme for ggplots
 custom_theme &lt;-
@@ -610,18 +651,357 @@ custom_theme &lt;-
       )
   )</code></pre>
 </div>
-<div id="plot-figure-martin-et-al.-2019-like" class="section level2">
-<h2>Plot figure Martin et al. 2019 like</h2>
-<div id="for-all-ancestries" class="section level3">
-<h3>For all ancestries</h3>
+<div id="get-top-disease-traits" class="section level1">
+<h1>Get top disease traits</h1>
+<p>The traits with the most number of pubmed ids:</p>
+<pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
+  dplyr::select(MAPPED_TRAIT, MAPPED_TRAIT_URI, PUBMED_ID) |&gt;
+  dplyr::distinct() |&gt;
+  dplyr::group_by(MAPPED_TRAIT, MAPPED_TRAIT_URI) |&gt;
+  dplyr::summarise(n_studies = dplyr::n()) |&gt;
+  dplyr::arrange(desc(n_studies))</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;MAPPED_TRAIT&#39;. You can override using the
+`.groups` argument.</code></pre>
+<pre class="r"><code>head(n_studies_trait)</code></pre>
+<pre><code># A tibble: 6 × 3
+# Groups:   MAPPED_TRAIT [6]
+  MAPPED_TRAIT                                     MAPPED_TRAIT_URI    n_studies
+  &lt;chr&gt;                                            &lt;chr&gt;                   &lt;int&gt;
+1 high density lipoprotein cholesterol measurement http://www.ebi.ac.…       134
+2 body mass index                                  http://www.ebi.ac.…       133
+3 triglyceride measurement                         http://www.ebi.ac.…       129
+4 low density lipoprotein cholesterol measurement  http://www.ebi.ac.…       119
+5 type 2 diabetes mellitus                         http://purl.obolib…       118
+6 total cholesterol measurement                    http://www.ebi.ac.…       103</code></pre>
+<div id="what-are-the-ancestry-groups" class="section level3">
+<h3>What are the ancestry groups?</h3>
 <pre class="r"><code># code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
 
-# https://github.com/armartin/prs_disparities/blob/master/gwas_sfs_pop.R
-# gwas cat
-# http://bioconductor.org/packages/release/bioc/html/gwascat.html
+group_ancestry_fn = function(study_ancest){
+  
+   case_when(
+     
+  # European
+  study_ancest %in% c(&#39;European&#39;) ~ &#39;European&#39;,
+  
+  # African
+  study_ancest %in% c(&#39;Sub-Saharan African, African American or Afro-Caribbean&#39;,
+                      &#39;African unspecified, African American or Afro-Caribbean&#39;,
+                      &#39;African American or Afro-Caribbean, African unspecified&#39;,
+                      &#39;Sub-Saharan African, African unspecified&#39;,
+                      &#39;African-American or Afro-Caribbean&#39;,
+                      &#39;Sub-Saharan African&#39;,
+                      &#39;African American or Afro-Caribbean&#39;,
+                      &#39;African unspecified&#39;) ~ &#39;African&#39;,
+      
+  # Asian  
+  study_ancest %in% c(&#39;East Asian, Asian unspecified&#39;, 
+                      &#39;South Asian, East Asian &#39;,
+                      &#39;South Asian, South East Asian&#39;, 
+                      &#39;South Asian, South East Asian, East Asian&#39;,
+                      &#39;South East Asian, East Asian&#39;, 
+                      &#39;South East Asian, South Asian, East Asian&#39;,
+                      &#39;South Asian, South East Asian, East Asian, Asian unspecified&#39;,
+                      &#39;South East Asian, East Asian, South Asian&#39;,
+                      &#39;East Asian, South Asian, South East Asian&#39;,
+                      &#39;East Asian, South East Asian, South Asian, Asian unspecified&#39;,
+                      &#39;South Asian&#39;,
+                      &#39;South East Asian&#39;,
+                      &#39;South Asian, East Asian&#39;,
+                      &#39;South Asian, Asian unspecified&#39;,
+                      &#39;Central Asian, South Asian&#39;,
+                      &#39;East Asian, South Asian&#39;,
+                      &#39;Central Asian&#39;,
+                      &#39;East Asian&#39;,
+                      &#39;Asian unspecified&#39;) ~&#39;Asian&#39;,
+  
+  # Middle eastern    
+  study_ancest == &#39;Greater Middle Eastern (Middle Eastern, North African or Persian)&#39; ~&#39;Middle Eastern&#39;,
+
+  # Oceanic
+  study_ancest %in% c(&#39;Aboriginal Australian&#39;, 
+                      &#39;Oceanian&#39;) ~&#39;Oceanic&#39;,
+  
+  # Hispanic/Latin American
+  study_ancest %in% &quot;Hispanic or Latin American&quot; ~&#39;Hispanic/Latin American&#39;,
+  
+  # Other 
+  study_ancest %in% c(&#39;Other&#39;,
+                      &#39;Other, NR&#39;, 
+                      &#39;NR, Other&#39;,
+                      &#39;Other admixed ancestry&#39;, 
+                      &#39;Native American&#39;) ~ &quot;Other&quot;,
+  
+  # Not reported
+  study_ancest %in% &quot;NR&quot; ~ &quot;Not reported&quot;,
+  
+  # Multiple    
+  grepl(&quot;, &quot;, study_ancest) ~ &#39;Multiple&#39;,
+      
+  TRUE~study_ancest
+    )
+  
+    
+  
+}</code></pre>
+<pre class="r"><code>ancestry_colors &lt;- c(
+  &quot;African&quot; = &quot;#984EA3&quot;,
+  &quot;European&quot; = &quot;#E41A1C&quot;,
+  &quot;Asian&quot; = &quot;#377EB8&quot;, #east asian
+  # &quot;South Asian&quot; = &quot;#4DAF4A&quot;,
+  &quot;Hispanic/Latin American&quot; = &quot;#FF7F00&quot;,
+  &quot;Middle Eastern&quot; = &quot;#FFFF33&quot;,
+  &quot;Oceanic&quot; = &quot;#A65628&quot;,
+  &quot;Other&quot; = &quot;#F781BF&quot;,
+  &quot;Multiple&quot; = &quot;#999999&quot;,
+  &quot;Not reported&quot; = &quot;black&quot;
+  
+)
+
+# Define the desired stacking order
+ancestry_levels &lt;- c(
+  &quot;European&quot;,
+  # &quot;East Asian&quot;,
+  # &quot;South Asian&quot;,
+  &quot;Asian&quot;,
+  &quot;African&quot;,
+  &quot;Hispanic/Latin American&quot;,
+  &quot;Middle Eastern&quot;,
+  &quot;Oceanic&quot;,
+  &quot;Other&quot;,
+  &quot;Multiple&quot;,
+  &quot;Not reported&quot;
+)</code></pre>
+</div>
+<div id="apply-this-ancestry-mapping" class="section level3">
+<h3>Apply this ancestry mapping</h3>
+<pre class="r"><code>grouped_ancest = vector()
+
+for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
+  
+grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
+
+}
+
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+                                )
 
 
-# following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
+print(head(grouped_ancest_map))</code></pre>
+<pre><code>                                   ancestry_group
+European                                 European
+Asian unspecified                           Asian
+Other                                       Other
+African American or Afro-Caribbean        African
+NR                                   Not reported
+South East Asian                            Asian
+                                             BROAD_ANCESTRAL_CATEGORY
+European                                                     European
+Asian unspecified                                   Asian unspecified
+Other                                                           Other
+African American or Afro-Caribbean African American or Afro-Caribbean
+NR                                                                 NR
+South East Asian                                     South East Asian</code></pre>
+<pre class="r"><code>gwas_ancest_info = dplyr::left_join(
+            gwas_ancest_info,
+            grouped_ancest_map,
+            by = &quot;BROAD_ANCESTRAL_CATEGORY&quot;)</code></pre>
+<pre class="r"><code>print(&quot;Total numbers (in millions) per ancestry group&quot;)</code></pre>
+<pre><code>[1] &quot;Total numbers (in millions) per ancestry group&quot;</code></pre>
+<pre class="r"><code>gwas_ancest_info %&gt;% 
+  group_by(ancestry_group) %&gt;% 
+  summarise(n = sum(NUMBER_OF_INDIVIDUALS, na.rm = TRUE)/10^5)</code></pre>
+<pre><code># A tibble: 9 × 2
+  ancestry_group                 n
+  &lt;chr&gt;                      &lt;dbl&gt;
+1 African                  4077.  
+2 Asian                    3128.  
+3 European                91218.  
+4 Hispanic/Latin American  1787.  
+5 Middle Eastern             44.7 
+6 Multiple                 1862.  
+7 Not reported             1488.  
+8 Oceanic                     1.34
+9 Other                      20.1 </code></pre>
+<pre class="r"><code>gwas_ancest_info %&gt;% 
+  filter(!is.na(NUMBER_OF_INDIVIDUALS)) |&gt;
+  arrange(DATE) %&gt;%
+  mutate(ancestry_group = factor(ancestry_group, levels = ancestry_levels)) %&gt;%
+  group_by(ancestry_group) %&gt;% 
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) %&gt;% 
+  select(DATE, ancest_cumsum, ancestry_group, NUMBER_OF_INDIVIDUALS) |&gt;
+  ggplot(aes(x=DATE, y=ancest_cumsum/(10^6), fill = ancestry_group)
+         ) + 
+  geom_area(position = &#39;stack&#39;) + 
+  scale_x_date(date_labels = &#39;%Y&#39;, date_breaks = &quot;2 years&quot;) + 
+  theme_classic() + 
+  labs(x = &quot;Year&quot;, y = &quot;Individuals in GWAS catalog (millons)&quot;) + 
+  scale_fill_manual(values = ancestry_colors, name=&#39;Ancestry group&#39;)  </code></pre>
+<p><img src="figure/disease_inves_by_ancest.Rmd/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="repeat-for-traits-only" class="section level1">
+<h1>Repeat for traits only</h1>
+<pre class="r"><code>gwas_ancest_info = 
+left_join(
+gwas_ancest_info,
+gwas_study_info |&gt; select(STUDY_ACCESSION, 
+                          COHORT, 
+                          MAPPED_TRAIT),
+by = &quot;STUDY_ACCESSION&quot;
+)</code></pre>
+<pre class="r"><code>gwas_ancest_info_plot = 
+gwas_ancest_info %&gt;% 
+  filter(!is.na(NUMBER_OF_INDIVIDUALS)) |&gt;
+  filter(MAPPED_TRAIT == &#39;high density lipoprotein cholesterol measurement&#39;)
+
+
+print(&quot;Total numbers (in millions) per ancestry group&quot;)</code></pre>
+<pre><code>[1] &quot;Total numbers (in millions) per ancestry group&quot;</code></pre>
+<pre class="r"><code>gwas_ancest_info_plot %&gt;% 
+  group_by(ancestry_group) %&gt;% 
+  summarise(n = sum(NUMBER_OF_INDIVIDUALS, na.rm = TRUE)/10^5)</code></pre>
+<pre><code># A tibble: 9 × 2
+  ancestry_group                 n
+  &lt;chr&gt;                      &lt;dbl&gt;
+1 African                  14.5   
+2 Asian                    35.5   
+3 European                214.    
+4 Hispanic/Latin American   7.71  
+5 Middle Eastern            0.172 
+6 Multiple                 52.1   
+7 Not reported              5.17  
+8 Oceanic                   0.0965
+9 Other                     0.0751</code></pre>
+<pre class="r"><code>gwas_ancest_info_plot %&gt;% 
+  group_by(ancestry_group) %&gt;% 
+  mutate(ancestry_group = factor(ancestry_group, levels = ancestry_levels)) %&gt;%
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) %&gt;% 
+  ggplot(aes(x=DATE, y=ancest_cumsum/(10^6), fill = ancestry_group)) + 
+  #geom_area() + 
+  geom_area(position = &#39;stack&#39;) + 
+  scale_x_date(date_labels = &#39;%Y&#39;, date_breaks = &quot;2 years&quot;) + 
+  theme_classic() + 
+  labs(x = &quot;Year&quot;, y = &quot;Individuals in GWAS catalog (millons)&quot;) + 
+  scale_fill_manual(values = ancestry_colors, name=&#39;Ancestry group&#39;) </code></pre>
+<p><img src="figure/disease_inves_by_ancest.Rmd/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="proportion-european-per-trait" class="section level1">
+<h1>Proportion European per trait</h1>
+<pre class="r"><code>euro_n = gwas_ancest_info |&gt;
+         filter(ancestry_group == &quot;European&quot;) |&gt;
+         pull(NUMBER_OF_INDIVIDUALS) |&gt;
+         sum(na.rm = T)
+
+total_n = gwas_ancest_info |&gt;
+         pull(NUMBER_OF_INDIVIDUALS) |&gt;
+         sum(na.rm = T)
+
+100 * euro_n / total_n</code></pre>
+<pre><code>[1] 88.02662</code></pre>
+<pre class="r"><code>prop_euro = vector()
+total_n_vec = vector()
+
+
+for(trait in n_studies_trait$MAPPED_TRAIT[1:1000]){
+  
+  euro_n = gwas_ancest_info |&gt;
+           filter(ancestry_group == &quot;European&quot;) |&gt;
+           filter(MAPPED_TRAIT == trait) |&gt;
+           pull(NUMBER_OF_INDIVIDUALS) |&gt;
+           sum(na.rm = T)
+  
+  total_n = gwas_ancest_info |&gt;
+            filter(MAPPED_TRAIT == trait) |&gt;
+            pull(NUMBER_OF_INDIVIDUALS) |&gt;
+            sum(na.rm = T)
+  
+  prop_euro[trait] = 100 * euro_n / total_n
+  total_n_vec[trait] = total_n
+  
+  #print(prop_euro[trait])
+  
+}
+
+prop_euro_df = data.frame(prop_euro = prop_euro, 
+                          trait = names(prop_euro),
+                          total_n = total_n_vec)
+
+prop_euro_df = left_join(prop_euro_df,
+                         n_studies_trait |&gt; rename(trait = MAPPED_TRAIT),
+                         by = &quot;trait&quot;)
+
+prop_euro_df$prop_euro |&gt; summary()</code></pre>
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  12.07   81.42   89.92   86.23   93.92  100.00 </code></pre>
+<pre class="r"><code>prop_euro_df |&gt; slice_min(prop_euro, n = 5)</code></pre>
+<pre><code>  prop_euro                               trait total_n
+1  12.06720     adolescent idiopathic scoliosis  386693
+2  16.09211      response to antipsychotic drug   14678
+3  17.40991              dilated cardiomyopathy 7229158
+4  26.17495              glucose tolerance test  796781
+5  30.40375 chronic hepatitis C virus infection 1182900
+                           MAPPED_TRAIT_URI n_studies
+1      http://www.ebi.ac.uk/efo/EFO_0005423        10
+2 http://purl.obolibrary.org/obo/GO_0097332        12
+3      http://www.ebi.ac.uk/efo/EFO_0000407         8
+4      http://www.ebi.ac.uk/efo/EFO_0004307         8
+5      http://www.ebi.ac.uk/efo/EFO_0004220        14</code></pre>
+<pre class="r"><code>prop_euro_df |&gt; slice_max(prop_euro, n =5 )</code></pre>
+<pre><code>  prop_euro                                trait  total_n
+1 100.00000                 testicular carcinoma  1796522
+2 100.00000 self reported educational attainment  4908190
+3  99.99236      base metabolic rate measurement  3807772
+4  99.99201                           hair color  1063503
+5  99.98250                      eye measurement 16269499
+                      MAPPED_TRAIT_URI n_studies
+1 http://www.ebi.ac.uk/efo/EFO_0005088        11
+2 http://www.ebi.ac.uk/efo/EFO_0004784         9
+3 http://www.ebi.ac.uk/efo/EFO_0007777         9
+4 http://www.ebi.ac.uk/efo/EFO_0003924        10
+5 http://www.ebi.ac.uk/efo/EFO_0004731        13</code></pre>
+<pre class="r"><code>prop_euro_df |&gt; slice_max(total_n, n = 5)</code></pre>
+<pre><code>  prop_euro                        trait   total_n
+1  77.99807     neuroimaging measurement 219548076
+2  97.75004             diet measurement  79737834
+3  81.97671                     COVID-19  74845527
+4  99.96221                 brain volume  64578173
+5  99.77048 brain connectivity attribute  60026325
+                              MAPPED_TRAIT_URI n_studies
+1         http://www.ebi.ac.uk/efo/EFO_0004346        13
+2         http://www.ebi.ac.uk/efo/EFO_0008111        17
+3 http://purl.obolibrary.org/obo/MONDO_0100096        34
+4   http://purl.obolibrary.org/obo/OBA_2050009         8
+5   http://purl.obolibrary.org/obo/OBA_2045295         8</code></pre>
+<pre class="r"><code>cor(prop_euro_df$prop_euro, prop_euro_df$total_n, 
+    method = &quot;spearman&quot;)</code></pre>
+<pre><code>[1] 0.08398827</code></pre>
+<pre class="r"><code>prop_euro_df |&gt;
+  ggplot(aes(x = total_n, y = prop_euro)) + 
+  geom_point() + 
+  theme_bw() + 
+  labs(x = &quot;Total number of individuals (studied for this trait)&quot;,
+       y = &quot;Proportion of European ancestry idividuals (studied for this trait)&quot;)</code></pre>
+<p><img src="figure/disease_inves_by_ancest.Rmd/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>prop_euro_df |&gt;
+  ggplot(aes(x = total_n, y = n_studies)) + 
+  geom_point() + 
+  theme_bw() + 
+  labs(x = &quot;Total number of individuals (studied for this trait)&quot;,
+       y = &quot;Total number of unique PUBMED IDs for this trait&quot;)</code></pre>
+<p><img src="figure/disease_inves_by_ancest.Rmd/unnamed-chunk-8-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>prop_euro_df |&gt;
+  ggplot(aes(x = n_studies, y = prop_euro)) + 
+  geom_point() + 
+  theme_bw() + 
+  labs(x = &quot;Total number of unique PUBMED IDs for this trait&quot;,
+       y = &quot;Proportion of European ancestry idividuals (studied for this trait)&quot;)</code></pre>
+<p><img src="figure/disease_inves_by_ancest.Rmd/unnamed-chunk-8-3.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="disease-statistics-cdc" class="section level1">
+<h1>Disease statistics CDC</h1>
+<pre class="r"><code># following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
 
 # wonder cdc 
 # https://wonder.cdc.gov/wonder/help/QuickStart.html#
@@ -631,264 +1011,18 @@ custom_theme &lt;-
 # whomds: Calculate Results from WHO Model Disability Survey Data
 
 
-# Order GWAS catalog by date 
-gwas_ancest_info &lt;- gwas_ancest_info %&gt;% arrange(DATE)
-
-# calculate cumulative number of individuals
-gwas_ancest_info = gwas_ancest_info %&gt;%  
-                   mutate(cum_num = cumsum(ifelse(is.na(NUMBER_OF_INDIVDUALS), 0, NUMBER_OF_INDIVDUALS))
-                          )
 
 
-# plot cumulative numbers
-gwas_ancest_info %&gt;%  
-  group_by(DATE) %&gt;% 
-  slice_max(NUMBER_OF_INDIVDUALS) %&gt;% 
-  ggplot(aes(x=DATE,y=cum_num/1e6)) + 
-  geom_line() +
-  #geom_area(position = &#39;stack&#39;) + 
-  scale_x_date(date_labels = &#39;%Y&#39;, date_breaks = &quot;2 years&quot;) + 
-  custom_theme + 
-  labs(x = &quot;Year&quot;, y = &quot;Individuals in GWAS catalog (millons)&quot;)</code></pre>
-<p><img src="figure/disease_inves_by_ancest.Rmd/plot_like_martin_et_al_2019_not_grouped-1.png" width="672" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-plot_like_martin_et_al_2019_not_grouped-1">
-Past versions of plot_like_martin_et_al_2019_not_grouped-1.png
-</button>
-</p>
-<div id="fig-plot_like_martin_et_al_2019_not_grouped-1"
-class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/2fd5755c1e0ffdca6c453751d9ce6c164e192cf6/docs/figure/disease_inves_by_ancest.Rmd/plot_like_martin_et_al_2019_not_grouped-1.png" target="_blank">2fd5755</a>
-</td>
-<td>
-Isobel Beasley
-</td>
-<td>
-2022-02-16
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div id="group-ancestry-into-broader-categories" class="section level3">
-<h3>Group ancestry into broader categories</h3>
-<pre class="r"><code>group_ancestry_fn = function(study_ancest){
-  
-    case_when(study_ancest %in% c(&#39;Sub-Saharan African, African American or Afro-Caribbean&#39;,
-                           &#39;Sub-Saharan African, African unspecified&#39;,
-                           &#39;African-American or Afro-Caribbean&#39;) ~ &#39;African&#39;,
-      #grouped_ancest = append(grouped_ancest,&#39;African&#39;)
-      
-      
-    study_ancest %in% c(&#39;East Asian, Asian unspecified&#39;, 
-                                  &#39;South Asian, East Asian &#39;,
-                                  &#39;South Asian, South East Asian&#39;, 
-                                  &#39;South Asian, South East Asian, East Asian&#39;,
-                                   &#39;South East Asian, East Asian&#39;, 
-                                  &#39;South East Asian, South Asian, East Asian&#39;) ~&#39;Asian unspecified&#39;,
-      #grouped_ancest = append(grouped_ancest,&#39;Asian unspecified&#39;)
-      
-      
-    study_ancest == &#39;Greater Middle Eastern (Middle Eastern, North African or Persian)&#39; ~&#39;Middle Eastern&#39;,
-      #grouped_ancest = append(grouped_ancest,&#39;Middle Eastern&#39;)
-   study_ancest %in% c(&#39;Aboriginal Australian&#39;, &#39;Oceanian&#39;) ~&#39;Oceanic&#39;,
-      #grouped_ancest = append(grouped_ancest,&#39;Oceanic&#39;)
-      
-      
-  grepl(&quot;, &quot;, study_ancest) ~ &#39;Multiple&#39;,
-      #grouped_ancest = append(grouped_ancest,&#39;Multiple&#39;)
-      
-      
-  study_ancest %in% &quot;Hispanic or Latin American&quot; ~&#39;Hispanic/Latin American&#39;,
-      #grouped_ancest = append(grouped_ancest,&#39;Hispanic/Latin American&#39;)
-      
-      
-  TRUE~study_ancest
-      #grouped_ancest = append(grouped_ancest,study_ancest)
-    )
-  
-    
-  
-}
-
-
-grouped_ancest = vector()
-
-for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
-  
-grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
-
-}
-
-
-# ancest_group = data.frame(group_ancest = grouped_ancest,
-#                          BROAD_ANCESTRAL_CATEGORY =
-#                            unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY))
-# 
-# }
-
-grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
-                                BROAD_ANCESTRAL_CATEGORY = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
-                                )
-
-gwas_ancest_info = dplyr::left_join(
-            gwas_ancest_info,
-            grouped_ancest_map)</code></pre>
-<pre><code>Joining with `by = join_by(BROAD_ANCESTRAL_CATEGORY)`</code></pre>
-<pre class="r"><code>gwas_ancest_info %&gt;% 
-  group_by(ancestry_group) %&gt;% 
-  summarise(n = sum(NUMBER_OF_INDIVDUALS, na.rm = TRUE))</code></pre>
-<pre><code># A tibble: 18 × 2
-   ancestry_group                              n
-   &lt;chr&gt;                                   &lt;dbl&gt;
- 1 African                                 60441
- 2 African American or Afro-Caribbean    8278986
- 3 African unspecified                   3028217
- 4 Asian unspecified                     4697042
- 5 Central Asian                           42945
- 6 East Asian                          124056468
- 7 European                           4235129752
- 8 Hispanic/Latin American              10840275
- 9 Middle Eastern                         348192
-10 Multiple                             56292255
-11 NR                                  110448036
-12 Native American                         91973
-13 Oceanic                                116432
-14 Other                                  194359
-15 Other admixed ancestry                 107563
-16 South Asian                           6138158
-17 South East Asian                       170602
-18 Sub-Saharan African                    827401</code></pre>
-<pre class="r"><code>gwas_ancest_info %&gt;% 
-  group_by(ancestry_group) %&gt;% 
-  mutate(ancest_cumsum = cumsum(NUMBER_OF_INDIVDUALS)) %&gt;% 
-  ggplot(aes(x=DATE,y=ancest_cumsum/(10^6), fill = ancestry_group)) + 
-  #geom_area() + 
-  geom_area() + 
-  scale_x_date(date_labels = &#39;%Y&#39;, date_breaks = &quot;2 years&quot;) + 
-  theme_classic() + 
-  labs(x = &quot;Year&quot;, y = &quot;Individuals in GWAS catalog (millons)&quot;) + 
-  scale_fill_brewer(palette = &quot;Set1&quot;)</code></pre>
-<pre><code>Warning: Removed 32641 rows containing non-finite outside the scale range
-(`stat_align()`).</code></pre>
-<pre><code>Warning in RColorBrewer::brewer.pal(n, pal): n too large, allowed maximum for palette Set1 is 9
-Returning the palette you asked for with that many colors</code></pre>
-<p><img src="figure/disease_inves_by_ancest.Rmd/grouped_ancest-1.png" width="672" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-grouped_ancest-1">
-Past versions of grouped_ancest-1.png
-</button>
-</p>
-<div id="fig-grouped_ancest-1" class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/2fd5755c1e0ffdca6c453751d9ce6c164e192cf6/docs/figure/disease_inves_by_ancest.Rmd/grouped_ancest-1.png" target="_blank">2fd5755</a>
-</td>
-<td>
-Isobel Beasley
-</td>
-<td>
-2022-02-16
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<pre class="r"><code>inner_join(
-           gwas_study_info %&gt;% select(STUDY_ACCESSION, 
-                                      `DISEASE/TRAIT`, 
-                                      MAPPED_TRAIT),
-           gwas_ancest_info %&gt;% select(STUDY_ACCESSION, 
-                                       NUMBER_OF_INDIVDUALS,
-                                       BROAD_ANCESTRAL_CATEGORY,
-                                       ancestry_group)) %&gt;% 
-  group_by(BROAD_ANCESTRAL_CATEGORY, 
-           `DISEASE/TRAIT`) %&gt;% 
-  summarise(n = sum(NUMBER_OF_INDIVDUALS)) %&gt;% 
-  group_by(BROAD_ANCESTRAL_CATEGORY) %&gt;% 
-  slice_max(n,n = 5)</code></pre>
-<pre><code>Joining with `by = join_by(STUDY_ACCESSION)`
-`summarise()` has grouped output by &#39;BROAD_ANCESTRAL_CATEGORY&#39;. You can
-override using the `.groups` argument.</code></pre>
-<pre><code># A tibble: 803 × 3
-# Groups:   BROAD_ANCESTRAL_CATEGORY [192]
-   BROAD_ANCESTRAL_CATEGORY                               `DISEASE/TRAIT`      n
-   &lt;chr&gt;                                                  &lt;chr&gt;            &lt;int&gt;
- 1 Aboriginal Australian                                  Urinary albumi…    746
- 2 Aboriginal Australian                                  Otitis media       391
- 3 Aboriginal Australian                                  Type 2 diabetes    391
- 4 Aboriginal Australian                                  Body mass index    361
- 5 African American or Afro-Caribbean                     Cataracts       262576
- 6 African American or Afro-Caribbean                     Body mass index 228346
- 7 African American or Afro-Caribbean                     Type 2 diabetes 202731
- 8 African American or Afro-Caribbean                     Diastolic bloo… 200474
- 9 African American or Afro-Caribbean                     Systolic blood… 200474
-10 African American or Afro-Caribbean, African unspecifi… Type 2 diabetes 287510
-# ℹ 793 more rows</code></pre>
-</div>
-</div>
-<div id="disease-statistics-cdc" class="section level2">
-<h2>Disease statistics CDC</h2>
-<pre class="r"><code>cdc_stats = data.table::fread(&quot;data/cdc/Underlying Cause of Death, 1999-2020.txt&quot;,
+cdc_stats = data.table::fread(&quot;data/cdc/Underlying Cause of Death, 1999-2020.txt&quot;,
                               drop = c(&quot;Notes&quot;, &quot;Race Code&quot;, &quot;Cause of death Code&quot;)) %&gt;% 
              filter(!if_any(everything(), ~.x == &quot;&quot;))
 
 cdc_stats %&gt;% 
   group_by(Race) %&gt;% 
-  slice_max(Deaths,n=10)</code></pre>
-<pre><code># A tibble: 40 × 6
-# Groups:   Race [4]
-   Race      `Cause of death` Deaths Population `Crude Rate` `Age Adjusted Rate`
-   &lt;chr&gt;     &lt;chr&gt;             &lt;int&gt;    &lt;int64&gt; &lt;chr&gt;        &lt;chr&gt;              
- 1 American… Atherosclerotic…  15927   88362592 18.0         33.9               
- 2 American… Bronchus or lun…  15334   88362592 17.4         28.3               
- 3 American… Acute myocardia…  13755   88362592 15.6         26.7               
- 4 American… Chronic obstruc…  10500   88362592 11.9         22.0               
- 5 American… Atherosclerotic…   9090   88362592 10.3         16.7               
- 6 American… Unspecified dia…   8307   88362592 9.4          15.0               
- 7 American… Alcoholic cirrh…   8129   88362592 9.2          10.7               
- 8 American… Stroke, not spe…   6055   88362592 6.9          13.8               
- 9 American… Pneumonia, unsp…   5728   88362592 6.5          12.5               
-10 American… Unspecified dem…   5092   88362592 5.8          13.9               
-# ℹ 30 more rows</code></pre>
-<pre class="r"><code># wonder cdc 
+  slice_max(Deaths,n=10)
+
+
+# wonder cdc 
 # https://wonder.cdc.gov/wonder/help/QuickStart.html#
 # https://wonder.cdc.gov/controller/datarequest/D76;jsessionid=2A56E973A3DF13BC5DFDD9C43725
 
@@ -903,17 +1037,16 @@ Session information
 </p>
 <div id="workflowr-sessioninfo" class="collapse">
 <pre class="r"><code>sessionInfo()</code></pre>
-<pre><code>R version 4.3.1 (2023-06-16 ucrt)
-Platform: x86_64-w64-mingw32/x64 (64-bit)
-Running under: Windows 11 x64 (build 26100)
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6
 
 Matrix products: default
-
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
 
 locale:
-[1] LC_COLLATE=English_Australia.utf8  LC_CTYPE=English_Australia.utf8   
-[3] LC_MONETARY=English_Australia.utf8 LC_NUMERIC=C                      
-[5] LC_TIME=English_Australia.utf8    
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 
 time zone: America/Los_Angeles
 tzcode source: internal
@@ -922,23 +1055,23 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] ggplot2_3.5.2   dplyr_1.1.4     workflowr_1.7.1
+[1] ggplot2_3.5.2     data.table_1.17.8 dplyr_1.1.4       workflowr_1.7.1  
 
 loaded via a namespace (and not attached):
- [1] bit_4.0.5          gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1    
- [5] renv_1.0.3         promises_1.3.3     tidyselect_1.2.1   Rcpp_1.0.14       
- [9] stringr_1.5.1      git2r_0.36.2       callr_3.7.6        later_1.4.2       
-[13] jquerylib_0.1.4    scales_1.4.0       yaml_2.3.10        fastmap_1.2.0     
+ [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1     renv_1.0.3        
+ [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.1.0         stringr_1.5.1     
+ [9] git2r_0.36.2       callr_3.7.6        later_1.4.2        jquerylib_0.1.4   
+[13] scales_1.4.0       yaml_2.3.10        fastmap_1.2.0      here_1.0.1        
 [17] R6_2.6.1           labeling_0.4.3     generics_0.1.4     knitr_1.50        
-[21] tibble_3.2.1       rprojroot_2.1.0    RColorBrewer_1.1-3 bslib_0.9.0       
-[25] pillar_1.10.2      rlang_1.1.6        utf8_1.2.5         cachem_1.1.0      
-[29] stringi_1.8.7      httpuv_1.6.13      xfun_0.52          getPass_0.2-4     
-[33] fs_1.6.6           sass_0.4.10        bit64_4.0.5        cli_3.6.5         
-[37] withr_3.0.2        magrittr_2.0.3     ps_1.9.1           grid_4.3.1        
-[41] digest_0.6.37      processx_3.8.6     rstudioapi_0.15.0  lifecycle_1.0.4   
-[45] vctrs_0.6.5        data.table_1.17.4  evaluate_1.0.3     glue_1.8.0        
-[49] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     httr_1.4.7        
-[53] tools_4.3.1        pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+[21] tibble_3.3.0       rprojroot_2.1.0    RColorBrewer_1.1-3 bslib_0.9.0       
+[25] pillar_1.11.0      rlang_1.1.6        utf8_1.2.6         cachem_1.1.0      
+[29] stringi_1.8.7      httpuv_1.6.16      xfun_0.52          getPass_0.2-4     
+[33] fs_1.6.6           sass_0.4.10        cli_3.6.5          withr_3.0.2       
+[37] magrittr_2.0.3     ps_1.9.1           grid_4.3.1         digest_0.6.37     
+[41] processx_3.8.6     rstudioapi_0.17.1  lifecycle_1.0.4    vctrs_0.6.5       
+[45] evaluate_1.0.4     glue_1.8.0         farver_2.1.2       whisker_0.4.1     
+[49] rmarkdown_2.29     httr_1.4.7         tools_4.3.1        pkgconfig_2.0.3   
+[53] htmltools_0.5.8.1 </code></pre>
 </div>
 </div>
 </div>
