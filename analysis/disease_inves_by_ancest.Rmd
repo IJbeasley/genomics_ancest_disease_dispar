@@ -16,21 +16,27 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r setup_2, message = FALSE, warning= FALSE}
 
 library(dplyr)
+library(data.table)
 library(ggplot2)
+# 
+# gwas_study_info = data.table::fread("data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv", 
+#                                     sep = "\t", 
+#                                     quote = "")
+ 
+gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
 
-gwas_study_info = data.table::fread("data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv", 
-                                    sep = "\t", 
-                                    quote = "")
-
-gwas_ancest_info = data.table::fread("./data/gwas_catalog/gwas_catalog-ancestry_r2022-02-02.tsv", 
-                                     sep = "\t", 
-                                     quote = "")
+gwas_ancest_info <-  fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
+                         sep = "\t", quote = "")
 
 gwas_study_info = gwas_study_info |>
   dplyr::rename_all(~gsub(" ", "_", .x))
 
 gwas_ancest_info = gwas_ancest_info |>
   dplyr::rename_all(~gsub(" ", "_", .x))
+
+gwas_ancest_info = gwas_ancest_info |> arrange(DATE)
+
+gwas_study_info = gwas_study_info |> arrange(DATE)
 
 # Set up custom theme for ggplots
 custom_theme <-
@@ -48,18 +54,334 @@ custom_theme <-
 
 ```
 
-## Plot figure Martin et al. 2019 like
+# Get top disease traits 
 
-### For all ancestries 
+The traits with the most number of pubmed ids: 
 
-```{r plot_like_martin_et_al_2019_not_grouped}
+```{r}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::select(MAPPED_TRAIT, MAPPED_TRAIT_URI, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(MAPPED_TRAIT, MAPPED_TRAIT_URI) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+```
+
+### What are the ancestry groups?
+
+```{r grouped_ancest}
 
 # code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
 
-# https://github.com/armartin/prs_disparities/blob/master/gwas_sfs_pop.R
-# gwas cat
-# http://bioconductor.org/packages/release/bioc/html/gwascat.html
+group_ancestry_fn = function(study_ancest){
+  
+   case_when(
+     
+  # European
+  study_ancest %in% c('European') ~ 'European',
+  
+  # African
+  study_ancest %in% c('Sub-Saharan African, African American or Afro-Caribbean',
+                      'African unspecified, African American or Afro-Caribbean',
+                      'African American or Afro-Caribbean, African unspecified',
+                      'Sub-Saharan African, African unspecified',
+                      'African-American or Afro-Caribbean',
+                      'Sub-Saharan African',
+                      'African American or Afro-Caribbean',
+                      'African unspecified') ~ 'African',
+      
+  # Asian  
+  study_ancest %in% c('East Asian, Asian unspecified', 
+                      'South Asian, East Asian ',
+                      'South Asian, South East Asian', 
+                      'South Asian, South East Asian, East Asian',
+                      'South East Asian, East Asian', 
+                      'South East Asian, South Asian, East Asian',
+                      'South Asian, South East Asian, East Asian, Asian unspecified',
+                      'South East Asian, East Asian, South Asian',
+                      'East Asian, South Asian, South East Asian',
+                      'East Asian, South East Asian, South Asian, Asian unspecified',
+                      'South Asian',
+                      'South East Asian',
+                      'South Asian, East Asian',
+                      'South Asian, Asian unspecified',
+                      'Central Asian, South Asian',
+                      'East Asian, South Asian',
+                      'Central Asian',
+                      'East Asian',
+                      'Asian unspecified') ~'Asian',
+  
+  # Middle eastern    
+  study_ancest == 'Greater Middle Eastern (Middle Eastern, North African or Persian)' ~'Middle Eastern',
 
+  # Oceanic
+  study_ancest %in% c('Aboriginal Australian', 
+                      'Oceanian') ~'Oceanic',
+  
+  # Hispanic/Latin American
+  study_ancest %in% "Hispanic or Latin American" ~'Hispanic/Latin American',
+  
+  # Other 
+  study_ancest %in% c('Other',
+                      'Other, NR', 
+                      'NR, Other',
+                      'Other admixed ancestry', 
+                      'Native American') ~ "Other",
+  
+  # Not reported
+  study_ancest %in% "NR" ~ "Not reported",
+  
+  # Multiple    
+  grepl(", ", study_ancest) ~ 'Multiple',
+      
+  TRUE~study_ancest
+    )
+  
+    
+  
+}
+
+
+
+
+
+
+```
+
+```{r ancestry_colours}
+
+ancestry_colors <- c(
+  "African" = "#984EA3",
+  "European" = "#E41A1C",
+  "Asian" = "#377EB8", #east asian
+  # "South Asian" = "#4DAF4A",
+  "Hispanic/Latin American" = "#FF7F00",
+  "Middle Eastern" = "#FFFF33",
+  "Oceanic" = "#A65628",
+  "Other" = "#F781BF",
+  "Multiple" = "#999999",
+  "Not reported" = "black"
+  
+)
+
+# Define the desired stacking order
+ancestry_levels <- c(
+  "European",
+  # "East Asian",
+  # "South Asian",
+  "Asian",
+  "African",
+  "Hispanic/Latin American",
+  "Middle Eastern",
+  "Oceanic",
+  "Other",
+  "Multiple",
+  "Not reported"
+)
+
+
+```
+
+
+### Apply this ancestry mapping
+
+```{r}
+
+grouped_ancest = vector()
+
+for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
+  
+grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
+
+}
+
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+                                )
+
+
+print(head(grouped_ancest_map))
+
+
+gwas_ancest_info = dplyr::left_join(
+            gwas_ancest_info,
+            grouped_ancest_map,
+            by = "BROAD_ANCESTRAL_CATEGORY")
+
+
+```
+
+```{r}
+
+print("Total numbers (in millions) per ancestry group")
+
+gwas_ancest_info %>% 
+  group_by(ancestry_group) %>% 
+  summarise(n = sum(NUMBER_OF_INDIVIDUALS, na.rm = TRUE)/10^5)
+
+```
+
+
+
+```{r}
+
+gwas_ancest_info %>% 
+  filter(!is.na(NUMBER_OF_INDIVIDUALS)) |>
+  arrange(DATE) %>%
+  mutate(ancestry_group = factor(ancestry_group, levels = ancestry_levels)) %>%
+  group_by(ancestry_group) %>% 
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) %>% 
+  select(DATE, ancest_cumsum, ancestry_group, NUMBER_OF_INDIVIDUALS) |>
+  ggplot(aes(x=DATE, y=ancest_cumsum/(10^6), fill = ancestry_group)
+         ) + 
+  geom_area(position = 'stack') + 
+  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
+  theme_classic() + 
+  labs(x = "Year", y = "Individuals in GWAS catalog (millons)") + 
+  scale_fill_manual(values = ancestry_colors, name='Ancestry group')  
+
+
+```
+
+# Repeat for traits only 
+
+```{r}
+
+gwas_ancest_info = 
+left_join(
+gwas_ancest_info,
+gwas_study_info |> select(STUDY_ACCESSION, 
+                          COHORT, 
+                          MAPPED_TRAIT),
+by = "STUDY_ACCESSION"
+)
+
+
+```
+
+
+```{r}
+
+gwas_ancest_info_plot = 
+gwas_ancest_info %>% 
+  filter(!is.na(NUMBER_OF_INDIVIDUALS)) |>
+  filter(MAPPED_TRAIT == 'high density lipoprotein cholesterol measurement')
+
+
+print("Total numbers (in millions) per ancestry group")
+
+gwas_ancest_info_plot %>% 
+  group_by(ancestry_group) %>% 
+  summarise(n = sum(NUMBER_OF_INDIVIDUALS, na.rm = TRUE)/10^5)
+
+```
+
+
+```{r}
+
+gwas_ancest_info_plot %>% 
+  group_by(ancestry_group) %>% 
+  mutate(ancestry_group = factor(ancestry_group, levels = ancestry_levels)) %>%
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) %>% 
+  ggplot(aes(x=DATE, y=ancest_cumsum/(10^6), fill = ancestry_group)) + 
+  #geom_area() + 
+  geom_area(position = 'stack') + 
+  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
+  theme_classic() + 
+  labs(x = "Year", y = "Individuals in GWAS catalog (millons)") + 
+  scale_fill_manual(values = ancestry_colors, name='Ancestry group') 
+
+
+```
+
+# Proportion European per trait 
+
+```{r}
+
+euro_n = gwas_ancest_info |>
+         filter(ancestry_group == "European") |>
+         pull(NUMBER_OF_INDIVIDUALS) |>
+         sum(na.rm = T)
+
+total_n = gwas_ancest_info |>
+         pull(NUMBER_OF_INDIVIDUALS) |>
+         sum(na.rm = T)
+
+100 * euro_n / total_n
+
+prop_euro = vector()
+total_n_vec = vector()
+
+
+for(trait in n_studies_trait$MAPPED_TRAIT[1:1000]){
+  
+  euro_n = gwas_ancest_info |>
+           filter(ancestry_group == "European") |>
+           filter(MAPPED_TRAIT == trait) |>
+           pull(NUMBER_OF_INDIVIDUALS) |>
+           sum(na.rm = T)
+  
+  total_n = gwas_ancest_info |>
+            filter(MAPPED_TRAIT == trait) |>
+            pull(NUMBER_OF_INDIVIDUALS) |>
+            sum(na.rm = T)
+  
+  prop_euro[trait] = 100 * euro_n / total_n
+  total_n_vec[trait] = total_n
+  
+  #print(prop_euro[trait])
+  
+}
+
+prop_euro_df = data.frame(prop_euro = prop_euro, 
+                          trait = names(prop_euro),
+                          total_n = total_n_vec)
+
+prop_euro_df = left_join(prop_euro_df,
+                         n_studies_trait |> rename(trait = MAPPED_TRAIT),
+                         by = "trait")
+
+prop_euro_df$prop_euro |> summary()
+
+prop_euro_df |> slice_min(prop_euro, n = 5)
+
+prop_euro_df |> slice_max(prop_euro, n =5 )
+
+prop_euro_df |> slice_max(total_n, n = 5)
+
+cor(prop_euro_df$prop_euro, prop_euro_df$total_n, 
+    method = "spearman")
+
+prop_euro_df |>
+  ggplot(aes(x = total_n, y = prop_euro)) + 
+  geom_point() + 
+  theme_bw() + 
+  labs(x = "Total number of individuals (studied for this trait)",
+       y = "Proportion of European ancestry idividuals (studied for this trait)")
+
+prop_euro_df |>
+  ggplot(aes(x = total_n, y = n_studies)) + 
+  geom_point() + 
+  theme_bw() + 
+  labs(x = "Total number of individuals (studied for this trait)",
+       y = "Total number of unique PUBMED IDs for this trait")
+
+prop_euro_df |>
+  ggplot(aes(x = n_studies, y = prop_euro)) + 
+  geom_point() + 
+  theme_bw() + 
+  labs(x = "Total number of unique PUBMED IDs for this trait",
+       y = "Proportion of European ancestry idividuals (studied for this trait)")
+
+```
+
+# Disease statistics CDC
+
+```{r disease_stats_cdc, message = FALSE, warning=FALSE, eval = F}
 
 # following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
 
@@ -71,129 +393,6 @@ custom_theme <-
 # whomds: Calculate Results from WHO Model Disability Survey Data
 
 
-# Order GWAS catalog by date 
-gwas_ancest_info <- gwas_ancest_info %>% arrange(DATE)
-
-# calculate cumulative number of individuals
-gwas_ancest_info = gwas_ancest_info %>%  
-                   mutate(cum_num = cumsum(ifelse(is.na(NUMBER_OF_INDIVDUALS), 0, NUMBER_OF_INDIVDUALS))
-                          )
-
-
-# plot cumulative numbers
-gwas_ancest_info %>%  
-  group_by(DATE) %>% 
-  slice_max(NUMBER_OF_INDIVDUALS) %>% 
-  ggplot(aes(x=DATE,y=cum_num/1e6)) + 
-  geom_line() +
-  #geom_area(position = 'stack') + 
-  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
-  custom_theme + 
-  labs(x = "Year", y = "Individuals in GWAS catalog (millons)")
-
-```
-
-### Group ancestry into broader categories
-
-```{r grouped_ancest}
-
-group_ancestry_fn = function(study_ancest){
-  
-    case_when(study_ancest %in% c('Sub-Saharan African, African American or Afro-Caribbean',
-                           'Sub-Saharan African, African unspecified',
-                           'African-American or Afro-Caribbean') ~ 'African',
-      #grouped_ancest = append(grouped_ancest,'African')
-      
-      
-    study_ancest %in% c('East Asian, Asian unspecified', 
-                                  'South Asian, East Asian ',
-                                  'South Asian, South East Asian', 
-                                  'South Asian, South East Asian, East Asian',
-                                   'South East Asian, East Asian', 
-                                  'South East Asian, South Asian, East Asian') ~'Asian unspecified',
-      #grouped_ancest = append(grouped_ancest,'Asian unspecified')
-      
-      
-    study_ancest == 'Greater Middle Eastern (Middle Eastern, North African or Persian)' ~'Middle Eastern',
-      #grouped_ancest = append(grouped_ancest,'Middle Eastern')
-   study_ancest %in% c('Aboriginal Australian', 'Oceanian') ~'Oceanic',
-      #grouped_ancest = append(grouped_ancest,'Oceanic')
-      
-      
-  grepl(", ", study_ancest) ~ 'Multiple',
-      #grouped_ancest = append(grouped_ancest,'Multiple')
-      
-      
-  study_ancest %in% "Hispanic or Latin American" ~'Hispanic/Latin American',
-      #grouped_ancest = append(grouped_ancest,'Hispanic/Latin American')
-      
-      
-  TRUE~study_ancest
-      #grouped_ancest = append(grouped_ancest,study_ancest)
-    )
-  
-    
-  
-}
-
-
-grouped_ancest = vector()
-
-for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
-  
-grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
-
-}
-
-
-# ancest_group = data.frame(group_ancest = grouped_ancest,
-#                          BROAD_ANCESTRAL_CATEGORY =
-#                            unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY))
-# 
-# }
-
-grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
-                                BROAD_ANCESTRAL_CATEGORY = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
-                                )
-
-gwas_ancest_info = dplyr::left_join(
-            gwas_ancest_info,
-            grouped_ancest_map)
-
-gwas_ancest_info %>% 
-  group_by(ancestry_group) %>% 
-  summarise(n = sum(NUMBER_OF_INDIVDUALS, na.rm = TRUE))
-
-gwas_ancest_info %>% 
-  group_by(ancestry_group) %>% 
-  mutate(ancest_cumsum = cumsum(NUMBER_OF_INDIVDUALS)) %>% 
-  ggplot(aes(x=DATE,y=ancest_cumsum/(10^6), fill = ancestry_group)) + 
-  #geom_area() + 
-  geom_area() + 
-  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
-  theme_classic() + 
-  labs(x = "Year", y = "Individuals in GWAS catalog (millons)") + 
-  scale_fill_brewer(palette = "Set1")
-
-inner_join(
-           gwas_study_info %>% select(STUDY_ACCESSION, 
-                                      `DISEASE/TRAIT`, 
-                                      MAPPED_TRAIT),
-           gwas_ancest_info %>% select(STUDY_ACCESSION, 
-                                       NUMBER_OF_INDIVDUALS,
-                                       BROAD_ANCESTRAL_CATEGORY,
-                                       ancestry_group)) %>% 
-  group_by(BROAD_ANCESTRAL_CATEGORY, 
-           `DISEASE/TRAIT`) %>% 
-  summarise(n = sum(NUMBER_OF_INDIVDUALS)) %>% 
-  group_by(BROAD_ANCESTRAL_CATEGORY) %>% 
-  slice_max(n,n = 5)
-
-```
-
-## Disease statistics CDC
-
-```{r disease_stats_cdc, message = FALSE, warning=FALSE}
 
 
 cdc_stats = data.table::fread("data/cdc/Underlying Cause of Death, 1999-2020.txt",
