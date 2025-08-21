@@ -997,13 +997,88 @@ length(single_use_cohorts)
 
 ```
 
+# Fuzzy name look-up 
 
+```{r}
+
+library(stringdist)
+library(dplyr)
+
+# Create a vector of unique cohort names
+cohorts <- unique(all_cohorts)
+
+# Compute pairwise string distances (Levenshtein distance)
+dist_matrix <- stringdistmatrix(single_use_cohorts, cohorts, method = "lv")
+
+# Identify pairs with small distance (e.g., <=2 edits)
+threshold <- 2
+matches <- which(dist_matrix > 0 & dist_matrix <= threshold, arr.ind = TRUE)
+matches <- data.frame(
+  cohort1 = single_use_cohorts[matches[,1]],
+  cohort2 = cohorts[matches[,2]],
+  distance = dist_matrix[matches]
+)
+matches <- matches[matches$cohort1 != matches$cohort2, ]
+matches <- unique(matches)
+
+matches |>
+  arrange(distance) |>
+  head()
+
+
+
+```
+
+
+
+# Saving: 
+
+```{r}
+
+data.table::fwrite(gwas_study_info,
+                  here::here("output/gwas_study_info_cohort_corrected.csv"), 
+                  sep = ",")
+
+```
 
 # Others to look into: 
 
 
+```{r, eval = F}
+# in below study, unlisted cohort is combination of two cohorts
+gwas_study_info |>
+  filter(PUBMED_ID  == 32605384) |>
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 30510241) |>
+    select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+# if go to supplement, can see made up of many many many studies - I believe includes other all other subsamples
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 33307546) |>
+    select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+# COVID-19 Host Genetics Initiative (HGI) is this hispanic individuals I believe
+#  European ancestry from the ‘broad respiratory phenotype’ study of 23andMe
+# See replication section of https://www.nature.com/articles/s41586-020-03065-y#Sec4
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 38184787) |> 
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, "DISEASE/TRAIT", "INITIAL_SAMPLE_SIZE", "REPLICATION_SAMPLE_SIZE")
+
+# cohorts listed are for
+
+
+```
 
 ```{r, eval = F}
+
+# Raine Study -- ? Raine
+
+# Penn - UPenn etc.
 
 # ?CALGB  
 # "SIGNET-REGARDS"  >? "SIGNET"  
@@ -1051,5 +1126,27 @@ length(single_use_cohorts)
  [513] "HELIC"                                                                                                                                                    
  [514] "HELIC-MANOLIS"                                                                                                                                            
  [515] "HELIC-Pomak"   
+
+# ? QTR == QTR_Qindao
+
+# ? is "other|UKB" == "UKB|other"
+
+# ? is UK|NR == UKB|NR
+
+# ? CF_TSS == TSS
+
+gwas_study_info |>
+  filter(grepl("ORPS", COHORT))
+
+gwas_study_info |>
+  filter(PUBMED_ID == 39749473) |>
+  select(COHORT)
+
+# PAGE vs PAGES
+
+# PUBMED ID: 35754128 - should be PAGES
+# see sup table 1. https://pmc.ncbi.nlm.nih.gov/articles/PMC9671132/
+
+# COGEND COGENT
 
 ```
