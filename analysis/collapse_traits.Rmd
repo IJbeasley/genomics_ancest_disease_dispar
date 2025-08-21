@@ -1,0 +1,250 @@
+---
+title: "Collapse / filtering traits"
+author: "Isobel Beasley"
+date: "2025-08-21"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+
+```{r}
+
+gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+
+# number of studies per mapped trait
+n_studies_trait = gwas_study_info |>
+  dplyr::group_by(MAPPED_TRAIT, MAPPED_TRAIT_URI) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+n_studies_trait |>
+  head()
+
+n_studies_trait |>
+  slice_head(n = 20) |>
+  ggplot(aes(y = reorder(MAPPED_TRAIT, n_studies), x = n_studies)) + 
+  geom_col() + 
+  theme_bw() + 
+  labs(y = "Trait", x = "Number of studies")
+
+
+```
+
+# Unmapped / badly mapped traits: 
+
+```{r}
+# number of traits only observed once in the catalog 
+# likely badly mapped traits: 
+
+n_studies_trait |>
+  dplyr::filter(n_studies == 1) |>
+  nrow()
+
+unique_mapped_traits = n_studies_trait |>
+  dplyr::filter(n_studies == 1) |>
+  dplyr::pull(MAPPED_TRAIT)
+
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits) |>
+  group_by(PUBMED_ID) |>
+  summarise(n_unmapped_per_study = n()) |>
+  arrange(desc(n_unmapped_per_study)) |>
+  head(n = 10)
+
+```
+
+
+```{r}
+
+# this study tests 
+# 6,790 proteins or protein complexes
+gwas_study_info |>
+  filter(PUBMED_ID == 35870639) |>
+  nrow()
+
+# not all are unmapped 
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == "35870639") |>
+  nrow()# map to blood protein amount
+# serum proteome - i.e. blood proteome 
+
+gwas_study_info  = 
+gwas_study_info |>
+  dplyr::rows_update(tibble(PUBMED_ID = 35870639, 
+                            MAPPED_TRAIT = "blood protein amount",
+                            MAPPED_TRAIT_URI = "http://purl.obolibrary.org/obo/OBA_VT0005416"),
+                     unmatched = "ignore")
+
+
+```
+
+
+
+```{r}
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 38412862) |>
+  nrow()
+
+# 2,821 ratios between protein levels
+# i.e. each study is a association study between ratio between two proteins
+
+# ? put under blood protein amount (even though it is a ratio between amounts not an amount...)
+gwas_study_info  = 
+gwas_study_info |>
+  dplyr::rows_update(tibble(PUBMED_ID = 3841286, 
+                            MAPPED_TRAIT = "blood protein amount",
+                            MAPPED_TRAIT_URI = "http://purl.obolibrary.org/obo/OBA_VT0005416"),
+                     unmatched = "ignore")
+
+```
+
+
+```{r}
+
+gwas_study_info |>
+  filter(PUBMED_ID == 39789286) |>
+  nrow()
+
+# not all are unmapped 
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == 39789286) |>
+  nrow()
+
+not_well_mapped_traits = 
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == 39789286) |>
+  pull(MAPPED_TRAIT)
+
+grepl("in blood", not_well_mapped_traits) |> length()
+grepl("level of", not_well_mapped_traits) |> length()
+
+# All unmapped traits are protein levels in blood 
+
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == 39789286) |>
+  dplyr::filter(grepl("in blood", MAPPED_TRAIT)) |> 
+  nrow()
+
+gwas_study_info = gwas_study_info |>
+  rowwise() |>
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 39789286 && MAPPED_TRAIT %in% unique_mapped_traits,
+                               "blood protein amount",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 39789286 && MAPPED_TRAIT %in% unique_mapped_traits,
+                                       "http://purl.obolibrary.org/obo/OBA_VT0005416",
+                                     MAPPED_TRAIT_URI)
+           ) |>
+  ungroup()
+  
+```
+
+
+```{r}
+
+gwas_study_info |>
+  filter(PUBMED_ID == 29875488) |>
+  nrow()
+
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == 29875488) |>
+  nrow()
+
+not_well_mapped_traits = 
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == 29875488) |>
+  pull(MAPPED_TRAIT)
+
+grepl("measurement", not_well_mapped_traits) |> length()
+
+# study title is: Genomic atlas of the human plasma proteome.
+
+# assume therefore, all these values are protein blood measurements
+
+gwas_study_info = gwas_study_info |>
+  rowwise() |>
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 29875488 && MAPPED_TRAIT %in% unique_mapped_traits,
+                               "blood protein amount",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 29875488 && MAPPED_TRAIT %in% unique_mapped_traits,
+                               "http://purl.obolibrary.org/obo/OBA_VT0005416",
+                               MAPPED_TRAIT_URI)
+           ) |>
+  ungroup()
+
+```
+
+
+```{r}
+
+# PUBMED_ID: 39528826
+
+# suspect: 
+# metabolite measurement	http://www.ebi.ac.uk/efo/EFO_0004725
+
+# Title:
+# Publication: Genetic architecture of cerebrospinal fluid and brain metabolite levels and the genetic colocalization of metabolites with human traits.
+
+```
+
+
+```{r}
+
+# PUBMED+ID: 33634981
+
+# suspect: 
+# metabolite measurement	http://www.ebi.ac.uk/efo/EFO_0004725
+
+# Genome-wide association study of metabolites in patients with coronary artery disease identified novel metabolite quantitative trait loci.
+
+
+
+```
+
+
+```{r}
+
+# 24816252
+
+# suspect: 
+# metabolite measurement	http://www.ebi.ac.uk/efo/EFO_0004725
+
+# An atlas of genetic influences on human blood metabolites.
+
+
+```
+
+```{r}
+
+# 36482414
+# Publication: Comprehensive characterization of putative genetic influences on plasma metabolome in a pediatric cohort.
+
+```
+
+
+```{r}
+
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits) |>
+  group_by(PUBMED_ID, STUDY, COHORT) |>
+  summarise(n_unmapped_per_study = n()) |>
+  arrange(desc(n_unmapped_per_study))
+
+```
