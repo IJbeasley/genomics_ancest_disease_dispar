@@ -1,0 +1,184 @@
+---
+title: "Cohort distribution information"
+author: "Isobel Beasley"
+date: "2025-08-21"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+
+## 1. Load / pre-process GWAS Catalog data
+
+```{r load_gwas}
+# Load GWAS Catalog studies
+# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+#                          sep = "\t", quote = "")
+gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+
+
+gwas_ancest_info <-  fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
+                         sep = "\t", quote = "")
+
+# Standardize column names (remove spaces)
+gwas_study_info <- gwas_study_info |>
+  rename_all(~gsub(" ", "_", .x))
+
+gwas_ancest_info <- gwas_ancest_info |>
+  rename_all(~gsub(" ", "_", .x)) 
+
+```
+
+
+### Comparing study info to ancestry info datasets: 
+
+```{r study_accession_compare}
+
+gwas_study_info$STUDY_ACCESSION |> unique() |> length()
+
+gwas_study_info$STUDY_ACCESSION |> length()
+# each row is a study accession in gwas study info, 
+
+gwas_ancest_info$STUDY_ACCESSION |> unique() |> length()
+
+gwas_ancest_info$STUDY_ACCESSION |> length()
+# study accessions have multiple rows in gwas ancest info, 
+# because of multiple ancestries per study
+```
+
+
+```{r}
+# number of rows per pubmed id
+# distribution
+gwas_ancest_info |> 
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  pull(n) |>
+  summary()
+
+gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  pull() |>
+  summary()
+
+```
+
+
+```{r}
+
+# PUBMED_ID, FIRST_AUTHOR, DATE (deposition date), STUDY_ACCESSION are the only consistent
+# across ancestry and study metadata
+colnames(gwas_ancest_info)[colnames(gwas_ancest_info) %in% colnames(gwas_study_info)]
+
+colnames(gwas_study_info)[colnames(gwas_study_info) %in% colnames(gwas_ancest_info)]
+
+```
+
+More rows in gwas ancestry dataset, corresponding to multiple rows (sometimes) for the same study accession - done when multiple ancestries for the same cohort. 
+
+
+## 2. Cohort Summary
+
+```{r cohort_overview}
+
+# Number of unique cohorts
+length(unique(gwas_study_info$COHORT))
+
+# Studies per cohort
+studies_per_cohort = gwas_study_info |>
+  group_by(COHORT) |>
+  summarise(n_studies = n()) |>
+  arrange(desc(n_studies)) 
+
+summary(studies_per_cohort$n_studies)
+
+studies_per_cohort |>
+  ggplot(aes(x=n_studies)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(title = "Distribution of the number of studies per cohort label")
+
+
+dplyr::slice_head(studies_per_cohort, n = 10)
+
+```
+
+#### Check: cohorts only listed once? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+
+length(unique(all_cohorts))
+
+data.frame(cohort = all_cohorts) |>
+  group_by(cohort) |>
+  summarise(n_studies = n()) |>
+  pull(n_studies) |>
+  summary()
+
+single_use_cohorts_v2 =   
+data.frame(cohort = all_cohorts) |>
+  group_by(cohort) |>
+  summarise(n_studies = n()) |>
+  filter(n_studies == 1) |>
+  pull(cohort)
+
+single_use_cohorts_v2 |> unique() |> length()
+
+```
+
+
+#### One to one relationship between COHORT and STUDY accession? 
+
+
+```{r}
+
+gwas_study_info |>
+  group_by(COHORT, STUDY_ACCESSION) |>
+  summarise(n = n()) |>
+  pull(n) |>
+  summary()
+# yep - for the same study accession, same cohort
+
+```
+
+
+### One-to-one relationship between study accession and pubmed?
+
+```{r}
+# not true for pubmed i believe .... 
+gwas_study_info |>
+  select(PUBMED_ID, COHORT) |>
+  distinct() |>
+  group_by(PUBMED_ID) |>
+  summarise(n_pubmed = n()) |>
+  pull(n_pubmed) |>
+  summary()
+
+pubmed_multi_cohort = 
+gwas_study_info |>
+  select(PUBMED_ID, COHORT) |>
+  distinct() |>
+  group_by(PUBMED_ID) |>
+  summarise(n_pubmed = n()) |>
+  filter(n_pubmed > 1) |>
+  pull(PUBMED_ID) 
+  
+gwas_study_info |>
+  filter(PUBMED_ID %in% pubmed_multi_cohort) |>
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION) |>
+  head()
+
+
+```
+
