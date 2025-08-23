@@ -1,26 +1,13 @@
 # Mapping gwas catalog diseases
 # ensuring consistency, and collapse across studies
 
-# gwas_study_info = data.table::fread("data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv",
-#                                     sep = "\t",
-#                                     quote = "")
-
-
 # All studies v1.0.3.1 - with added fields to match the unpublished downloads, including cohort identifiers and full summary statistics availability
-
 gwas_study_info = data.table::fread("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-06-10.tsv",
                                     sep = "\t",
                                     quote = "")
 
 gwas_study_info = gwas_study_info |>
   dplyr::rename_all(~gsub(" ", "_", .x))
-
-
-# multiple studies per pubmed id
-
-nrow(gwas_study_info)
-
-length(unique(gwas_study_info$PUBMED_ID))
 
 # no non-numeric pubmed IDs
 gwas_study_info |>
@@ -87,19 +74,7 @@ gwas_study_info$JOURNAL |> unique()
 
 gwas_study_info |> dplyr::pull(MAPPED_TRAIT) |> unique() |> length()
 
-# number of studies per mapped trait
-n_studies_trait = gwas_study_info |>
-  dplyr::group_by(MAPPED_TRAIT) |>
-  dplyr::summarise(n_studies = dplyr::n()) |>
-  dplyr::arrange(desc(n_studies))
 
-n_studies_trait |>
-  dplyr::filter(n_studies == 1) |>
-  nrow()
-
-unique_mapped_traits = n_studies_trait |>
-  dplyr::filter(n_studies == 1) |>
-  dplyr::pull(MAPPED_TRAIT)
 
 gwas_study_info |>
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits) |>
@@ -113,7 +88,3 @@ gwas_study_info |>
   dplyr::summarise(n_studies = dplyr::n()) |>
   dplyr::arrange(desc(n_studies))
 
-
-gwas_study_info |>
-  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == "35870639") # map to blood protein amount
