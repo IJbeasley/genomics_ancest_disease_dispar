@@ -2,11 +2,24 @@
 title: "Collapse / filtering traits"
 author: "Isobel Beasley"
 date: "2025-08-21"
-output: html_document
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
+# Set up 
+
 ```{r setup, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE
+                      )
+
 library(data.table)
 library(dplyr)
 library(ggplot2)
@@ -14,10 +27,19 @@ library(stringr)
 
 ```
 
+## Load data
 
 ```{r}
 
 gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+
+```
+
+
+# Number of studies per mapped trait
+
+
+```{r}
 
 # number of studies per mapped trait
 n_studies_trait = gwas_study_info |>
@@ -29,12 +51,14 @@ n_studies_trait |>
   head()
 
 n_studies_trait |>
-  slice_head(n = 20) |>
-  ggplot(aes(y = reorder(MAPPED_TRAIT, n_studies), x = n_studies)) + 
+  head() |>
+  ggplot(aes(y = reorder(MAPPED_TRAIT, 
+                         n_studies), 
+             x = n_studies)
+         ) + 
   geom_col() + 
   theme_bw() + 
   labs(y = "Trait", x = "Number of studies")
-
 
 ```
 
@@ -60,26 +84,46 @@ gwas_study_info |>
   head(n = 10)
 
 ```
-
+## PUBMED_ID 35870639
 
 ```{r}
 
+pubmed_id = 35870639
 # this study tests 
 # 6,790 proteins or protein complexes
+print(paste0("How many studies for pubmed id: ", pubmed_id))
 gwas_study_info |>
-  filter(PUBMED_ID == 35870639) |>
+  filter(PUBMED_ID == pubmed_id) |>
   nrow()
 
 # not all are unmapped 
+print(paste0("How many studies for pubmed id: ", pubmed_id, 
+        "have unmapped/not well mapped traits"
+        )
+        )
 gwas_study_info |>
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == "35870639") |>
-  nrow()# map to blood protein amount
+                PUBMED_ID == pubmed_id) |>
+  nrow()
+
+not_well_mapped_traits = 
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |>
+  pull(MAPPED_TRAIT)
+
+print("Of these unmapped studies, how many contain phrase in blood")
+grepl("in blood serum", not_well_mapped_traits) |> sum()
+print("level of or amount of")
+grepl("level of|amount of", not_well_mapped_traits) |> sum()
+
+# all unmapped 
+# map to blood protein amount
 # serum proteome - i.e. blood proteome 
 
 gwas_study_info  = 
 gwas_study_info |>
-  dplyr::rows_update(tibble(PUBMED_ID = 35870639, 
+  dplyr::rows_update(tibble(PUBMED_ID = pubmed_id, 
                             MAPPED_TRAIT = "blood protein amount",
                             MAPPED_TRAIT_URI = "http://purl.obolibrary.org/obo/OBA_VT0005416"),
                      unmatched = "ignore")
@@ -87,13 +131,21 @@ gwas_study_info |>
 
 ```
 
-
+## PUBMED_ID: 39789286
 
 ```{r}
+pubmed_id = 39789286
 
-
+print(paste0("How many studies for pubmed id: ", pubmed_id))
 gwas_study_info |>
-  filter(PUBMED_ID == 38412862) |>
+  filter(PUBMED_ID == pubmed_id) |>
+  nrow()
+
+# not all are unmapped 
+print(paste0("How many studies for pubmed id: ", pubmed_id, "have unmapped/not well mapped traits"))
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |>
   nrow()
 
 # 2,821 ratios between protein levels
@@ -102,7 +154,7 @@ gwas_study_info |>
 # ? put under blood protein amount (even though it is a ratio between amounts not an amount...)
 gwas_study_info  = 
 gwas_study_info |>
-  dplyr::rows_update(tibble(PUBMED_ID = 3841286, 
+  dplyr::rows_update(tibble(PUBMED_ID = pubmed_id, 
                             MAPPED_TRAIT = "blood protein amount",
                             MAPPED_TRAIT_URI = "http://purl.obolibrary.org/obo/OBA_VT0005416"),
                      unmatched = "ignore")
@@ -110,42 +162,44 @@ gwas_study_info |>
 ```
 
 
-```{r}
+## PUBMED_ID: 39789286
 
+
+```{r}
+pubmed_id = 39789286
+
+print(paste0("How many studies for pubmed id: ", pubmed_id))
 gwas_study_info |>
-  filter(PUBMED_ID == 39789286) |>
+  filter(PUBMED_ID == pubmed_id) |>
   nrow()
 
 # not all are unmapped 
+print(paste0("How many studies for pubmed id: ", pubmed_id, "have unmapped/not well mapped traits"))
 gwas_study_info |>
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 39789286) |>
+                PUBMED_ID == pubmed_id) |>
   nrow()
 
 not_well_mapped_traits = 
 gwas_study_info |>
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 39789286) |>
+                PUBMED_ID == pubmed_id) |>
   pull(MAPPED_TRAIT)
 
-grepl("in blood", not_well_mapped_traits) |> length()
-grepl("level of", not_well_mapped_traits) |> length()
+print("Of these unmapped studies, how many contain phrase in blood")
+grepl("in blood", not_well_mapped_traits) |> sum()
+print("level of or amount of")
+grepl("level of|amount of", not_well_mapped_traits) |> sum()
 
-# All unmapped traits are protein levels in blood 
-
-gwas_study_info |>
-  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 39789286) |>
-  dplyr::filter(grepl("in blood", MAPPED_TRAIT)) |> 
-  nrow()
+print("All unmapped studies are measurements in blood")
 
 gwas_study_info = gwas_study_info |>
   rowwise() |>
-  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 39789286 && MAPPED_TRAIT %in% unique_mapped_traits,
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == pubmed_id && MAPPED_TRAIT %in% unique_mapped_traits,
                                "blood protein amount",
                                MAPPED_TRAIT)
          ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 39789286 && MAPPED_TRAIT %in% unique_mapped_traits,
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == pubmed_id && MAPPED_TRAIT %in% unique_mapped_traits,
                                        "http://purl.obolibrary.org/obo/OBA_VT0005416",
                                      MAPPED_TRAIT_URI)
            ) |>
@@ -154,24 +208,39 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
+## PUBMED_ID: 29875488
+
+
 ```{r}
 
+pubmed_id = 29875488
+
+print(paste0("How many studies for pubmed id: ", pubmed_id))
 gwas_study_info |>
-  filter(PUBMED_ID == 29875488) |>
+  filter(PUBMED_ID == pubmed_id) |>
   nrow()
 
+# not all are unmapped 
+print(paste0("How many studies for pubmed id: ", pubmed_id, "have unmapped/not well mapped traits"))
 gwas_study_info |>
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 29875488) |>
+                PUBMED_ID == pubmed_id) |>
   nrow()
+
+
 
 not_well_mapped_traits = 
 gwas_study_info |>
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 29875488) |>
+                PUBMED_ID == pubmed_id) |>
   pull(MAPPED_TRAIT)
 
-grepl("measurement", not_well_mapped_traits) |> length()
+print("Of these unmapped studies, how many contain phrase in blood")
+grepl("in blood", not_well_mapped_traits) |> sum()
+print("level of or amount of")
+grepl("level of|amount of|measurement", not_well_mapped_traits) |> sum()
+
+grepl("measurement", not_well_mapped_traits) |> sum()
 
 # study title is: Genomic atlas of the human plasma proteome.
 
@@ -179,11 +248,11 @@ grepl("measurement", not_well_mapped_traits) |> length()
 
 gwas_study_info = gwas_study_info |>
   rowwise() |>
-  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 29875488 && MAPPED_TRAIT %in% unique_mapped_traits,
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == pubmed_id && MAPPED_TRAIT %in% unique_mapped_traits,
                                "blood protein amount",
                                MAPPED_TRAIT)
          ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 29875488 && MAPPED_TRAIT %in% unique_mapped_traits,
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == pubmed_id && MAPPED_TRAIT %in% unique_mapped_traits,
                                "http://purl.obolibrary.org/obo/OBA_VT0005416",
                                MAPPED_TRAIT_URI)
            ) |>
@@ -223,10 +292,48 @@ gwas_study_info = gwas_study_info |>
 
 # 24816252
 
+pubmed_id = 24816252
+
 # suspect: 
 # metabolite measurement	http://www.ebi.ac.uk/efo/EFO_0004725
 
 # An atlas of genetic influences on human blood metabolites.
+
+print(paste0("How many studies for pubmed id: ", pubmed_id))
+gwas_study_info |>
+  filter(PUBMED_ID == pubmed_id) |>
+  nrow()
+
+# not all are unmapped 
+print(paste0("How many studies for pubmed id: ", pubmed_id, "have unmapped/not well mapped traits"))
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |>
+  nrow()
+
+not_well_mapped_traits = 
+gwas_study_info |>
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |>
+  pull(MAPPED_TRAIT)
+
+print("Of these unmapped studies, how many contain phrase in blood")
+grepl("in blood", not_well_mapped_traits) |> sum()
+print("level of or amount of")
+grepl("level of|amount of|measurement|ratio", not_well_mapped_traits) |> sum()
+
+
+gwas_study_info = gwas_study_info |>
+  rowwise() |>
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == pubmed_id && MAPPED_TRAIT %in% unique_mapped_traits,
+                               "blood protein amount",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == pubmed_id && MAPPED_TRAIT %in% unique_mapped_traits,
+                               "http://purl.obolibrary.org/obo/OBA_VT0005416",
+                               MAPPED_TRAIT_URI)
+           ) |>
+  ungroup()
 
 
 ```
@@ -246,5 +353,16 @@ gwas_study_info |>
   group_by(PUBMED_ID, STUDY, COHORT) |>
   summarise(n_unmapped_per_study = n()) |>
   arrange(desc(n_unmapped_per_study))
+
+```
+
+
+# Saving: 
+
+```{r}
+
+data.table::fwrite(gwas_study_info,
+                  here::here("output/gwas_study_info_trait_corrected.csv"), 
+                  sep = ",")
 
 ```
