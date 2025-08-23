@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-08-21
+<strong>Last updated:</strong> 2025-08-23
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed4ec61e976a18365521d4949ee0b9e2f7d4a0edbtargetblankd4ec61ea">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9a9803bb6625cc4f5ea6fc2c53f07dcf31f29181targetblank9a9803ba">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d4ec61e976a18365521d4949ee0b9e2f7d4a0edb" target="_blank">d4ec61e</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9a9803bb6625cc4f5ea6fc2c53f07dcf31f29181" target="_blank">9a9803b</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed4ec61e976a18365521d4949ee0b9e2f7d4a0edbtargetblankd4ec61ea"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9a9803bb6625cc4f5ea6fc2c53f07dcf31f29181targetblank9a9803ba"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d4ec61e976a18365521d4949ee0b9e2f7d4a0edb" target="_blank">d4ec61e</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9a9803bb6625cc4f5ea6fc2c53f07dcf31f29181" target="_blank">9a9803b</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -544,13 +544,18 @@ Ignored files:
     Ignored:    .Rproj.user/
     Ignored:    data/gwas_catalog/
     Ignored:    output/gwas_study_info_cohort_corrected.csv
+    Ignored:    output/gwas_study_info_trait_corrected.csv
 
 Untracked files:
+    Untracked:  .DS_Store
+    Untracked:  code/custom_plotting.R
     Untracked:  data/.DS_Store
+    Untracked:  gwas_time.pdf
     Untracked:  renv/
 
 Unstaged changes:
     Modified:   .Rprofile
+    Modified:   analysis/disease_inves_by_ancest.Rmd
     Modified:   code/collapse_diseases.R
 
 </code></pre>
@@ -601,6 +606,40 @@ Message
 Rmd
 </td>
 <td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/9a9803bb6625cc4f5ea6fc2c53f07dcf31f29181/analysis/collapse_traits.Rmd" target="_blank">9a9803b</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-08-23
+</td>
+<td>
+Update correcting traits
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/605013e15d80375ef780030578cef81c21b8d5dd/docs/collapse_traits.html" target="_blank">605013e</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-08-21
+</td>
+<td>
+Build site.
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
 <a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/d4ec61e976a18365521d4949ee0b9e2f7d4a0edb/analysis/collapse_traits.Rmd" target="_blank">d4ec61e</a>
 </td>
 <td>
@@ -620,14 +659,27 @@ Adding investigation harmonizing mapped traits
 </div>
 </div>
 </div>
-<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+<div id="set-up" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Set up</h1>
+<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE
+                      )
+
 library(data.table)
 library(dplyr)
 library(ggplot2)
 library(stringr)</code></pre>
-<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_cohort_corrected.csv&quot;))
-
-# number of studies per mapped trait
+<div id="load-data" class="section level2" number="1.1">
+<h2><span class="header-section-number">1.1</span> Load data</h2>
+<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_cohort_corrected.csv&quot;))</code></pre>
+</div>
+</div>
+<div id="number-of-studies-per-mapped-trait" class="section level1"
+number="2">
+<h1><span class="header-section-number">2</span> Number of studies per
+mapped trait</h1>
+<pre class="r"><code># number of studies per mapped trait
 n_studies_trait = gwas_study_info |&gt;
   dplyr::group_by(MAPPED_TRAIT, MAPPED_TRAIT_URI) |&gt;
   dplyr::summarise(n_studies = dplyr::n()) |&gt;
@@ -646,14 +698,20 @@ n_studies_trait |&gt;
 5 blood metabolite level     http://purl.obolibrary.org/obo/OBA_20500…      2738
 6 gut microbiome measurement http://www.ebi.ac.uk/efo/EFO_0007874           2363</code></pre>
 <pre class="r"><code>n_studies_trait |&gt;
-  slice_head(n = 20) |&gt;
-  ggplot(aes(y = reorder(MAPPED_TRAIT, n_studies), x = n_studies)) + 
+  head() |&gt;
+  ggplot(aes(y = reorder(MAPPED_TRAIT, 
+                         n_studies), 
+             x = n_studies)
+         ) + 
   geom_col() + 
   theme_bw() + 
   labs(y = &quot;Trait&quot;, x = &quot;Number of studies&quot;)</code></pre>
-<p><img src="figure/collapse_traits.Rmd/unnamed-chunk-1-1.png" width="672" style="display: block; margin: auto;" /></p>
-<div id="unmapped-badly-mapped-traits" class="section level1">
-<h1>Unmapped / badly mapped traits:</h1>
+<p><img src="figure/collapse_traits.Rmd/unnamed-chunk-2-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="unmapped-badly-mapped-traits" class="section level1"
+number="3">
+<h1><span class="header-section-number">3</span> Unmapped / badly mapped
+traits:</h1>
 <pre class="r"><code># number of traits only observed once in the catalog 
 # likely badly mapped traits: 
 
@@ -684,95 +742,165 @@ gwas_study_info |&gt;
  8  36482414                  121
  9  26068415                   99
 10  37253714                   95</code></pre>
-<pre class="r"><code># this study tests 
+<div id="pubmed_id-35870639" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> PUBMED_ID
+35870639</h2>
+<pre class="r"><code>pubmed_id = 35870639
+# this study tests 
 # 6,790 proteins or protein complexes
-gwas_study_info |&gt;
-  filter(PUBMED_ID == 35870639) |&gt;
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 35870639&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(PUBMED_ID == pubmed_id) |&gt;
   nrow()</code></pre>
 <pre><code>[1] 6790</code></pre>
 <pre class="r"><code># not all are unmapped 
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id, 
+        &quot;have unmapped/not well mapped traits&quot;
+        )
+        )</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 35870639have unmapped/not well mapped traits&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 3411</code></pre>
+<pre class="r"><code>not_well_mapped_traits = 
 gwas_study_info |&gt;
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == &quot;35870639&quot;) |&gt;
-  nrow()# map to blood protein amount</code></pre>
-<pre><code>[1] 3411</code></pre>
-<pre class="r"><code># serum proteome - i.e. blood proteome 
+                PUBMED_ID == pubmed_id) |&gt;
+  pull(MAPPED_TRAIT)
+
+print(&quot;Of these unmapped studies, how many contain phrase in blood&quot;)</code></pre>
+<pre><code>[1] &quot;Of these unmapped studies, how many contain phrase in blood&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;in blood serum&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 3408</code></pre>
+<pre class="r"><code>print(&quot;level of or amount of&quot;)</code></pre>
+<pre><code>[1] &quot;level of or amount of&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;level of|amount of&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 3408</code></pre>
+<pre class="r"><code># all unmapped 
+# map to blood protein amount
+# serum proteome - i.e. blood proteome 
 
 gwas_study_info  = 
 gwas_study_info |&gt;
-  dplyr::rows_update(tibble(PUBMED_ID = 35870639, 
+  dplyr::rows_update(tibble(PUBMED_ID = pubmed_id, 
                             MAPPED_TRAIT = &quot;blood protein amount&quot;,
                             MAPPED_TRAIT_URI = &quot;http://purl.obolibrary.org/obo/OBA_VT0005416&quot;),
                      unmatched = &quot;ignore&quot;)</code></pre>
+</div>
+<div id="pubmed_id-39789286" class="section level2" number="3.2">
+<h2><span class="header-section-number">3.2</span> PUBMED_ID:
+39789286</h2>
+<pre class="r"><code>pubmed_id = 39789286
+
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 39789286&quot;</code></pre>
 <pre class="r"><code>gwas_study_info |&gt;
-  filter(PUBMED_ID == 38412862) |&gt;
+  filter(PUBMED_ID == pubmed_id) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 2821</code></pre>
+<pre><code>[1] 3049</code></pre>
+<pre class="r"><code># not all are unmapped 
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id, &quot;have unmapped/not well mapped traits&quot;))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 39789286have unmapped/not well mapped traits&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 612</code></pre>
 <pre class="r"><code># 2,821 ratios between protein levels
 # i.e. each study is a association study between ratio between two proteins
 
 # ? put under blood protein amount (even though it is a ratio between amounts not an amount...)
 gwas_study_info  = 
 gwas_study_info |&gt;
-  dplyr::rows_update(tibble(PUBMED_ID = 3841286, 
+  dplyr::rows_update(tibble(PUBMED_ID = pubmed_id, 
                             MAPPED_TRAIT = &quot;blood protein amount&quot;,
                             MAPPED_TRAIT_URI = &quot;http://purl.obolibrary.org/obo/OBA_VT0005416&quot;),
                      unmatched = &quot;ignore&quot;)</code></pre>
+</div>
+<div id="pubmed_id-39789286-1" class="section level2" number="3.3">
+<h2><span class="header-section-number">3.3</span> PUBMED_ID:
+39789286</h2>
+<pre class="r"><code>pubmed_id = 39789286
+
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 39789286&quot;</code></pre>
 <pre class="r"><code>gwas_study_info |&gt;
-  filter(PUBMED_ID == 39789286) |&gt;
+  filter(PUBMED_ID == pubmed_id) |&gt;
   nrow()</code></pre>
 <pre><code>[1] 3049</code></pre>
 <pre class="r"><code># not all are unmapped 
-gwas_study_info |&gt;
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id, &quot;have unmapped/not well mapped traits&quot;))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 39789286have unmapped/not well mapped traits&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 39789286) |&gt;
+                PUBMED_ID == pubmed_id) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 612</code></pre>
+<pre><code>[1] 0</code></pre>
 <pre class="r"><code>not_well_mapped_traits = 
 gwas_study_info |&gt;
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 39789286) |&gt;
+                PUBMED_ID == pubmed_id) |&gt;
   pull(MAPPED_TRAIT)
 
-grepl(&quot;in blood&quot;, not_well_mapped_traits) |&gt; length()</code></pre>
-<pre><code>[1] 612</code></pre>
-<pre class="r"><code>grepl(&quot;level of&quot;, not_well_mapped_traits) |&gt; length()</code></pre>
-<pre><code>[1] 612</code></pre>
-<pre class="r"><code># All unmapped traits are protein levels in blood 
-
-gwas_study_info |&gt;
-  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 39789286) |&gt;
-  dplyr::filter(grepl(&quot;in blood&quot;, MAPPED_TRAIT)) |&gt; 
-  nrow()</code></pre>
-<pre><code>[1] 612</code></pre>
+print(&quot;Of these unmapped studies, how many contain phrase in blood&quot;)</code></pre>
+<pre><code>[1] &quot;Of these unmapped studies, how many contain phrase in blood&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;in blood&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>print(&quot;level of or amount of&quot;)</code></pre>
+<pre><code>[1] &quot;level of or amount of&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;level of|amount of&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>print(&quot;All unmapped studies are measurements in blood&quot;)</code></pre>
+<pre><code>[1] &quot;All unmapped studies are measurements in blood&quot;</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   rowwise() |&gt;
-  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 39789286 &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == pubmed_id &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
                                &quot;blood protein amount&quot;,
                                MAPPED_TRAIT)
          ) |&gt;
-    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 39789286 &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == pubmed_id &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
                                        &quot;http://purl.obolibrary.org/obo/OBA_VT0005416&quot;,
                                      MAPPED_TRAIT_URI)
            ) |&gt;
   ungroup()</code></pre>
+</div>
+<div id="pubmed_id-29875488" class="section level2" number="3.4">
+<h2><span class="header-section-number">3.4</span> PUBMED_ID:
+29875488</h2>
+<pre class="r"><code>pubmed_id = 29875488
+
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 29875488&quot;</code></pre>
 <pre class="r"><code>gwas_study_info |&gt;
-  filter(PUBMED_ID == 29875488) |&gt;
+  filter(PUBMED_ID == pubmed_id) |&gt;
   nrow()</code></pre>
 <pre><code>[1] 3283</code></pre>
+<pre class="r"><code># not all are unmapped 
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id, &quot;have unmapped/not well mapped traits&quot;))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 29875488have unmapped/not well mapped traits&quot;</code></pre>
 <pre class="r"><code>gwas_study_info |&gt;
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 29875488) |&gt;
+                PUBMED_ID == pubmed_id) |&gt;
   nrow()</code></pre>
 <pre><code>[1] 388</code></pre>
 <pre class="r"><code>not_well_mapped_traits = 
 gwas_study_info |&gt;
   dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
-                PUBMED_ID == 29875488) |&gt;
+                PUBMED_ID == pubmed_id) |&gt;
   pull(MAPPED_TRAIT)
 
-grepl(&quot;measurement&quot;, not_well_mapped_traits) |&gt; length()</code></pre>
+print(&quot;Of these unmapped studies, how many contain phrase in blood&quot;)</code></pre>
+<pre><code>[1] &quot;Of these unmapped studies, how many contain phrase in blood&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;in blood&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>print(&quot;level of or amount of&quot;)</code></pre>
+<pre><code>[1] &quot;level of or amount of&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;level of|amount of|measurement&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 388</code></pre>
+<pre class="r"><code>grepl(&quot;measurement&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
 <pre><code>[1] 388</code></pre>
 <pre class="r"><code># study title is: Genomic atlas of the human plasma proteome.
 
@@ -780,11 +908,11 @@ grepl(&quot;measurement&quot;, not_well_mapped_traits) |&gt; length()</code></pr
 
 gwas_study_info = gwas_study_info |&gt;
   rowwise() |&gt;
-  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 29875488 &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == pubmed_id &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
                                &quot;blood protein amount&quot;,
                                MAPPED_TRAIT)
          ) |&gt;
-    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 29875488 &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == pubmed_id &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
                                &quot;http://purl.obolibrary.org/obo/OBA_VT0005416&quot;,
                                MAPPED_TRAIT_URI)
            ) |&gt;
@@ -804,10 +932,52 @@ gwas_study_info = gwas_study_info |&gt;
 # Genome-wide association study of metabolites in patients with coronary artery disease identified novel metabolite quantitative trait loci.</code></pre>
 <pre class="r"><code># 24816252
 
+pubmed_id = 24816252
+
 # suspect: 
 # metabolite measurement    http://www.ebi.ac.uk/efo/EFO_0004725
 
-# An atlas of genetic influences on human blood metabolites.</code></pre>
+# An atlas of genetic influences on human blood metabolites.
+
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 24816252&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(PUBMED_ID == pubmed_id) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 533</code></pre>
+<pre class="r"><code># not all are unmapped 
+print(paste0(&quot;How many studies for pubmed id: &quot;, pubmed_id, &quot;have unmapped/not well mapped traits&quot;))</code></pre>
+<pre><code>[1] &quot;How many studies for pubmed id: 24816252have unmapped/not well mapped traits&quot;</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 173</code></pre>
+<pre class="r"><code>not_well_mapped_traits = 
+gwas_study_info |&gt;
+  dplyr::filter(MAPPED_TRAIT %in% unique_mapped_traits,
+                PUBMED_ID == pubmed_id) |&gt;
+  pull(MAPPED_TRAIT)
+
+print(&quot;Of these unmapped studies, how many contain phrase in blood&quot;)</code></pre>
+<pre><code>[1] &quot;Of these unmapped studies, how many contain phrase in blood&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;in blood&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>print(&quot;level of or amount of&quot;)</code></pre>
+<pre><code>[1] &quot;level of or amount of&quot;</code></pre>
+<pre class="r"><code>grepl(&quot;level of|amount of|measurement|ratio&quot;, not_well_mapped_traits) |&gt; sum()</code></pre>
+<pre><code>[1] 173</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  rowwise() |&gt;
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == pubmed_id &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
+                               &quot;blood protein amount&quot;,
+                               MAPPED_TRAIT)
+         ) |&gt;
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == pubmed_id &amp;&amp; MAPPED_TRAIT %in% unique_mapped_traits,
+                               &quot;http://purl.obolibrary.org/obo/OBA_VT0005416&quot;,
+                               MAPPED_TRAIT_URI)
+           ) |&gt;
+  ungroup()</code></pre>
 <pre class="r"><code># 36482414
 # Publication: Comprehensive characterization of putative genetic influences on plasma metabolome in a pediatric cohort.</code></pre>
 <pre class="r"><code>gwas_study_info |&gt;
@@ -815,21 +985,28 @@ gwas_study_info = gwas_study_info |&gt;
   group_by(PUBMED_ID, STUDY, COHORT) |&gt;
   summarise(n_unmapped_per_study = n()) |&gt;
   arrange(desc(n_unmapped_per_study))</code></pre>
-<pre><code># A tibble: 1,550 × 4
-# Groups:   PUBMED_ID, STUDY [1,513]
+<pre><code># A tibble: 1,548 × 4
+# Groups:   PUBMED_ID, STUDY [1,512]
    PUBMED_ID STUDY                                   COHORT n_unmapped_per_study
        &lt;int&gt; &lt;chr&gt;                                   &lt;chr&gt;                 &lt;int&gt;
  1  38412862 Genetic associations with ratios betwe… &quot;UKBB&quot;                 2821
  2  39528826 Genetic architecture of cerebrospinal … &quot;Knig…                  381
  3  33634981 Genome-wide association study of metab… &quot;&quot;                      197
- 4  24816252 An atlas of genetic influences on huma… &quot;Twin…                  127
- 5  36482414 Comprehensive characterization of puta… &quot;othe…                  121
- 6  37253714 Whole-Genome Sequencing Analysis of Hu… &quot;ARIC…                   95
- 7  37794183 Rare variant associations with plasma … &quot;UKBB&quot;                   89
- 8  34737426 A generalized linear mixed model assoc… &quot;UKBB&quot;                   81
- 9  26068415 Genome-wide association study identifi… &quot;EGCU…                   76
-10  35347128 Genome-wide association studies of met… &quot;METS…                   55
-# ℹ 1,540 more rows</code></pre>
+ 4  36482414 Comprehensive characterization of puta… &quot;othe…                  121
+ 5  37253714 Whole-Genome Sequencing Analysis of Hu… &quot;ARIC…                   95
+ 6  37794183 Rare variant associations with plasma … &quot;UKBB&quot;                   89
+ 7  34737426 A generalized linear mixed model assoc… &quot;UKBB&quot;                   81
+ 8  26068415 Genome-wide association study identifi… &quot;EGCU…                   76
+ 9  35347128 Genome-wide association studies of met… &quot;METS…                   55
+10  39024449 Diversity and scale: Genetic architect… &quot;MVP&quot;                    51
+# ℹ 1,538 more rows</code></pre>
+</div>
+</div>
+<div id="saving" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Saving:</h1>
+<pre class="r"><code>data.table::fwrite(gwas_study_info,
+                  here::here(&quot;output/gwas_study_info_trait_corrected.csv&quot;), 
+                  sep = &quot;,&quot;)</code></pre>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
@@ -841,7 +1018,7 @@ Session information
 <pre class="r"><code>sessionInfo()</code></pre>
 <pre><code>R version 4.3.1 (2023-06-16)
 Platform: aarch64-apple-darwin20 (64-bit)
-Running under: macOS 15.6
+Running under: macOS 15.6.1
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
