@@ -42,63 +42,27 @@ gwas_ancest_info = gwas_ancest_info |>
 gwas_study_info = gwas_study_info |>
                   arrange(DATE)
 
-
-
 ```
 
-## Plot figure Martin et al. 2019 like
+## Studies with missing sample numbers 
 
-### For all ancestries 
-
-```{r plot_like_martin_et_al_2019_not_grouped}
-
-# code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
-
-# https://github.com/armartin/prs_disparities/blob/master/gwas_sfs_pop.R
-# gwas cat
-# http://bioconductor.org/packages/release/bioc/html/gwascat.html
-
-# following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
-
+```{r}
 
 # Some number of individuals are missing
-gwas_ancest_info |> dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS) | NUMBER_OF_INDIVIDUALS == 0) |> nrow()
-
-
-gwas_ancest_info |> dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS) | NUMBER_OF_INDIVIDUALS == 0) |> head()
-
-# Filter missing number of individuals
-gwas_ancest_info = gwas_ancest_info |>
-  dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS)) |>
-  dplyr::filter(NUMBER_OF_INDIVIDUALS != 0)
-
-# calculate cumulative number of individuals
-gwas_ancest_info = gwas_ancest_info %>%  
-                   dplyr::arrange(DATE) |>
-                   mutate(cum_num = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))
-                          )
-
-
-# plot cumulative numbers
-gwas_ancest_info %>%  
-  # group_by(DATE) %>% 
-  # slice_max(NUMBER_OF_INDIVDUALS) %>% 
-  ggplot(aes(x=DATE,y=cum_num/1e6)) + 
- # geom_line() +
-  geom_area() + 
-  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
-  custom_theme + 
-  labs(x = "Year", 
-       y = "Individuals in GWAS catalog (millons)")
-
-```
-
-```{r na_number_of_individ}
 
 # 44 studies / 44 rows
 gwas_ancest_info |>
 dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS)) |>
 nrow()
+
+gwas_ancest_info |> 
+  dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS) | NUMBER_OF_INDIVIDUALS == 0) |> 
+  nrow()
+
+gwas_ancest_info |> 
+  dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS) | NUMBER_OF_INDIVIDUALS == 0) |> 
+  head()
+
 
 # from only 24 gwas papers
 gwas_ancest_info |>
@@ -122,19 +86,50 @@ gwas_ancest_info |>
 # discloses: 1229 AL amyloidosis patients from Germany, UK and Italy, and 7526 healthy local controls
 
 
-```
+# Filter missing number of individuals
+gwas_ancest_info = gwas_ancest_info |>
+  dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS)) |>
+  dplyr::filter(NUMBER_OF_INDIVIDUALS != 0)
 
-### Filter out NA number of individuals 
-
-```{r filter_na}
-
-gwas_ancest_info  =
-gwas_ancest_info |>
-dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS))
 
 ```
 
-# Make ancestry groups 
+# Plot figure Martin et al. 2019 like
+
+### For all ancestries - number of individuals in the GWAS catalog over time
+
+```{r plot_like_martin_et_al_2019_not_grouped}
+
+# code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
+
+# https://github.com/armartin/prs_disparities/blob/master/gwas_sfs_pop.R
+# gwas cat
+# http://bioconductor.org/packages/release/bioc/html/gwascat.html
+
+# following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
+
+# calculate cumulative number of individuals
+gwas_ancest_info = gwas_ancest_info %>%  
+                   dplyr::arrange(DATE) |>
+                   mutate(cum_num = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS)))
+
+
+# plot cumulative numbers
+gwas_ancest_info %>%  
+  # group_by(DATE) %>% 
+  # slice_max(NUMBER_OF_INDIVDUALS) %>% 
+  ggplot(aes(x=DATE,y=cum_num/1e6)) + 
+ # geom_line() +
+  geom_area() + 
+  scale_x_date(date_labels = '%Y', date_breaks = "2 years") + 
+  custom_theme + 
+  labs(x = "Year", 
+       y = "Individuals in GWAS catalog (millons)")
+
+```
+
+
+## Make ancestry groups 
 
 Here we make the column 'ancestry_group' in the gwas_study_info datasets, 'ancestry_group' defines the broad ancestry group (like in Martin et al. 2019, European, Greater Middle Eastern etc.) that each group of individuals belongs to. 
 
@@ -179,7 +174,7 @@ gwas_ancest_info %>%
 
 ```
 
-### Make plot like Martin et al. 2019 by applying this ancestry mapping
+### Make plot like Martin et al. 2019 by applying this ancestry mapping - number of individuals in GWAS catalog over time, per ancestry group
 
 ```{r}
 
@@ -199,7 +194,6 @@ gwas_ancest_info |>
   theme_classic() + 
   labs(x = "Year", y = "Individuals in GWAS catalog (millons)") + 
   scale_fill_manual(values = ancestry_colors, name='Ancestry group') 
-
 
 
 ```
