@@ -297,7 +297,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-07-30
+<strong>Last updated:</strong> 2025-08-25
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -429,15 +429,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree10a35cc5b555c4f9759b44ea044d867e7c9ade61targetblank10a35cca">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree02fe018bafe9143ed172d637ceb22acaeb0a2655targetblank02fe018a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/10a35cc5b555c4f9759b44ea044d867e7c9ade61" target="_blank">10a35cc</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/02fe018bafe9143ed172d637ceb22acaeb0a2655" target="_blank">02fe018</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree10a35cc5b555c4f9759b44ea044d867e7c9ade61targetblank10a35cca"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree02fe018bafe9143ed172d637ceb22acaeb0a2655targetblank02fe018a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -447,7 +447,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/10a35cc5b555c4f9759b44ea044d867e7c9ade61" target="_blank">10a35cc</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/02fe018bafe9143ed172d637ceb22acaeb0a2655" target="_blank">02fe018</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -463,19 +463,21 @@ were generated:
 <pre><code>
 Ignored files:
     Ignored:    .Rproj.user/
-    Ignored:    data/cdc/
+    Ignored:    analysis/figure/
     Ignored:    data/gwas_catalog/
+    Ignored:    output/gwas_study_info_cohort_corrected.csv
+    Ignored:    output/gwas_study_info_trait_corrected.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info.csv
+    Ignored:    output/trait_ontology/
 
 Untracked files:
+    Untracked:  .DS_Store
+    Untracked:  data/.DS_Store
     Untracked:  renv/
 
 Unstaged changes:
     Modified:   .Rprofile
-    Modified:   README.md
-    Modified:   analysis/_site.yml
-    Deleted:    analysis/about.Rmd
-    Modified:   analysis/disease_inves_by_ancest.Rmd
-    Deleted:    analysis/license.Rmd
+    Modified:   analysis/collapse_traits.Rmd
 
 </code></pre>
 <p>
@@ -526,6 +528,40 @@ Message
 Rmd
 </td>
 <td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/02fe018bafe9143ed172d637ceb22acaeb0a2655/analysis/replication_ancestry_bias.Rmd" target="_blank">02fe018</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-08-25
+</td>
+<td>
+Update replicatio Martin et al. 2019
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/ec761592c38ee66054be983d1cb588339aaf05e9/docs/replication_ancestry_bias.html" target="_blank">ec76159</a>
+</td>
+<td>
+IJBeasley
+</td>
+<td>
+2025-07-30
+</td>
+<td>
+Build site.
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
 <a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/10a35cc5b555c4f9759b44ea044d867e7c9ade61/analysis/replication_ancestry_bias.Rmd" target="_blank">10a35cc</a>
 </td>
 <td>
@@ -545,18 +581,17 @@ Updating replication of ancestry biases in gwas
 </div>
 </div>
 </div>
-<div id="load-gwas-catalog-data" class="section level2">
-<h2>Load GWAS catalog data</h2>
 <pre class="r"><code>library(dplyr)
 library(ggplot2)
+library(data.table)
+source(here::here(&quot;code/custom_plotting.R&quot;))</code></pre>
+<div id="load-gwas-catalog-data" class="section level2">
+<h2>Load GWAS catalog data</h2>
+<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_trait_ontology_info.csv&quot;))
 
-gwas_study_info = data.table::fread(&quot;data/gwas_catalog/gwas-catalog-v1.0.3-studies-r2022-02-02.tsv&quot;, 
-                                    sep = &quot;\t&quot;, 
-                                    quote = &quot;&quot;)
-
-gwas_ancest_info = data.table::fread(&quot;./data/gwas_catalog/gwas_catalog-ancestry_r2022-02-02.tsv&quot;, 
-                                     sep = &quot;\t&quot;, 
-                                     quote = &quot;&quot;)
+gwas_ancest_info &lt;-  fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv&quot;),
+                         sep = &quot;\t&quot;, 
+                         quote = &quot;&quot;)
 
 gwas_study_info = gwas_study_info |&gt;
   dplyr::rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
@@ -564,19 +599,11 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_ancest_info = gwas_ancest_info |&gt;
   dplyr::rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
 
-# Set up custom theme for ggplots
-custom_theme &lt;-
-  list(
-    theme_bw() +
-      theme(
-        panel.border = element_blank(),
-        axis.line = element_line(),
-        text = element_text(size = 16),
-        legend.position = &quot;bottom&quot;,
-        strip.background = element_blank(),
-        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-      )
-  )</code></pre>
+gwas_ancest_info = gwas_ancest_info |&gt;
+                    arrange(DATE)
+
+gwas_study_info = gwas_study_info |&gt;
+                  arrange(DATE)</code></pre>
 </div>
 <div id="plot-figure-martin-et-al.-2019-like" class="section level2">
 <h2>Plot figure Martin et al. 2019 like</h2>
@@ -588,63 +615,78 @@ custom_theme &lt;-
 # gwas cat
 # http://bioconductor.org/packages/release/bioc/html/gwascat.html
 
-
 # following steps from https://static-content.springer.com/esm/art%3A10.1038%2Fs41588-019-0379-x/MediaObjects/41588_2019_379_MOESM1_ESM.pdf
 
 
 # Some number of individuals are missing
-gwas_ancest_info |&gt; dplyr::filter(is.na(NUMBER_OF_INDIVDUALS) | NUMBER_OF_INDIVDUALS == 0) |&gt; nrow()</code></pre>
-<pre><code>[1] 35</code></pre>
-<pre class="r"><code>gwas_ancest_info |&gt; dplyr::filter(is.na(NUMBER_OF_INDIVDUALS) | NUMBER_OF_INDIVDUALS == 0) |&gt; head()</code></pre>
-<pre><code>   STUDY_ACCESSION PUBMEDID     FIRST_AUTHOR       DATE
-            &lt;char&gt;    &lt;int&gt;           &lt;char&gt;     &lt;IDat&gt;
-1:      GCST002988 26089329         Carty CL 2015-06-18
-2:      GCST004339 28298293             Hu Y 2017-03-15
-3:      GCST004338 28298293             Hu Y 2017-03-15
-4:      GCST004585 28630421             Li D 2017-06-19
-5:      GCST002330 24406073      Galanter JM 2014-01-07
-6:      GCST001788 23263445 Lawrance-Owen AJ 2012-12-22
-                                                              INITIAL_SAMPLE_DESCRIPTION
-                                                                                  &lt;char&gt;
-1:            up to 1,365 African American cases, up to 13,154 African American controls
-2:               3,521 Chinese ancestry individuals, European individuals (see Wu 2013).
-3: 3,521 Chinese ancestry individuals, European ancestry individuals (see Wu et al 2013)
-4:        692 European ancestry female cases and 3,570 European ancestry female controls
-5:                             1,893 Latin American cases, 1,881 Latin American controls
-6:                                                     979 European ancestry individuals
+gwas_ancest_info |&gt; dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS) | NUMBER_OF_INDIVIDUALS == 0) |&gt; nrow()</code></pre>
+<pre><code>[1] 46</code></pre>
+<pre class="r"><code>gwas_ancest_info |&gt; dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS) | NUMBER_OF_INDIVIDUALS == 0) |&gt; head()</code></pre>
+<pre><code>   STUDY_ACCESSION PUBMED_ID     FIRST_AUTHOR       DATE
+            &lt;char&gt;     &lt;int&gt;           &lt;char&gt;     &lt;IDat&gt;
+1:      GCST000308  19115949          Limou S 2009-01-01
+2:      GCST001070  21573907         Parra EJ 2011-05-15
+3:      GCST001564  22694930             Li X 2012-06-11
+4:      GCST001788  23263445 Lawrance-Owen AJ 2012-12-22
+5:      GCST002197  24057671       Chimusa ER 2013-09-18
+6:      GCST002330  24406073      Galanter JM 2014-01-07
+                                                                                                                               INITIAL_SAMPLE_DESCRIPTION
+                                                                                                                                                   &lt;char&gt;
+1: 275 European ancestry seropositive non-progressors, 86 European ancestry seropositive rapid progressors, 1,352 European ancestry seronegative controls
+2:                                                                                                            1,804 Hispanic cases, 780 Hispanic controls
+3:                                                                                          813 European ancestry cases, 1,011 European ancestry controls
+4:                                                                                                                      979 European ancestry individuals
+5:                                                                  642 South African coloured cases, 91 South African coloured controls, (see Thye 2010)
+6:                                                                                              1,893 Latin American cases, 1,881 Latin American controls
                       REPLICATION_SAMPLE_DESCRIPTION       STAGE
                                               &lt;char&gt;      &lt;char&gt;
-1: European ancestry individuals (see Traylor, 2012) replication
-2:                                              &lt;NA&gt;     initial
-3:                                              &lt;NA&gt;     initial
-4:      Cases and controls (see Boraska et al, 2014) replication
-5: EVE Asthma Consortium, see Torgerson et al., 2011 replication
-6:                               (see Medland, 2010) replication
-   NUMBER_OF_INDIVDUALS       BROAD_ANCESTRAL_CATEGORY COUNTRY_OF_ORIGIN
-                  &lt;int&gt;                         &lt;char&gt;            &lt;char&gt;
-1:                   NA                       European                NR
-2:                   NA                       European                NR
-3:                   NA                       European                NR
-4:                   NA                             NR                NR
-5:                   NA NR, Hispanic or Latin American                NR
-6:                   NA                             NR                NR
-   COUNTRY_OF_RECRUITMENT            ADDITONAL_ANCESTRY_DESCRIPTION
-                   &lt;char&gt;                                    &lt;char&gt;
-1:          Australia, NR                                          
-2:                     NR See Wu J. H., et al. 2013. PMID: 23362303
-3:                     NR                     See Wu et al 23362303
-4:                     NR                                          
-5:                     NR                                          
-6:                     NR                                          </code></pre>
+1:                                 (see Fellay 2007) replication
+2:                     European ancestry individuals replication
+3:                         TENOR and GABRIEL studies replication
+4:                               (see Medland, 2010) replication
+5:                                              &lt;NA&gt;     initial
+6: EVE Asthma Consortium, see Torgerson et al., 2011 replication
+   NUMBER_OF_INDIVIDUALS       BROAD_ANCESTRAL_CATEGORY COUNTRY_OF_ORIGIN
+                   &lt;int&gt;                         &lt;char&gt;            &lt;char&gt;
+1:                    NA                             NR                NR
+2:                    NA                       European                NR
+3:                    NA                             NR                NR
+4:                    NA                             NR                NR
+5:                    NA            Sub-Saharan African                NR
+6:                    NA NR, Hispanic or Latin American                NR
+   COUNTRY_OF_RECRUITMENT ADDITIONAL_ANCESTRY_DESCRIPTION ANCESTRY_DESCRIPTOR
+                   &lt;char&gt;                          &lt;char&gt;              &lt;lgcl&gt;
+1:                     NR                                                  NA
+2:                     NR                                                  NA
+3:                     NR                                                  NA
+4:                     NR                                                  NA
+5:  Malawi, Ghana, Gambia                                                  NA
+6:                     NR                                                  NA
+   FOUNDER/GENETICALLY_ISOLATED_POPULATION NUMBER_OF_CASES NUMBER_OF_CONTROLS
+                                    &lt;lgcl&gt;          &lt;lgcl&gt;             &lt;lgcl&gt;
+1:                                      NA              NA                 NA
+2:                                      NA              NA                 NA
+3:                                      NA              NA                 NA
+4:                                      NA              NA                 NA
+5:                                      NA              NA                 NA
+6:                                      NA              NA                 NA
+   SAMPLE_DESCRIPTION
+               &lt;lgcl&gt;
+1:                 NA
+2:                 NA
+3:                 NA
+4:                 NA
+5:                 NA
+6:                 NA</code></pre>
 <pre class="r"><code># Filter missing number of individuals
 gwas_ancest_info = gwas_ancest_info |&gt;
-  dplyr::filter(!is.na(NUMBER_OF_INDIVDUALS)) |&gt;
-  dplyr::filter(NUMBER_OF_INDIVDUALS != 0)
+  dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS)) |&gt;
+  dplyr::filter(NUMBER_OF_INDIVIDUALS != 0)
 
 # calculate cumulative number of individuals
 gwas_ancest_info = gwas_ancest_info %&gt;%  
                    dplyr::arrange(DATE) |&gt;
-                   mutate(cum_num = cumsum(as.numeric(NUMBER_OF_INDIVDUALS))
+                   mutate(cum_num = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))
                           )
 
 
@@ -660,558 +702,219 @@ gwas_ancest_info %&gt;%
   labs(x = &quot;Year&quot;, 
        y = &quot;Individuals in GWAS catalog (millons)&quot;)</code></pre>
 <p><img src="figure/replication_ancestry_bias.Rmd/plot_like_martin_et_al_2019_not_grouped-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>
+<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-plot_like_martin_et_al_2019_not_grouped-1">
+Past versions of plot_like_martin_et_al_2019_not_grouped-1.png
+</button>
+</p>
+<div id="fig-plot_like_martin_et_al_2019_not_grouped-1"
+class="collapse">
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/ec761592c38ee66054be983d1cb588339aaf05e9/docs/figure/replication_ancestry_bias.Rmd/plot_like_martin_et_al_2019_not_grouped-1.png" target="_blank">ec76159</a>
+</td>
+<td>
+IJBeasley
+</td>
+<td>
+2025-07-30
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
-<div id="group-ancestry-into-broader-categories" class="section level2">
-<h2>Group ancestry into broader categories</h2>
+<pre class="r"><code># 44 studies / 44 rows
+gwas_ancest_info |&gt;
+dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS)) |&gt;
+nrow()</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code># from only 24 gwas papers
+gwas_ancest_info |&gt;
+    dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS)) |&gt; 
+    select(PUBMED_ID) |&gt; 
+    distinct() |&gt;
+    nrow()</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>gwas_ancest_info |&gt;
+  dplyr::filter(PUBMED_ID == 28679651) |&gt;
+  select(INITIAL_SAMPLE_DESCRIPTION, 
+         REPLICATION_SAMPLE_DESCRIPTION, 
+         BROAD_ANCESTRAL_CATEGORY) |&gt;
+  distinct()</code></pre>
+<pre><code>   INITIAL_SAMPLE_DESCRIPTION REPLICATION_SAMPLE_DESCRIPTION
+                       &lt;char&gt;                         &lt;char&gt;
+1:        404 cases, controls                           &lt;NA&gt;
+2:        194 cases, controls                           &lt;NA&gt;
+3:        426 cases, controls                           &lt;NA&gt;
+4:         85 cases, controls                           &lt;NA&gt;
+5:        535 cases, controls                           &lt;NA&gt;
+6:        345 cases, controls                           &lt;NA&gt;
+7:        835 cases, controls                           &lt;NA&gt;
+8:        844 cases, controls                           &lt;NA&gt;
+9:        447 cases, controls                           &lt;NA&gt;
+   BROAD_ANCESTRAL_CATEGORY
+                     &lt;char&gt;
+1:                       NR
+2:                       NR
+3:                       NR
+4:                       NR
+5:                       NR
+6:                       NR
+7:                       NR
+8:                       NR
+9:                       NR</code></pre>
+<pre class="r"><code># 28679651 - problem seems to be that number of controls per disease not specifically listed
+# see https://pubmed.ncbi.nlm.nih.gov/28679651/
+
+
+# although paper they cite as where data comes from (https://www.nature.com/articles/leu2016387#Tab1)
+# discloses: 1229 AL amyloidosis patients from Germany, UK and Italy, and 7526 healthy local controls</code></pre>
 </div>
-<div id="dealing-with-multiple" class="section level2">
-<h2>Dealing with multiple</h2>
-<ol style="list-style-type: decimal">
-<li>Where multiple, and can get ancestry info from initial sample
-description - do that</li>
-</ol>
-<pre class="r"><code># there&#39;s some kinda gross things in here (e.g. &#39;whites&#39;, &#39;Caucasian non-Hispanic&#39;)
-unique(gwas_ancest_info$ADDITONAL_ANCESTRY_DESCRIPTION)[1:20]</code></pre>
-<pre><code> [1] &quot;&quot;                                  &quot;Korean&quot;                           
- [3] &quot;Latinos or Africans&quot;               &quot;Asian&quot;                            
- [5] &quot;European&quot;                          &quot;Malawian, Ugandan&quot;                
- [7] &quot;Black African, Ugandan&quot;            &quot;Italian&quot;                          
- [9] &quot;Japanese&quot;                          &quot;Han Chinese&quot;                      
-[11] &quot;Polish&quot;                            &quot;Northern European&quot;                
-[13] &quot;British, Irish&quot;                    &quot;Erasmus Rucphen&quot;                  
-[15] &quot;Han Chinese, Indian, Malay&quot;        &quot;Orcadian, Erasmus Rucphen&quot;        
-[17] &quot;Dutch, European American&quot;          &quot;European and European American&quot;   
-[19] &quot;mixed European and Asian ancestry&quot; &quot;Chinese, Japanese&quot;                </code></pre>
-<pre class="r"><code># find studies where people fall into different ancestry categories
-gwas_ancest_info_multiple = gwas_ancest_info |&gt; 
-  filter(grepl(&quot;,&quot;, BROAD_ANCESTRAL_CATEGORY)) |&gt;
-  dplyr::filter(!BROAD_ANCESTRAL_CATEGORY %in% 
-                  c(&quot;African unspecified, Sub-Saharan African&quot;,
-                    &quot;Sub-Saharan African, African unspecified&quot;,
-                    &#39;African American or Afro-Caribbean, African unspecified&#39;,
-                    &#39;Greater Middle Eastern (Middle Eastern, North African or Persian)&#39;,
-                    &#39;Sub-Saharan African, African American or Afro-Caribbean&#39;)
-  ) 
+<div id="filter-out-na-number-of-individuals" class="section level3">
+<h3>Filter out NA number of individuals</h3>
+<pre class="r"><code>gwas_ancest_info  =
+gwas_ancest_info |&gt;
+dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS))</code></pre>
+</div>
+</div>
+<div id="make-ancestry-groups" class="section level1">
+<h1>Make ancestry groups</h1>
+<p>Here we make the column ‘ancestry_group’ in the gwas_study_info
+datasets, ‘ancestry_group’ defines the broad ancestry group (like in
+Martin et al. 2019, European, Greater Middle Eastern etc.) that each
+group of individuals belongs to.</p>
+<pre class="r"><code>grouped_ancest = vector()
+broad_ancest_cat = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
 
-# let&#39;s see if initial sample description match number of individuals
-gwas_ancest_info_multiple = gwas_ancest_info_multiple |&gt; 
-  dplyr::select(PUBMEDID, DATE, STAGE,
-                BROAD_ANCESTRAL_CATEGORY, 
-                NUMBER_OF_INDIVDUALS,
-                INITIAL_SAMPLE_DESCRIPTION) |&gt; 
-  dplyr::distinct() |&gt;
-    mutate(
-    extracted_numbers = stringr::str_extract_all(INITIAL_SAMPLE_DESCRIPTION, &quot;\\d{1,3}(?:,\\d{3})*|\\d+&quot;), 
-    extracted_numbers = lapply(extracted_numbers, function(x) as.integer(gsub(&quot;,&quot;, &quot;&quot;, x))),      # remove commas, convert to integers
-    extracted_sum = sapply(extracted_numbers, sum),
-    matches_reported_total = extracted_sum == NUMBER_OF_INDIVDUALS,
-    diff_inital_sample_n_individ = extracted_sum - NUMBER_OF_INDIVDUALS
-  )
-
-# total number of individuals in studies with multiple ancestries
-total_multiple = sum(gwas_ancest_info_multiple$NUMBER_OF_INDIVDUALS)
-
-# proportion individuals in these studies of total number multiple ancestry
-gwas_ancest_info_multiple = gwas_ancest_info_multiple |&gt;
-  dplyr::mutate(prop_total_multiple = NUMBER_OF_INDIVDUALS / total_multiple)
-
-gwas_extracted_pairs = gwas_ancest_info_multiple |&gt; 
-  dplyr::filter(matches_reported_total == T) |&gt; 
-  dplyr::rowwise() |&gt;
-  dplyr::filter(length(extracted_numbers) &gt; 1) |&gt;
-  dplyr::ungroup()
-
-gwas_extracted_pairs =   
-  gwas_extracted_pairs |&gt;
-  dplyr::mutate(
-    # Extract number–label patterns: captures digits followed by 1–10 words (tunable)
-    number_label_matches = stringr::str_extract_all(
-      INITIAL_SAMPLE_DESCRIPTION,
-      &quot;\\b\\d{1,3}(?:,\\d{3})*\\b(?:\\s+\\w+){1,10}&quot;
-    )
-  ) |&gt;
-  dplyr::select(PUBMEDID,
-                number_label_matches, 
-                BROAD_ANCESTRAL_CATEGORY, 
-                INITIAL_SAMPLE_DESCRIPTION) |&gt;
-  # Unnest to one pair per row
-  tidyr::unnest_longer(number_label_matches) |&gt;
-  # Clean and split number from label
-  dplyr::mutate(
-    number = stringr::str_extract(number_label_matches, &quot;^\\d{1,3}(?:,\\d{3})*&quot;),
-    number = as.integer(gsub(&quot;,&quot;, &quot;&quot;, number)),
-    label = stringr::str_trim(stringr::str_remove(number_label_matches, &quot;^\\d{1,3}(?:,\\d{3})*&quot;))
-  ) 
-
-
-gwas_extracted_pairs |&gt;
-  dplyr::filter(BROAD_ANCESTRAL_CATEGORY %in% c(&quot;NR, European&quot;,
-                                                &quot;European, NR&quot;,
-                                                &quot;European, Other&quot;))</code></pre>
-<pre><code># A tibble: 154 × 6
-   PUBMEDID number_label_matches   BROAD_ANCESTRAL_CATE…¹ INITIAL_SAMPLE_DESCR…²
-      &lt;int&gt; &lt;chr&gt;                  &lt;chr&gt;                  &lt;chr&gt;                 
- 1 18385738 1,926 European ance o… European, Other        1,926 European ance o…
- 2 18385738 2,522 European and ot… European, Other        1,926 European ance o…
- 3 19451621 1,821 cases            European, Other        1,821 cases, 2,258 co…
- 4 19451621 2,258 controls         European, Other        1,821 cases, 2,258 co…
- 5 20351715 4,387 European and un… European, NR           4,387 European and un…
- 6 20351715 6,209 European and un… European, NR           4,387 European and un…
- 7 20860503 10,365 cases           European, Other        10,365 cases, 16,110 …
- 8 20860503 16,110 controls        European, Other        10,365 cases, 16,110 …
- 9 21738484 1,190 European and un… NR, European           1,190 European and un…
-10 21738484 401 European and unkn… NR, European           1,190 European and un…
-# ℹ 144 more rows
-# ℹ abbreviated names: ¹​BROAD_ANCESTRAL_CATEGORY, ²​INITIAL_SAMPLE_DESCRIPTION
-# ℹ 2 more variables: number &lt;int&gt;, label &lt;chr&gt;</code></pre>
-<pre class="r"><code>gwas_extracted_pairs |&gt;
-  dplyr::filter(!BROAD_ANCESTRAL_CATEGORY %in% c(&quot;NR, European&quot;,
-                                                &quot;European, NR&quot;,
-                                                &quot;European, Other&quot;))</code></pre>
-<pre><code># A tibble: 142 × 6
-   PUBMEDID number_label_matches   BROAD_ANCESTRAL_CATE…¹ INITIAL_SAMPLE_DESCR…²
-      &lt;int&gt; &lt;chr&gt;                  &lt;chr&gt;                  &lt;chr&gt;                 
- 1 19724244 90 Hispanic and Europ… European, Hispanic or… 90 Hispanic and Europ…
- 2 19724244 90 Hispanic and Europ… European, Hispanic or… 90 Hispanic and Europ…
- 3 20460622 973 incident AD cases  European, Hispanic or… 973 incident AD cases…
- 4 20460622 2,033 prevalent AD ca… European, Hispanic or… 973 incident AD cases…
- 5 20460622 22,604  controls of E… European, Hispanic or… 973 incident AD cases…
- 6 23021708 132 African American   African American or A… 132 African American,…
- 7 23021708 103 African American   African American or A… 132 African American,…
- 8 23719583 79 European            European, Hispanic or… 79 European, African,…
- 9 23719583 241 European           European, Hispanic or… 79 European, African,…
-10 23838604 175 European           African American or A… 175 European, African…
-# ℹ 132 more rows
-# ℹ abbreviated names: ¹​BROAD_ANCESTRAL_CATEGORY, ²​INITIAL_SAMPLE_DESCRIPTION
-# ℹ 2 more variables: number &lt;int&gt;, label &lt;chr&gt;</code></pre>
-<pre class="r"><code>gwas_extracted_pairs |&gt;
-  dplyr::filter(!BROAD_ANCESTRAL_CATEGORY %in% c(&quot;NR, European&quot;,
-                                                &quot;European, NR&quot;,
-                                                &quot;European, Other&quot;)) |&gt; dplyr::pull(label) |&gt; unique()</code></pre>
-<pre><code> [1] &quot;Hispanic and European ancestry cases&quot;                                           
- [2] &quot;Hispanic and European ancestry controls&quot;                                        
- [3] &quot;incident AD cases&quot;                                                              
- [4] &quot;prevalent AD cases&quot;                                                             
- [5] &quot;controls of European and Hispanic ancestry&quot;                                     
- [6] &quot;African American&quot;                                                               
- [7] &quot;European&quot;                                                                       
- [8] &quot;bipolar disorder cases&quot;                                                         
- [9] &quot;pre&quot;                                                                            
-[10] &quot;term birth neonates&quot;                                                            
-[11] &quot;term delivery mothers&quot;                                                          
-[12] &quot;obese individuals&quot;                                                              
-[13] &quot;non&quot;                                                                            
-[14] &quot;osteonecrosis cases&quot;                                                            
-[15] &quot;treated controls&quot;                                                               
-[16] &quot;Native American ancestry&quot;                                                       
-[17] &quot;cases with pancreatitis&quot;                                                        
-[18] &quot;cases without pancreatitis&quot;                                                     
-[19] &quot;cases&quot;                                                                          
-[20] &quot;controls&quot;                                                                       
-[21] &quot;children&quot;                                                                       
-[22] &quot;mothers and 237 fathers&quot;                                                        
-[23] &quot;African American or European ancestry female individuals with single fibroid&quot;   
-[24] &quot;African American or European ancestry female individuals with multiple fibroids&quot;
-[25] &quot;Han Chinese and unknown ancestry alcohol drinkers&quot;                              
-[26] &quot;Han Chinese and unknown ancestry non&quot;                                           
-[27] &quot;preterm birth infant cases&quot;                                                     
-[28] &quot;preterm birth infant controls&quot;                                                  
-[29] &quot;Asian&quot;                                                                          
-[30] &quot;mothers&quot;                                                                        
-[31] &quot;fathers&quot;                                                                        
-[32] &quot;Asian ancestry cases&quot;                                                           
-[33] &quot;Asian ancestry controls&quot;                                                        
-[34] &quot;Chinese or European ancestry cases&quot;                                             
-[35] &quot;Chinese or European ancestry controls&quot;                                          
-[36] &quot;Hispanic&quot;                                                                       
-[37] &quot;African American individuals&quot;                                                   
-[38] &quot;East Asian ancestry individuals&quot;                                                
-[39] &quot;European ancestry individuals&quot;                                                  
-[40] &quot;Hispanic individuals&quot;                                                           
-[41] &quot;South Asian ancestry individuals&quot;                                               
-[42] &quot;Sub&quot;                                                                            
-[43] &quot;European ancestry&quot;                                                              
-[44] &quot;East Asian ancestry female cases&quot;                                               
-[45] &quot;East Asian ancestry female controls&quot;                                            
-[46] &quot;European ancestry European&quot;                                                     
-[47] &quot;Japanese&quot;                                                                       </code></pre>
-<pre class="r"><code>gwas_extracted_pairs |&gt;
-  dplyr::filter(!BROAD_ANCESTRAL_CATEGORY %in% c(&quot;NR, European&quot;,
-                                                &quot;European, NR&quot;,
-                                                &quot;European, Other&quot;)) |&gt;
- dplyr::select(PUBMEDID, 
-               BROAD_ANCESTRAL_CATEGORY, 
-               label, 
-               number) |&gt;
- dplyr::mutate(label_v2 = case_when(
-   label %in% c(&quot;European ancestry&quot;, 
-                &quot;European ancestry individuals&quot;,
-                &quot;European&quot;) ~ &quot;European&quot;,
-   
-   label %in% c(&quot;Hispanic&quot;,
-                &quot;Hispanic ancestry&quot;,
-                &quot;Hispanic individuals&quot;) ~ &quot;Hispanic/Latino&quot;,
-   
-   label %in% c(&#39;East Asian ancestry female cases&#39;,
-                &#39;East Asian ancestry female controls&#39;,
-                &#39;East Asian ancestry individuals&#39;, 
-                &#39;Japanese&#39;) ~ &quot;East Asian&quot;,
-   
-   label %in% c(&#39;South Asian ancestry individuals&#39;) ~ &quot;South Asian&quot;,
-  
-   label %in% c(&#39;African American&#39;,
-                &quot;African American individuals&quot;) ~ &#39;African&#39;, 
-   
-   label %in% c(&#39;Asian&#39;, 
-                &#39;Asian ancestry cases&#39;, 
-                &#39;Asian ancestry controls&#39;) ~ &#39;Asian unspecified&#39;,
-   
-   label %in% c(&#39;Native American ancestry&#39;) ~ &quot;Other&quot;,
-   TRUE~BROAD_ANCESTRAL_CATEGORY
- )
- )</code></pre>
-<pre><code># A tibble: 142 × 5
-   PUBMEDID BROAD_ANCESTRAL_CATEGORY                       label number label_v2
-      &lt;int&gt; &lt;chr&gt;                                          &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   
- 1 19724244 European, Hispanic or Latin American           Hisp…     90 Europea…
- 2 19724244 European, Hispanic or Latin American           Hisp…     90 Europea…
- 3 20460622 European, Hispanic or Latin American           inci…    973 Europea…
- 4 20460622 European, Hispanic or Latin American           prev…   2033 Europea…
- 5 20460622 European, Hispanic or Latin American           cont…  22604 Europea…
- 6 23021708 African American or Afro-Caribbean, South Asi… Afri…    132 African 
- 7 23021708 African American or Afro-Caribbean, South Asi… Afri…    103 African 
- 8 23719583 European, Hispanic or Latin American, African… Euro…     79 European
- 9 23719583 European, Hispanic or Latin American, African… Euro…    241 European
-10 23838604 African American or Afro-Caribbean, European,… Euro…    175 European
-# ℹ 132 more rows</code></pre>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt; 
-  dplyr::group_by(matches_reported_total, STAGE) |&gt; 
-  dplyr::summarise(n = n())  </code></pre>
-<pre><code>`summarise()` has grouped output by &#39;matches_reported_total&#39;. You can override
-using the `.groups` argument.</code></pre>
-<pre><code># A tibble: 4 × 3
-# Groups:   matches_reported_total [2]
-  matches_reported_total STAGE           n
-  &lt;lgl&gt;                  &lt;chr&gt;       &lt;int&gt;
-1 FALSE                  initial       249
-2 FALSE                  replication   169
-3 TRUE                   initial       267
-4 TRUE                   replication     1</code></pre>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt;
-  dplyr::group_by(matches_reported_total, STAGE) |&gt; 
-  dplyr::summarise(median_diff = median(abs(diff_inital_sample_n_individ)),
-                   mean_diff = mean(abs(diff_inital_sample_n_individ)),
-                   min_diff = min(diff_inital_sample_n_individ),
-                   max_diff = max(diff_inital_sample_n_individ)
-  )</code></pre>
-<pre><code>`summarise()` has grouped output by &#39;matches_reported_total&#39;. You can override
-using the `.groups` argument.</code></pre>
-<pre><code># A tibble: 4 × 6
-# Groups:   matches_reported_total [2]
-  matches_reported_total STAGE       median_diff mean_diff min_diff max_diff
-  &lt;lgl&gt;                  &lt;chr&gt;             &lt;int&gt;     &lt;dbl&gt;    &lt;int&gt;    &lt;int&gt;
-1 FALSE                  initial           17803    94252.  -187639  1190995
-2 FALSE                  replication        6862    44807.  -741609   337502
-3 TRUE                   initial               0        0         0        0
-4 TRUE                   replication           0        0         0        0</code></pre>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt;
-  dplyr::filter(matches_reported_total == F) |&gt;
-  ggplot(aes(x = diff_inital_sample_n_individ)) + 
-  geom_histogram() + 
-  theme_bw() + 
-  facet_wrap(~STAGE)</code></pre>
-<pre><code>`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
-<p><img src="figure/replication_ancestry_bias.Rmd/unnamed-chunk-1-1.png" width="672" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt;
-  dplyr::filter(matches_reported_total == F) |&gt;
-  ggplot(aes(y = diff_inital_sample_n_individ)) + 
-  geom_boxplot() + 
-  theme_bw() + 
-  facet_wrap(~STAGE)</code></pre>
-<p><img src="figure/replication_ancestry_bias.Rmd/unnamed-chunk-1-2.png" width="672" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt;
-  arrange(desc(NUMBER_OF_INDIVDUALS)) |&gt;
-  head(
-  )</code></pre>
-<pre><code>   PUBMEDID       DATE       STAGE
-      &lt;int&gt;     &lt;IDat&gt;      &lt;char&gt;
-1: 34548389 2021-09-21     initial
-2: 33243845 2020-11-26 replication
-3: 34450027 2021-08-24     initial
-4: 34450027 2021-08-24     initial
-5: 32888493 2020-09-01     initial
-6: 32888493 2020-09-01     initial
-                                                                                                 BROAD_ANCESTRAL_CATEGORY
-                                                                                                                   &lt;char&gt;
-1:                      European, East Asian, South Asian, African American or Afro-Caribbean, Hispanic or Latin American
-2:                                                                                                           European, NR
-3:                                                                                                   East Asian, European
-4:                                                                                                   East Asian, European
-5: African American or Afro-Caribbean, African unspecified, European, East Asian, Hispanic or Latin American, South Asian
-6: African American or Afro-Caribbean, African unspecified, European, East Asian, Hispanic or Latin American, South Asian
-   NUMBER_OF_INDIVDUALS
-                  &lt;int&gt;
-1:              1159871
-2:               959564
-3:               890949
-4:               890949
-5:               746667
-6:               746431
-                                                                                                                                                                 INITIAL_SAMPLE_DESCRIPTION
-                                                                                                                                                                                     &lt;char&gt;
-1: 949,116 European ancestry individuals, 166,997 East Asian ancestry individuals, 21,338 South Asian ancestry individuals, 17,459 African American individuals, 4,961 Hispanic individuals
-2:                                                                                                                         16,761 Finnish ancestry cases, 201,194 Finnish ancestry controls
-3:                                                                        up to 400,604 European, Japanese ancestry female cases, up to 490,345 European, Japanese ancestry female controls
-4:                                                                            up to 400,604 Japanese, European ancestry male cases, up to 490,345 Japanese, European ancestry male controls
-5:                    746,667 African American or Afro-Caribbean, African ancestry, European ancestry, East Asian ancestry, Hispanic or Latin American and South Asian ancestry individuals
-6:                    746,431 African American or Afro-Caribbean, African ancestry, European ancestry, East Asian ancestry, Hispanic or Latin American and South Asian ancestry individuals
-                    extracted_numbers extracted_sum matches_reported_total
-                               &lt;list&gt;         &lt;int&gt;                 &lt;lgcl&gt;
-1: 949116,166997, 21338, 17459,  4961       1159871                   TRUE
-2:                       16761,201194        217955                  FALSE
-3:                      400604,490345        890949                   TRUE
-4:                      400604,490345        890949                   TRUE
-5:                             746667        746667                   TRUE
-6:                             746431        746431                   TRUE
-   diff_inital_sample_n_individ prop_total_multiple
-                          &lt;int&gt;               &lt;num&gt;
-1:                            0          0.02556391
-2:                      -741609          0.02114908
-3:                            0          0.01963679
-4:                            0          0.01963679
-5:                            0          0.01645677
-6:                            0          0.01645157</code></pre>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt;
-  dplyr::slice_max(NUMBER_OF_INDIVDUALS, n = 100) |&gt;
-  dplyr::mutate(PUBMEDID = as.factor(PUBMEDID)) |&gt;
-  dplyr::mutate(PUBMEDID = reorder(PUBMEDID, NUMBER_OF_INDIVDUALS)) |&gt; 
-  ggplot(aes(x = NUMBER_OF_INDIVDUALS, y= PUBMEDID)) +
-  geom_col() + 
-  theme_bw()</code></pre>
-<p><img src="figure/replication_ancestry_bias.Rmd/unnamed-chunk-1-3.png" width="672" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>gwas_ancest_info_multiple |&gt;
-  dplyr::mutate(prop_number_of_individ = NUMBER_OF_INDIVDUALS / total_multiple) |&gt;
-  dplyr::arrange(desc(NUMBER_OF_INDIVDUALS)) |&gt;  
-  dplyr::mutate(cum_prop_n_of_individ = cumsum(prop_number_of_individ)) |&gt;
-  dplyr::select(PUBMEDID, cum_prop_n_of_individ, NUMBER_OF_INDIVDUALS)</code></pre>
-<pre><code>     PUBMEDID cum_prop_n_of_individ NUMBER_OF_INDIVDUALS
-        &lt;int&gt;                 &lt;num&gt;                &lt;int&gt;
-  1: 34548389            0.02556391              1159871
-  2: 33243845            0.04671299               959564
-  3: 34450027            0.06634978               890949
-  4: 34450027            0.08598657               890949
-  5: 32888493            0.10244333               746667
- ---                                                    
-682: 29315502            0.99999960                   10
-683: 33589590            0.99999974                    6
-684: 33589590            0.99999987                    6
-685: 34680877            0.99999998                    5
-686: 31299468            1.00000000                    1</code></pre>
-<pre class="r"><code># in total - studies where initial number of individuals = number of individual
-# ~ 70% 
-gwas_ancest_info_multiple |&gt;
-  dplyr::filter(matches_reported_total == T) |&gt; 
-  dplyr::arrange(desc(NUMBER_OF_INDIVDUALS)) |&gt;  
-  dplyr::mutate(cum_prop_n_of_individ = cumsum(prop_total_multiple)) |&gt;
-  dplyr::select(PUBMEDID, cum_prop_n_of_individ, NUMBER_OF_INDIVDUALS) |&gt; 
-  tail()</code></pre>
-<pre><code>   PUBMEDID cum_prop_n_of_individ NUMBER_OF_INDIVDUALS
-      &lt;int&gt;                 &lt;num&gt;                &lt;int&gt;
-1: 22391508             0.7030777                  100
-2: 32066683             0.7030798                   95
-3: 33669428             0.7030818                   90
-4: 33831438             0.7030838                   90
-5: 34025683             0.7030857                   87
-6: 34025683             0.7030876                   86</code></pre>
-<div id="what-are-the-groups" class="section level3">
-<h3>What are the groups?</h3>
-<pre class="r"><code># code adapted from https://github.com/armartin/prs_disparities/blob/master/gwas_disparities_time.R
-
-group_ancestry_fn = function(study_ancest){
-  
-   case_when(
-     
-  # European
-  study_ancest %in% c(&#39;European&#39;) ~ &#39;European&#39;,
-  
-  # African
-  study_ancest %in% c(&#39;Sub-Saharan African, African American or Afro-Caribbean&#39;,
-                      &#39;African American or Afro-Caribbean, African unspecified&#39;,
-                      &#39;Sub-Saharan African, African unspecified&#39;,
-                      &#39;African-American or Afro-Caribbean&#39;,
-                      &#39;Sub-Saharan African&#39;,
-                      &#39;African American or Afro-Caribbean&#39;,
-                      &#39;African unspecified&#39;) ~ &#39;African&#39;,
-      
-  # Asian  
-  study_ancest %in% c(&#39;East Asian, Asian unspecified&#39;, 
-                      &#39;South Asian, East Asian &#39;,
-                      &#39;South Asian, South East Asian&#39;, 
-                      &#39;South Asian, South East Asian, East Asian&#39;,
-                      &#39;South East Asian, East Asian&#39;, 
-                      &#39;South East Asian, South Asian, East Asian&#39;,
-                      &#39;South Asian&#39;,
-                      &#39;South East Asian&#39;,
-                      &#39;Central Asian&#39;,
-                      &#39;East Asian&#39;,
-                      &#39;Asian unspecified&#39;) ~&#39;Asian&#39;,
-  
-  # Middle eastern    
-  study_ancest == &#39;Greater Middle Eastern (Middle Eastern, North African or Persian)&#39; ~&#39;Middle Eastern&#39;,
-
-  # Oceanic
-  study_ancest %in% c(&#39;Aboriginal Australian&#39;, 
-                      &#39;Oceanian&#39;) ~&#39;Oceanic&#39;,
-  
-  # Hispanic/Latin American
-  study_ancest %in% &quot;Hispanic or Latin American&quot; ~&#39;Hispanic/Latin American&#39;,
-  
-  # Other 
-  study_ancest %in% c(&#39;Other&#39;,
-                      &#39;Other, NR&#39;, 
-                      &#39;NR, Other&#39;,
-                      &#39;Other admixed ancestry&#39;, 
-                      &#39;Native American&#39;) ~ &quot;Other&quot;,
-  
-  # Not reported
-  study_ancest %in% &quot;NR&quot; ~ &quot;Not reported&quot;,
-  
-  # Multiple    
-  grepl(&quot;, &quot;, study_ancest) ~ &#39;Multiple&#39;,
-      
-  TRUE~study_ancest
-    )
-  
-    
-  
-}
-
-
-grouped_ancest = vector()
-
-for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
+for(study_ancest in broad_ancest_cat){
   
 grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
 
 }
 
 grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
-                                BROAD_ANCESTRAL_CATEGORY = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+                                BROAD_ANCESTRAL_CATEGORY = broad_ancest_cat
                                 )
 
 
-print(head(grouped_ancest_map))</code></pre>
+print(&quot;Mapping examples - broad ancestral categories to ancestry groups&quot;)</code></pre>
+<pre><code>[1] &quot;Mapping examples - broad ancestral categories to ancestry groups&quot;</code></pre>
+<pre class="r"><code>head(grouped_ancest_map)</code></pre>
 <pre><code>                                   ancestry_group
 European                                 European
-Other                                       Other
 Asian unspecified                           Asian
+Other                                       Other
 African American or Afro-Caribbean        African
 NR                                   Not reported
 South East Asian                            Asian
                                              BROAD_ANCESTRAL_CATEGORY
 European                                                     European
-Other                                                           Other
 Asian unspecified                                   Asian unspecified
+Other                                                           Other
 African American or Afro-Caribbean African American or Afro-Caribbean
 NR                                                                 NR
 South East Asian                                     South East Asian</code></pre>
-</div>
-<div id="apply-this-ancestry-mapping" class="section level3">
-<h3>Apply this ancestry mapping</h3>
 <pre class="r"><code>gwas_ancest_info = dplyr::left_join(
             gwas_ancest_info,
-            grouped_ancest_map)</code></pre>
-<pre><code>Joining with `by = join_by(BROAD_ANCESTRAL_CATEGORY)`</code></pre>
+            grouped_ancest_map,
+            by = &quot;BROAD_ANCESTRAL_CATEGORY&quot;)
+
+gwas_ancest_info = gwas_ancest_info |&gt;
+                    dplyr::mutate(ancestry_group = factor(ancestry_group, levels = ancestry_levels))</code></pre>
+<div id="number-of-individuals-per-ancestry-group-in-millions"
+class="section level2">
+<h2>Number of individuals per ancestry group (in millions)</h2>
 <pre class="r"><code>gwas_ancest_info %&gt;% 
-  group_by(ancestry_group) %&gt;% 
-  summarise(n = sum(NUMBER_OF_INDIVDUALS, na.rm = TRUE))</code></pre>
+  dplyr::group_by(ancestry_group) %&gt;% 
+  dplyr::summarise(n = sum(NUMBER_OF_INDIVIDUALS, na.rm = TRUE)/ 10^6)</code></pre>
 <pre><code># A tibble: 9 × 2
-  ancestry_group                   n
-  &lt;chr&gt;                        &lt;dbl&gt;
-1 African                   13322669
-2 Asian                    135105215
-3 European                4235129752
-4 Hispanic/Latin American   10840275
-5 Middle Eastern              348192
-6 Multiple                  55154361
-7 Not reported             110448036
-8 Oceanic                     116432
-9 Other                       404165</code></pre>
-<pre class="r"><code># colours from RColorBrewer::brewer.pal(n = 9, &quot;Set1&quot;)
-ancestry_colors &lt;- c(
-  &quot;African&quot; = &quot;#984EA3&quot;,
-  &quot;European&quot; = &quot;#E41A1C&quot;,
-  &quot;Asian&quot; = &quot;#377EB8&quot;, #east asian
-  # &quot;South Asian&quot; = &quot;#4DAF4A&quot;,
-  &quot;Hispanic/Latin American&quot; = &quot;#FF7F00&quot;,
-  &quot;Middle Eastern&quot; = &quot;#FFFF33&quot;,
-  &quot;Oceanic&quot; = &quot;#A65628&quot;,
-  &quot;Other&quot; = &quot;#F781BF&quot;,
-  &quot;Multiple&quot; = &quot;#999999&quot;,
-  &quot;Not reported&quot; = &quot;black&quot;
-  
-)
-
-# Define the desired stacking order
-ancestry_levels &lt;- c(
-  &quot;European&quot;,
-  # &quot;East Asian&quot;,
-  # &quot;South Asian&quot;,
-  &quot;Asian&quot;,
-  &quot;African&quot;,
-  &quot;Hispanic/Latin American&quot;,
-  &quot;Middle Eastern&quot;,
-  &quot;Oceanic&quot;,
-  &quot;Other&quot;,
-  &quot;Multiple&quot;,
-  &quot;Not reported&quot;
-)
-
+  ancestry_group                 n
+  &lt;fct&gt;                      &lt;dbl&gt;
+1 European                9122.   
+2 Asian                    313.   
+3 African                  408.   
+4 Hispanic/Latin American  179.   
+5 Middle Eastern             4.47 
+6 Oceanic                    0.134
+7 Other                      2.01 
+8 Multiple                 186.   
+9 Not reported             149.   </code></pre>
+<div
+id="make-plot-like-martin-et-al.-2019-by-applying-this-ancestry-mapping"
+class="section level3">
+<h3>Make plot like Martin et al. 2019 by applying this ancestry
+mapping</h3>
+<pre class="r"><code># Define the desired stacking order
+gwas_ancest_info = 
 gwas_ancest_info %&gt;% 
-  group_by(ancestry_group) %&gt;% 
   mutate(ancestry_group = factor(ancestry_group, levels = ancestry_levels)) %&gt;%
-  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVDUALS))) %&gt;% 
+  group_by(ancestry_group) %&gt;% 
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) %&gt;% 
+  add_final_totals() 
+
+
+gwas_ancest_info |&gt; 
   ggplot(aes(x=DATE, y=ancest_cumsum/(10^6), fill = ancestry_group)) + 
-  #geom_area() + 
   geom_area(position = &#39;stack&#39;) + 
   scale_x_date(date_labels = &#39;%Y&#39;, date_breaks = &quot;2 years&quot;) + 
   theme_classic() + 
   labs(x = &quot;Year&quot;, y = &quot;Individuals in GWAS catalog (millons)&quot;) + 
   scale_fill_manual(values = ancestry_colors, name=&#39;Ancestry group&#39;) </code></pre>
 <p><img src="figure/replication_ancestry_bias.Rmd/unnamed-chunk-2-1.png" width="672" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>  # scale_fill_brewer(palette = &quot;Set1&quot;)</code></pre>
-<pre class="r"><code>inner_join(
-           gwas_study_info %&gt;% select(STUDY_ACCESSION, 
-                                      `DISEASE/TRAIT`, 
-                                      MAPPED_TRAIT),
-           gwas_ancest_info %&gt;% select(STUDY_ACCESSION, 
-                                       NUMBER_OF_INDIVDUALS,
-                                       BROAD_ANCESTRAL_CATEGORY,
-                                       ancestry_group)) %&gt;% 
-  group_by(BROAD_ANCESTRAL_CATEGORY, 
-           `DISEASE/TRAIT`) %&gt;% 
-  summarise(n = sum(NUMBER_OF_INDIVDUALS)) %&gt;% 
-  group_by(BROAD_ANCESTRAL_CATEGORY) %&gt;% 
-  slice_max(n,n = 5)</code></pre>
-<pre><code>Joining with `by = join_by(STUDY_ACCESSION)`
-`summarise()` has grouped output by &#39;BROAD_ANCESTRAL_CATEGORY&#39;. You can
-override using the `.groups` argument.</code></pre>
-<pre><code># A tibble: 802 × 3
-# Groups:   BROAD_ANCESTRAL_CATEGORY [192]
-   BROAD_ANCESTRAL_CATEGORY                               `DISEASE/TRAIT`      n
-   &lt;chr&gt;                                                  &lt;chr&gt;            &lt;int&gt;
- 1 Aboriginal Australian                                  Urinary albumi…    746
- 2 Aboriginal Australian                                  Otitis media       391
- 3 Aboriginal Australian                                  Type 2 diabetes    391
- 4 Aboriginal Australian                                  Body mass index    361
- 5 African American or Afro-Caribbean                     Cataracts       262576
- 6 African American or Afro-Caribbean                     Body mass index 228346
- 7 African American or Afro-Caribbean                     Type 2 diabetes 202731
- 8 African American or Afro-Caribbean                     Diastolic bloo… 200474
- 9 African American or Afro-Caribbean                     Systolic blood… 200474
-10 African American or Afro-Caribbean, African unspecifi… Type 2 diabetes 287510
-# ℹ 792 more rows</code></pre>
+<p>
+<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-unnamed-chunk-2-1">
+Past versions of unnamed-chunk-2-1.png
+</button>
+</p>
+<div id="fig-unnamed-chunk-2-1" class="collapse">
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/ec761592c38ee66054be983d1cb588339aaf05e9/docs/figure/replication_ancestry_bias.Rmd/unnamed-chunk-2-1.png" target="_blank">ec76159</a>
+</td>
+<td>
+IJBeasley
+</td>
+<td>
+2025-07-30
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
@@ -1221,17 +924,16 @@ Session information
 </p>
 <div id="workflowr-sessioninfo" class="collapse">
 <pre class="r"><code>sessionInfo()</code></pre>
-<pre><code>R version 4.3.1 (2023-06-16 ucrt)
-Platform: x86_64-w64-mingw32/x64 (64-bit)
-Running under: Windows 11 x64 (build 26100)
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6.1
 
 Matrix products: default
-
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
 
 locale:
-[1] LC_COLLATE=English_Australia.utf8  LC_CTYPE=English_Australia.utf8   
-[3] LC_MONETARY=English_Australia.utf8 LC_NUMERIC=C                      
-[5] LC_TIME=English_Australia.utf8    
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 
 time zone: America/Los_Angeles
 tzcode source: internal
@@ -1240,23 +942,24 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] ggplot2_3.5.2   dplyr_1.1.4     workflowr_1.7.1
+[1] data.table_1.17.8 ggplot2_3.5.2     dplyr_1.1.4       workflowr_1.7.1  
 
 loaded via a namespace (and not attached):
  [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1     renv_1.0.3        
- [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.0.14        stringr_1.5.1     
- [9] git2r_0.36.2       tidyr_1.3.1        callr_3.7.6        later_1.4.2       
-[13] jquerylib_0.1.4    scales_1.4.0       yaml_2.3.10        fastmap_1.2.0     
+ [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.1.0         stringr_1.5.1     
+ [9] git2r_0.36.2       callr_3.7.6        later_1.4.2        jquerylib_0.1.4   
+[13] scales_1.4.0       yaml_2.3.10        fastmap_1.2.0      here_1.0.1        
 [17] R6_2.6.1           labeling_0.4.3     generics_0.1.4     knitr_1.50        
-[21] tibble_3.2.1       rprojroot_2.1.0    RColorBrewer_1.1-3 bslib_0.9.0       
-[25] pillar_1.10.2      rlang_1.1.6        utf8_1.2.5         cachem_1.1.0      
-[29] stringi_1.8.7      httpuv_1.6.13      xfun_0.52          getPass_0.2-4     
+[21] tibble_3.3.0       rprojroot_2.1.0    RColorBrewer_1.1-3 bslib_0.9.0       
+[25] pillar_1.11.0      rlang_1.1.6        utf8_1.2.6         cachem_1.1.0      
+[29] stringi_1.8.7      httpuv_1.6.16      xfun_0.52          getPass_0.2-4     
 [33] fs_1.6.6           sass_0.4.10        cli_3.6.5          withr_3.0.2       
 [37] magrittr_2.0.3     ps_1.9.1           grid_4.3.1         digest_0.6.37     
-[41] processx_3.8.6     rstudioapi_0.15.0  lifecycle_1.0.4    vctrs_0.6.5       
-[45] data.table_1.17.4  evaluate_1.0.3     glue_1.8.0         farver_2.1.2      
-[49] whisker_0.4.1      purrr_1.0.4        rmarkdown_2.29     httr_1.4.7        
-[53] tools_4.3.1        pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+[41] processx_3.8.6     rstudioapi_0.17.1  lifecycle_1.0.4    vctrs_0.6.5       
+[45] evaluate_1.0.4     glue_1.8.0         farver_2.1.2       whisker_0.4.1     
+[49] rmarkdown_2.29     httr_1.4.7         tools_4.3.1        pkgconfig_2.0.3   
+[53] htmltools_0.5.8.1 </code></pre>
+</div>
 </div>
 </div>
 </div>
