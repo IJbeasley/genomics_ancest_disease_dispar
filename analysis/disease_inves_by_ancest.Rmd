@@ -33,10 +33,13 @@ source(here::here("code/custom_plotting.R"))
 #                                     sep = "\t", 
 #                                     quote = "")
  
-gwas_study_info <- fread(here::here("output/gwas_study_info_trait_corrected.csv"))
+# gwas_study_info <- fread(here::here("output/gwas_study_info_trait_corrected.csv"))
+
+gwas_study_info <- fread(here::here("output/gwas_study_info_trait_ontology_info.csv"))
 
 gwas_ancest_info <-  fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
-                         sep = "\t", quote = "")
+                         sep = "\t", 
+                         quote = "")
 
 
 ```
@@ -103,6 +106,28 @@ dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS))
 
 ```
 
+## Set up - add trait information to ancestry information
+
+```{r}
+
+gwas_ancest_info = 
+left_join(
+gwas_ancest_info,
+gwas_study_info |> select(STUDY_ACCESSION, 
+                          COHORT, 
+                          MAPPED_TRAIT,
+                          DISEASE_STUDY,
+                          MAPPED_TRAIT_CATEGORY,
+                          BACKGROUND_TRAIT_CATEGORY,
+                          all_disease_terms),
+by = "STUDY_ACCESSION"
+)
+
+gwas_ancest_info = gwas_ancest_info |> filter(DISEASE_STUDY == T)
+
+
+```
+
 # Top disease traits 
 
 The traits with the most number of pubmed ids are: 
@@ -120,28 +145,41 @@ head(n_studies_trait)
 
 ```
 
+```{r}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::select(all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+
+```
+
 # Make ancestry groups 
 
 Here we make the column 'ancestry_group' in the gwas_study_info datasets, 'ancestry_group' defines the broad ancestry group (like in Martin et al. 2019, European, Greater Middle Eastern etc.) that each group of individuals belongs to. 
 
 ```{r grouped_ancest}
 
-grouped_ancest = character()
+grouped_ancest = vector()
+broad_ancest_cat = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
 
-for(study_ancest in unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)){
+for(study_ancest in broad_ancest_cat){
   
 grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
 
 }
 
-grouped_ancest_map = tibble(
-  BROAD_ANCESTRAL_CATEGORY = names(grouped_ancest),
-  ancestry_group = unname(grouped_ancest)
-)
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = broad_ancest_cat
+                                )
 
 
-
-print("See some example mapping between BROAD_ANCESTRAL_CATEGORY and ancestry_group")
+print("See some example mappings between BROAD_ANCESTRAL_CATEGORY and ancestry_group")
 print(dplyr::slice_sample(grouped_ancest_map, n = 5))
 
 
@@ -203,22 +241,6 @@ gwas_ancest_info |>
 
 # Plot number of individuals per ancestry group for a single trait
 
-## Set up - add trait information to ancestry information
-
-```{r}
-
-gwas_ancest_info = 
-left_join(
-gwas_ancest_info,
-gwas_study_info |> select(STUDY_ACCESSION, 
-                          COHORT, 
-                          MAPPED_TRAIT),
-by = "STUDY_ACCESSION"
-)
-
-
-```
-
 ## Select trait
 
 ```{r}
@@ -278,8 +300,6 @@ total_n = gwas_ancest_info |>
 
 100 * euro_n / total_n
 
-prop_euro = vector()
-total_n_vec = vector()
 
 ```
 
@@ -287,16 +307,19 @@ total_n_vec = vector()
 
 ```{r prop_euro_per_trait}
 
-for(trait in n_studies_trait$MAPPED_TRAIT[1:1000]){
+prop_euro = vector()
+total_n_vec = vector()
+
+for(trait in n_studies_trait$all_disease_terms){
   
   euro_n = gwas_ancest_info |>
            filter(ancestry_group == "European") |>
-           filter(MAPPED_TRAIT == trait) |>
+           filter(all_disease_terms == trait) |>
            pull(NUMBER_OF_INDIVIDUALS) |>
            sum(na.rm = T)
   
   total_n = gwas_ancest_info |>
-            filter(MAPPED_TRAIT == trait) |>
+            filter(all_disease_terms == trait) |>
             pull(NUMBER_OF_INDIVIDUALS) |>
             sum(na.rm = T)
   
@@ -310,19 +333,62 @@ prop_euro_df = data.frame(prop_euro = prop_euro,
                           total_n = total_n_vec)
 
 prop_euro_df = left_join(prop_euro_df,
-                         n_studies_trait |> rename(trait = MAPPED_TRAIT),
+                         n_studies_trait |> rename(trait = all_disease_terms),
                          by = "trait")
+
+```
+
+
+```{r}
+
+prop_euro_df |> ungroup() |> dplyr::slice_min(prop_euro, n = 10)
+
+prop_euro_df |> ungroup() |> dplyr::slice_max(prop_euro, n = 10)
+
+prop_euro_df |> ungroup() |> dplyr::slice_max(total_n, n = 5)
+
+```
+
+```{r}
 
 prop_euro_df$prop_euro |> summary()
 
-prop_euro_df |> slice_min(prop_euro, n = 5)
+prop_euro_df |>
+  ggplot(aes(x = prop_euro)) + 
+  geom_histogram() + 
+  theme_bw()
 
-prop_euro_df |> slice_max(prop_euro, n =5 )
+```
 
-prop_euro_df |> slice_max(total_n, n = 5)
+### Proportion european - vs. total number of individuals 
+
+
+```{r}
+
 
 cor(prop_euro_df$prop_euro, prop_euro_df$total_n, 
-    method = "spearman")
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+
+
+prop_euro_df |>
+  filter(n_studies > 5) |>
+  summarise(cor = cor(prop_euro, total_n,   
+                      method = "spearman",
+    use = "pairwise.complete.obs"))
+
+
+cor(prop_euro_df$prop_euro, prop_euro_df$n_studies, 
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+prop_euro_df |>
+  filter(n_studies > 5) |>
+  summarise(cor = cor(prop_euro, n_studies,   
+                      method = "spearman",
+    use = "pairwise.complete.obs")
+    )
 
 prop_euro_df |>
   ggplot(aes(x = total_n, y = prop_euro)) + 
@@ -330,6 +396,11 @@ prop_euro_df |>
   theme_bw() + 
   labs(x = "Total number of individuals (studied for this trait)",
        y = "Proportion of European ancestry idividuals (studied for this trait)")
+
+
+```
+
+```{r}
 
 prop_euro_df |>
   ggplot(aes(x = total_n, y = n_studies)) + 
