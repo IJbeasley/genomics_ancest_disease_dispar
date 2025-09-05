@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-08-25
+<strong>Last updated:</strong> 2025-09-05
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb710a4db85001c23f15255b79a1fade1dccab8d2targetblankb710a4da">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7c4f4af631daa17f51fa3626ee964b36a694fa33targetblank7c4f4afa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b710a4db85001c23f15255b79a1fade1dccab8d2" target="_blank">b710a4d</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7c4f4af631daa17f51fa3626ee964b36a694fa33" target="_blank">7c4f4af</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb710a4db85001c23f15255b79a1fade1dccab8d2targetblankb710a4da"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7c4f4af631daa17f51fa3626ee964b36a694fa33targetblank7c4f4afa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b710a4db85001c23f15255b79a1fade1dccab8d2" target="_blank">b710a4d</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7c4f4af631daa17f51fa3626ee964b36a694fa33" target="_blank">7c4f4af</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -541,24 +541,24 @@ were generated:
 </p>
 <pre><code>
 Ignored files:
+    Ignored:    .DS_Store
     Ignored:    .Rproj.user/
+    Ignored:    data/.DS_Store
     Ignored:    data/gwas_catalog/
     Ignored:    output/gwas_study_info_cohort_corrected.csv
     Ignored:    output/gwas_study_info_trait_corrected.csv
     Ignored:    output/gwas_study_info_trait_ontology_info.csv
     Ignored:    output/trait_ontology/
+    Ignored:    renv/
 
 Untracked files:
-    Untracked:  .DS_Store
-    Untracked:  data/.DS_Store
-    Untracked:  renv/
+    Untracked:  analysis/disease_burden.qmd
+    Untracked:  analysis/download_ontology.Rmd
+    Untracked:  data/gbd/
+    Untracked:  data/who/
 
 Unstaged changes:
-    Modified:   .Rprofile
-    Modified:   analysis/collapse_traits.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
-    Modified:   analysis/index.Rmd
-    Modified:   analysis/replication_ancestry_bias.Rmd
 
 </code></pre>
 <p>
@@ -604,6 +604,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/7c4f4af631daa17f51fa3626ee964b36a694fa33/analysis/trait_ontology_collapse.Rmd" target="_blank">7c4f4af</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-05
+</td>
+<td>
+Fixing / updating trait ontology collapse
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/5eee83c71ad5ed6034d13b1a19be44322ee01989/docs/trait_ontology_collapse.html" target="_blank">5eee83c</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-08-25
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -674,491 +708,9 @@ library(dplyr)
 library(ggplot2)
 library(stringr)</code></pre>
 </div>
-<div id="get-trait-ontology-terms-relating-to-disease-etc."
-class="section level1" number="2">
-<h1><span class="header-section-number">2</span> Get trait ontology
-terms relating to ‘Disease’ (etc.)</h1>
-<pre class="r"><code>library(httr)
-library(jsonlite)</code></pre>
-<div id="mondo-human-disease-httppurl.obolibrary.orgobomondo_0700096"
-class="section level2" number="2.1">
-<h2><span class="header-section-number">2.1</span> Mondo ‘Human Disease’
-(<a href="http://purl.obolibrary.org/obo/MONDO_0700096"
-class="uri">http://purl.obolibrary.org/obo/MONDO_0700096</a>)</h2>
-<pre class="r"><code>url &lt;-
-&quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0700096/descendants&quot;
-
-mondo_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  mondo_descendants &lt;- c(mondo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(mondo_descendants)
-mondo_descendants[1:5]
-
-writeLines(mondo_descendants, here::here(&quot;output/trait_ontology/mondo_0700096_descendants.txt&quot;))</code></pre>
-</div>
-<div id="efo-disease-descendants-httpwww.ebi.ac.ukefoefo_0000408"
-class="section level2" number="2.2">
-<h2><span class="header-section-number">2.2</span> EFO ‘Disease’
-Descendants (<a href="http://www.ebi.ac.uk/efo/EFO_0000408"
-class="uri">http://www.ebi.ac.uk/efo/EFO_0000408</a>)</h2>
-<pre class="r"><code>url &lt;-
-&quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000408/descendants&quot;
-
-efo_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  efo_descendants &lt;- c(efo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(efo_descendants)
-efo_descendants[1:5]
-
-writeLines(efo_descendants, here::here(&quot;output/trait_ontology/efo_0000408_descendants.txt&quot;))</code></pre>
-</div>
-<div id="ncit-disease-or-disorder-httppurl.obolibrary.orgoboncit_c2991"
-class="section level2" number="2.3">
-<h2><span class="header-section-number">2.3</span> NCIT (Disease or
-Disorder): <a href="http://purl.obolibrary.org/obo/NCIT_C2991"
-class="uri">http://purl.obolibrary.org/obo/NCIT_C2991</a></h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/ncit/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCIT_C2991/descendants&quot;
-
-
-ncit_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  ncit_descendants &lt;- c(ncit_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(ncit_descendants)
-ncit_descendants[1:5]
-
-writeLines(ncit_descendants, here::here(&quot;output/trait_ontology/ncit_C2991_descendants.txt&quot;))</code></pre>
-</div>
-<div id="orphanet-disorder-httpwww.orpha.netordoorphanet_557493"
-class="section level2" number="2.4">
-<h2><span class="header-section-number">2.4</span> Orphanet Disorder (<a
-href="http://www.orpha.net/ORDO/Orphanet_557493"
-class="uri">http://www.orpha.net/ORDO/Orphanet_557493</a>)</h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/ordo/terms/http%253A%252F%252Fwww.orpha.net%252FORDO%252FOrphanet_557493/descendants&quot;
-
-orphanet_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  orphanet_descendants &lt;- c(orphanet_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(orphanet_descendants)
-orphanet_descendants[1:5]
-
-writeLines(orphanet_descendants, here::here(&quot;output/trait_ontology/orphanet_557493_descendants.txt&quot;))</code></pre>
-</div>
-<div id="pathologic-process-httppurl.obolibrary.orgoboobi_1110122"
-class="section level2" number="2.5">
-<h2><span class="header-section-number">2.5</span> Pathologic process
-(<a href="http://purl.obolibrary.org/obo/OBI_1110122"
-class="uri">http://purl.obolibrary.org/obo/OBI_1110122</a>)</h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOBI_1110122/descendants&quot;
-
-path_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  path_descendants &lt;- c(path_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(path_descendants)
-path_descendants[1:5]
-
-writeLines(path_descendants, here::here(&quot;output/trait_ontology/obi_1110122_descendants.txt&quot;))</code></pre>
-</div>
-<div id="disease-course-httppurl.obolibrary.orgoboogms_0000063"
-class="section level2" number="2.6">
-<h2><span class="header-section-number">2.6</span> Disease course <a
-href="http://purl.obolibrary.org/obo/OGMS_0000063"
-class="uri">http://purl.obolibrary.org/obo/OGMS_0000063</a></h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOGMS_0000063/descendants&quot;
-
-disease_course_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  disease_course_descendants &lt;- c(disease_course_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(disease_course_descendants)
-disease_course_descendants[1:5]
-
-writeLines(disease_course_descendants, here::here(&quot;output/trait_ontology/ogms_0000063_descendants.txt&quot;))</code></pre>
-</div>
-</div>
-<div
-id="get-trait-ontology-terms-relating-to-phenotypic-abnormality-httppurl.obolibrary.orgobohp_0000118"
-class="section level1" number="3">
-<h1><span class="header-section-number">3</span> Get trait ontology
-terms relating to ‘Phenotypic abnormality’ (<a
-href="http://purl.obolibrary.org/obo/HP_0000118"
-class="uri">http://purl.obolibrary.org/obo/HP_0000118</a>)</h1>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0000118/descendants&quot;
-
-
-hp_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  hp_descendants &lt;- c(hp_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(hp_descendants)</code></pre>
-<pre><code>[1] 2625</code></pre>
-<pre class="r"><code>hp_descendants[1:5]</code></pre>
-<pre><code>[1] &quot;hypoxia&quot;                                  
-[2] &quot;necrosis&quot;                                 
-[3] &quot;Abnormality of limbs&quot;                     
-[4] &quot;Abnormality of the musculoskeletal system&quot;
-[5] &quot;Vocal cord dysfunction&quot;                   </code></pre>
-<pre class="r"><code>writeLines(hp_descendants, here::here(&quot;output/trait_ontology/hp_0000118_descendants.txt&quot;))</code></pre>
-</div>
-<div id="get-trait-ontology-terms-relating-to-measurement"
-class="section level1" number="4">
-<h1><span class="header-section-number">4</span> Get trait ontology
-terms relating to ‘Measurement’</h1>
-<div id="measurement-terms-httpwww.ebi.ac.ukefoefo_0001444"
-class="section level2" number="4.1">
-<h2><span class="header-section-number">4.1</span> Measurement terms (<a
-href="http://www.ebi.ac.uk/efo/EFO_0001444"
-class="uri">http://www.ebi.ac.uk/efo/EFO_0001444</a>)</h2>
-<pre class="r"><code># Define the API endpoint
-url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001444/descendants&quot;
-
-measurement_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  measurement_descendants &lt;- c(measurement_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(measurement_descendants)
-measurement_descendants[1:5]
-
-
-writeLines(measurement_descendants, here::here(&quot;output/trait_ontology/efo_0001444_descendants.txt&quot;))</code></pre>
-</div>
-<div id="total-cholesterol-measurements-httpwww.ebi.ac.ukefoefo_0004574"
-class="section level2" number="4.2">
-<h2><span class="header-section-number">4.2</span> Total cholesterol
-measurements (<a href="http://www.ebi.ac.uk/efo/EFO_0004574"
-class="uri">http://www.ebi.ac.uk/efo/EFO_0004574</a>)</h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004574/descendants&quot;
-
-
-total_choles_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  total_choles_descendants &lt;- c(total_choles_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-writeLines(total_choles_descendants, here::here(&quot;output/trait_ontology/efo_0004574_descendants.txt&quot;))
-
-
-length(total_choles_descendants)
-total_choles_descendants[1:5]</code></pre>
-</div>
-</div>
-<div
-id="get-ontology-terms---response-to-stimulus-httppurl.obolibrary.orgobogo_0050896"
-class="section level1" number="5">
-<h1><span class="header-section-number">5</span> Get ontology terms -
-response to stimulus (<a
-href="http://purl.obolibrary.org/obo/GO_0050896"
-class="uri">http://purl.obolibrary.org/obo/GO_0050896</a>)</h1>
-<p>Includes:</p>
-<ul>
-<li>Response to chemical (e.g. drug) (<a
-href="http://purl.obolibrary.org/obo/GO_0042221"
-class="uri">http://purl.obolibrary.org/obo/GO_0042221</a>)</li>
-<li>Immune response (<a href="http://purl.obolibrary.org/obo/GO_0006955"
-class="uri">http://purl.obolibrary.org/obo/GO_0006955</a>)</li>
-</ul>
-<div id="from-go" class="section level2" number="5.1">
-<h2><span class="header-section-number">5.1</span> From GO</h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/go/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0050896/descendants&quot;
-
-go_response_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  go_response_descendants &lt;- c(go_response_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(go_response_descendants)
-go_response_descendants[1:5]
-
-writeLines(go_response_descendants, here::here(&quot;output/trait_ontology/go_0050896_descendants.txt&quot;))</code></pre>
-</div>
-<div id="from-efo" class="section level2" number="5.2">
-<h2><span class="header-section-number">5.2</span> From EFO</h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0050896/descendants&quot;
-
-efo_response_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  efo_response_descendants &lt;- c(efo_response_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(efo_response_descendants)
-efo_response_descendants[1:5]
-
-writeLines(efo_response_descendants, here::here(&quot;output/trait_ontology/efo_go_0050896_descendants.txt&quot;))</code></pre>
-</div>
-</div>
-<div
-id="get-ontology-terms-relating-to-phenotype-httpwww.ebi.ac.ukefoefo_0000651"
-class="section level1" number="6">
-<h1><span class="header-section-number">6</span> Get ontology terms
-relating to ‘Phenotype’ (<a href="http://www.ebi.ac.uk/efo/EFO_0000651"
-class="uri">http://www.ebi.ac.uk/efo/EFO_0000651</a>)</h1>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000651/descendants&quot;
-
-phenotype_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  phenotype_descendants &lt;- c(phenotype_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(phenotype_descendants)
-phenotype_descendants[1:5]
-
-
-writeLines(phenotype_descendants, here::here(&quot;output/trait_ontology/efo_0000651_descendants.txt&quot;))</code></pre>
-</div>
-<div id="mental-process-httpwww.ebi.ac.ukefoefo_0004323"
-class="section level1" number="7">
-<h1><span class="header-section-number">7</span> Mental process (<a
-href="http://www.ebi.ac.uk/efo/EFO_0004323"
-class="uri">http://www.ebi.ac.uk/efo/EFO_0004323</a>)</h1>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004323/descendants&quot;
-
-mental_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  mental_descendants &lt;- c(mental_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(mental_descendants)
-mental_descendants[1:5]
-mental_descendants = c(&quot;mental process&quot;, 
-                       &quot;cognitive function measurement&quot;,
-                       mental_descendants)
-
-writeLines(mental_descendants, here::here(&quot;output/trait_ontology/efo_0004323_descendants.txt&quot;))</code></pre>
-</div>
-<div id="behavior-httppurl.obolibrary.orgobogo_0007610"
-class="section level1" number="8">
-<h1><span class="header-section-number">8</span> Behavior (<a
-href="http://purl.obolibrary.org/obo/GO_0007610"
-class="uri">http://purl.obolibrary.org/obo/GO_0007610</a>)</h1>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0007610/descendants&quot;
-
-behavior_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  behavior_descendants &lt;- c(behavior_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(behavior_descendants)
-behavior_descendants[1:5]
-
-behavior_descendants = c(&quot;behavior&quot;, behavior_descendants)
-writeLines(behavior_descendants, here::here(&quot;output/trait_ontology/go_0007610_descendants.txt&quot;))</code></pre>
-</div>
-<div id="injury-httpwww.ebi.ac.ukefoefo_0000546" class="section level1"
-number="9">
-<h1><span class="header-section-number">9</span> Injury (<a
-href="http://www.ebi.ac.uk/efo/EFO_0000546"
-class="uri">http://www.ebi.ac.uk/efo/EFO_0000546</a>)</h1>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000546/descendants&quot;
-
-injury_descendants &lt;- c()
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  injury_descendants &lt;- c(injury_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(injury_descendants)
-injury_descendants[1:5]
-
-injury_descendants = c(&quot;injury&quot;, injury_descendants)
-writeLines(injury_descendants, here::here(&quot;output/trait_ontology/efo_0000546_descendants.txt&quot;))</code></pre>
-</div>
-<div id="sociological-environmental-factors" class="section level1"
-number="10">
-<h1><span class="header-section-number">10</span> Sociological /
-environmental factors</h1>
-<pre class="r"><code>enviro_factors &lt;- c(
-  &quot;income&quot;,
-&quot;socioeconomic status&quot;,
-&quot;encounter with health service related to socioeconomic and psychosocial circumstances&quot; ,
-&quot;townsend deprivation index&quot;,
-&quot;household income&quot;,
-&quot;social deprivation&quot;,
-&quot;economic and social preference&quot;,
-&quot;social deprivation&quot;,
-&quot;physical activity&quot;,
-&quot;exercise&quot;,
-&quot;family relationship&quot;
-)</code></pre>
-</div>
 <div id="overlap-ontology-terms-and-gwas-traits" class="section level1"
-number="11">
-<h1><span class="header-section-number">11</span> Overlap ontology terms
+number="2">
+<h1><span class="header-section-number">2</span> Overlap ontology terms
 and GWAS traits</h1>
 <pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_cohort_corrected.csv&quot;))</code></pre>
 <pre class="r"><code>all_gwas_terms = unique(gwas_study_info$MAPPED_TRAIT)
@@ -1166,11 +718,11 @@ and GWAS traits</h1>
 all_gwas_terms = stringr::str_trim(tolower(all_gwas_terms))</code></pre>
 <div
 id="disease-overlap-how-many-gwas-traits-fall-within-disease-or-disorder-terms"
-class="section level2" number="11.1">
-<h2><span class="header-section-number">11.1</span> Disease Overlap (How
+class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Disease Overlap (How
 many GWAS traits fall within disease or disorder terms?)</h2>
-<div id="combine-disease-terms" class="section level3" number="11.1.1">
-<h3><span class="header-section-number">11.1.1</span> Combine disease
+<div id="combine-disease-terms" class="section level3" number="2.1.1">
+<h3><span class="header-section-number">2.1.1</span> Combine disease
 terms</h3>
 <pre class="r"><code>efo_descendants &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0000408_descendants.txt&quot;))
 
@@ -1180,24 +732,62 @@ ncit_descendants &lt;- readLines(here::here(&quot;output/trait_ontology/ncit_C29
 
 orphanet_descendants &lt;- readLines(here::here(&quot;output/trait_ontology/orphanet_557493_descendants.txt&quot;))
 
+age_of_onset_descendants &lt;- readLines(here::here(&quot;output/trait_ontology/oba_2020000_descendants.txt&quot;))
+
+disease_measurement_terms &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0001444_disease_measurement_terms.txt&quot;))
+
+disease_typos = c(&quot;Alzheimer disease&quot;,
+                  &quot;late-onset Alzheimers disease&quot;,
+                  &quot;age of onset of Alzheimer disease&quot;,
+                  &quot;Chagas cardiomyopathy&quot;,
+                  &quot;Parkinson disease&quot;,
+                  &quot;Iron deficiency anemia&quot;,
+                  &quot;Churg-Strauss syndrome&quot;,
+                  &quot;Iridocyclitis&quot;,
+                  &quot;Phlebitis&quot; 
+                  )
+
+other &lt;- c(&quot;Allergic disease&quot;, 
+  &quot;Lewy body dementia&quot;,
+  &quot;Lewy body attribute&quot;,
+ &quot;non-Hodgkins lymphoma&quot;,
+           &quot;Ischemic Stroke&quot;,
+           &quot;Lung disease&quot;,
+           &quot;Respiratory System Disease&quot;,
+  &quot;Iron deficiency anemia (disorder)&quot;,
+  &quot;Alzheimer disease, APOE carrier status&quot;
+           )
+
 disease_terms = c(mondo_descendants,
                   efo_descendants,
                   ncit_descendants,
-                  orphanet_descendants) |&gt;
+                  orphanet_descendants,
+                  age_of_onset_descendants,
+                  disease_measurement_terms,
+                  disease_typos,
+                  other) |&gt;
                  unique()
+
 
 disease_terms = stringr::str_trim(tolower(disease_terms))
 
 print(&quot;Number of terms related to disease or disorder&quot;)</code></pre>
 <pre><code>[1] &quot;Number of terms related to disease or disorder&quot;</code></pre>
 <pre class="r"><code>length(disease_terms)</code></pre>
-<pre><code>[1] 53251</code></pre>
-<pre class="r"><code>not_simple_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_terms]
+<pre><code>[1] 53394</code></pre>
+<pre class="r"><code># Find GWAS traits that fall within disease or disorder terms
+simple_disease_terms = all_gwas_terms[all_gwas_terms %in% disease_terms]
+
+# Also search for cases where there are multiple terms separated by commas
+# and one of them is a disease term
+not_simple_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_terms]
 
 # sometimes there&#39;s multiple terms - check if any disease term is in these gwas terms
 multiple_terms = grep(&quot;,&quot;, not_simple_disease_terms, value = T)
 
-mask &lt;- Reduce(`|`, lapply(disease_terms, function(x) grepl(x, multiple_terms)))
+disease_chunks &lt;- split(disease_terms, ceiling(seq_along(disease_terms) / 100))
+disease_chunks  &lt;- lapply(disease_chunks, function(x) paste0(x, collapse = &quot;|&quot;))
+mask &lt;- Reduce(`|`, lapply(disease_chunks, function(x) grepl(x, multiple_terms, ignore.case = T)))
 additional_disease_gwas &lt;- multiple_terms[mask]
 
 disease_gwas = c(all_gwas_terms[all_gwas_terms %in% disease_terms],
@@ -1208,30 +798,33 @@ not_disease_terms = not_simple_disease_terms[!not_simple_disease_terms %in% addi
 print(&quot;Number of GWAS traits under disease or disorder terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits under disease or disorder terms&quot;</code></pre>
 <pre class="r"><code>length(all_gwas_terms) - length(not_disease_terms)</code></pre>
-<pre><code>[1] 3377</code></pre>
+<pre><code>[1] 3507</code></pre>
 <pre class="r"><code>print(&quot;Percentage of GWAS traits under disease or disorder terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under disease or disorder terms&quot;</code></pre>
 <pre class="r"><code>round(100 * (length(all_gwas_terms) - length(not_disease_terms)) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 14.8</code></pre>
+<pre><code>[1] 15.3</code></pre>
 <pre class="r"><code>print(&quot;Percentage of GWAS traits not under disease or disorder terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits not under disease or disorder terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_disease_terms) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 85.2</code></pre>
+<pre><code>[1] 84.7</code></pre>
+<pre class="r"><code>not_accounted_for = not_disease_terms </code></pre>
 </div>
 </div>
 <div id="add-disease-terms-to-gwas-study-info-dataset"
-class="section level2" number="11.2">
-<h2><span class="header-section-number">11.2</span> Add disease terms to
+class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Add disease terms to
 GWAS study info dataset</h2>
-<pre class="r"><code>find_disease_terms  =   function(MAPPED_TRAIT) {
+<pre class="r"><code>find_disease_terms  &lt;-   function(MAPPED_TRAIT) {
         # find all disease terms that appear in the trait
         split_mapped_traits &lt;- stringr::str_split(MAPPED_TRAIT, &quot;, &quot;) |&gt; 
                                unlist()
         
-        mapped_disease_terms = disease_terms[disease_terms %in% split_mapped_traits]
+        mapped_disease_terms &lt;- split_mapped_traits[split_mapped_traits %in% disease_terms]
+        
         mapped_disease_terms = unique(mapped_disease_terms)
+        
         return(paste0(mapped_disease_terms, collapse = &quot;, &quot;))  # combine multiple matches
         
     }
@@ -1241,107 +834,29 @@ gwas_study_info &lt;-
   dplyr::rowwise() |&gt;
   dplyr::mutate(
     disease_terms = 
-      ifelse(MAPPED_TRAIT %in% disease_gwas,
+      ifelse(tolower(MAPPED_TRAIT) %in% disease_gwas,
              find_disease_terms(MAPPED_TRAIT),
              NA)
   )</code></pre>
 </div>
-<div
-id="measurement-overlap-how-many-gwas-traits-fall-within-measurement-terms"
-class="section level2" number="11.3">
-<h2><span class="header-section-number">11.3</span> Measurement Overlap
-(how many GWAS traits fall within measurement terms?)</h2>
-<div id="combine-measurement" class="section level3" number="11.3.1">
-<h3><span class="header-section-number">11.3.1</span> Combine
-measurement</h3>
-<pre class="r"><code>measurement &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0001444_descendants.txt&quot;))
-total_choles &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0004574_descendants.txt&quot;))
-
-measurement &lt;- c(total_choles,
-                 measurement) 
-
-measurement &lt;- unique(measurement)
-
-measurement = stringr::str_trim(tolower(measurement))</code></pre>
-<pre class="r"><code># Find terms where all comma-split pieces are in measurement
-measurement_gwas &lt;- not_disease_terms[
-  sapply(strsplit(not_disease_terms, &quot;, &quot;), function(parts) {
-    parts &lt;- trimws(parts) # remove extra spaces
-    all(parts %in% measurement)
-  })
-]
-
-additional_measurement &lt;- not_disease_terms[not_disease_terms %in% measurement]
-
-measurement_gwas  = c(measurement_gwas, additional_measurement) |&gt; unique()
-
-print(&quot;Number of GWAS traits under measurement terms&quot;)</code></pre>
-<pre><code>[1] &quot;Number of GWAS traits under measurement terms&quot;</code></pre>
-<pre class="r"><code>length(measurement_gwas)</code></pre>
-<pre><code>[1] 18226</code></pre>
-<pre class="r"><code>print(&quot;Percentage of GWAS traits under measurement terms&quot;)</code></pre>
-<pre><code>[1] &quot;Percentage of GWAS traits under measurement terms&quot;</code></pre>
-<pre class="r"><code>round(100 * length(measurement_gwas) / length(all_gwas_terms),
-      digits = 1)</code></pre>
-<pre><code>[1] 79.7</code></pre>
-<pre class="r"><code>not_accounted_for = not_disease_terms[!not_disease_terms %in% measurement_gwas]
-
-print(&quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
-<pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
-<pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
-      digits = 1)</code></pre>
-<pre><code>[1] 5.6</code></pre>
-<pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
-<pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
-<pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 1274</code></pre>
-</div>
-</div>
-<div id="response-to-stimulus" class="section level2" number="11.4">
-<h2><span class="header-section-number">11.4</span> Response to
-stimulus</h2>
-<div id="combine-response-terms" class="section level3" number="11.4.1">
-<h3><span class="header-section-number">11.4.1</span> Combine response
-terms</h3>
-<pre class="r"><code>go_response = readLines(here::here(&quot;output/trait_ontology/go_0050896_descendants.txt&quot;))
-
-efo_response &lt;- readLines(here::here(&quot;output/trait_ontology/efo_go_0050896_descendants.txt&quot;))
-
-response &lt;- c(go_response,
-              efo_response,
-              &quot;response to stimulus&quot;)
-
-response &lt;- unique(response)
-
-response = stringr::str_trim(tolower(response))</code></pre>
-<pre class="r"><code>response_gwas = not_accounted_for[not_accounted_for %in% response]
-
-print(&quot;Percentage of GWAS traits under response terms&quot;)</code></pre>
-<pre><code>[1] &quot;Percentage of GWAS traits under response terms&quot;</code></pre>
-<pre class="r"><code>round(100 * length(response_gwas) / length(all_gwas_terms),
-      digits = 1)</code></pre>
-<pre><code>[1] 0.6</code></pre>
-<pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% response_gwas]
-
-print(&quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
-<pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
-<pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
-      digits = 1)</code></pre>
-<pre><code>[1] 5</code></pre>
-<pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
-<pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
-<pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 1141</code></pre>
-</div>
-</div>
 <div id="phenotype-abnormality-overlap" class="section level2"
-number="11.5">
-<h2><span class="header-section-number">11.5</span> Phenotype
-abnormality overlap</h2>
+number="2.3">
+<h2><span class="header-section-number">2.3</span> Phenotype abnormality
+overlap</h2>
 <pre class="r"><code>pheno_abnorm &lt;- readLines(here::here(&quot;output/trait_ontology/hp_0000118_descendants.txt&quot;))
 pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
 
-pheno_abnorm_gwas = not_accounted_for[not_accounted_for %in% pheno_abnorm]
+# Find terms where all comma-split pieces are in measurement
+pheno_abnorm_gwas &lt;- not_accounted_for[
+  sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
+    parts &lt;- trimws(parts) # remove extra spaces
+    all(parts %in% pheno_abnorm)
+  })
+]
+
+additional_pheno_abnorm &lt;- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+
+pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |&gt; unique()
 
 print(&quot;Percentage of GWAS traits under phenotype abnormality terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under phenotype abnormality terms&quot;</code></pre>
@@ -1354,14 +869,112 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.5</code></pre>
+<pre><code>[1] 83.1</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 804</code></pre>
+<pre><code>[1] 19023</code></pre>
 </div>
-<div id="mental-process" class="section level2" number="11.6">
-<h2><span class="header-section-number">11.6</span> Mental process</h2>
+<div
+id="measurement-overlap-how-many-gwas-traits-fall-within-measurement-terms"
+class="section level2" number="2.4">
+<h2><span class="header-section-number">2.4</span> Measurement Overlap
+(how many GWAS traits fall within measurement terms?)</h2>
+<div id="combine-measurement" class="section level3" number="2.4.1">
+<h3><span class="header-section-number">2.4.1</span> Combine
+measurement</h3>
+<pre class="r"><code>measurement &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0001444_descendants.txt&quot;))
+total_choles &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0004574_descendants.txt&quot;))
+
+measurement &lt;- c(total_choles,
+                 measurement) 
+
+measurement &lt;- unique(measurement)
+
+measurement &lt;- c(&quot;cerebrospinal fluid composition attribute&quot;, measurement)
+
+measurement = stringr::str_trim(tolower(measurement))</code></pre>
+<pre class="r"><code># Find terms where all comma-split pieces are in measurement
+measurement_gwas &lt;- not_accounted_for[
+  sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
+    parts &lt;- trimws(parts)
+    all(parts %in% measurement)
+  })
+]
+additional_measurement &lt;- not_accounted_for[not_accounted_for %in% measurement]
+
+measurement_gwas  = c(measurement_gwas, additional_measurement) |&gt; unique()
+
+print(&quot;Number of GWAS traits under measurement terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of GWAS traits under measurement terms&quot;</code></pre>
+<pre class="r"><code>length(measurement_gwas)</code></pre>
+<pre><code>[1] 18108</code></pre>
+<pre class="r"><code>print(&quot;Percentage of GWAS traits under measurement terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of GWAS traits under measurement terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(measurement_gwas) / length(all_gwas_terms),
+      digits = 1)</code></pre>
+<pre><code>[1] 79.2</code></pre>
+<pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
+
+print(&quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)</code></pre>
+<pre><code>[1] 4</code></pre>
+<pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
+<pre class="r"><code>length(not_accounted_for)</code></pre>
+<pre><code>[1] 914</code></pre>
+</div>
+</div>
+<div id="response-to-stimulus" class="section level2" number="2.5">
+<h2><span class="header-section-number">2.5</span> Response to
+stimulus</h2>
+<div id="combine-response-terms" class="section level3" number="2.5.1">
+<h3><span class="header-section-number">2.5.1</span> Combine response
+terms</h3>
+<pre class="r"><code>go_response = readLines(here::here(&quot;output/trait_ontology/go_0050896_descendants.txt&quot;))
+
+efo_response &lt;- readLines(here::here(&quot;output/trait_ontology/efo_go_0050896_descendants.txt&quot;))
+
+response &lt;- c(go_response,
+              efo_response,
+              &quot;response to stimulus&quot;)
+
+response &lt;- unique(response)
+
+response = stringr::str_trim(tolower(response))</code></pre>
+<pre class="r"><code># Find terms where all comma-split pieces are in measurement
+response_gwas &lt;- not_accounted_for[
+  sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
+    parts &lt;- trimws(parts)
+    all(parts %in% response)
+  })
+]
+additional_response &lt;- not_accounted_for[not_accounted_for %in% response]
+
+measurement_gwas  = c(measurement_gwas, additional_response) |&gt; unique()
+
+print(&quot;Percentage of GWAS traits under response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of GWAS traits under response terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(response_gwas) / length(all_gwas_terms),
+      digits = 1)</code></pre>
+<pre><code>[1] 0.7</code></pre>
+<pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% response_gwas]
+
+print(&quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)</code></pre>
+<pre><code>[1] 3.3</code></pre>
+<pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
+<pre class="r"><code>length(not_accounted_for)</code></pre>
+<pre><code>[1] 761</code></pre>
+</div>
+</div>
+<div id="mental-process" class="section level2" number="2.6">
+<h2><span class="header-section-number">2.6</span> Mental process</h2>
 <pre class="r"><code>mental &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0004323_descendants.txt&quot;))
 mental = stringr::str_trim(tolower(mental))
 
@@ -1378,14 +991,14 @@ print(&quot;Percentage of GWAS traits not accounted for thus far&quot;)</code></
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for thus far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.4</code></pre>
+<pre><code>[1] 3.2</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for thus far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for thus far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 786</code></pre>
+<pre><code>[1] 743</code></pre>
 </div>
-<div id="behavior" class="section level2" number="11.7">
-<h2><span class="header-section-number">11.7</span> Behavior</h2>
+<div id="behavior" class="section level2" number="2.7">
+<h2><span class="header-section-number">2.7</span> Behavior</h2>
 <pre class="r"><code>behavior &lt;- readLines(here::here(&quot;output/trait_ontology/go_0007610_descendants.txt&quot;))
 behavior = stringr::str_trim(tolower(behavior))
 
@@ -1402,14 +1015,14 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.3</code></pre>
+<pre><code>[1] 3.1</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 763</code></pre>
+<pre><code>[1] 720</code></pre>
 </div>
-<div id="injury" class="section level2" number="11.8">
-<h2><span class="header-section-number">11.8</span> Injury</h2>
+<div id="injury" class="section level2" number="2.8">
+<h2><span class="header-section-number">2.8</span> Injury</h2>
 <pre class="r"><code>injury &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0000546_descendants.txt&quot;))
 
 injury = stringr::str_trim(tolower(injury))
@@ -1427,14 +1040,14 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.3</code></pre>
+<pre><code>[1] 3.1</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 744</code></pre>
+<pre><code>[1] 701</code></pre>
 </div>
-<div id="phenotype" class="section level2" number="11.9">
-<h2><span class="header-section-number">11.9</span> Phenotype</h2>
+<div id="phenotype" class="section level2" number="2.9">
+<h2><span class="header-section-number">2.9</span> Phenotype</h2>
 <pre class="r"><code>phenotype &lt;- readLines(here::here(&quot;output/trait_ontology/efo_0000651_descendants.txt&quot;))
 
 phenotype = stringr::str_trim(tolower(phenotype))
@@ -1452,120 +1065,206 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3</code></pre>
+<pre><code>[1] 2.9</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 695</code></pre>
+<pre><code>[1] 654</code></pre>
 </div>
 </div>
-<div id="add-categories-to-gwas-info" class="section level1"
-number="12">
-<h1><span class="header-section-number">12</span> Add Categories to GWAS
+<div id="add-categories-to-gwas-info" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Add Categories to GWAS
 Info</h1>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt;
-  dplyr::mutate(MAPPED_TRAIT_CATEGORY = dplyr::case_when(MAPPED_TRAIT %in% disease_gwas ~ &quot;Disease/Disorder&quot;,
-                                                          MAPPED_TRAIT %in% pheno_abnorm_gwas ~ &quot;Phenotypic Abornmality&quot;,
-                                                          MAPPED_TRAIT %in% measurement_gwas ~ &quot;Measurement&quot;,
-                                                          MAPPED_TRAIT %in% response_gwas ~ &quot;Response&quot;,
+  dplyr::mutate(MAPPED_TRAIT_CATEGORY = dplyr::case_when(is.na(MAPPED_TRAIT) ~ NA,
+                                                         tolower(MAPPED_TRAIT) %in% disease_gwas ~ &quot;Disease/Disorder&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ &quot;Phenotypic Abnormality&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% measurement_gwas ~ &quot;Measurement&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% response_gwas ~ &quot;Response&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% mental_gwas ~ &quot;Mental Process&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% behavior_gwas ~ &quot;Behavior&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% injury_gwas ~ &quot;Injury&quot;,
+                                                         tolower(MAPPED_TRAIT) %in% phenotype_gwas ~ &quot;Phenotype&quot;,
                                                           TRUE ~ &quot;Other&quot;
                                                           )
                 )</code></pre>
 </div>
-<div id="background-traits" class="section level1" number="13">
-<h1><span class="header-section-number">13</span> Background traits</h1>
+<div id="background-traits" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Background traits</h1>
 <pre class="r"><code>gwas_study_info$MAPPED_BACKGROUND_TRAIT |&gt; unique() -&gt; gwas_background
 
-gwas_background = stringr::str_trim(tolower(gwas_background))</code></pre>
+gwas_background = stringr::str_trim(tolower(gwas_background))
+
+length(gwas_background)</code></pre>
+<pre><code>[1] 314</code></pre>
 <div id="overlap-with-diseasedisorder-traits" class="section level2"
-number="13.1">
-<h2><span class="header-section-number">13.1</span> Overlap with
+number="4.1">
+<h2><span class="header-section-number">4.1</span> Overlap with
 disease/disorder traits</h2>
 <pre class="r"><code>multiple_terms = grep(&quot;,&quot;, gwas_background, value = T)
 mask &lt;- Reduce(`|`, lapply(disease_terms, function(x) grepl(x, multiple_terms)))
 additional_disease_gwas &lt;- multiple_terms[mask]
 
 disease_gwas = c(gwas_background[gwas_background %in% disease_terms],
-                 additional_disease_gwas)</code></pre>
+                 additional_disease_gwas)
+
+print(&quot;Number of background GWAS traits under disease or disorder terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of background GWAS traits under disease or disorder terms&quot;</code></pre>
+<pre class="r"><code>length(disease_gwas)</code></pre>
+<pre><code>[1] 229</code></pre>
+<pre class="r"><code>print(&quot;Percentage of background GWAS traits under disease or disorder terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of background GWAS traits under disease or disorder terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(disease_gwas) / length(gwas_background),
+      digits = 1)</code></pre>
+<pre><code>[1] 72.9</code></pre>
+<pre class="r"><code>not_accounted_for = gwas_background[!gwas_background %in% disease_gwas]</code></pre>
 <pre class="r"><code>gwas_study_info &lt;- 
   gwas_study_info |&gt;
   rowwise() |&gt;
   dplyr::mutate(
     background_disease_terms = 
-      ifelse(MAPPED_BACKGROUND_TRAIT %in% disease_gwas,
+      ifelse(tolower(MAPPED_BACKGROUND_TRAIT) %in% disease_gwas,
              find_disease_terms(MAPPED_BACKGROUND_TRAIT),
              NA)
   )</code></pre>
 </div>
-<div id="overlap-with-measurement-traits" class="section level2"
-number="13.2">
-<h2><span class="header-section-number">13.2</span> Overlap with
-measurement traits</h2>
-<pre class="r"><code>not_accounted_background = gwas_background[!gwas_background %in% disease_gwas]
+<div id="phenotype-abnormality-overlap-1" class="section level2"
+number="4.2">
+<h2><span class="header-section-number">4.2</span> Phenotype abnormality
+overlap</h2>
+<pre class="r"><code>pheno_abnorm &lt;- readLines(here::here(&quot;output/trait_ontology/hp_0000118_descendants.txt&quot;))
+pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
 
-measurement_gwas &lt;- not_disease_terms[
-  sapply(strsplit(not_accounted_background, &quot;, &quot;), function(parts) {
+# Find terms where all comma-split pieces are in measurement
+pheno_abnorm_gwas &lt;- not_accounted_for[
+  sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
+    parts &lt;- trimws(parts) # remove extra spaces
+    all(parts %in% pheno_abnorm)
+  })
+]
+
+additional_pheno_abnorm &lt;- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+
+pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |&gt; unique()
+
+print(&quot;Percentage of background GWAS traits under phenotype abnormality terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of background GWAS traits under phenotype abnormality terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(pheno_abnorm_gwas) / length(gwas_background),
+      digits = 1)</code></pre>
+<pre><code>[1] 2.2</code></pre>
+<pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% pheno_abnorm_gwas]
+
+print(&quot;Percentage of background GWAS traits not accounted for so far&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of background GWAS traits not accounted for so far&quot;</code></pre>
+<pre class="r"><code>round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)</code></pre>
+<pre><code>[1] 25.2</code></pre>
+<pre class="r"><code>print(&quot;Number of background GWAS traits not accounted for by so far&quot;)</code></pre>
+<pre><code>[1] &quot;Number of background GWAS traits not accounted for by so far&quot;</code></pre>
+<pre class="r"><code>length(not_accounted_for)</code></pre>
+<pre><code>[1] 79</code></pre>
+</div>
+<div id="measurement-traits" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Measurement
+traits</h2>
+<pre class="r"><code>measurement_gwas &lt;- not_accounted_for[
+  sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
     parts &lt;- trimws(parts) # remove extra spaces
     all(parts %in% measurement)
   })
 ]
 
 measurement_gwas  = c(measurement_gwas, additional_measurement) |&gt; unique()
-additional_measurement &lt;- not_accounted_background[not_accounted_background %in% measurement]</code></pre>
+additional_measurement &lt;- not_accounted_for[not_accounted_for %in% measurement]
+
+measurement_gwas  = c(measurement_gwas, additional_measurement) |&gt; unique()
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
+
+print(&quot;Percentage of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)</code></pre>
+<pre><code>[1] 7.6</code></pre>
+<pre class="r"><code>print(&quot;Number of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
+<pre class="r"><code>length(not_accounted_for)</code></pre>
+<pre><code>[1] 24</code></pre>
 </div>
-<div id="overlap-with-response-traits" class="section level2"
-number="13.3">
-<h2><span class="header-section-number">13.3</span> Overlap with
-response traits</h2>
-<pre class="r"><code>not_accounted_background = not_accounted_background[!not_accounted_background %in% measurement_gwas]
+<div id="response-traits" class="section level2" number="4.4">
+<h2><span class="header-section-number">4.4</span> Response traits</h2>
+<pre class="r"><code># Find terms where all comma-split pieces are in measurement
+response_gwas &lt;- not_accounted_for[
+  sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
+    parts &lt;- trimws(parts)
+    all(parts %in% response)
+  })
+]
+additional_response &lt;- not_accounted_for[not_accounted_for %in% response]
 
-response_gwas = not_accounted_background[not_accounted_background %in% response]
+response_gwas  = c(response_gwas, additional_response) |&gt; unique()
 
-gwas_study_info = 
+not_accounted_for = not_accounted_for[!not_accounted_for %in% response_gwas]
+
+print(&quot;Percentage of background GWAS traits under response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of background GWAS traits under response terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(response_gwas) / length(gwas_background),
+      digits = 1)</code></pre>
+<pre><code>[1] 1.6</code></pre>
+<pre class="r"><code>print(&quot;Number of background GWAS traits under response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of background GWAS traits under response terms&quot;</code></pre>
+<pre class="r"><code>length(response_gwas)</code></pre>
+<pre><code>[1] 5</code></pre>
+<pre class="r"><code>print(&quot;Number of background GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Number of background GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
+<pre class="r"><code>length(not_accounted_for)</code></pre>
+<pre><code>[1] 19</code></pre>
+<pre class="r"><code>print(&quot;Percentage of background GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of background GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
+<pre class="r"><code>round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)</code></pre>
+<pre><code>[1] 6.1</code></pre>
+<pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt;
-  dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = dplyr::case_when(MAPPED_BACKGROUND_TRAIT %in% disease_gwas ~ &quot;Disease/Disorder&quot;,
-                                                          MAPPED_BACKGROUND_TRAIT %in% measurement_gwas ~ &quot;Measurement&quot;,
-                                                          MAPPED_BACKGROUND_TRAIT %in% response_gwas ~ &quot;Response&quot;,
+  dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = dplyr::case_when(
+                                                            MAPPED_BACKGROUND_TRAIT == &quot;&quot; ~ NA,
+                                                            tolower(MAPPED_BACKGROUND_TRAIT) %in% disease_gwas ~ &quot;Disease/Disorder&quot;,
+                                                            tolower(MAPPED_BACKGROUND_TRAIT) %in% pheno_abnorm_gwas ~ &quot;Phenotypic Abnormality&quot;,
+                                                          tolower(MAPPED_BACKGROUND_TRAIT) %in% measurement_gwas ~ &quot;Measurement&quot;,
+                                                          tolower(MAPPED_BACKGROUND_TRAIT) %in% response_gwas ~ &quot;Response&quot;,
                                                           TRUE ~ &quot;Other&quot;
                                                           ))</code></pre>
 </div>
 </div>
 <div id="saving-gwas-trait-categories" class="section level1"
-number="14">
-<h1><span class="header-section-number">14</span> Saving GWAS trait
+number="5">
+<h1><span class="header-section-number">5</span> Saving GWAS trait
 categories</h1>
 <pre class="r"><code>gwas_study_info |&gt;
   group_by(MAPPED_TRAIT_CATEGORY, BACKGROUND_TRAIT_CATEGORY) |&gt;
   summarise(n_studies = n()) |&gt; 
   arrange(desc(n_studies))</code></pre>
-<pre><code># A tibble: 18 × 3
-# Groups:   MAPPED_TRAIT_CATEGORY [5]
+<pre><code># A tibble: 33 × 3
+# Groups:   MAPPED_TRAIT_CATEGORY [9]
    MAPPED_TRAIT_CATEGORY  BACKGROUND_TRAIT_CATEGORY n_studies
    &lt;chr&gt;                  &lt;chr&gt;                         &lt;int&gt;
- 1 Measurement            Measurement                   84977
- 2 Other                  Measurement                   27173
- 3 Disease/Disorder       Measurement                   16585
- 4 Measurement            Disease/Disorder               7252
- 5 Other                  Disease/Disorder               5109
- 6 Phenotypic Abornmality Measurement                     436
- 7 Disease/Disorder       Disease/Disorder                365
- 8 Response               Measurement                     274
- 9 Measurement            Other                           256
-10 Response               Disease/Disorder                155
-11 Other                  Other                           108
-12 Disease/Disorder       Other                            97
-13 Phenotypic Abornmality Disease/Disorder                 37
-14 Response               Other                            13
-15 Phenotypic Abornmality Other                            11
-16 Measurement            Response                          5
-17 Disease/Disorder       Response                          1
-18 Other                  Response                          1</code></pre>
+ 1 Measurement            &lt;NA&gt;                         101886
+ 2 Disease/Disorder       &lt;NA&gt;                          20296
+ 3 Measurement            Disease/Disorder              12223
+ 4 Other                  &lt;NA&gt;                           2692
+ 5 Phenotypic Abnormality &lt;NA&gt;                           2329
+ 6 Measurement            Measurement                     969
+ 7 Disease/Disorder       Disease/Disorder                549
+ 8 Injury                 &lt;NA&gt;                            508
+ 9 Phenotype              &lt;NA&gt;                            340
+10 Other                  Disease/Disorder                335
+# ℹ 23 more rows</code></pre>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt;
   dplyr::rowwise() |&gt;
-  dplyr::mutate(DISEASE_STUDY = ifelse(MAPPED_TRAIT_CATEGORY == &quot;Disease/Disorder&quot; | BACKGROUND_TRAIT_CATEGORY == &quot;Disease/Disorer&quot;, T, F )) |&gt;
-  dplyr::ungroup()</code></pre>
+  dplyr::mutate(DISEASE_STUDY = ifelse(MAPPED_TRAIT_CATEGORY == &quot;Disease/Disorder&quot; | BACKGROUND_TRAIT_CATEGORY == &quot;Disease/Disorder&quot;, T, F )) |&gt;
+  dplyr::ungroup() </code></pre>
 <pre class="r"><code>combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
   
   
@@ -1599,8 +1298,8 @@ gwas_study_info &lt;-
   ) |&gt;
   dplyr::ungroup()</code></pre>
 </div>
-<div id="saving" class="section level1" number="15">
-<h1><span class="header-section-number">15</span> Saving:</h1>
+<div id="saving" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Saving:</h1>
 <pre class="r"><code>data.table::fwrite(gwas_study_info,
                   here::here(&quot;output/gwas_study_info_trait_ontology_info.csv&quot;), 
                   sep = &quot;,&quot;)</code></pre>
@@ -1631,23 +1330,23 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] jsonlite_2.0.0    httr_1.4.7        stringr_1.5.1     ggplot2_3.5.2    
-[5] dplyr_1.1.4       data.table_1.17.8 workflowr_1.7.1  
+[1] stringr_1.5.1     ggplot2_3.5.2     dplyr_1.1.4       data.table_1.17.8
+[5] workflowr_1.7.1  
 
 loaded via a namespace (and not attached):
- [1] gtable_0.3.6       compiler_4.3.1     renv_1.0.3         promises_1.3.3    
- [5] tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2       callr_3.7.6       
- [9] later_1.4.2        jquerylib_0.1.4    scales_1.4.0       yaml_2.3.10       
-[13] fastmap_1.2.0      here_1.0.1         R6_2.6.1           generics_0.1.4    
-[17] curl_6.4.0         knitr_1.50         tibble_3.3.0       rprojroot_2.1.0   
+ [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1     renv_1.0.3        
+ [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2      
+ [9] callr_3.7.6        later_1.4.2        jquerylib_0.1.4    scales_1.4.0      
+[13] yaml_2.3.10        fastmap_1.2.0      here_1.0.1         R6_2.6.1          
+[17] generics_0.1.4     knitr_1.50         tibble_3.3.0       rprojroot_2.1.0   
 [21] RColorBrewer_1.1-3 bslib_0.9.0        pillar_1.11.0      rlang_1.1.6       
 [25] utf8_1.2.6         cachem_1.1.0       stringi_1.8.7      httpuv_1.6.16     
 [29] xfun_0.52          getPass_0.2-4      fs_1.6.6           sass_0.4.10       
 [33] cli_3.6.5          withr_3.0.2        magrittr_2.0.3     ps_1.9.1          
 [37] grid_4.3.1         digest_0.6.37      processx_3.8.6     rstudioapi_0.17.1 
 [41] lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.4     glue_1.8.0        
-[45] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     tools_4.3.1       
-[49] pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+[45] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     httr_1.4.7        
+[49] tools_4.3.1        pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
 </div>
 </div>
 </div>
