@@ -27,496 +27,6 @@ library(stringr)
 
 ```
 
-# Get trait ontology terms relating to 'Disease' (etc.)
-
-```{r set_up_trait_ontology_retrieval}
-
-library(httr)
-library(jsonlite)
-
-```
-
-## Mondo 'Human Disease' (<http://purl.obolibrary.org/obo/MONDO_0700096>)
-
-```{r mondo_descendants, eval=FALSE}
-
-url <-
-"http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0700096/descendants"
-
-mondo_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  mondo_descendants <- c(mondo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(mondo_descendants)
-mondo_descendants[1:5]
-
-writeLines(mondo_descendants, here::here("output/trait_ontology/mondo_0700096_descendants.txt"))
-
-```
-
-## EFO 'Disease' Descendants (<http://www.ebi.ac.uk/efo/EFO_0000408>)
-
-```{r efo_descendants, eval = F}
-
-url <-
-"http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000408/descendants"
-
-efo_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  efo_descendants <- c(efo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(efo_descendants)
-efo_descendants[1:5]
-
-writeLines(efo_descendants, here::here("output/trait_ontology/efo_0000408_descendants.txt"))
-
-```
-
-## NCIT (Disease or Disorder): <http://purl.obolibrary.org/obo/NCIT_C2991>
-
-```{r ncit_descendants, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/ncit/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCIT_C2991/descendants"
-
-
-ncit_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  ncit_descendants <- c(ncit_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(ncit_descendants)
-ncit_descendants[1:5]
-
-writeLines(ncit_descendants, here::here("output/trait_ontology/ncit_C2991_descendants.txt"))
-
-```
-
-## Orphanet Disorder (<http://www.orpha.net/ORDO/Orphanet_557493>)
-
-```{r orphanet, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/ordo/terms/http%253A%252F%252Fwww.orpha.net%252FORDO%252FOrphanet_557493/descendants"
-
-orphanet_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  orphanet_descendants <- c(orphanet_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(orphanet_descendants)
-orphanet_descendants[1:5]
-
-writeLines(orphanet_descendants, here::here("output/trait_ontology/orphanet_557493_descendants.txt"))
-
-
-```
-
-## Pathologic process (<http://purl.obolibrary.org/obo/OBI_1110122>)
-
-```{r pathologic, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOBI_1110122/descendants"
-
-path_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  path_descendants <- c(path_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(path_descendants)
-path_descendants[1:5]
-
-writeLines(path_descendants, here::here("output/trait_ontology/obi_1110122_descendants.txt"))
-
-
-```
-
-## Disease course <http://purl.obolibrary.org/obo/OGMS_0000063>
-
-```{r disease_course, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOGMS_0000063/descendants"
-
-disease_course_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  disease_course_descendants <- c(disease_course_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(disease_course_descendants)
-disease_course_descendants[1:5]
-
-writeLines(disease_course_descendants, here::here("output/trait_ontology/ogms_0000063_descendants.txt"))
-
-
-
-```
-
-# Get trait ontology terms relating to 'Phenotypic abnormality' (<http://purl.obolibrary.org/obo/HP_0000118>)
-
-```{r hp_descendants}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0000118/descendants"
-
-
-hp_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  hp_descendants <- c(hp_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(hp_descendants)
-hp_descendants[1:5]
-
-writeLines(hp_descendants, here::here("output/trait_ontology/hp_0000118_descendants.txt"))
-
-```
-
-# Get trait ontology terms relating to 'Measurement'
-
-## Measurement terms (<http://www.ebi.ac.uk/efo/EFO_0001444>)
-
-```{r measurement_descendants, eval = F}
-# Define the API endpoint
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001444/descendants"
-
-measurement_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  measurement_descendants <- c(measurement_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(measurement_descendants)
-measurement_descendants[1:5]
-
-
-writeLines(measurement_descendants, here::here("output/trait_ontology/efo_0001444_descendants.txt"))
-
-```
-
-## Total cholesterol measurements (<http://www.ebi.ac.uk/efo/EFO_0004574>)
-
-```{r, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004574/descendants"
-
-
-total_choles_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  total_choles_descendants <- c(total_choles_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-writeLines(total_choles_descendants, here::here("output/trait_ontology/efo_0004574_descendants.txt"))
-
-
-length(total_choles_descendants)
-total_choles_descendants[1:5]
-
-```
-
-# Get ontology terms - response to stimulus (<http://purl.obolibrary.org/obo/GO_0050896>)
-
-Includes:
-
--   Response to chemical (e.g. drug)
-    (<http://purl.obolibrary.org/obo/GO_0042221>)
--   Immune response (<http://purl.obolibrary.org/obo/GO_0006955>)
-
-## From GO
-
-```{r, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/go/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0050896/descendants"
-
-go_response_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  go_response_descendants <- c(go_response_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(go_response_descendants)
-go_response_descendants[1:5]
-
-writeLines(go_response_descendants, here::here("output/trait_ontology/go_0050896_descendants.txt"))
-
-
-```
-
-## From EFO
-
-```{r, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0050896/descendants"
-
-efo_response_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  efo_response_descendants <- c(efo_response_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(efo_response_descendants)
-efo_response_descendants[1:5]
-
-writeLines(efo_response_descendants, here::here("output/trait_ontology/efo_go_0050896_descendants.txt"))
-
-```
-
-# Get ontology terms relating to 'Phenotype' (<http://www.ebi.ac.uk/efo/EFO_0000651>)
-
-```{r trait_ontology, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000651/descendants"
-
-phenotype_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  phenotype_descendants <- c(phenotype_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(phenotype_descendants)
-phenotype_descendants[1:5]
-
-
-writeLines(phenotype_descendants, here::here("output/trait_ontology/efo_0000651_descendants.txt"))
-
-
-```
-
-# Mental process (<http://www.ebi.ac.uk/efo/EFO_0004323>)
-
-```{r, eval = F}
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004323/descendants"
-
-mental_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  mental_descendants <- c(mental_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(mental_descendants)
-mental_descendants[1:5]
-mental_descendants = c("mental process", 
-                       "cognitive function measurement",
-                       mental_descendants)
-
-writeLines(mental_descendants, here::here("output/trait_ontology/efo_0004323_descendants.txt"))
-
-```
-
-# Behavior (<http://purl.obolibrary.org/obo/GO_0007610>)
-
-```{r, eval = F}
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0007610/descendants"
-
-behavior_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  behavior_descendants <- c(behavior_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(behavior_descendants)
-behavior_descendants[1:5]
-
-behavior_descendants = c("behavior", behavior_descendants)
-writeLines(behavior_descendants, here::here("output/trait_ontology/go_0007610_descendants.txt"))
-
-```
-
-# Injury (<http://www.ebi.ac.uk/efo/EFO_0000546>)
-
-```{r, eval = F}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000546/descendants"
-
-injury_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  injury_descendants <- c(injury_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(injury_descendants)
-injury_descendants[1:5]
-
-injury_descendants = c("injury", injury_descendants)
-writeLines(injury_descendants, here::here("output/trait_ontology/efo_0000546_descendants.txt"))
-
-```
-
-# Sociological / environmental factors
-
-```{r}
-
-enviro_factors <- c(
-  "income",
-"socioeconomic status",
-"encounter with health service related to socioeconomic and psychosocial circumstances" ,
-"townsend deprivation index",
-"household income",
-"social deprivation",
-"economic and social preference",
-"social deprivation",
-"physical activity",
-"exercise",
-"family relationship"
-)
-
-```
 
 # Overlap ontology terms and GWAS traits
 
@@ -546,11 +56,42 @@ ncit_descendants <- readLines(here::here("output/trait_ontology/ncit_C2991_desce
 
 orphanet_descendants <- readLines(here::here("output/trait_ontology/orphanet_557493_descendants.txt"))
 
+age_of_onset_descendants <- readLines(here::here("output/trait_ontology/oba_2020000_descendants.txt"))
+
+disease_measurement_terms <- readLines(here::here("output/trait_ontology/efo_0001444_disease_measurement_terms.txt"))
+
+disease_typos = c("Alzheimer disease",
+                  "late-onset Alzheimers disease",
+                  "age of onset of Alzheimer disease",
+                  "Chagas cardiomyopathy",
+                  "Parkinson disease",
+                  "Iron deficiency anemia",
+                  "Churg-Strauss syndrome",
+                  "Iridocyclitis",
+                  "Phlebitis" 
+                  )
+
+other <- c("Allergic disease", 
+  "Lewy body dementia",
+  "Lewy body attribute",
+ "non-Hodgkins lymphoma",
+           "Ischemic Stroke",
+           "Lung disease",
+           "Respiratory System Disease",
+  "Iron deficiency anemia (disorder)",
+  "Alzheimer disease, APOE carrier status"
+           )
+
 disease_terms = c(mondo_descendants,
                   efo_descendants,
                   ncit_descendants,
-                  orphanet_descendants) |>
+                  orphanet_descendants,
+                  age_of_onset_descendants,
+                  disease_measurement_terms,
+                  disease_typos,
+                  other) |>
                  unique()
+
 
 disease_terms = stringr::str_trim(tolower(disease_terms))
 
@@ -560,12 +101,19 @@ length(disease_terms)
 ```
 
 ```{r}
+# Find GWAS traits that fall within disease or disorder terms
+simple_disease_terms = all_gwas_terms[all_gwas_terms %in% disease_terms]
+
+# Also search for cases where there are multiple terms separated by commas
+# and one of them is a disease term
 not_simple_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_terms]
 
 # sometimes there's multiple terms - check if any disease term is in these gwas terms
 multiple_terms = grep(",", not_simple_disease_terms, value = T)
 
-mask <- Reduce(`|`, lapply(disease_terms, function(x) grepl(x, multiple_terms)))
+disease_chunks <- split(disease_terms, ceiling(seq_along(disease_terms) / 100))
+disease_chunks  <- lapply(disease_chunks, function(x) paste0(x, collapse = "|"))
+mask <- Reduce(`|`, lapply(disease_chunks, function(x) grepl(x, multiple_terms, ignore.case = T)))
 additional_disease_gwas <- multiple_terms[mask]
 
 disease_gwas = c(all_gwas_terms[all_gwas_terms %in% disease_terms],
@@ -584,19 +132,24 @@ print("Percentage of GWAS traits not under disease or disorder terms")
 round(100 * length(not_disease_terms) / length(all_gwas_terms),
       digits = 1)
 
+
+not_accounted_for = not_disease_terms 
+
 ```
 
 ## Add disease terms to GWAS study info dataset
 
 ```{r disease_terms}
 
-find_disease_terms  =   function(MAPPED_TRAIT) {
+find_disease_terms  <-   function(MAPPED_TRAIT) {
         # find all disease terms that appear in the trait
         split_mapped_traits <- stringr::str_split(MAPPED_TRAIT, ", ") |> 
                                unlist()
         
-        mapped_disease_terms = disease_terms[disease_terms %in% split_mapped_traits]
+        mapped_disease_terms <- split_mapped_traits[split_mapped_traits %in% disease_terms]
+        
         mapped_disease_terms = unique(mapped_disease_terms)
+        
         return(paste0(mapped_disease_terms, collapse = ", "))  # combine multiple matches
         
     }
@@ -606,15 +159,45 @@ gwas_study_info <-
   dplyr::rowwise() |>
   dplyr::mutate(
     disease_terms = 
-      ifelse(MAPPED_TRAIT %in% disease_gwas,
+      ifelse(tolower(MAPPED_TRAIT) %in% disease_gwas,
              find_disease_terms(MAPPED_TRAIT),
              NA)
   )
 
+```
+
+## Phenotype abnormality overlap
+
+```{r}
 
 
+pheno_abnorm <- readLines(here::here("output/trait_ontology/hp_0000118_descendants.txt"))
+pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
 
+# Find terms where all comma-split pieces are in measurement
+pheno_abnorm_gwas <- not_accounted_for[
+  sapply(strsplit(not_accounted_for, ", "), function(parts) {
+    parts <- trimws(parts) # remove extra spaces
+    all(parts %in% pheno_abnorm)
+  })
+]
 
+additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+
+pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
+
+print("Percentage of GWAS traits under phenotype abnormality terms")
+round(100 * length(pheno_abnorm_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% pheno_abnorm_gwas]
+
+print("Percentage of GWAS traits not accounted for so far")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+print("Number of GWAS traits not accounted for by so far")
+length(not_accounted_for)
 
 ```
 
@@ -632,20 +215,21 @@ measurement <- c(total_choles,
 
 measurement <- unique(measurement)
 
+measurement <- c("cerebrospinal fluid composition attribute", measurement)
+
 measurement = stringr::str_trim(tolower(measurement))
 ```
 
 ```{r}
 
 # Find terms where all comma-split pieces are in measurement
-measurement_gwas <- not_disease_terms[
-  sapply(strsplit(not_disease_terms, ", "), function(parts) {
-    parts <- trimws(parts) # remove extra spaces
+measurement_gwas <- not_accounted_for[
+  sapply(strsplit(not_accounted_for, ", "), function(parts) {
+    parts <- trimws(parts)
     all(parts %in% measurement)
   })
 ]
-
-additional_measurement <- not_disease_terms[not_disease_terms %in% measurement]
+additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
 
 measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
 
@@ -656,7 +240,7 @@ print("Percentage of GWAS traits under measurement terms")
 round(100 * length(measurement_gwas) / length(all_gwas_terms),
       digits = 1)
 
-not_accounted_for = not_disease_terms[!not_disease_terms %in% measurement_gwas]
+not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
 
 print("Percentage of GWAS traits not accounted for by disease, disorder or measurement terms")
 round(100 * length(not_accounted_for) / length(all_gwas_terms),
@@ -687,7 +271,16 @@ response = stringr::str_trim(tolower(response))
 
 ```{r}
 
-response_gwas = not_accounted_for[not_accounted_for %in% response]
+# Find terms where all comma-split pieces are in measurement
+response_gwas <- not_accounted_for[
+  sapply(strsplit(not_accounted_for, ", "), function(parts) {
+    parts <- trimws(parts)
+    all(parts %in% response)
+  })
+]
+additional_response <- not_accounted_for[not_accounted_for %in% response]
+
+measurement_gwas  = c(measurement_gwas, additional_response) |> unique()
 
 print("Percentage of GWAS traits under response terms")
 round(100 * length(response_gwas) / length(all_gwas_terms),
@@ -704,29 +297,7 @@ length(not_accounted_for)
 
 ```
 
-## Phenotype abnormality overlap
 
-```{r}
-
-pheno_abnorm <- readLines(here::here("output/trait_ontology/hp_0000118_descendants.txt"))
-pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
-
-pheno_abnorm_gwas = not_accounted_for[not_accounted_for %in% pheno_abnorm]
-
-print("Percentage of GWAS traits under phenotype abnormality terms")
-round(100 * length(pheno_abnorm_gwas) / length(all_gwas_terms),
-      digits = 1)
-
-not_accounted_for = not_accounted_for[!not_accounted_for %in% pheno_abnorm_gwas]
-
-print("Percentage of GWAS traits not accounted for so far")
-round(100 * length(not_accounted_for) / length(all_gwas_terms),
-      digits = 1)
-
-print("Number of GWAS traits not accounted for by so far")
-length(not_accounted_for)
-
-```
 
 ## Mental process
 
@@ -833,10 +404,15 @@ length(not_accounted_for)
 
 gwas_study_info = 
 gwas_study_info |>
-  dplyr::mutate(MAPPED_TRAIT_CATEGORY = dplyr::case_when(MAPPED_TRAIT %in% disease_gwas ~ "Disease/Disorder",
-                                                          MAPPED_TRAIT %in% pheno_abnorm_gwas ~ "Phenotypic Abornmality",
-                                                          MAPPED_TRAIT %in% measurement_gwas ~ "Measurement",
-                                                          MAPPED_TRAIT %in% response_gwas ~ "Response",
+  dplyr::mutate(MAPPED_TRAIT_CATEGORY = dplyr::case_when(is.na(MAPPED_TRAIT) ~ NA,
+                                                         tolower(MAPPED_TRAIT) %in% disease_gwas ~ "Disease/Disorder",
+                                                         tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
+                                                         tolower(MAPPED_TRAIT) %in% measurement_gwas ~ "Measurement",
+                                                         tolower(MAPPED_TRAIT) %in% response_gwas ~ "Response",
+                                                         tolower(MAPPED_TRAIT) %in% mental_gwas ~ "Mental Process",
+                                                         tolower(MAPPED_TRAIT) %in% behavior_gwas ~ "Behavior",
+                                                         tolower(MAPPED_TRAIT) %in% injury_gwas ~ "Injury",
+                                                         tolower(MAPPED_TRAIT) %in% phenotype_gwas ~ "Phenotype",
                                                           TRUE ~ "Other"
                                                           )
                 )
@@ -851,6 +427,8 @@ gwas_study_info$MAPPED_BACKGROUND_TRAIT |> unique() -> gwas_background
 
 gwas_background = stringr::str_trim(tolower(gwas_background))
 
+length(gwas_background)
+
 ```
 
 ## Overlap with disease/disorder traits
@@ -864,6 +442,14 @@ additional_disease_gwas <- multiple_terms[mask]
 disease_gwas = c(gwas_background[gwas_background %in% disease_terms],
                  additional_disease_gwas)
 
+print("Number of background GWAS traits under disease or disorder terms")
+length(disease_gwas)
+
+print("Percentage of background GWAS traits under disease or disorder terms")
+round(100 * length(disease_gwas) / length(gwas_background),
+      digits = 1)
+
+not_accounted_for = gwas_background[!gwas_background %in% disease_gwas]
 
 ```
 
@@ -874,45 +460,121 @@ gwas_study_info <-
   rowwise() |>
   dplyr::mutate(
     background_disease_terms = 
-      ifelse(MAPPED_BACKGROUND_TRAIT %in% disease_gwas,
+      ifelse(tolower(MAPPED_BACKGROUND_TRAIT) %in% disease_gwas,
              find_disease_terms(MAPPED_BACKGROUND_TRAIT),
              NA)
   )
 
 ```
 
-## Overlap with measurement traits
+## Phenotype abnormality overlap
 
 ```{r}
 
-not_accounted_background = gwas_background[!gwas_background %in% disease_gwas]
 
-measurement_gwas <- not_disease_terms[
-  sapply(strsplit(not_accounted_background, ", "), function(parts) {
+pheno_abnorm <- readLines(here::here("output/trait_ontology/hp_0000118_descendants.txt"))
+pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
+
+# Find terms where all comma-split pieces are in measurement
+pheno_abnorm_gwas <- not_accounted_for[
+  sapply(strsplit(not_accounted_for, ", "), function(parts) {
+    parts <- trimws(parts) # remove extra spaces
+    all(parts %in% pheno_abnorm)
+  })
+]
+
+additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+
+pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
+
+print("Percentage of background GWAS traits under phenotype abnormality terms")
+round(100 * length(pheno_abnorm_gwas) / length(gwas_background),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% pheno_abnorm_gwas]
+
+print("Percentage of background GWAS traits not accounted for so far")
+round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)
+
+print("Number of background GWAS traits not accounted for by so far")
+length(not_accounted_for)
+
+```
+
+## Measurement traits
+
+```{r}
+
+measurement_gwas <- not_accounted_for[
+  sapply(strsplit(not_accounted_for, ", "), function(parts) {
     parts <- trimws(parts) # remove extra spaces
     all(parts %in% measurement)
   })
 ]
 
 measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
-additional_measurement <- not_accounted_background[not_accounted_background %in% measurement]
+additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
+
+measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
+
+print("Percentage of background GWAS traits not accounted for by disease, disorder or measurement terms")
+round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)
+
+print("Number of background GWAS traits not accounted for by disease, disorder or measurement terms")
+length(not_accounted_for)
 
 
 ```
 
-## Overlap with response traits
+## Response traits
 
 ```{r}
 
-not_accounted_background = not_accounted_background[!not_accounted_background %in% measurement_gwas]
+# Find terms where all comma-split pieces are in measurement
+response_gwas <- not_accounted_for[
+  sapply(strsplit(not_accounted_for, ", "), function(parts) {
+    parts <- trimws(parts)
+    all(parts %in% response)
+  })
+]
+additional_response <- not_accounted_for[not_accounted_for %in% response]
 
-response_gwas = not_accounted_background[not_accounted_background %in% response]
+response_gwas  = c(response_gwas, additional_response) |> unique()
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% response_gwas]
+
+print("Percentage of background GWAS traits under response terms")
+round(100 * length(response_gwas) / length(gwas_background),
+      digits = 1)
+
+print("Number of background GWAS traits under response terms")
+length(response_gwas)
+
+print("Number of background GWAS traits not accounted for by disease, measurement or response terms")
+length(not_accounted_for)
+
+print("Percentage of background GWAS traits not accounted for by disease, measurement or response terms")
+round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)
+
+
+```
+
+
+```{r}
 
 gwas_study_info = 
 gwas_study_info |>
-  dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = dplyr::case_when(MAPPED_BACKGROUND_TRAIT %in% disease_gwas ~ "Disease/Disorder",
-                                                          MAPPED_BACKGROUND_TRAIT %in% measurement_gwas ~ "Measurement",
-                                                          MAPPED_BACKGROUND_TRAIT %in% response_gwas ~ "Response",
+  dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = dplyr::case_when(
+                                                            MAPPED_BACKGROUND_TRAIT == "" ~ NA,
+                                                            tolower(MAPPED_BACKGROUND_TRAIT) %in% disease_gwas ~ "Disease/Disorder",
+                                                            tolower(MAPPED_BACKGROUND_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
+                                                          tolower(MAPPED_BACKGROUND_TRAIT) %in% measurement_gwas ~ "Measurement",
+                                                          tolower(MAPPED_BACKGROUND_TRAIT) %in% response_gwas ~ "Response",
                                                           TRUE ~ "Other"
                                                           ))
 
@@ -931,8 +593,8 @@ gwas_study_info |>
 gwas_study_info = 
 gwas_study_info |>
   dplyr::rowwise() |>
-  dplyr::mutate(DISEASE_STUDY = ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | BACKGROUND_TRAIT_CATEGORY == "Disease/Disorer", T, F )) |>
-  dplyr::ungroup()
+  dplyr::mutate(DISEASE_STUDY = ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder", T, F )) |>
+  dplyr::ungroup() 
 
 ```
 
