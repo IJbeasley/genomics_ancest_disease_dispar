@@ -125,11 +125,29 @@ gwas_study_info = gwas_study_info |>
                            "\\bdisorder\\s+measurement\\b",
                            "disorder")) 
 
+```
+
+## Age of onset of
+
+```{r}
+
 
 gwas_study_info = gwas_study_info |>
       mutate(collected_all_disease_terms = 
          stringr::str_remove(collected_all_disease_terms,
-                         pattern = "age of onset of"))
+                         pattern = "age of onset of "))
+
+```
+
+## Family history of 
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+      mutate(collected_all_disease_terms = 
+         stringr::str_remove(collected_all_disease_terms,
+                         pattern = "family history of "))
+
 
 ```
 
@@ -196,12 +214,14 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
       mutate(collected_all_disease_terms = 
            stringr::str_replace_all(collected_all_disease_terms,
-                            "alcohol dependence|alcohol withdrawal|alcohol withdrawal delirium",
+                            "alcohol dependence|alcohol withdrawal|alcohol withdrawal delirium|alcohol abuse",
                             "alcohol-related disorders"
            ))
 
 
 ```
+
+### Cannibis 
 
 ```{r}
   
@@ -213,6 +233,37 @@ gwas_study_info = gwas_study_info |>
          ))
 
 ```
+
+### Cocaine
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "cocaine use disorder|cocaine dependence",
+                          "cocaine-related disorders"
+         ))
+
+
+```
+
+## Infectious disease
+
+### Influenza
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "influenza a (h1n1)",
+                          "influenza"
+         ))
+
+
+```
+
 
 ## Asthma
 
@@ -310,7 +361,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-### ADHD & autism
+### ADHD & Autism
 
 ```{r}
 
@@ -319,8 +370,13 @@ gwas_study_info = gwas_study_info |>
         stringr::str_replace_all(collected_all_disease_terms,
                          "autism spectrum disorder",
                          "autism")
+        ) |>
+    mutate(collected_all_disease_terms = 
+        stringr::str_replace_all(collected_all_disease_terms,
+                         "asperger syndrome",
+                         "autism")
         )
-
+  
 
 gwas_study_info = gwas_study_info |> 
     mutate(collected_all_disease_terms = 
@@ -508,24 +564,408 @@ dim(n_studies_trait)
 ```
 
 
-# To do
-
-"asperger syndrome" 
-
-
 ```{r}
 
 diseases <- stringr::str_split(pattern = ", ", 
-                               n_studies_trait$collected_all_disease_terms)  |> 
+                               gwas_study_info$collected_all_disease_terms)  |> 
             unlist() |>
             stringr::str_trim()
 
 length(unique(diseases))
 
+```
+
+# Grouping - level 1
+
+
+```{r group_l1}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = collected_all_disease_terms)
 
 
 ```
 
+### Ontology help
+
+```{r ontology_fns}
+
+
+library(httr)
+library(jsonlite)
+
+
+get_descendants <- function(url){
+  
+  terms <- c()
+
+repeat {
+  res <- GET(url)
+  stop_for_status(res)
+  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
+  
+  terms <- c(terms, data$`_embedded`$terms$label)
+  
+  # check if there is a next page
+  if (!is.null(data$`_links`$`next`$href)) {
+    url <- data$`_links`$`next`$href
+  } else {
+    break
+  }
+}
+  
+terms = unlist(terms)
+terms = unique(terms)
+  
+print("Number of terms collected:")
+print(length(terms))
+
+print("\n Some example terms")
+print(terms[1:5])
+
+return(terms)
+
+
+}
+
+
+```
+
+## Cancers
+
+### Breast cancer
+
+```{r group_breast_cancer}
+
+breast_cancer_terms <- grep("breast cancer", unique(diseases), value = T)
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(breast_cancer_terms, collapse = "|"),
+                                   "breast cancer"
+                          )  
+        )
+
+```
+
+
+### Skin Cancer
+
+```{r skin_cancer_get_terms}
+
+url<- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002898/descendants"
+
+skin_cancer_terms <- get_descendants(url)
+
+# plus skin carcinoma terms
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009259/descendants"
+
+
+skin_carcinoma_terms <- get_descendants(url)
+
+skin_cancer_terms = c(skin_cancer_terms, skin_carcinoma_terms) 
+
+skin_cancer_terms = stringr::str_replace_all(skin_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+skin_cancer_terms = unique(skin_cancer_terms)
+
+```
+
+
+```{r group_skin_cancer}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(skin_cancer_terms, collapse = "|"),
+                                   "skin cancer"
+                          )  
+        )
+
+
+```
+
+### Male reproductive organ cancer
+
+```{r group_male_reproductive_organ_cancer}
+
+male_repro_cancer_terms = c("metastatic prostate cancer",
+                              "prostate cancer",
+                            "scrotum cancer",
+                            "epididymis cancer",
+                            "penile cancer"
+                              )
+
+gwas_study_info = 
+ gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+                  stringr::str_replace_all(l1_all_disease_terms,
+                           pattern = paste0(male_repro_cancer_terms, collapse = "|"),
+                          "male reproductive organ cancer"
+                          ))
+
+
+
+```
+
+### Female reproductive organ cancer 
+
+```{r group_fem_repro_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_120/descendants"
+
+female_repro_cancer_terms <- get_descendants(url)
+
+female_repro_cancer_terms = stringr::str_replace_all(female_repro_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(female_repro_cancer_terms, collapse = "|"),
+                                   "female reproductive organ cancer"
+                          )  
+        )
+
+```
+
+
+### Liver cancer 
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002691/descendants"
+
+liver_cancer_terms <- get_descendants(url)
+
+liver_cancer_terms = stringr::str_replace_all(liver_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+```
+
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(liver_cancer_terms, collapse = "|"),
+                                   "liver cancer"
+                          )  
+        )
+
+```
+
+### Lung cancer 
+
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008903/descendants"
+
+lung_cancer_terms <- get_descendants(url)
+
+lung_cancer_terms = stringr::str_replace_all(lung_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(lung_cancer_terms, collapse = "|"),
+                                   "lung cancer"
+                          )  
+        )
+
+
+```
+
+### Colorectal cancer
+
+```{r}
+
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005575/descendants"
+
+colorectal_cancer_terms <- get_descendants(url)
+
+colorectal_cancer_terms = stringr::str_replace_all(colorectal_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(colorectal_cancer_terms, collapse = "|"),
+                                   "colorectal cancer"
+                          )  
+        )
+
+
+```
+
+### Kidney cancer
+
+```{r}
+
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_263/descendants"
+
+
+kidney_cancer_terms <- get_descendants(url)
+
+kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(kidney_cancer_terms, collapse = "|"),
+                                   "kidney cancer"
+                          )  
+        )
+
+
+```
+
+## Allergies 
+
+```{r}
+
+
+allergy_terms <- grep("allergy", unique(diseases), value = T)
+
+allergic_terms <- grep("allergic", unique(diseases), value = T) 
+allergic_terms = allergic_terms[allergic_terms != "non-allergic rhinitis"]
+
+eczema_terms <- grep("eczema", unique(diseases), value = T) 
+
+allergy_terms <- c(allergy_terms, 
+                   allergic_terms, 
+                   eczema_terms)
+
+```
+
+```{r}
+
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(allergy_terms, collapse = "|"),
+                                   "allergic disease"
+                          )  
+        )
+
+```
+
+## Infectious disease 
+
+###  Abscess 
+```{r}
+
+abscess_terms <- grep("abscess", unique(diseases), value = T)
+
+```
+
+### 
+
+```{r}
+
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(abscess_terms, collapse = "|"),
+                                   "abscess"
+                          )  
+        )
+
+```
+
+?Maybe: could group further into hypersensitivity reaction disease (with drug hypersensitivity syndrome)
+
+## Putting it all together
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  rowwise() |>
+  mutate(
+    l1_all_disease_terms = paste0(
+      unique(unlist(stringr::str_split(l1_all_disease_terms, ", "))),
+      collapse = ", "
+    )
+  ) |>
+  ungroup()
+
+gwas_study_info$l1_all_disease_terms = stringr::str_trim(gwas_study_info$l1_all_disease_terms)
+gwas_study_info$l1_all_disease_terms = sub(",$", "", gwas_study_info$l1_all_disease_terms)
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(l1_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(l1_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+```{r}
+
+diseases <- stringr::str_split(pattern = ", ", 
+                               gwas_study_info$l1_all_disease_terms)  |> 
+            unlist() |>
+            stringr::str_trim()
+
+length(unique(diseases))
+
+# make frequency table
+freq <- table(as.factor(diseases))
+
+# sort in decreasing order
+freq_sorted <- sort(freq, decreasing = TRUE)
+
+# show top N, e.g. top 10
+head(freq_sorted, 10)
+
+```
 
 # (?) Even more grouping to maybe add later:
 - Cancer
