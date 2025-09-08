@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+<meta name="date" content="2025-09-08" />
+
+<title>Level 1 Disease Trait Grouping</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Level 1 Disease Trait Grouping</h1>
+<h4 class="author">Isobel Beasley</h4>
+<h4 class="date">2025-09-08</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2025-09-08
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree4a6d1c5418b6e20da8030e2f8deebc2fc32c9f33targetblank4a6d1c5a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/4a6d1c5418b6e20da8030e2f8deebc2fc32c9f33" target="_blank">4a6d1c5</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree4a6d1c5418b6e20da8030e2f8deebc2fc32c9f33targetblank4a6d1c5a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/4a6d1c5418b6e20da8030e2f8deebc2fc32c9f33" target="_blank">4a6d1c5</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rproj.user/
+    Ignored:    data/.DS_Store
+    Ignored:    data/gwas_catalog/
+    Ignored:    output/gwas_study_info_cohort_corrected.csv
+    Ignored:    output/gwas_study_info_trait_corrected.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info.csv
+    Ignored:    output/trait_ontology/
+    Ignored:    renv/
+
+Untracked files:
+    Untracked:  analysis/disease_burden.qmd
+    Untracked:  analysis/level_2_disease_group.Rmd
+    Untracked:  data/gbd/
+    Untracked:  data/who/
+
+Unstaged changes:
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/trait_ontology_collapse.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/level_1_disease_group.Rmd</code>)
+and HTML (<code>docs/level_1_disease_group.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/4a6d1c5418b6e20da8030e2f8deebc2fc32c9f33/analysis/level_1_disease_group.Rmd" target="_blank">4a6d1c5</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-08
+</td>
+<td>
+Adding first level of disease term grouping
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="set-up" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Set up</h1>
+<pre class="r"><code>library(dplyr)
+library(data.table)
+library(ggplot2)
+library(stringr)</code></pre>
+<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_trait_ontology_info.csv&quot;))</code></pre>
+</div>
+<div id="initial-summary" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Initial summary</h1>
+<div id="objectives-of-this-analysis" class="section level2"
+number="2.1">
+<h2><span class="header-section-number">2.1</span> Objectives of this
+analysis:</h2>
+<p>Level 1 disease grouping: - collapse disease causes, e.g. contact
+dermatitis due to nickel to contact dermatitis - collapse disease
+subtypes, e.g. bipolar I and bipolar II to bipolar disorder - collapse
+disease onset times, e.g. early-onset alzheimers disease and late-onset
+alzheimers disease to alzheimers disease - collapse disease stages</p>
+</div>
+<div id="grouping---level-1-set-up" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Grouping - level 1
+set up</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms = collected_all_disease_terms)</code></pre>
+</div>
+<div id="initial-summary---number-of-unique-study-terns"
+class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Initial summary -
+number of unique study terns</h2>
+<pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
+  dplyr::filter(DISEASE_STUDY == T) |&gt;
+  dplyr::select(collected_all_disease_terms, PUBMED_ID) |&gt;
+  dplyr::distinct() |&gt;
+  dplyr::group_by(collected_all_disease_terms) |&gt;
+  dplyr::summarise(n_studies = dplyr::n()) |&gt;
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)</code></pre>
+<pre><code># A tibble: 6 × 2
+  collected_all_disease_terms n_studies
+  &lt;chr&gt;                           &lt;int&gt;
+1 type 2 diabetes mellitus          149
+2 alzheimers disease                117
+3 breast cancer                     115
+4 asthma                            111
+5 major depressive disorder         110
+6 schizophrenia                     106</code></pre>
+<pre class="r"><code>dim(n_studies_trait)</code></pre>
+<pre><code>[1] 2600    2</code></pre>
+<div id="when-separate-studies-with-multiple-terms"
+class="section level3" number="2.3.1">
+<h3><span class="header-section-number">2.3.1</span> When separate
+studies with multiple terms</h3>
+<pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
+                               gwas_study_info$collected_all_disease_terms)  |&gt; 
+            unlist() |&gt;
+            stringr::str_trim()
+
+length(unique(diseases))</code></pre>
+<pre><code>[1] 1830</code></pre>
+</div>
+</div>
+</div>
+<div id="disease-cause-grouping" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Disease cause
+grouping</h1>
+<div id="contact-dermatitis" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Contact
+dermatitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;contact dermatitis due to nickel&quot;,
+                          &quot;contact dermatitis&quot;
+         ))</code></pre>
+</div>
+</div>
+<div id="disease-subtype-grouping-non-cancer" class="section level1"
+number="4">
+<h1><span class="header-section-number">4</span> Disease subtype
+grouping (non-cancer)</h1>
+<div id="ontology-help---for-getting-disease-subtypes"
+class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Ontology help - for
+getting disease subtypes</h2>
+<pre class="r"><code>library(httr)
+library(jsonlite)
+
+
+get_descendants &lt;- function(url){
+  
+  terms &lt;- c()
+
+repeat {
+  res &lt;- GET(url)
+  stop_for_status(res)
+  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
+  
+  terms &lt;- c(terms, data$`_embedded`$terms$label)
+  
+  # check if there is a next page
+  if (!is.null(data$`_links`$`next`$href)) {
+    url &lt;- data$`_links`$`next`$href
+  } else {
+    break
+  }
+}
+  
+terms = unlist(terms)
+terms = stringr::str_trim(tolower(terms))
+terms = unique(terms)
+  
+print(&quot;Number of terms collected:&quot;)
+print(length(terms))
+
+print(&quot;\n Some example terms&quot;)
+print(terms[1:5])
+
+return(terms)
+
+
+}</code></pre>
+</div>
+<div id="abortion" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Abortion</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;habitual abortion|abortion&quot;,
+                          &quot;loss of pregnancy&quot;
+         ))
+# exact synonyms (to avoid partial matches
+# https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001491?lang=en</code></pre>
+</div>
+<div id="acute-pancreatitis" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Acute
+pancreatitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;asparaginase-induced acute pancreatitis&quot;,
+                          &quot;acute pancreatitis&quot;
+         ))</code></pre>
+</div>
+<div id="alopecia" class="section level2" number="4.4">
+<h2><span class="header-section-number">4.4</span> Alopecia</h2>
+<pre class="r"><code>url&lt;-  &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0004907/descendants&quot;
+
+alopecia_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 50
+[1] &quot;\n Some example terms&quot;
+[1] &quot;alopecia universalis&quot;                                     
+[2] &quot;microcephaly sparse hair intellectual disability seizures&quot;
+[3] &quot;slti-salem syndrome&quot;                                      
+[4] &quot;ectodermal dysplasia alopecia preaxial polydactyly&quot;       
+[5] &quot;central centrifugal cicatricial alopecia&quot;                 </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          pattern = paste0(alopecia_terms, collapse = &quot;|&quot;),
+                          &quot;alopecia&quot;
+         ))</code></pre>
+</div>
+<div id="allergic-contact-dermatitis" class="section level2"
+number="4.5">
+<h2><span class="header-section-number">4.5</span> Allergic contact
+dermatitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;allergic contact dermatitis of eyelid&quot;,
+                          &quot;allergic contact dermatitis&quot;
+         ))</code></pre>
+</div>
+<div id="allergic-rhinitis" class="section level2" number="4.6">
+<h2><span class="header-section-number">4.6</span> Allergic
+rhinitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;seasonal allergic rhinitis&quot;,
+                          &quot;allergic rhinitis&quot;
+         ))</code></pre>
+</div>
+<div id="asthma" class="section level2" number="4.7">
+<h2><span class="header-section-number">4.7</span> Asthma</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+      mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms ,
+                            &quot;atopic asthma&quot;,
+                            &quot;asthma&quot;
+           )) |&gt;
+    mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms ,
+                            &quot;chronic obstructive asthma&quot;,
+                            &quot;asthma&quot;
+           ))</code></pre>
+</div>
+<div id="autoimmune-pancreatitis" class="section level2" number="4.8">
+<h2><span class="header-section-number">4.8</span> Autoimmune
+pancreatitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+      mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms ,
+                            &quot;autoimmune pancreatitis type 1&quot;,
+                            &quot;autoimmune pancreatitis&quot;
+           )) </code></pre>
+</div>
+<div id="biopolar-disorder" class="section level2" number="4.9">
+<h2><span class="header-section-number">4.9</span> Biopolar
+disorder</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;bipolar ii disorder|bipolar i disorder&quot;,
+                          &quot;bipolar disorder&quot;
+         ))</code></pre>
+</div>
+<div id="celiac-disease" class="section level2" number="4.10">
+<h2><span class="header-section-number">4.10</span> Celiac disease</h2>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = c(&quot;refractory celiac disease&quot;),
+                                   &quot;celiac disease&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="chronic-pancreatitis" class="section level2" number="4.11">
+<h2><span class="header-section-number">4.11</span> Chronic
+pancreatitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;thiopurine immunosuppressant-induced pancreatitis|non-alcoholic pancreatitis&quot;,
+                          &quot;chronic pancreatitis&quot;
+         ))</code></pre>
+</div>
+<div id="chronic-rhinosinusitis" class="section level2" number="4.12">
+<h2><span class="header-section-number">4.12</span> Chronic
+rhinosinusitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;chronic rhinosinusitis with nasal polyps&quot;,
+                          &quot;chronic pancreatitis&quot;
+         ))</code></pre>
+</div>
+<div id="drug-allergy" class="section level2" number="4.13">
+<h2><span class="header-section-number">4.13</span> Drug allergy</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;beta-lactam allergy&quot;,
+                          &quot;drug allergy&quot;
+         ))</code></pre>
+</div>
+<div id="food-allergy" class="section level2" number="4.14">
+<h2><span class="header-section-number">4.14</span> Food allergy</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;peanut allergy|milk allergy|egg allergy|wheat allergic reaction&quot;,
+                          &quot;food allergy&quot;
+         ))</code></pre>
+</div>
+<div id="photosensitivity-disease" class="section level2" number="4.15">
+<h2><span class="header-section-number">4.15</span> Photosensitivity
+disease</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms ,
+                         &quot;phototoxic dermatitis|skin sensitivity to sun&quot;,
+                         &quot;photosensitivity disease&quot;)
+        )</code></pre>
+</div>
+<div id="phobic-disorder" class="section level2" number="4.16">
+<h2><span class="header-section-number">4.16</span> Phobic disorder</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001908/descendants&quot;
+
+phobic_disorder_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 11
+[1] &quot;\n Some example terms&quot;
+[1] &quot;specific phobia&quot;         &quot;social anxiety disorder&quot;
+[3] &quot;agoraphobia&quot;             &quot;nosophobia&quot;             
+[5] &quot;flying phobia&quot;          </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          pattern = paste0(phobic_disorder_terms, collapse = &quot;|&quot;),
+                          &quot;phobic disorder&quot;
+         ))</code></pre>
+</div>
+<div id="hereditary-heterochromatosis" class="section level2"
+number="4.17">
+<h2><span class="header-section-number">4.17</span> Hereditary
+heterochromatosis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;hereditary hemochromatosis type 1&quot;,
+                          &quot;hereditary hemochromatosis&quot;
+         ))</code></pre>
+</div>
+<div id="herpes" class="section level2" number="4.18">
+<h2><span class="header-section-number">4.18</span> Herpes</h2>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = &quot;herpes simplex infection&quot;,
+                                   &quot;herpesviridae infectious disease&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="infertility-female-male" class="section level2" number="4.19">
+<h2><span class="header-section-number">4.19</span> Infertility (female
+&amp; male)</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;tubal factor infertility&quot;,
+                          &quot;female infertility&quot;
+                          )) |&gt;
+  mutate(l1_all_disease_terms  = 
+                  stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;azoospermia&quot;,
+                          &quot;male infertility&quot;
+                          )  )</code></pre>
+</div>
+<div id="infectious-disease" class="section level2" number="4.20">
+<h2><span class="header-section-number">4.20</span> Infectious
+disease</h2>
+<div id="influenza-a-h1n1-subset-of-influenza" class="section level3"
+number="4.20.1">
+<h3><span class="header-section-number">4.20.1</span> Influenza a (h1n1)
+(subset of influenza)</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+    mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;influenza a (h1n1)&quot;,
+                          &quot;influenza&quot;
+         ))</code></pre>
+</div>
+</div>
+<div id="liver-cirrhosis" class="section level2" number="4.21">
+<h2><span class="header-section-number">4.21</span> Liver cirrhosis</h2>
+</div>
+<div id="neuromyelitis-optica" class="section level2" number="4.22">
+<h2><span class="header-section-number">4.22</span> Neuromyelitis
+optica</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;aqp4-igg-negative neuromyelitis optica|aqp4-igg-positive neuromyelitis optica&quot;,
+                          &quot;neuromyelitis optica&quot;
+         ))</code></pre>
+</div>
+<div id="obesity" class="section level2" number="4.23">
+<h2><span class="header-section-number">4.23</span> Obesity</h2>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = c(&quot;morbid obesity|metabolically healthy obesity&quot;),
+                                   &quot;obesity&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="ocular-melanoma" class="section level2" number="4.24">
+<h2><span class="header-section-number">4.24</span> Ocular Melanoma</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;uveal melanoma|uveal melanoma disease severity|epithelioid cell uveal melanoma|choroidal melanoma&quot;,
+                          &quot;ocular melanoma&quot;
+         ))</code></pre>
+</div>
+<div id="rheumatoid-arthritis" class="section level2" number="4.25">
+<h2><span class="header-section-number">4.25</span> Rheumatoid
+arthritis</h2>
+<pre class="r"><code>ra_terms &lt;- c(&quot;acpa-positive rheumatoid arthritis&quot;,
+               &quot;acpa-negative rheumatoid arthritis&quot;)
+
+gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(ra_terms, collapse = &quot;|&quot;),
+                                   &quot;rheumatoid arthritis&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="scoliosis" class="section level2" number="4.26">
+<h2><span class="header-section-number">4.26</span> Scoliosis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;adolescent idiopathic scoliosis&quot;,
+                          &quot;scoliosis&quot;)
+         )</code></pre>
+</div>
+<div id="sleep-apnea" class="section level2" number="4.27">
+<h2><span class="header-section-number">4.27</span> Sleep apnea</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;sleep apnea during non-rem sleep|sleep apnea during rem sleep|obstructive sleep apnea&quot;,
+                          &quot;sleep apnea&quot;)
+  )</code></pre>
+</div>
+<div id="tenosynovitis" class="section level2" number="4.28">
+<h2><span class="header-section-number">4.28</span> Tenosynovitis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms ,
+                         &quot;stenosing tenosynovitis&quot;,
+                         &quot;tenosynovitis&quot;)
+        )</code></pre>
+</div>
+<div id="type-1-diabetes" class="section level2" number="4.29">
+<h2><span class="header-section-number">4.29</span> Type 1 diabetes</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;latent autoimmune diabetes in adults&quot;,
+                          &quot;type 1 diabetes&quot;
+         ))</code></pre>
+</div>
+<div id="vitamin-b-deficiency" class="section level2" number="4.30">
+<h2><span class="header-section-number">4.30</span> Vitamin b
+deficiency</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          &quot;vitamin b12 deficiency anemia&quot;,
+                          &quot;vitamin b deficiency&quot;
+         ))</code></pre>
+</div>
+</div>
+<div id="disease-subtype-grouping-cancer" class="section level1"
+number="5">
+<h1><span class="header-section-number">5</span> Disease subtype
+grouping (cancer)</h1>
+<div id="breast-cancer" class="section level3" number="5.0.1">
+<h3><span class="header-section-number">5.0.1</span> Breast cancer</h3>
+<pre class="r"><code>breast_cancer_terms &lt;- grep(&quot;breast cancer&quot;, unique(diseases), value = T)
+
+gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(breast_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;breast cancer&quot;
+                          )  
+        ) |&gt;
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = &quot;breast cancer in situ&quot;,
+                                   &quot;breast cancer&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="colorectal-cancer" class="section level3" number="5.0.2">
+<h3><span class="header-section-number">5.0.2</span> Colorectal
+cancer</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005575/descendants&quot;
+
+colorectal_cancer_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 106
+[1] &quot;\n Some example terms&quot;
+[1] &quot;colorectal lymphoma&quot;        &quot;colorectal carcinoma&quot;      
+[3] &quot;familial colorectal cancer&quot; &quot;malignant colon neoplasm&quot;  
+[5] &quot;rectal cancer&quot;             </code></pre>
+<pre class="r"><code>colorectal_cancer_terms = stringr::str_replace_all(colorectal_cancer_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(colorectal_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;colorectal cancer&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="endometrial-cancer" class="section level3" number="5.0.3">
+<h3><span class="header-section-number">5.0.3</span> Endometrial
+cancer</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0011962/descendants&quot;
+
+endometrial_cancer_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 23
+[1] &quot;\n Some example terms&quot;
+[1] &quot;endometrioid stromal sarcoma&quot;              
+[2] &quot;endometrial carcinoma&quot;                     
+[3] &quot;endometrioid stromal sarcoma of the cervix&quot;
+[4] &quot;uterine corpus endometrial stromal sarcoma&quot;
+[5] &quot;endometrioid stromal sarcoma of the vagina&quot;</code></pre>
+<pre class="r"><code>endometrial_cancer_terms = stringr::str_replace_all(endometrial_cancer_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(endometrial_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;endometrial cancer&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="kidney-cancer" class="section level3" number="5.0.4">
+<h3><span class="header-section-number">5.0.4</span> Kidney cancer</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_263/descendants&quot;
+
+
+kidney_cancer_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 51
+[1] &quot;\n Some example terms&quot;
+[1] &quot;malignant cystic nephroma&quot;       &quot;kidney liposarcoma&quot;             
+[3] &quot;renal pelvis carcinoma&quot;          &quot;congenital mesoblastic nephroma&quot;
+[5] &quot;renal carcinoma&quot;                </code></pre>
+<pre class="r"><code>kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(kidney_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;kidney cancer&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="leukemia" class="section level3" number="5.0.5">
+<h3><span class="header-section-number">5.0.5</span> Leukemia</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000565/descendants&quot;
+
+leukemia_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 133
+[1] &quot;\n Some example terms&quot;
+[1] &quot;chronic eosinophilic leukemia, not otherwise specified&quot;
+[2] &quot;acute leukemia&quot;                                        
+[3] &quot;mast-cell leukemia&quot;                                    
+[4] &quot;lymphoid leukemia&quot;                                     
+[5] &quot;myeloid leukemia&quot;                                      </code></pre>
+<pre class="r"><code>leukemia_terms = stringr::str_replace_all(leukemia_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(leukemia_terms, collapse = &quot;|&quot;),
+                                   &quot;leukemia&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="liver-cancer" class="section level3" number="5.0.6">
+<h3><span class="header-section-number">5.0.6</span> Liver cancer</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002691/descendants&quot;
+
+liver_cancer_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 76
+[1] &quot;\n Some example terms&quot;
+[1] &quot;carcinoma of liver and intrahepatic biliary tract&quot;      
+[2] &quot;calcifying nested epithelial stromal tumor of the liver&quot;
+[3] &quot;liver lymphoma&quot;                                         
+[4] &quot;biliary tract cancer&quot;                                   
+[5] &quot;liver sarcoma&quot;                                          </code></pre>
+<pre class="r"><code>liver_cancer_terms = stringr::str_replace_all(liver_cancer_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(liver_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;liver cancer&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="lung-cancer" class="section level3" number="5.0.7">
+<h3><span class="header-section-number">5.0.7</span> Lung cancer</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008903/descendants&quot;
+
+lung_cancer_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 63
+[1] &quot;\n Some example terms&quot;
+[1] &quot;graham-boyle-troxell syndrome&quot;      &quot;malignant superior sulcus neoplasm&quot;
+[3] &quot;lung carcinoma&quot;                     &quot;lung hilum cancer&quot;                 
+[5] &quot;lung lymphoma&quot;                     </code></pre>
+<pre class="r"><code>lung_cancer_terms = stringr::str_replace_all(lung_cancer_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(lung_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;lung cancer&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="ovarian-cancer" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Ovarian cancer</h2>
+<pre class="r"><code>url &lt;-  &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008170/descendants&quot;
+
+ovarian_cancer_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 77
+[1] &quot;\n Some example terms&quot;
+[1] &quot;malignant non-epithelial tumor of ovary&quot; 
+[2] &quot;malignant epithelial tumor of ovary&quot;     
+[3] &quot;familial ovarian cancer&quot;                 
+[4] &quot;ovarian endometrioid adenocarcinofibroma&quot;
+[5] &quot;ovarian adenosarcoma&quot;                    </code></pre>
+<pre class="r"><code>ovarian_cancer_terms = stringr::str_replace_all(ovarian_cancer_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(ovarian_cancer_terms, collapse = &quot;|&quot;),
+                                   &quot;ovarian cancer&quot;
+                          )  
+        )</code></pre>
+<div id="non-hodgkins-lymphoma" class="section level3" number="5.1.1">
+<h3><span class="header-section-number">5.1.1</span> Non-Hodgkins
+lymphoma</h3>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005952/descendants&quot;
+
+nhl_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 93
+[1] &quot;\n Some example terms&quot;
+[1] &quot;b-cell non-hodgkins lymphoma&quot; &quot;lymphoma, aids-related&quot;      
+[3] &quot;sezary&#39;s disease&quot;             &quot;acute lymphoblastic leukemia&quot;
+[5] &quot;gastric non-hodgkin lymphoma&quot;</code></pre>
+<pre class="r"><code>nhl_terms = stringr::str_replace_all(leukemia_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(nhl_terms, collapse = &quot;|&quot;),
+                                   &quot;non-hodgkins lymphoma&quot;
+                          )  
+        )</code></pre>
+</div>
+</div>
+</div>
+<div id="disease-onset-grouping" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Disease onset
+grouping</h1>
+<div id="alzheimers-disease" class="section level3" number="6.0.1">
+<h3><span class="header-section-number">6.0.1</span> Alzheimer’s
+disease</h3>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt; 
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;early-onset alzheimers disease|late-onset alzheimers disease&quot;,
+                          &quot;alzheimers disease&quot;
+         )) </code></pre>
+</div>
+<div id="asthma-1" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Asthma</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms ,
+                            &quot;adult onset asthma|childhood onset asthma&quot;,
+                            &quot;asthma&quot;
+           ))</code></pre>
+</div>
+<div id="juvenile-idiopathic-arthritis" class="section level2"
+number="6.2">
+<h2><span class="header-section-number">6.2</span> Juvenile idiopathic
+arthritis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms ,
+                         &quot;systemic juvenile idiopathic arthritis|oligoarticular juvenile idiopathic arthritis|
+                         polyarticular juvenile idiopathic arthritis&quot;,
+                         &quot;juvenile idiopathic arthritis&quot;)
+        )</code></pre>
+</div>
+<div id="epilepsy" class="section level2" number="6.3">
+<h2><span class="header-section-number">6.3</span> Epilepsy</h2>
+<pre class="r"><code># juvenile absence epilepsy
+# 
+# juvenile myoclonic epilepsy</code></pre>
+</div>
+<div id="myasthenia-gravis" class="section level2" number="6.4">
+<h2><span class="header-section-number">6.4</span> Myasthenia
+gravis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms ,
+                         &quot;late-onset myasthenia gravis|early-onset myasthenia gravis&quot;,
+                         &quot;myasthenia gravis&quot;)
+        )</code></pre>
+</div>
+<div id="parkinsons-disease-pd" class="section level2" number="6.5">
+<h2><span class="header-section-number">6.5</span> Parkinsons disease
+(PD)</h2>
+<pre class="r"><code>pd_terms &lt;- c(&quot;secondary parkinson disease&quot;,
+               &quot;young adult-onset parkinsonism&quot;,
+              &quot;parkinsons disease&quot;)
+
+gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(pd_terms, collapse = &quot;|&quot;),
+                                   &quot;parkinsons disease&quot;
+                          )  
+        )</code></pre>
+</div>
+</div>
+<div id="disease-stage-grouping" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Disease stage
+grouping</h1>
+<div id="chronic-kidney-disease-ckd" class="section level2"
+number="7.1">
+<h2><span class="header-section-number">7.1</span> Chronic kidney
+disease (CKD)</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;chronic kidney disease stage 5|chronic kidney disease stage 4&quot;,
+                          &quot;chronic kidney disease&quot;
+         ))</code></pre>
+</div>
+</div>
+<div id="final-summary---number-of-unique-study-terns"
+class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Final summary - number
+of unique study terns</h1>
+<pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
+  dplyr::filter(DISEASE_STUDY == T) |&gt;
+  dplyr::select(l1_all_disease_terms, PUBMED_ID) |&gt;
+  dplyr::distinct() |&gt;
+  dplyr::group_by(l1_all_disease_terms) |&gt;
+  dplyr::summarise(n_studies = dplyr::n()) |&gt;
+  dplyr::arrange(desc(n_studies))
+
+
+head(n_studies_trait)</code></pre>
+<pre><code># A tibble: 6 × 2
+  l1_all_disease_terms      n_studies
+  &lt;chr&gt;                         &lt;int&gt;
+1 type 2 diabetes mellitus        149
+2 asthma                          130
+3 alzheimers disease              125
+4 breast cancer                   124
+5 major depressive disorder       110
+6 schizophrenia                   106</code></pre>
+<pre class="r"><code>dim(n_studies_trait)</code></pre>
+<pre><code>[1] 2477    2</code></pre>
+<div id="when-separate-studies-with-multiple-terms-1"
+class="section level3" number="8.0.1">
+<h3><span class="header-section-number">8.0.1</span> When separate
+studies with multiple terms</h3>
+<pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
+                               gwas_study_info$l1_all_disease_terms)  |&gt; 
+            unlist() |&gt;
+            stringr::str_trim()
+
+
+
+length(unique(diseases))</code></pre>
+<pre><code>[1] 1729</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] jsonlite_2.0.0    httr_1.4.7        stringr_1.5.1     ggplot2_3.5.2    
+[5] data.table_1.17.8 dplyr_1.1.4       workflowr_1.7.1  
+
+loaded via a namespace (and not attached):
+ [1] gtable_0.3.6       compiler_4.3.1     renv_1.0.3         promises_1.3.3    
+ [5] tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2       callr_3.7.6       
+ [9] later_1.4.2        jquerylib_0.1.4    scales_1.4.0       yaml_2.3.10       
+[13] fastmap_1.2.0      here_1.0.1         R6_2.6.1           generics_0.1.4    
+[17] curl_6.4.0         knitr_1.50         tibble_3.3.0       rprojroot_2.1.0   
+[21] RColorBrewer_1.1-3 bslib_0.9.0        pillar_1.11.0      rlang_1.1.6       
+[25] utf8_1.2.6         cachem_1.1.0       stringi_1.8.7      httpuv_1.6.16     
+[29] xfun_0.52          getPass_0.2-4      fs_1.6.6           sass_0.4.10       
+[33] cli_3.6.5          withr_3.0.2        magrittr_2.0.3     ps_1.9.1          
+[37] grid_4.3.1         digest_0.6.37      processx_3.8.6     rstudioapi_0.17.1 
+[41] lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.4     glue_1.8.0        
+[45] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     tools_4.3.1       
+[49] pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
