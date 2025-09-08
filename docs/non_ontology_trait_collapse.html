@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-09-06
+<strong>Last updated:</strong> 2025-09-07
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreedc84680a34d58fb82780a1bc9861ed1168d1ea9btargetblankdc84680a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreecad3bf3bf2863acb9aada8cb4b4e88b03caeb243targetblankcad3bf3a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/dc84680a34d58fb82780a1bc9861ed1168d1ea9b" target="_blank">dc84680</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/cad3bf3bf2863acb9aada8cb4b4e88b03caeb243" target="_blank">cad3bf3</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreedc84680a34d58fb82780a1bc9861ed1168d1ea9btargetblankdc84680a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreecad3bf3bf2863acb9aada8cb4b4e88b03caeb243targetblankcad3bf3a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/dc84680a34d58fb82780a1bc9861ed1168d1ea9b" target="_blank">dc84680</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/cad3bf3bf2863acb9aada8cb4b4e88b03caeb243" target="_blank">cad3bf3</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -553,12 +553,13 @@ Ignored files:
 
 Untracked files:
     Untracked:  analysis/disease_burden.qmd
-    Untracked:  analysis/download_ontology.Rmd
     Untracked:  data/gbd/
     Untracked:  data/who/
+    Untracked:  level_1_disease_group.Rmd
 
 Unstaged changes:
     Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/index.Rmd
     Modified:   analysis/trait_ontology_collapse.Rmd
 
 </code></pre>
@@ -605,6 +606,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/cad3bf3bf2863acb9aada8cb4b4e88b03caeb243/analysis/non_ontology_trait_collapse.Rmd" target="_blank">cad3bf3</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-07
+</td>
+<td>
+Separating disease grouping steps
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/dcfc8e1b58fba0dc1e1838dbd3d2dd95b864bbb2/docs/non_ontology_trait_collapse.html" target="_blank">dcfc8e1</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-06
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -705,16 +740,28 @@ library(ggplot2)
 library(stringr)</code></pre>
 <pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_trait_ontology_info.csv&quot;))</code></pre>
 </div>
+<div id="initial-summary" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Initial summary</h1>
+<div id="objectives-of-this-analysis" class="section level2"
+number="2.1">
+<h2><span class="header-section-number">2.1</span> Objectives of this
+analysis:</h2>
+<ul>
+<li>Collapsing and standardizing disease trait terms in GWAS study
+metadata without relying on ontology mappings.</li>
+<li>Initial harmonization of disease trait terms (fixing spelling,
+collapsing studies that study different aspects of the same
+disease)</li>
+</ul>
+</div>
+</div>
 <div id="number-of-studies-per-trait---before-any-grouping"
-class="section level1" number="2">
-<h1><span class="header-section-number">2</span> Number of studies per
+class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Number of studies per
 trait - before any grouping</h1>
-<pre class="r"><code># gwas_study_info |&gt; 
-#   dplyr::filter(DISEASE_STUDY == T) |&gt;
-#   dplyr::filter(all_disease_terms == &quot;&quot;) |&gt;
-#   View()
-
-n_studies_trait = gwas_study_info |&gt;
+<p>Let’s look at the number of studies associated with each unique
+disease/trait term before any grouping or collapsing.</p>
+<pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
   dplyr::filter(DISEASE_STUDY == T) |&gt;
   dplyr::select(all_disease_terms, PUBMED_ID) |&gt;
   dplyr::distinct() |&gt;
@@ -735,20 +782,35 @@ head(n_studies_trait)</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
 <pre><code>[1] 2722    2</code></pre>
 </div>
-<div id="collapse-more-traits" class="section level1" number="3">
-<h1><span class="header-section-number">3</span> Collapse more
-traits</h1>
-<pre class="r"><code>gwas_study_info$all_disease_terms = sub(&quot;,$&quot;, &quot;&quot;, gwas_study_info$all_disease_terms)
+<div id="disease-trait-collapsing-and-cleaning" class="section level1"
+number="4">
+<h1><span class="header-section-number">4</span> Disease trait
+collapsing and cleaning</h1>
+<pre class="r"><code># Basic cleaning of disease terms
+# Removes trailing commas, 
+gwas_study_info$all_disease_terms = sub(&quot;,$&quot;, &quot;&quot;, gwas_study_info$all_disease_terms)
 
+# trims whitespace
 gwas_study_info$all_disease_terms = stringr::str_trim(gwas_study_info$all_disease_terms)
 
+# remove apostrophes
+gwas_study_info$all_disease_terms = stringr::str_remove_all(gwas_study_info$all_disease_terms, &quot;&#39;|’&quot;)
+
+# initializes a new column (collected_all_disease_terms) to standardized traits
 # collapse more traits 
 gwas_study_info = gwas_study_info |&gt; 
   mutate(collected_all_disease_terms = all_disease_terms) </code></pre>
-<div id="susceptibility-to-x-measurement-x-disorder-measurement-etc."
-class="section level2" number="3.1">
-<h2><span class="header-section-number">3.1</span> Susceptibility to X
-measurement, X disorder measurement etc.</h2>
+<div
+id="where-a-study-investigates-a-given-aspect-of-of-disease-reduce-this-to-a-study-of-this-disease"
+class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Where a study
+investigates a given aspect of of disease, reduce this to a study of
+this disease</h2>
+<div
+id="e.g-susceptibility-to-x-measurement-x-disorder-measurement-etc."
+class="section level3" number="4.1.1">
+<h3><span class="header-section-number">4.1.1</span> e.g Susceptibility
+to X measurement, X disorder measurement etc.</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
         str_replace(collected_all_disease_terms, 
@@ -803,10 +865,6 @@ gwas_study_info = gwas_study_info |&gt;
            str_replace_all(collected_all_disease_terms,
                            &quot;\\baddiction\\s+measurement\\b&quot;,
                            &quot;addiction&quot;)) |&gt; 
-    mutate(collected_all_disease_terms =
-           str_replace_all(collected_all_disease_terms,
-                           &quot;\\baddiction\\s+measurement\\b&quot;,
-                           &quot;addiction&quot;)) |&gt; 
       mutate(collected_all_disease_terms =
            str_replace_all(collected_all_disease_terms,
                            &quot;\\bsyndrome\\s+measurement\\b&quot;,
@@ -816,67 +874,211 @@ gwas_study_info = gwas_study_info |&gt;
                            &quot;\\bdisorder\\s+measurement\\b&quot;,
                            &quot;disorder&quot;)) </code></pre>
 </div>
-<div id="age-of-onset-of" class="section level2" number="3.2">
-<h2><span class="header-section-number">3.2</span> Age of onset of</h2>
+<div id="e.g-age-of-onset-of" class="section level3" number="4.1.2">
+<h3><span class="header-section-number">4.1.2</span> e.g age of onset
+of</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
          stringr::str_remove(collected_all_disease_terms,
-                         pattern = &quot;age of onset of &quot;))</code></pre>
+                         pattern = &quot;age of onset of &quot;))
+
+
+gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(collected_all_disease_terms  = 
+          stringr::str_replace_all(collected_all_disease_terms ,
+                                  pattern = &quot;age of onset of type 2 diabetes mellitus&quot;,
+                                   &quot;type 2 diabetes mellitus&quot;
+                          )  
+        )</code></pre>
 </div>
-<div id="family-history-of" class="section level2" number="3.3">
-<h2><span class="header-section-number">3.3</span> Family history
-of</h2>
+<div id="e.g.-family-history-of" class="section level3" number="4.1.3">
+<h3><span class="header-section-number">4.1.3</span> e.g. Family history
+of</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
          stringr::str_remove(collected_all_disease_terms,
-                         pattern = &quot;family history of &quot;))</code></pre>
-</div>
-<div id="cancer" class="section level2" number="3.4">
-<h2><span class="header-section-number">3.4</span> Cancer</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-      mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-         )
+                         pattern = &quot;family history of &quot;))
+
 
 gwas_study_info = gwas_study_info |&gt;
-      mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;triple-negative breast cancer&quot;,
-                            &quot;breast cancer&quot;
-           ))</code></pre>
-<div id="melanoma" class="section level3" number="3.4.1">
-<h3><span class="header-section-number">3.4.1</span> Melanoma</h3>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
+    mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;cutaneous melanoma&quot;,
-                          &quot;melanoma&quot;
-         ))
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;uveal melanoma|uveal melanoma disease severity|epithelioid cell uveal melanoma|choroidal melanoma&quot;,
-                          &quot;ocular melanoma&quot;
+                          &quot;family history of alzheimer’s disease&quot;,
+                          &quot;alzheimers disease&quot;
          ))</code></pre>
 </div>
-<div id="head-and-neck-cancer" class="section level3" number="3.4.2">
-<h3><span class="header-section-number">3.4.2</span> Head and neck
-cancer</h3>
+<div id="time-to-remission" class="section level3" number="4.1.4">
+<h3><span class="header-section-number">4.1.4</span> Time to
+remission</h3>
+<div id="covid" class="section level4" number="4.1.4.1">
+<h4><span class="header-section-number">4.1.4.1</span> COVID</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
+    mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;head and neck malignant neoplasia&quot;,
-                          &quot;head and neck cancer&quot;
+                          &quot;time to remission of covid-19 symptoms&quot;,
+                          &quot;covid-19&quot;
          ))</code></pre>
 </div>
 </div>
-<div id="substance-abuse" class="section level2" number="3.5">
-<h2><span class="header-section-number">3.5</span> Substance abuse</h2>
-<div id="alcohol" class="section level3" number="3.5.1">
-<h3><span class="header-section-number">3.5.1</span> Alcohol</h3>
+<div id="symptom-measurement" class="section level3" number="4.1.5">
+<h3><span class="header-section-number">4.1.5</span> Symptom
+measurement</h3>
+<div id="adhd" class="section level4" number="4.1.5.1">
+<h4><span class="header-section-number">4.1.5.1</span> ADHD</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+  mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            &quot;adhd symptom measurement&quot;,
+                            &quot;adhd&quot;)
+         )</code></pre>
+</div>
+<div id="agoraphobia" class="section level4" number="4.1.5.2">
+<h4><span class="header-section-number">4.1.5.2</span> Agoraphobia</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;agoraphobia symptom measurement&quot;,
+                          &quot;agoraphobia&quot;
+         ))</code></pre>
+</div>
+<div id="asthma" class="section level4" number="4.1.5.3">
+<h4><span class="header-section-number">4.1.5.3</span> Asthma</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;asthma exacerbation measurement&quot;,
+                          &quot;asthma&quot;
+         )) |&gt;
+  mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            &quot;asthma symptoms measurement&quot;,
+                            &quot;asthma&quot;
+           )) </code></pre>
+</div>
+<div id="covid-symptoms" class="section level4" number="4.1.5.4">
+<h4><span class="header-section-number">4.1.5.4</span> COVID
+symptoms</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;covid-19 symptoms measurement&quot;,
+                          &quot;covid-19&quot;)
+  )</code></pre>
+</div>
+<div id="irritable-bowel-syndrome" class="section level4"
+number="4.1.5.5">
+<h4><span class="header-section-number">4.1.5.5</span> Irritable bowel
+syndrome</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;irritable bowel syndrome symptom measurement&quot;,
+                          &quot;irritable bowel syndrome&quot;
+         ))</code></pre>
+</div>
+<div id="parkinsons-disease" class="section level4" number="4.1.5.6">
+<h4><span class="header-section-number">4.1.5.6</span> Parkinson’s
+disease</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;parkinsons disease symptom measurement&quot;,
+                          &quot;parkinsons disease&quot;
+         ))</code></pre>
+</div>
+<div id="ptsd" class="section level4" number="4.1.5.7">
+<h4><span class="header-section-number">4.1.5.7</span> PTSD</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;post-traumatic stress disorder symptom measurement&quot;,
+                          &quot;post-traumatic stress disorder&quot;
+         ))</code></pre>
+</div>
+<div id="respiratory-symptom-change" class="section level4"
+number="4.1.5.8">
+<h4><span class="header-section-number">4.1.5.8</span> Respiratory
+symptom change</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;respiratory symptom change measurement&quot; ,
+                          &quot;respiratory symptom measurement&quot; 
+         ))</code></pre>
+</div>
+</div>
+<div id="measurement" class="section level3" number="4.1.6">
+<h3><span class="header-section-number">4.1.6</span> Measurement</h3>
+<div id="anxiety-disorder" class="section level4" number="4.1.6.1">
+<h4><span class="header-section-number">4.1.6.1</span> Anxiety
+disorder</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;anxiety disorder measurement&quot;,
+                          &quot;anxiety disorder&quot;
+         ))</code></pre>
+</div>
+<div id="coronary-atherosclerosis" class="section level4"
+number="4.1.6.2">
+<h4><span class="header-section-number">4.1.6.2</span> Coronary
+atherosclerosis</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;coronary atherosclerosis measurement&quot;,
+                          &quot;coronary atherosclerosis&quot;)
+  ) </code></pre>
+</div>
+</div>
+<div id="insommnia" class="section level3" number="4.1.7">
+<h3><span class="header-section-number">4.1.7</span> Insommnia</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;insomnia measurement&quot;,
+                          &quot;insomnia&quot;
+         ))</code></pre>
+<div id="lewy-body-dementia" class="section level4" number="4.1.7.1">
+<h4><span class="header-section-number">4.1.7.1</span> Lewy body
+dementia</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;lewy body dementia measurement&quot;,
+                          &quot;lewy body dementia&quot;
+         ))</code></pre>
+</div>
+<div id="psychosis-predisposition" class="section level4"
+number="4.1.7.2">
+<h4><span class="header-section-number">4.1.7.2</span> Psychosis
+predisposition</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+        stringr::str_replace_all(collected_all_disease_terms,
+                         &quot;psychosis predisposition measurement&quot;,
+                         &quot;psychosis predisposition&quot;)
+        )</code></pre>
+</div>
+<div id="sleep-apnea-measurement" class="section level4"
+number="4.1.7.3">
+<h4><span class="header-section-number">4.1.7.3</span> Sleep apnea
+measurement</h4>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+        mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          &quot;sleep apnea measurement&quot;,
+                          &quot;sleep apnea&quot;
+         ))</code></pre>
+</div>
+</div>
+<div id="substance-abuse-measurement" class="section level3"
+number="4.1.8">
+<h3><span class="header-section-number">4.1.8</span> Substance abuse
+measurement</h3>
+<div id="alcohol" class="section level4" number="4.1.8.1">
+<h4><span class="header-section-number">4.1.8.1</span> Alcohol</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -891,8 +1093,8 @@ gwas_study_info = gwas_study_info |&gt;
                             &quot;alcohol-related disorders&quot;
            ))</code></pre>
 </div>
-<div id="cannibis" class="section level3" number="3.5.2">
-<h3><span class="header-section-number">3.5.2</span> Cannibis</h3>
+<div id="cannibis" class="section level4" number="4.1.8.2">
+<h4><span class="header-section-number">4.1.8.2</span> Cannibis</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -900,8 +1102,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;cannabis dependence&quot;
          ))</code></pre>
 </div>
-<div id="cocaine" class="section level3" number="3.5.3">
-<h3><span class="header-section-number">3.5.3</span> Cocaine</h3>
+<div id="cocaine" class="section level4" number="4.1.8.3">
+<h4><span class="header-section-number">4.1.8.3</span> Cocaine</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -909,8 +1111,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;cocaine-related disorders&quot;
          ))</code></pre>
 </div>
-<div id="nicotine" class="section level3" number="3.5.4">
-<h3><span class="header-section-number">3.5.4</span> Nicotine</h3>
+<div id="nicotine" class="section level4" number="4.1.8.4">
+<h4><span class="header-section-number">4.1.8.4</span> Nicotine</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -926,21 +1128,42 @@ gwas_study_info = gwas_study_info |&gt;
          ))</code></pre>
 </div>
 </div>
-<div id="infectious-disease" class="section level2" number="3.6">
-<h2><span class="header-section-number">3.6</span> Infectious
-disease</h2>
-<div id="influenza" class="section level3" number="3.6.1">
-<h3><span class="header-section-number">3.6.1</span> Influenza</h3>
+</div>
+<div id="deal-with-basic-synonyms" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Deal with basic
+synonyms</h2>
+<div id="carcinoma-cancer" class="section level3" number="4.2.1">
+<h3><span class="header-section-number">4.2.1</span> Carcinoma =
+Cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-    mutate(collected_all_disease_terms = 
+      mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            &quot;\\bcarcinoma&quot;,
+                            &quot;cancer&quot;)
+         )
+
+gwas_study_info = gwas_study_info |&gt;
+      mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            &quot;triple-negative breast cancer&quot;,
+                            &quot;breast cancer&quot;
+           ))</code></pre>
+</div>
+<div id="head-and-neck-cancer-head-and-neck-malignant-neoplasia"
+class="section level3" number="4.2.2">
+<h3><span class="header-section-number">4.2.2</span> Head and neck
+cancer = head and neck malignant neoplasia</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;influenza a (h1n1)&quot;,
-                          &quot;influenza&quot;
+                          &quot;head and neck malignant neoplasia&quot;,
+                          &quot;head and neck cancer&quot;
          ))</code></pre>
 </div>
-</div>
-<div id="hepatitis" class="section level2" number="3.7">
-<h2><span class="header-section-number">3.7</span> hepatitis</h2>
+<div id="hepatitis-virus-infection-hepatitis-infection"
+class="section level3" number="4.2.3">
+<h3><span class="header-section-number">4.2.3</span> Hepatitis virus
+infection = hepatitis infection</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -976,8 +1199,9 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hepatitis virus-related liver cancer&quot;,
                           &quot;hepatitis, liver cancer&quot;
          ))</code></pre>
-<div id="hiv" class="section level3" number="3.7.1">
-<h3><span class="header-section-number">3.7.1</span> HIV</h3>
+</div>
+<div id="hiv" class="section level3" number="4.2.4">
+<h3><span class="header-section-number">4.2.4</span> HIV</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -985,17 +1209,10 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hiv infection&quot;
          ))</code></pre>
 </div>
-<div id="covid" class="section level3" number="3.7.2">
-<h3><span class="header-section-number">3.7.2</span> COVID</h3>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;time to remission of covid-19 symptoms&quot;,
-                          &quot;covid-19&quot;
-         ))</code></pre>
-</div>
-<div id="mumps" class="section level3" number="3.7.3">
-<h3><span class="header-section-number">3.7.3</span> Mumps</h3>
+<div id="mumps-virus-infection-mumps" class="section level3"
+number="4.2.5">
+<h3><span class="header-section-number">4.2.5</span> Mumps virus
+infection = mumps</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1003,100 +1220,26 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;mumps&quot;
          ))</code></pre>
 </div>
-<div id="rubella" class="section level3" number="3.7.4">
-<h3><span class="header-section-number">3.7.4</span> Rubella</h3>
+<div id="rubella-infect-rubella" class="section level3" number="4.2.6">
+<h3><span class="header-section-number">4.2.6</span> Rubella infect =
+rubella</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
                           &quot;rubella infection&quot;,
                           &quot;rubella&quot;
          ))</code></pre>
-</div>
-</div>
-<div id="asthma" class="section level2" number="3.8">
-<h2><span class="header-section-number">3.8</span> Asthma</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;asthma exacerbation measurement&quot;,
-                          &quot;asthma&quot;
-         )) |&gt;
-    mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;adult onset asthma|childhood onset asthma&quot;,
-                            &quot;asthma&quot;
-           )) |&gt;
-  mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;asthma symptoms measurement&quot;,
-                            &quot;asthma&quot;
-           )) |&gt; 
-    mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;atopic asthma&quot;,
-                            &quot;asthma&quot;
-           )) |&gt;
-    mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;asthma, asthma&quot;,
-                            &quot;asthma&quot;
-           )) |&gt;
-  mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;chronic obstructive asthma&quot;,
-                            &quot;asthma&quot;
-           ))</code></pre>
-</div>
-<div id="psychiatric" class="section level2" number="3.9">
-<h2><span class="header-section-number">3.9</span> Psychiatric</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;bipolar ii disorder|bipolar i disorder&quot;,
-                          &quot;bipolar disorder&quot;
-         ))
-
-
-gwas_study_info = gwas_study_info |&gt; 
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;insomnia measurement&quot;,
-                          &quot;insomnia&quot;
-         ))
-
-
-gwas_study_info = gwas_study_info |&gt; 
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;post-traumatic stress disorder symptom measurement&quot;,
-                          &quot;post-traumatic stress disorder&quot;
-         )) |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
                           &quot;multiple sclerosis symptom measurement&quot;,
                           &quot;multiple sclerosis&quot;
-         ))  
-
-
-gwas_study_info = gwas_study_info |&gt; 
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;anxiety disorder measurement&quot;,
-                          &quot;anxiety disorder&quot;
-         ))
-
-
-
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;agoraphobia symptom measurement&quot;,
-                          &quot;agoraphobia&quot;
-         ))</code></pre>
-<div id="adhd-autism" class="section level3" number="3.9.1">
-<h3><span class="header-section-number">3.9.1</span> ADHD &amp;
-Autism</h3>
+         ))  </code></pre>
+</div>
+<div id="autism-autism-spectrum-disorder-asperger-syndrome"
+class="section level3" number="4.2.7">
+<h3><span class="header-section-number">4.2.7</span> Autism = Autism
+Spectrum Disorder = Asperger Syndrome</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
         stringr::str_replace_all(collected_all_disease_terms,
@@ -1107,191 +1250,37 @@ Autism</h3>
         stringr::str_replace_all(collected_all_disease_terms,
                          &quot;asperger syndrome&quot;,
                          &quot;autism&quot;)
-        )
-  
-
-gwas_study_info = gwas_study_info |&gt; 
+        )</code></pre>
+</div>
+<div id="adhd-attention-deficit-hyperactivity-disorder"
+class="section level3" number="4.2.8">
+<h3><span class="header-section-number">4.2.8</span> ADHD = attention
+deficit hyperactivity disorder</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
            stringr::str_replace_all(collected_all_disease_terms,
                             &quot;attention deficit hyperactivity disorder&quot;,
                             &quot;adhd&quot;
-         )) |&gt;
-  mutate(collected_all_disease_terms = 
-           stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;adhd symptom measurement&quot;,
-                            &quot;adhd&quot;)
-         )</code></pre>
+         ))</code></pre>
 </div>
 </div>
-<div id="psychosis-predisposition" class="section level2" number="3.10">
-<h2><span class="header-section-number">3.10</span> Psychosis
-predisposition</h2>
+<div id="typos" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Typos</h2>
+<div id="alzheimer---alzheimers" class="section level3" number="4.3.1">
+<h3><span class="header-section-number">4.3.1</span> Alzheimer -&gt;
+alzheimers</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        stringr::str_replace_all(collected_all_disease_terms,
-                         &quot;psychosis predisposition measurement&quot;,
-                         &quot;psychosis predisposition&quot;)
-        )</code></pre>
-</div>
-<div id="photosensitivity" class="section level2" number="3.11">
-<h2><span class="header-section-number">3.11</span>
-Photosensitivity</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        stringr::str_replace_all(collected_all_disease_terms,
-                         &quot;phototoxic dermatitis|skin sensitivity to sun&quot;,
-                         &quot;photosensitivity disease&quot;)
-        )</code></pre>
-</div>
-<div id="tenosynovitis" class="section level2" number="3.12">
-<h2><span class="header-section-number">3.12</span> Tenosynovitis</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        stringr::str_replace_all(collected_all_disease_terms,
-                         &quot;stenosing tenosynovitis&quot;,
-                         &quot;tenosynovitis&quot;)
-        )</code></pre>
-</div>
-<div id="juvenile-idiopathic-arthritis" class="section level2"
-number="3.13">
-<h2><span class="header-section-number">3.13</span> Juvenile idiopathic
-arthritis</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        stringr::str_replace_all(collected_all_disease_terms,
-                         &quot;systemic juvenile idiopathic arthritis|oligoarticular juvenile idiopathic arthritis|
-                         polyarticular juvenile idiopathic arthritis&quot;,
-                         &quot;juvenile idiopathic arthritis&quot;)
-        )</code></pre>
-<div id="dementia-alzheimers-parkinsons-etc." class="section level3"
-number="3.13.1">
-<h3><span class="header-section-number">3.13.1</span> Dementia,
-Alzheimer’s, Parkinson’s etc.</h3>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;early-onset alzheimers disease|late-onset alzheimers disease&quot;,
-                          &quot;alzheimers disease&quot;
-         )) |&gt;
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;alzheimer’s disease&quot;, 
-                          &quot;alzheimers disease&quot;
-         )) |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;family history of alzheimer’s disease&quot;,
-                          &quot;alzheimers disease&quot;
-         )) |&gt;
   mutate(collected_all_disease_terms =
          stringr::str_replace_all(collected_all_disease_terms,
                           &quot;alzheimer disease&quot;,
                           &quot;alzheimers disease&quot;
-         ))
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;parkinson&#39;s disease symptom measurement&quot;,
-                          &quot;parkinsons disease&quot;
          ))</code></pre>
 </div>
-<div id="sleep-apnea" class="section level3" number="3.13.2">
-<h3><span class="header-section-number">3.13.2</span> Sleep Apnea</h3>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;lewy body dementia measurement&quot;,
-                          &quot;lewy body dementia&quot;
-         )) |&gt;
-      mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;sleep apnea measurement&quot;,
-                          &quot;sleep apnea&quot;
-         )) |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;sleep apnea during non-rem sleep|sleep apnea during rem sleep&quot;,
-                          &quot;sleep apnea&quot;)
-  )</code></pre>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;contact dermatitis due to nickel&quot;,
-                          &quot;contact dermatitis&quot;
-         ))
-
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;covid-19 symptoms measurement&quot;,
-                          &quot;covid-19&quot;)
-  )
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;coronary atherosclerosis measurement&quot;,
-                          &quot;coronary atherosclerosis&quot;)
-  ) </code></pre>
 </div>
 </div>
-<div id="allergies" class="section level2" number="3.14">
-<h2><span class="header-section-number">3.14</span> Allergies</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;allergic contact dermatitis of eyelid&quot;,
-                          &quot;allergic contact dermatitis&quot;
-         ))
-
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;seasonal allergic rhinitis&quot;,
-                          &quot;allergic rhinitis&quot;
-         ))</code></pre>
-</div>
-<div id="irritable-bowel-syndrome" class="section level2" number="3.15">
-<h2><span class="header-section-number">3.15</span> Irritable bowel
-syndrome</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;irritable bowel syndrome symptom measurement&quot;,
-                          &quot;irritable bowel syndrome&quot;
-         ))</code></pre>
-</div>
-<div id="respiratory-respiratory-symptom" class="section level2"
-number="3.16">
-<h2><span class="header-section-number">3.16</span> Respiratory
-respiratory symptom</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;respiratory symptom change measurement&quot; ,
-                          &quot;respiratory symptom measurement&quot; 
-         ))</code></pre>
-</div>
-<div id="infertility" class="section level2" number="3.17">
-<h2><span class="header-section-number">3.17</span> Infertility</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;tubal factor infertility&quot;,
-                          &quot;female infertility&quot;
-                          )) |&gt;
-  mutate(collected_all_disease_terms = 
-                  stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;azoospermia&quot;,
-                          &quot;male infertility&quot;
-                          )  )</code></pre>
-</div>
-<div id="putting-it-all-together" class="section level2" number="3.18">
-<h2><span class="header-section-number">3.18</span> Putting it all
-together</h2>
+<div id="putting-it-all-together" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Putting it all
+together</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   rowwise() |&gt;
   mutate(
@@ -1304,9 +1293,13 @@ together</h2>
 
            
 gwas_study_info$collected_all_disease_terms = stringr::str_trim(gwas_study_info$collected_all_disease_terms)
-gwas_study_info$collected_all_disease_terms = sub(&quot;,$&quot;, &quot;&quot;, gwas_study_info$collected_all_disease_terms)
-
-n_studies_trait = gwas_study_info |&gt;
+gwas_study_info$collected_all_disease_terms = sub(&quot;,$&quot;, &quot;&quot;, gwas_study_info$collected_all_disease_terms)</code></pre>
+<div
+id="final-summary---number-of-studies-per-trait---after-harmonization"
+class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Final summary -
+number of studies per trait - after harmonization</h2>
+<pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
   dplyr::filter(DISEASE_STUDY == T) |&gt;
   dplyr::select(collected_all_disease_terms, PUBMED_ID) |&gt;
   dplyr::distinct() |&gt;
@@ -1319,603 +1312,25 @@ head(n_studies_trait)</code></pre>
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
 1 type 2 diabetes mellitus          149
-2 asthma                            133
-3 alzheimers disease                125
-4 breast cancer                     115
+2 alzheimers disease                117
+3 breast cancer                     115
+4 asthma                            111
 5 major depressive disorder         110
 6 schizophrenia                     106</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2571    2</code></pre>
+<pre><code>[1] 2603    2</code></pre>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
                                gwas_study_info$collected_all_disease_terms)  |&gt; 
             unlist() |&gt;
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 1812</code></pre>
-</div>
-</div>
-<div id="grouping---level-1" class="section level1" number="4">
-<h1><span class="header-section-number">4</span> Grouping - level 1</h1>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(l1_all_disease_terms = collected_all_disease_terms)</code></pre>
-<div id="ontology-help" class="section level3" number="4.0.1">
-<h3><span class="header-section-number">4.0.1</span> Ontology help</h3>
-<pre class="r"><code>library(httr)
-library(jsonlite)
-
-
-get_descendants &lt;- function(url){
-  
-  terms &lt;- c()
-
-repeat {
-  res &lt;- GET(url)
-  stop_for_status(res)
-  data &lt;- fromJSON(content(res, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;))
-  
-  terms &lt;- c(terms, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url &lt;- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-  
-terms = unlist(terms)
-terms = stringr::str_trim(tolower(terms))
-terms = unique(terms)
-  
-print(&quot;Number of terms collected:&quot;)
-print(length(terms))
-
-print(&quot;\n Some example terms&quot;)
-print(terms[1:5])
-
-return(terms)
-
-
-}</code></pre>
-</div>
-<div id="cancers" class="section level2" number="4.1">
-<h2><span class="header-section-number">4.1</span> Cancers</h2>
-<div id="breast-cancer" class="section level3" number="4.1.1">
-<h3><span class="header-section-number">4.1.1</span> Breast cancer</h3>
-<pre class="r"><code>breast_cancer_terms &lt;- grep(&quot;breast cancer&quot;, unique(diseases), value = T)
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(breast_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;breast cancer&quot;
-                          )  
-        ) |&gt;
-   mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = &quot;breast cancer in situ&quot;,
-                                   &quot;breast cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="colorectal-cancer" class="section level3" number="4.1.2">
-<h3><span class="header-section-number">4.1.2</span> Colorectal
-cancer</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005575/descendants&quot;
-
-colorectal_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 106
-[1] &quot;\n Some example terms&quot;
-[1] &quot;colorectal lymphoma&quot;        &quot;colorectal carcinoma&quot;      
-[3] &quot;familial colorectal cancer&quot; &quot;malignant colon neoplasm&quot;  
-[5] &quot;rectal cancer&quot;             </code></pre>
-<pre class="r"><code>colorectal_cancer_terms = stringr::str_replace_all(colorectal_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(colorectal_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;colorectal cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="skin-cancer" class="section level3" number="4.1.3">
-<h3><span class="header-section-number">4.1.3</span> Skin Cancer</h3>
-<pre class="r"><code>url&lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002898/descendants&quot;
-
-skin_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 131
-[1] &quot;\n Some example terms&quot;
-[1] &quot;sebaceous gland cancer&quot;           &quot;eyelid cancer&quot;                   
-[3] &quot;cd4+/cd56+ hematodermic neoplasm&quot; &quot;primary cutaneous lymphoma&quot;      
-[5] &quot;cutaneous melanoma&quot;              </code></pre>
-<pre class="r"><code># plus skin carcinoma terms
-
-url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009259/descendants&quot;
-
-
-skin_carcinoma_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 46
-[1] &quot;\n Some example terms&quot;
-[1] &quot;skin appendage carcinoma&quot;    &quot;vulvar seborrheic keratosis&quot;
-[3] &quot;non-melanoma skin carcinoma&quot; &quot;skin carcinoma in situ&quot;     
-[5] &quot;eyelid carcinoma&quot;           </code></pre>
-<pre class="r"><code>skin_cancer_terms = c(skin_cancer_terms, skin_carcinoma_terms) 
-
-skin_cancer_terms = stringr::str_replace_all(skin_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-skin_cancer_terms = unique(skin_cancer_terms)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(skin_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;skin cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="male-reproductive-organ-cancer" class="section level3"
-number="4.1.4">
-<h3><span class="header-section-number">4.1.4</span> Male reproductive
-organ cancer</h3>
-<pre class="r"><code>male_repro_cancer_terms = c(&quot;metastatic prostate cancer&quot;,
-                              &quot;prostate cancer&quot;,
-                            &quot;scrotum cancer&quot;,
-                            &quot;epididymis cancer&quot;,
-                            &quot;penile cancer&quot;
-                              )
-
-gwas_study_info = 
- gwas_study_info |&gt;
- mutate(l1_all_disease_terms  = 
-                  stringr::str_replace_all(l1_all_disease_terms,
-                           pattern = paste0(male_repro_cancer_terms, collapse = &quot;|&quot;),
-                          &quot;male reproductive organ cancer&quot;
-                          ))</code></pre>
-</div>
-<div id="female-reproductive-organ-cancer" class="section level3"
-number="4.1.5">
-<h3><span class="header-section-number">4.1.5</span> Female reproductive
-organ cancer</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_120/descendants&quot;
-
-female_repro_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 252
-[1] &quot;\n Some example terms&quot;
-[1] &quot;uterine cancer&quot;                         
-[2] &quot;female reproductive endometrioid cancer&quot;
-[3] &quot;ovarian cancer&quot;                         
-[4] &quot;fallopian tube cancer&quot;                  
-[5] &quot;paraurethral gland cancer&quot;              </code></pre>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/ncit/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCIT_C181162/descendants&quot;
-
-female_repro_carcinoma_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 801
-[1] &quot;\n Some example terms&quot;
-[1] &quot;cervical carcinoma&quot;          &quot;endometrial carcinoma&quot;      
-[3] &quot;ovarian carcinoma&quot;           &quot;vulvar carcinoma&quot;           
-[5] &quot;gestational choriocarcinoma&quot;</code></pre>
-<pre class="r"><code>female_repro_cancer_terms &lt;- c(female_repro_cancer_terms,
-                               female_repro_carcinoma_terms)
-
-female_repro_cancer_terms = stringr::str_replace_all(female_repro_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-female_repro_cancer_terms = unique(female_repro_cancer_terms)
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(female_repro_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;female reproductive organ cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="kidney-cancer" class="section level3" number="4.1.6">
-<h3><span class="header-section-number">4.1.6</span> Kidney cancer</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_263/descendants&quot;
-
-
-kidney_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 51
-[1] &quot;\n Some example terms&quot;
-[1] &quot;malignant cystic nephroma&quot;       &quot;kidney liposarcoma&quot;             
-[3] &quot;renal pelvis carcinoma&quot;          &quot;congenital mesoblastic nephroma&quot;
-[5] &quot;renal carcinoma&quot;                </code></pre>
-<pre class="r"><code>kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(kidney_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;kidney cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="liver-cancer" class="section level3" number="4.1.7">
-<h3><span class="header-section-number">4.1.7</span> Liver cancer</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002691/descendants&quot;
-
-liver_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 76
-[1] &quot;\n Some example terms&quot;
-[1] &quot;carcinoma of liver and intrahepatic biliary tract&quot;      
-[2] &quot;calcifying nested epithelial stromal tumor of the liver&quot;
-[3] &quot;liver lymphoma&quot;                                         
-[4] &quot;biliary tract cancer&quot;                                   
-[5] &quot;liver sarcoma&quot;                                          </code></pre>
-<pre class="r"><code>liver_cancer_terms = stringr::str_replace_all(liver_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(liver_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;liver cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="lung-cancer" class="section level3" number="4.1.8">
-<h3><span class="header-section-number">4.1.8</span> Lung cancer</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008903/descendants&quot;
-
-lung_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 63
-[1] &quot;\n Some example terms&quot;
-[1] &quot;graham-boyle-troxell syndrome&quot;      &quot;malignant superior sulcus neoplasm&quot;
-[3] &quot;lung carcinoma&quot;                     &quot;lung hilum cancer&quot;                 
-[5] &quot;lung lymphoma&quot;                     </code></pre>
-<pre class="r"><code>lung_cancer_terms = stringr::str_replace_all(lung_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(lung_cancer_terms, collapse = &quot;|&quot;),
-                                   &quot;lung cancer&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="leukemia" class="section level3" number="4.1.9">
-<h3><span class="header-section-number">4.1.9</span> Leukemia</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000565/descendants&quot;
-
-leukemia_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 133
-[1] &quot;\n Some example terms&quot;
-[1] &quot;chronic eosinophilic leukemia, not otherwise specified&quot;
-[2] &quot;acute leukemia&quot;                                        
-[3] &quot;mast-cell leukemia&quot;                                    
-[4] &quot;lymphoid leukemia&quot;                                     
-[5] &quot;myeloid leukemia&quot;                                      </code></pre>
-<pre class="r"><code>leukemia_terms = stringr::str_replace_all(leukemia_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(leukemia_terms, collapse = &quot;|&quot;),
-                                   &quot;leukemia&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="non-hodgkins-lymphoma" class="section level3" number="4.1.10">
-<h3><span class="header-section-number">4.1.10</span> Non-Hodgkins
-lymphoma</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005952/descendants&quot;
-
-nhl_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 93
-[1] &quot;\n Some example terms&quot;
-[1] &quot;b-cell non-hodgkins lymphoma&quot; &quot;lymphoma, aids-related&quot;      
-[3] &quot;sezary&#39;s disease&quot;             &quot;acute lymphoblastic leukemia&quot;
-[5] &quot;gastric non-hodgkin lymphoma&quot;</code></pre>
-<pre class="r"><code>nhl_terms = stringr::str_replace_all(leukemia_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(nhl_terms, collapse = &quot;|&quot;),
-                                   &quot;non-hodgkins lymphoma&quot;
-                          )  
-        )</code></pre>
-</div>
-</div>
-<div id="allergies-1" class="section level2" number="4.2">
-<h2><span class="header-section-number">4.2</span> Allergies</h2>
-<pre class="r"><code>allergy_terms &lt;- grep(&quot;allergy&quot;, unique(diseases), value = T)
-
-allergic_terms &lt;- grep(&quot;allergic&quot;, unique(diseases), value = T) 
-allergic_terms = allergic_terms[allergic_terms != &quot;non-allergic rhinitis&quot;]
-
-eczema_terms &lt;- grep(&quot;eczema&quot;, unique(diseases), value = T) 
-
-allergy_terms &lt;- c(allergy_terms, 
-                   allergic_terms, 
-                   eczema_terms)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(allergy_terms, collapse = &quot;|&quot;),
-                                   &quot;allergic disease&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="infectious-disease-1" class="section level2" number="4.3">
-<h2><span class="header-section-number">4.3</span> Infectious
-disease</h2>
-<div id="abscess" class="section level3" number="4.3.1">
-<h3><span class="header-section-number">4.3.1</span> Abscess</h3>
-<pre class="r"><code>abscess_terms &lt;- grep(&quot;abscess&quot;, unique(diseases), value = T)</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(abscess_terms, collapse = &quot;|&quot;),
-                                   &quot;abscess&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="staphylococcal-skin-infections" class="section level3"
-number="4.3.2">
-<h3><span class="header-section-number">4.3.2</span> Staphylococcal skin
-infections</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001849/descendants&quot;
-
-
-staph_skin_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 15
-[1] &quot;\n Some example terms&quot;
-[1] &quot;staphyloenterotoxemia&quot;           &quot;staphylococcal pneumonia&quot;       
-[3] &quot;staphylococcus aureus infection&quot; &quot;staphylococcal toxemia&quot;         
-[5] &quot;staphylococcus aureus pneumonia&quot;</code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(staph_skin_terms, collapse = &quot;|&quot;),
-                                   &quot;staphylococcal skin infections&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="herpes" class="section level3" number="4.3.3">
-<h3><span class="header-section-number">4.3.3</span> Herpes</h3>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = &quot;herpes simplex infection&quot;,
-                                   &quot;herpesviridae infectious disease&quot;
-                          )  
-        )</code></pre>
-</div>
-</div>
-<div id="prion-disease" class="section level2" number="4.4">
-<h2><span class="header-section-number">4.4</span> Prion disease</h2>
-<pre class="r"><code>url&lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004720/descendants&quot;
-
-prion_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 13
-[1] &quot;\n Some example terms&quot;
-[1] &quot;scrapie&quot;                   &quot;kuru&quot;                     
-[3] &quot;inherited prion disease&quot;   &quot;creutzfeldt jacob disease&quot;
-[5] &quot;prp systemic amyloidosis&quot; </code></pre>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(prion_terms, collapse = &quot;|&quot;),
-                                   &quot;prion disease&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="epilepsy" class="section level2" number="4.5">
-<h2><span class="header-section-number">4.5</span> Epilepsy</h2>
-<pre class="r"><code># juvenile absence epilepsy
-# 
-# juvenile myoclonic epilepsy</code></pre>
-</div>
-<div id="rheumatoid-arthritis" class="section level2" number="4.6">
-<h2><span class="header-section-number">4.6</span> rheumatoid
-arthritis</h2>
-<pre class="r"><code>ra_terms &lt;- c(&quot;acpa-positive rheumatoid arthritis&quot;,
-               &quot;acpa-negative rheumatoid arthritis&quot;)
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(ra_terms, collapse = &quot;|&quot;),
-                                   &quot;rheumatoid arthritis&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="parkinson-disease-pd" class="section level2" number="4.7">
-<h2><span class="header-section-number">4.7</span> Parkinson disease
-(PD)</h2>
-<pre class="r"><code>pd_terms &lt;- c(&quot;secondary parkinson disease&quot;,
-               &quot;young adult-onset parkinsonism&quot;,
-              &quot;parkinsons disease&quot;)
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(pd_terms, collapse = &quot;|&quot;),
-                                   &quot;parkinson disease&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="orofacial-cleft" class="section level2" number="4.8">
-<h2><span class="header-section-number">4.8</span> orofacial cleft</h2>
-<pre class="r"><code>cleft_terms &lt;- c(&quot;cleft lip&quot;,
-               &quot;cleft palate&quot;)
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(cleft_terms, collapse = &quot;|&quot;),
-                                   &quot;orofacial cleft&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="celiac-disease" class="section level2" number="4.9">
-<h2><span class="header-section-number">4.9</span> celiac disease</h2>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = c(&quot;refractory celiac disease&quot;),
-                                   &quot;celiac disease&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="obesity" class="section level2" number="4.10">
-<h2><span class="header-section-number">4.10</span> Obesity</h2>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = c(&quot;morbid obesity|metabolically healthy obesity&quot;),
-                                   &quot;obesity&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="diabetic-eye-disease" class="section level2" number="4.11">
-<h2><span class="header-section-number">4.11</span> Diabetic eye
-disease</h2>
-<pre class="r"><code>diabetic_eye_terms &lt;- c(&quot;diabetic maculopathy&quot;,
-                        &quot;diabetic macular edema&quot;,
-                        &quot;diabetic retinopathy&quot;,
-                        &quot;proliferative diabetic retinopathy&quot;,
-                         &quot;non-proliferative diabetic retinopathy&quot;,
-                        &quot;diabetes mellitus type 2 associated cataract&quot;)
-
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(diabetic_eye_terms, collapse = &quot;|&quot;),
-                                   &quot;diabetic eye disease&quot;
-                          )  
-        )
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = &quot;age of onset of type 2 diabetes mellitus&quot;,
-                                   &quot;type 2 diabetes mellitus&quot;
-                          )  
-        )</code></pre>
-<p>?Maybe: could group further into hypersensitivity reaction disease
-(with drug hypersensitivity syndrome)</p>
-</div>
-<div id="putting-it-all-together-1" class="section level2"
-number="4.12">
-<h2><span class="header-section-number">4.12</span> Putting it all
-together</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  rowwise() |&gt;
-  mutate(
-    l1_all_disease_terms = paste0(
-      unique(unlist(stringr::str_split(l1_all_disease_terms, &quot;, &quot;))),
-      collapse = &quot;, &quot;
-    )
-  ) |&gt;
-  ungroup()
-
-gwas_study_info$l1_all_disease_terms = stringr::str_trim(gwas_study_info$l1_all_disease_terms)
-gwas_study_info$l1_all_disease_terms = sub(&quot;,$&quot;, &quot;&quot;, gwas_study_info$l1_all_disease_terms)
-
-n_studies_trait = gwas_study_info |&gt;
-  dplyr::filter(DISEASE_STUDY == T) |&gt;
-  dplyr::select(l1_all_disease_terms, PUBMED_ID) |&gt;
-  dplyr::distinct() |&gt;
-  dplyr::group_by(l1_all_disease_terms) |&gt;
-  dplyr::summarise(n_studies = dplyr::n()) |&gt;
-  dplyr::arrange(desc(n_studies))
-
-head(n_studies_trait)</code></pre>
-<pre><code># A tibble: 6 × 2
-  l1_all_disease_terms      n_studies
-  &lt;chr&gt;                         &lt;int&gt;
-1 type 2 diabetes mellitus        149
-2 asthma                          133
-3 breast cancer                   127
-4 alzheimers disease              125
-5 major depressive disorder       110
-6 schizophrenia                   106</code></pre>
-<pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2436    2</code></pre>
-<pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
-                               gwas_study_info$l1_all_disease_terms)  |&gt; 
-            unlist() |&gt;
-            stringr::str_trim()
-
-length(unique(diseases))</code></pre>
-<pre><code>[1] 1709</code></pre>
-<pre class="r"><code># make frequency table
-freq &lt;- table(as.factor(diseases))
-
-# sort in decreasing order
-freq_sorted &lt;- sort(freq, decreasing = TRUE)
-
-# show top N, e.g. top 10
-head(freq_sorted, 10)</code></pre>
-<pre><code>
-                             chronic kidney disease              hypertension 
-                   109388                     10828                      6995 
- type 2 diabetes mellitus major depressive disorder   coronary artery disease 
-                      922                       471                       444 
-            schizophrenia             breast cancer                    asthma 
-                      356                       354                       346 
-                 covid-19 
-                      305 </code></pre>
-</div>
-</div>
-<div id="even-more-grouping-to-maybe-add-later" class="section level1"
-number="5">
-<h1><span class="header-section-number">5</span> (?) Even more grouping
-to maybe add later:</h1>
-<ul>
-<li>Cancer</li>
-<li>Cardiovascular disease</li>
-<li>Autoimmune disease</li>
-<li>Allergy</li>
-<li>Dementia</li>
-<li>Substance abuse</li>
-</ul>
+<pre><code>[1] 1833</code></pre>
+<div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
+class="section level3" number="5.1.1">
+<h3><span class="header-section-number">5.1.1</span> Save the updated
+gwas_study_info with harmonized disease terms</h3>
+<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_trait_ontology_info.csv&quot;))</code></pre>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
@@ -1943,23 +1358,25 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] jsonlite_2.0.0    httr_1.4.7        stringr_1.5.1     ggplot2_3.5.2    
-[5] data.table_1.17.8 dplyr_1.1.4       workflowr_1.7.1  
+[1] stringr_1.5.1     ggplot2_3.5.2     data.table_1.17.8 dplyr_1.1.4      
+[5] workflowr_1.7.1  
 
 loaded via a namespace (and not attached):
- [1] gtable_0.3.6       compiler_4.3.1     renv_1.0.3         promises_1.3.3    
- [5] tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2       callr_3.7.6       
- [9] later_1.4.2        jquerylib_0.1.4    scales_1.4.0       yaml_2.3.10       
-[13] fastmap_1.2.0      here_1.0.1         R6_2.6.1           generics_0.1.4    
-[17] curl_6.4.0         knitr_1.50         tibble_3.3.0       rprojroot_2.1.0   
+ [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1     renv_1.0.3        
+ [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2      
+ [9] callr_3.7.6        later_1.4.2        jquerylib_0.1.4    scales_1.4.0      
+[13] yaml_2.3.10        fastmap_1.2.0      here_1.0.1         R6_2.6.1          
+[17] generics_0.1.4     knitr_1.50         tibble_3.3.0       rprojroot_2.1.0   
 [21] RColorBrewer_1.1-3 bslib_0.9.0        pillar_1.11.0      rlang_1.1.6       
 [25] utf8_1.2.6         cachem_1.1.0       stringi_1.8.7      httpuv_1.6.16     
 [29] xfun_0.52          getPass_0.2-4      fs_1.6.6           sass_0.4.10       
 [33] cli_3.6.5          withr_3.0.2        magrittr_2.0.3     ps_1.9.1          
 [37] grid_4.3.1         digest_0.6.37      processx_3.8.6     rstudioapi_0.17.1 
 [41] lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.4     glue_1.8.0        
-[45] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     tools_4.3.1       
-[49] pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+[45] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     httr_1.4.7        
+[49] tools_4.3.1        pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+</div>
+</div>
 </div>
 </div>
 </div>
