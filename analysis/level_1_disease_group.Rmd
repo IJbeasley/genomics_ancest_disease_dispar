@@ -801,6 +801,36 @@ gwas_study_info |>
   
 ```
 
+### Central nervous system cancer
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000326/descendants"
+
+cns_cancer_terms <- get_descendants(url)
+
+cns_cancer_terms = stringr::str_replace_all(cns_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+```
+
+```{r}
+
+pattern = paste0(cns_cancer_terms, collapse = "|")
+
+gwas_study_info = gwas_study_info |>
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = pattern,
+                                   "central nervous system cancer"
+                          )  
+        )
+  
+
+```
+
 ### Cervical cancer
 
 ```{r}
@@ -815,6 +845,14 @@ cervical_cancer_terms = stringr::str_replace_all(cervical_cancer_terms,
 cervical_cancer_terms = c("cervical intraepithelial neoplasia grade 2/3",
                           "uterine cervical cancer in situ",
                           cervical_cancer_terms)
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "uterine cervical cancer in situ",
+                                   "cervical cancer"
+                          )  
+        )
 
 
 ```
@@ -1026,7 +1064,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "laryngeal squamous cell cancer",
+                                  pattern = "laryngeal squamous cell cancer|laryngeal cancer",
                                    "larynx cancer"
                           )  
         )
