@@ -79,7 +79,8 @@ other <- c("Allergic disease",
            "Lung disease",
            "Respiratory System Disease",
   "Iron deficiency anemia (disorder)",
-  "Alzheimer disease, APOE carrier status"
+  "Alzheimer disease, APOE carrier status",
+ "HIV-associated neurocognitive disorder"
            )
 
 disease_terms = c(mondo_descendants,
@@ -137,35 +138,6 @@ not_accounted_for = not_disease_terms
 
 ```
 
-## Add disease terms to GWAS study info dataset
-
-```{r disease_terms}
-
-find_disease_terms  <-   function(MAPPED_TRAIT) {
-        # find all disease terms that appear in the trait
-        split_mapped_traits <- stringr::str_split(MAPPED_TRAIT, ", ") |> 
-                               unlist()
-        
-        mapped_disease_terms <- split_mapped_traits[split_mapped_traits %in% disease_terms]
-        
-        mapped_disease_terms = unique(mapped_disease_terms)
-        
-        return(paste0(mapped_disease_terms, collapse = ", "))  # combine multiple matches
-        
-    }
-
-gwas_study_info <- 
-  gwas_study_info |> 
-  dplyr::rowwise() |>
-  dplyr::mutate(
-    disease_terms = 
-      ifelse(tolower(MAPPED_TRAIT) %in% disease_gwas,
-             find_disease_terms(MAPPED_TRAIT),
-             NA)
-  )
-
-```
-
 ## Phenotype abnormality overlap
 
 ```{r}
@@ -200,6 +172,40 @@ print("Number of GWAS traits not accounted for by so far")
 length(not_accounted_for)
 
 ```
+
+## Add disease & phenotypic abnormality terms to GWAS study info dataset
+
+```{r disease_terms}
+
+find_disease_terms  <-   function(MAPPED_TRAIT) {
+        # find all disease terms that appear in the trait
+        split_mapped_traits <- stringr::str_split(MAPPED_TRAIT, ", ") |> 
+                               unlist()
+        
+        mapped_disease_terms <- split_mapped_traits[split_mapped_traits %in% disease_terms]
+        mapped_pheno_abnorm_terms <- split_mapped_traits[split_mapped_traits %in% pheno_abnorm]
+        
+        mapped_disease_terms = unique(c(mapped_disease_terms, 
+                                        mapped_pheno_abnorm_terms
+                                        )
+        )
+                                      
+        return(paste0(mapped_disease_terms, collapse = ", "))  # combine multiple matches
+        
+    }
+
+gwas_study_info <- 
+  gwas_study_info |> 
+  dplyr::rowwise() |>
+  dplyr::mutate(
+    disease_terms = 
+      ifelse(stringr::str_trim(tolower(MAPPED_TRAIT)) %in% c(disease_gwas,pheno_abnorm_gwas),
+             find_disease_terms(stringr::str_trim(tolower(MAPPED_TRAIT))),
+             NA)
+  )
+
+```
+
 
 ## Measurement Overlap (how many GWAS traits fall within measurement terms?)
 
@@ -460,8 +466,8 @@ gwas_study_info <-
   rowwise() |>
   dplyr::mutate(
     background_disease_terms = 
-      ifelse(tolower(MAPPED_BACKGROUND_TRAIT) %in% disease_gwas,
-             find_disease_terms(MAPPED_BACKGROUND_TRAIT),
+      ifelse(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% c(disease_gwas, pheno_abnorm_gwas),
+             find_disease_terms(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT))),
              NA)
   )
 
@@ -564,24 +570,31 @@ round(100 * length(not_accounted_for) / length(gwas_background),
 
 ```
 
+## Background trait categories 
+
 
 ```{r}
 
 gwas_study_info = 
 gwas_study_info |>
-  dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = dplyr::case_when(
-                                                            MAPPED_BACKGROUND_TRAIT == "" ~ NA,
-                                                            tolower(MAPPED_BACKGROUND_TRAIT) %in% disease_gwas ~ "Disease/Disorder",
-                                                            tolower(MAPPED_BACKGROUND_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
-                                                          tolower(MAPPED_BACKGROUND_TRAIT) %in% measurement_gwas ~ "Measurement",
-                                                          tolower(MAPPED_BACKGROUND_TRAIT) %in% response_gwas ~ "Response",
-                                                          TRUE ~ "Other"
-                                                          ))
+  dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = 
+                   dplyr::case_when(
+                                      MAPPED_BACKGROUND_TRAIT == "" ~ NA,
+                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% disease_gwas ~ "Disease/Disorder",
+                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
+                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% measurement_gwas ~ "Measurement",
+                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% response_gwas ~ "Response",
+                                      TRUE ~ "Other")
+                )
 
 
 ```
 
+
+
 # Saving GWAS trait categories
+
+
 
 ```{r}
 
@@ -593,10 +606,18 @@ gwas_study_info |>
 gwas_study_info = 
 gwas_study_info |>
   dplyr::rowwise() |>
-  dplyr::mutate(DISEASE_STUDY = ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder", T, F )) |>
+  dplyr::mutate(DISEASE_STUDY = 
+                   ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
+                          MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
+                          BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder" | 
+                          BACKGROUND_TRAIT_CATEGORY == "Phenotypic Abnormality",
+                          T, F )
+                ) |>
   dplyr::ungroup() 
 
 ```
+
+## Giving the disease labels 
 
 ```{r combined_disease_terms}
 
