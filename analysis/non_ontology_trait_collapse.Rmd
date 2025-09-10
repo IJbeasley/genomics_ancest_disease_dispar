@@ -62,6 +62,142 @@ head(n_studies_trait)
 dim(n_studies_trait)
 
 ```
+# Minor fixes of trait categorisation 
+
+```{r}
+
+gwas_study_info |> 
+  filter(DISEASE_STUDY == T) |> 
+  filter(all_disease_terms == "")  |> 
+  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
+  distinct() |>
+  nrow()
+
+gwas_study_info = 
+gwas_study_info |>
+  rowwise() |>
+  mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT == "",
+                                        "Other",
+                                        MAPPED_TRAIT_CATEGORY)) |>
+  mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT == "fractures, ununited",
+                                        "Injury",
+                                        MAPPED_TRAIT_CATEGORY))   
+
+gwas_study_info = 
+gwas_study_info |>
+  rowwise() |>
+  mutate(BACKGROUND_TRAIT_CATEGORY = ifelse(MAPPED_BACKGROUND_TRAIT == "",
+                                        "Other",
+                                        BACKGROUND_TRAIT_CATEGORY)) 
+
+
+other_response_terms = c("response to COVID-19 vaccine, localized superficial swelling, mass, or lump",
+                         "response to COVID-19 vaccine, SARS-CoV-2 neutralizing antibody measurement",
+                         "Anti-hepatitis B virus surface antigen IgG measurement, response to vaccine",
+                         "anti-SARS-CoV-2 IgG measurement, response to COVID-19 vaccine",
+                         "anti-tetanus toxoid IgG measurement, response to vaccine",
+                         "height growth attribute, response to growth hormone",
+                         "adrenal suppression measurement, response to corticosteroid",
+                         "asthenia, response to COVID-19 vaccine",
+                         "SARS-CoV-2 antibody measurement, response to COVID-19 vaccine",
+                         "response to vaccine, anti-Haemophilus influenzae type b polyribosylribitol phosphate IgG measurement",
+                         "height growth attribute, response to growth hormone"
+                )
+
+other_measurement_terms = c("amygdala volume, pallidum volume, nucleus accumbens volume, hippocampal volume, putamen volume, intracranial volume measurement, thalamus volume, caudate nucleus volume",
+                            "lamina-associated polypeptide 2, isoforms beta/gamma measurement",
+                            "apoptosis-inducing factor 1, mitochondrial measurement",
+                            "central corneal thickness, intraocular pressure measurement",
+                            "level of apoptosis-inducing factor 1, mitochondrial in blood serum",
+                            "level of MHC class I polypeptide-related sequence A in blood, level of MHC class I polypeptide-related sequence B in blood",
+                            "psychosocial stress measurement, intracranial volume measurement")
+
+other_terms = c("insulin metabolic clearance rate measurement, disposition index measurement, insulin sensitivity measurement, glucose homeostasis trait, glucose effectiveness measurement, acute insulin response measurement",
+                "disease recurrence, response to allogeneic hematopoietic stem cell transplant",
+                "disease recurrence, response to allogeneic hematopoietic stem cell transplant, donor genotype effect measurement"
+)
+
+gwas_study_info =
+  gwas_study_info |>
+    mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT %in% other_response_terms,
+                                        "Response",
+                                        MAPPED_TRAIT_CATEGORY)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT %in% other_measurement_terms,
+                                        "Response",
+                                        MAPPED_TRAIT_CATEGORY)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT %in% other_terms,
+                                        "Other",
+                                        MAPPED_TRAIT_CATEGORY))  
+
+gwas_study_info = 
+  gwas_study_info |>
+    mutate(disease_terms = ifelse(grepl("spine osteoarthritis", MAPPED_TRAIT),
+                                        paste0("spine psteoarthritis", disease_terms, collapse = ","),
+                                        disease_terms)
+    ) |>
+      mutate(all_disease_terms = ifelse(grepl("spine osteoarthritis", MAPPED_TRAIT),
+                                        paste0("spine psteoarthritis", all_disease_terms, collapse = ","),
+                                        all_disease_terms)
+    )
+
+
+gwas_study_info = 
+  gwas_study_info |>
+    mutate(disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
+                                        paste0("liver disease", disease_terms, collapse = ","),
+                                        disease_terms)
+    ) |>
+      mutate(all_disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
+                                        paste0("liver disease", all_disease_terms, collapse = ","),
+                                        all_disease_terms)
+    )
+
+
+gwas_study_info = 
+  gwas_study_info |>
+    mutate(disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
+                                        paste0("liver disease", disease_terms, collapse = ","),
+                                        disease_terms)
+    ) |>
+      mutate(all_disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
+                                        paste0("liver disease", all_disease_terms, collapse = ","),
+                                        all_disease_terms)
+    )
+
+
+gwas_study_info = 
+  gwas_study_info |>
+    mutate(background_disease_terms= ifelse(grepl("Growth delay", MAPPED_BACKGROUND_TRAIT),
+                                        paste0("growth delay", background_disease_terms, collapse = ","),
+                                        background_disease_terms)
+    ) |> 
+      mutate(all_disease_terms = ifelse(grepl("Growth delay", MAPPED_BACKGROUND_TRAIT),
+                                        paste0("growth delay", all_disease_terms, collapse = ","),
+                                        all_disease_terms)
+    )
+
+gwas_study_info = 
+gwas_study_info |>
+  dplyr::rowwise() |>
+  dplyr::mutate(DISEASE_STUDY = 
+                   ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
+                          MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
+                          BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder" | 
+                          BACKGROUND_TRAIT_CATEGORY == "Phenotypic Abnormality",
+                          T, F )
+                ) |>
+  dplyr::ungroup() 
+
+
+gwas_study_info |> 
+  filter(DISEASE_STUDY == T) |> 
+  filter(all_disease_terms == "")  |> 
+  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
+  distinct() |>
+  nrow()
+
+```
+
 
 
 # Disease trait collapsing and cleaning
