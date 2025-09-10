@@ -34,6 +34,143 @@ library(stringr)
 
 gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
 
+# fixing weird terms- where comma is in the term
+# gwas_study_info |> 
+#  mutate(n_commas_trait = stringr::str_count(MAPPED_TRAIT, ", "),
+#         n_commas_uri = stringr::str_count(MAPPED_TRAIT_URI, ",")) |>
+#   filter(n_commas_trait != n_commas_uri)
+
+
+gwas_study_info =
+gwas_study_info |> 
+  rowwise() |>
+  mutate(MAPPED_TRAIT = case_when(
+                         # osteoarthritis, hip ... http://www.ebi.ac.uk/efo/EFO_1000786
+                         grepl("EFO_1000786", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, hip", "hip osteoarthritis"),
+                         # 	osteoarthritis, hand ... http://www.ebi.ac.uk/efo/EFO_1000789
+                         grepl("EFO_1000789", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, hand", "hand osteoarthritis"),
+                         # 	osteoarthritis, spine ... http://www.ebi.ac.uk/efo/EFO_1000787
+                         grepl("EFO_1000787", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, spine", "spine osteoarthritis"),
+                         # 	Hepatitis, Alcoholic, http://www.ebi.ac.uk/efo/EFO_1001345
+                         grepl("EFO_1001345", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Hepatitis, Alcoholic", "Alcoholic Hepatitis"),
+                         # psoriasis 14, pustular http://purl.obolibrary.org/obo/MONDO_0013626
+                         grepl("MONDO_0013626", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "psoriasis 14, pustula", "pustular psoriasis 14"),
+                         # hypertension, pregnancy-induced http://purl.obolibrary.org/obo/MONDO_0024664
+                         grepl("MONDO_0024664", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "hypertension, pregnancy-induced", "pregnancy-induced hypertension"),
+                         # renal agenesis, unilateral http://purl.obolibrary.org/obo/MONDO_0019636
+                         grepl("MONDO_0019636", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "renal agenesis, unilateral", "unilateral renal agenesis"),
+                         # 	Cholecystitis, Acute http://www.ebi.ac.uk/efo/EFO_1001289
+                         grepl("EFO_1001289", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Cholecystitis, Acute", "Acute Cholecystitis"),
+                         # 	Genital neoplasm, female http://www.ebi.ac.uk/efo/EFO_1001331
+                         grepl("EFO_1001331", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Genital neoplasm, female", "female reproductive organ cancer"),
+                         # 	Anemia, Hemolytic, Autoimmune http://www.ebi.ac.uk/efo/EFO_1001264
+                          grepl("EFO_1001264", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Anemia, Hemolytic, Autoimmune", "autoimmune haemolytic anemia"),
+                         TRUE ~ MAPPED_TRAIT
+                         )
+  ) |>
+  ungroup()
+
+# osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(
+                         grepl("EFO_0004616", MAPPED_TRAIT_URI),
+                         stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, knee", "knee osteoarthritis"),
+                         MAPPED_TRAIT
+  )
+  ) 
+
+# rheumatoid factor-negative juvenile idiopathic arthritis
+# polyarticular juvenile idiopathic arthritis, rheumatoid factor negative
+# http://www.ebi.ac.uk/efo/EFO_1002020
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_1002020", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "polyarticular juvenile idiopathic arthritis, rheumatoid factor negative", 
+                                                        "rheumatoid factor-negative juvenile idiopathic arthritis"),
+                               MAPPED_TRAIT)
+         )
+
+# http://www.ebi.ac.uk/efo/EFO_0007294, hand, foot and mouth disease,
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_0007294", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "hand, foot and mouth disease", 
+                                                        "hand foot and mouth disease"),
+                               MAPPED_TRAIT)
+         )
+
+# susceptibility to migriane without aura http://purl.obolibrary.org/obo/MONDO_0011847 
+
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("MONDO_0011847", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, pattern = "migraine without aura, susceptibility to, 4", "migraine without aura"),
+                               MAPPED_TRAIT)
+         )
+
+# 	neural tube defects, susceptibility to, http://purl.obolibrary.org/obo/MONDO_0020705
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("MONDO_0020705", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "neural tube defects, susceptibility to", 
+                                                        "neural tube defects"),
+                               MAPPED_TRAIT)
+         )
+
+# infantile diarrhea
+# Diarrhea, Infantile http://www.ebi.ac.uk/efo/EFO_1001306
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_1001306", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "Diarrhea, Infantile", 
+                                                        "infantile diarrhea"),
+                               MAPPED_TRAIT)
+         )
+
+# self reported traits 
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_0009803|EFO_0009822|EFO_0009803|EFO_0009817|EFO_0009822|EFO_0009819|EFO_0009823|EFO_0009824", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = ", self-reported$", 
+                                                        " self-reported"),
+                               MAPPED_TRAIT)
+         )
+
+
+# Hodgkins lymphoma, mixed cellularity http://www.ebi.ac.uk/efo/EFO_1002031
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_1002031", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, pattern = "Hodgkins lymphoma, mixed cellularity", "Hodgkins lymphoma mixed cellularity"),
+                               MAPPED_TRAIT)
+         )
+
+# encephalopathy, acute, infection-induced, http://purl.obolibrary.org/obo/MONDO_0000166
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("MONDO_0000166", MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "encephalopathy, acute, infection-induced", 
+                                                        "encephalopathy acute infection-induced"),
+                               MAPPED_TRAIT)
+         )
+
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = stringr::str_replace_all(MAPPED_TRAIT, 
+                                                 "^level of .+, mitochondrial in blood$", "blood protein amount")
+         )
+
+
+
+
 ```
 
 ```{r}
@@ -80,7 +217,10 @@ other <- c("Allergic disease",
            "Respiratory System Disease",
   "Iron deficiency anemia (disorder)",
   "Alzheimer disease, APOE carrier status",
- "HIV-associated neurocognitive disorder"
+  "Alzheimer's disease biomarker measurement",
+ "Genital neoplasm, female",
+ "HIV-associated neurocognitive disorder",
+ "encephalopathy acute infection-induced"
            )
 
 disease_terms = c(mondo_descendants,
@@ -100,6 +240,8 @@ print("Number of terms related to disease or disorder")
 length(disease_terms)
 
 ```
+
+
 
 ```{r}
 # Find GWAS traits that fall within disease or disorder terms
@@ -204,8 +346,18 @@ gwas_study_info <-
              NA)
   )
 
-```
+gwas_study_info <- 
+  gwas_study_info |>
+  rowwise() |>
+  dplyr::mutate(
+   disease_terms = 
+      ifelse(BACKGROUND_TRAIT == "",
+             NA,
+            disease_terms)
+  ) |>
+  ungroup()
 
+```
 
 ## Measurement Overlap (how many GWAS traits fall within measurement terms?)
 
@@ -221,7 +373,9 @@ measurement <- c(total_choles,
 
 measurement <- unique(measurement)
 
-measurement <- c("cerebrospinal fluid composition attribute", measurement)
+measurement <- c("cerebrospinal fluid composition attribute",
+                 "blood protein amount",
+                 measurement)
 
 measurement = stringr::str_trim(tolower(measurement))
 ```
@@ -469,17 +623,26 @@ gwas_study_info <-
       ifelse(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% c(disease_gwas, pheno_abnorm_gwas),
              find_disease_terms(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT))),
              NA)
-  )
+  ) |>
+  ungroup()
+
+
+gwas_study_info <- 
+  gwas_study_info |>
+  rowwise() |>
+  dplyr::mutate(
+    background_disease_terms = 
+      ifelse(MAPPED_BACKGROUND_TRAIT == "",
+             NA,
+             background_disease_terms)
+  ) |>
+  ungroup()
 
 ```
 
 ## Phenotype abnormality overlap
 
 ```{r}
-
-
-pheno_abnorm <- readLines(here::here("output/trait_ontology/hp_0000118_descendants.txt"))
-pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
 
 # Find terms where all comma-split pieces are in measurement
 pheno_abnorm_gwas <- not_accounted_for[
@@ -614,6 +777,16 @@ gwas_study_info |>
                           T, F )
                 ) |>
   dplyr::ungroup() 
+
+```
+
+## Number of disease studies 
+
+```{r}
+
+gwas_study_info |>
+  filter(DISEASE_STUDY == T) |>
+  nrow()
 
 ```
 
