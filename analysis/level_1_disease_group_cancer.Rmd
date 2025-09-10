@@ -1,0 +1,1035 @@
+---
+title: "Level 1 Disease Trait Grouping - Cancer traits"
+author: "Isobel Beasley"
+date: "2025-09-08"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r required_fns, message = F, warning= F}
+
+library(dplyr)
+library(data.table)
+library(stringr)
+
+```
+
+## Ontology help - for getting disease subtypes
+
+```{r ontology_fns}
+
+source(here::here("code/get_term_descendants.R"))
+
+```
+
+```{r setup_2, message = FALSE, warning= FALSE}
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group_l1.csv"))
+
+```
+
+
+
+# Initial summary - number of unique study terns
+
+```{r initial_summary}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(l1_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(l1_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+## When separate studies with multiple terms
+
+```{r initial_diseases}
+
+diseases <- stringr::str_split(pattern = ", ", 
+                               gwas_study_info$l1_all_disease_terms[gwas_study_info$l1_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+
+length(unique(diseases))
+
+
+test <- data.frame(trait = unique(diseases))
+
+```
+
+# Disease subtype grouping (cancer)
+
+### Bone cancer
+
+```{r group_bone_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002129/descendants"
+
+bone_cancer_terms <- get_descendants(url)
+
+bone_cancer_terms = stringr::str_replace_all(bone_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+bone_cancer_terms = c("malignant bone neoplasm",
+                      bone_cancer_terms)
+
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = paste0(bone_cancer_terms, collapse = "|"),
+                                   "bone cancer"
+                          )  
+        )
+
+```
+
+### Bladder cancer
+
+```{r}
+
+url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_4007/descendants"
+
+# maybe do uninary bladder cancer instead
+
+bladder_cancer_terms <- get_descendants(url)
+
+bladder_cancer_terms = stringr::str_replace_all(bladder_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(bladder_cancer_terms, collapse = "|"),
+                                   "bladder cancer"
+                          )  
+        )
+  
+  
+```
+
+### Breast cancer
+
+```{r group_breast_cancer}
+
+breast_cancer_terms <- grep("breast cancer", unique(diseases), value = T)
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(breast_cancer_terms, collapse = "|"),
+                                   "breast cancer"
+                          )  
+        ) |>
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "breast cancer in situ",
+                                   "breast cancer"
+                          )  
+        ) |>
+     mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "invasive lobular cancer",
+                                   "breast cancer"
+                          )  
+        )
+  
+```
+
+### Benign neoplasms
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+        str_replace_all(l1_all_disease_terms, 
+                    "benign neoplasm of (.*?)(?=,|$)|benign neoplasm of (.*?) (.*?)(?=,|$)", 
+                    "benign neoplasm")
+         ) 
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+        str_replace_all(l1_all_disease_terms, 
+                    "benign (.*?) neoplasm(?=,|$)|benign (.*?) (.*?) neoplasm(?=,|$)", 
+                    "benign neoplasm")
+         ) 
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+        str_replace_all(l1_all_disease_terms, 
+                    "(.*?) benign neoplasm(?=,|$)|(.*?) (.*?) neoplasm(?=,|$)", 
+                    "benign neoplasm")
+         ) 
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+        str_replace_all(l1_all_disease_terms, 
+                    "polyp of (.*?)(?=,|$)|polyp of (.*?) (.*?)(?=,|$)", 
+                    "benign neoplasm")
+         ) 
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+        str_replace_all(l1_all_disease_terms, 
+                    "(?=,|^)(.*?) polyp(?=,|$)|(?=,|^)(.*?) (.*?) polyp (?=,|$)", 
+                    "benign neoplasm")
+         ) 
+
+# https://my.clevelandclinic.org/health/diseases/21477-adenomas - benign
+other_benign_neoplasms = c("adenomatous colon polyp",
+                           "colorectal adenoma",
+                           "pituitary gland adenoma",
+                           "aldosterone-producing adenoma",
+                           "female genital tract polyp",
+                           "polyp"
+                           )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+        str_replace_all(l1_all_disease_terms, 
+                    paste0(other_benign_neoplasms, collapse = "|"), 
+                    "benign neoplasm")
+         )
+
+```
+
+### Central nervous system cancer
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000326/descendants"
+
+cns_cancer_terms <- get_descendants(url)
+
+cns_cancer_terms = stringr::str_replace_all(cns_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+```
+
+```{r}
+
+pattern = paste0(cns_cancer_terms, collapse = "|")
+
+gwas_study_info = gwas_study_info |>
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = pattern,
+                                   "central nervous system cancer"
+                          )  
+        )
+  
+
+```
+
+### Cervical cancer
+
+```{r}
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_4362/descendants"
+
+cervical_cancer_terms <- get_descendants(url)
+
+cervical_cancer_terms = stringr::str_replace_all(cervical_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+cervical_cancer_terms = c("cervical intraepithelial neoplasia grade 2/3",
+                          "uterine cervical cancer in situ",
+                          cervical_cancer_terms)
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "uterine cervical cancer in situ",
+                                   "cervical cancer"
+                          )  
+        )
+
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = paste0(cervical_cancer_terms, collapse = "|"),
+                                   "cervical cancer"
+                          )  
+        )
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "uterine cervical cancer in situ",
+                                   "cervical cancer"
+                          )  
+        )
+
+```
+
+### Colorectal cancer
+
+```{r group_colorectal_cancer}
+
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005575/descendants"
+
+colorectal_cancer_terms <- get_descendants(url)
+
+colorectal_cancer_terms = stringr::str_replace_all(colorectal_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+colorectal_cancer_terms= c("metastatic colorectal cancer",
+                             "rectum cancer",
+                          colorectal_cancer_terms)
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = paste0(colorectal_cancer_terms, collapse = "|"),
+                                   "colorectal cancer"
+                          )  
+        ) |>
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "colorectal mucinous adenocarcinoma",
+                                   "colorectal cancer"
+                          )  
+        ) |>
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "metachronous colorectal adenoma",
+                                   "colorectal cancer"
+                          )  
+        )
+
+
+```
+
+### Endometrial cancer
+
+```{r group_endometrial_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0011962/descendants"
+
+endometrial_cancer_terms <- get_descendants(url)
+
+# also: http://www.ebi.ac.uk/efo/EFO_1001514: endometrial endometrioid carcinoma
+endometrial_cancer_terms = c("endometrial endometrioid carcinoma",
+                             endometrial_cancer_terms)
+
+endometrial_cancer_terms = stringr::str_replace_all(endometrial_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(endometrial_cancer_terms, collapse = "|"),
+                                   "endometrial cancer"
+                          )  
+        )
+
+```
+
+
+### Esophageal cancer
+
+```{r group_esophageal_cancer}
+
+esophageal_cancer_terms <- c("esophageal adenocarcinoma",
+                             "esophageal squamous cell cancer")
+
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(esophageal_cancer_terms, collapse = "|"),
+                                   "esophageal cancer"
+                          )  
+        )
+
+```
+
+### Eye cancer (to add)
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002236/descendants"
+
+ocular_cancer_terms <- get_descendants(url)
+
+ocular_cancer_terms = stringr::str_replace_all(ocular_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(ocular_cancer_terms, collapse = "|"),
+                                   "ocular cancer"
+                          )  
+        )
+
+
+```
+
+### Gallbladder and bilary tract cancer
+
+```{r group_gallbladder_biliary_cancer}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                         "cancer of gallbladder and extrahepatic biliary tract",
+                         "gallbladder and bilary tract cancer"
+         )
+         )
+
+```
+
+### Hodgkin lymphoma
+
+```{r group_hodgkin_lymphoma}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          "nodular sclerosis hodgkin lymphoma",
+                          "hodgkins lymphoma"
+         ))
+
+```
+
+### Head and neck cancer 
+
+```{r group_head_neck_cancer}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms ,
+                          "head and neck squamous cell cancer",
+                          "head and neck cancer, squamous cell cancer"
+         ))
+
+```
+
+### Intestinal cancer (non- colorectal)
+
+
+```{r group_intestinal_cancer}
+
+intestinal_cancer_terms <- c("small intestine cancer",
+                           "small bowel cancer",
+                           "small intestine cancer")
+
+```
+
+
+### Kidney cancer
+
+```{r group_kidney_cancer}
+
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_263/descendants"
+
+
+kidney_cancer_terms <- get_descendants(url)
+
+kidney_cancer_terms = c("renal cell carcinoma",
+                       "clear cell renal carcinoma",
+                       "clear cell renal cell carcinoma",
+                       kidney_cancer_terms)
+
+kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+kidney_cancer_terms =  stringr::str_replace_all(kidney_cancer_terms,
+                          "renal cancer",
+                          "kidney cancer")
+
+
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(kidney_cancer_terms, collapse = "|"),
+                                   "kidney cancer"
+                          )  
+        )
+
+
+```
+
+### Laryngeal cancer
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "laryngeal squamous cell cancer|laryngeal cancer",
+                                   "larynx cancer"
+                          )  
+        )
+
+
+```
+
+### Leukemia 
+
+```{r group_leukemia}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000565/descendants"
+
+leukemia_terms <- get_descendants(url)
+
+leukemia_terms = stringr::str_replace_all(leukemia_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(leukemia_terms, collapse = "|"),
+                                   "leukemia"
+                          )  
+        )
+
+
+```
+
+### Lip and oral cavity cancer
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005570/descendants"
+
+lip_oral_cavity_cancer_terms <- get_descendants(url)
+
+lip_oral_cavity_cancer_terms = stringr::str_replace_all(lip_oral_cavity_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(lip_oral_cavity_cancer_terms, collapse = "|"),
+                                   "lip and oral cavity cancer"
+                          )  
+        )
+
+```
+
+### Liver cancer 
+
+```{r group_liver_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002691/descendants"
+
+liver_cancer_terms <- get_descendants(url)
+
+liver_cancer_terms = stringr::str_replace_all(liver_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+liver_cancer_terms = c("hepatitis virus-related liver cancer",
+                       liver_cancer_terms)
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(liver_cancer_terms, collapse = "|"),
+                                   "liver cancer"
+                          )  
+        )
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "hepatitis virus-related liver cancer",
+                                   "liver cancer"
+                          )  
+        )
+
+```
+
+### Lung cancer 
+
+
+```{r group_lung_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008903/descendants"
+
+lung_cancer_terms <- get_descendants(url)
+
+lung_cancer_terms = stringr::str_replace_all(lung_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(lung_cancer_terms, collapse = "|"),
+                                   "lung cancer"
+                          )  
+        )
+
+
+```
+
+### Ovarian cancer
+
+```{r group_ovarian_cancer}
+
+url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008170/descendants"
+
+ovarian_cancer_terms <- get_descendants(url)
+
+ovarian_cancer_terms = stringr::str_replace_all(ovarian_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+ovarian_cancer_terms = c("high grade serous ovarian cancer",
+                         "high grade ovarian cancer",
+                         "high grade ovarian cancers",
+                         "ovarian endometrioid cancer", # http://www.ebi.ac.uk/efo/EFO_1001515 - ovarian edometrioid carcinoma
+                         
+                         "ovarian serous cancer", # http://www.ebi.ac.uk/efo/EFO_1001516 - ovarian serous carcinoma
+                       ovarian_cancer_terms
+                       )
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = paste0(ovarian_cancer_terms, collapse = "|"),
+                                   "ovarian cancer"
+                  
+        )
+ )
+        
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "high grade ovarian cancer",
+                                   "ovarian cancer"
+                          )  
+        )
+
+```
+
+### Pancreatic cancer
+
+```{r group_pancreatic_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0009831/descendants"
+
+pancreatic_cancer_terms <- get_descendants(url)
+
+pancreatic_cancer_terms = stringr::str_replace_all(pancreatic_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(pancreatic_cancer_terms, collapse = "|"),
+                                   "pancreatic cancer"
+                          )  
+        )
+
+```
+### Prostate cancer
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10283/descendants"
+
+prostate_cancer_terms <- get_descendants(url)
+
+prostate_cancer_terms = stringr::str_replace_all(prostate_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+prostate_cancer_terms = c("grade iii prostatic intraepithelial neoplasia",
+                          "metastatic prostate cancer",
+                          prostate_cancer_terms)
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = paste0(prostate_cancer_terms, collapse = "|"),
+                                   "prostate cancer"
+                          )  
+        )
+
+```
+
+
+### Non-Hodgkins lymphoma
+
+```{r group_nhl}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005952/descendants"
+
+nhl_terms <- get_descendants(url)
+
+nhl_terms = stringr::str_replace_all(leukemia_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+nhl_terms = c("central nervous system non-hodgkin lymphoma",
+              "lymphoblastic lymphoma",
+              "extranodal nasal nk/t cell lymphoma", # https://www.ebi.ac.uk/ols4/ontologies/ordo/classes/http%253A%252F%252Fwww.orpha.net%252FORDO%252FOrphanet_86879
+              "follicular lymphoma", # http://purl.obolibrary.org/obo/DOID_0050873
+              "marginal zone b-cell lymphoma",
+              "diffuse large b-cell lymphoma",
+              nhl_terms)
+
+```
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(nhl_terms, collapse = "|"),
+                                   "non-hodgkins lymphoma"
+                          )  
+        )
+
+
+```
+
+### Non-melanoma skin cancer
+
+```{r group_non_melanoma_skin_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009260/descendants"
+
+non_melanoma_skin_cancer_terms <- get_descendants(url)
+
+non_melanoma_skin_cancer_terms = stringr::str_replace_all(non_melanoma_skin_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(non_melanoma_skin_cancer_terms, collapse = "|"),
+                                   "non-melanoma skin cancer"
+                          )  
+        )
+
+
+```
+
+### Other pharygnx cancer
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_0060119/descendants"
+
+other_pharynx_cancer_terms <- get_descendants(url)
+
+other_pharynx_cancer_terms = stringr::str_replace_all(other_pharynx_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+other_pharynx_cancer_terms = c("hypopharyngeal cancer",
+                               other_pharynx_cancer_terms)
+
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(other_pharynx_cancer_terms, collapse = "|"),
+                                   "other pharynx cancer"
+                          )  
+        )
+
+
+```
+
+### Stomach cancer
+
+```{r group_stomach_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10534/descendants"
+
+stomach_cancer_terms <- get_descendants(url)
+
+stomach_cancer_terms = stringr::str_replace_all(stomach_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+stomach_cancer_terms = c(
+                          "diffuse stomach cancer",
+                          "gastric cancer",
+                          stomach_cancer_terms
+                          )
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(stomach_cancer_terms, collapse = "|"),
+                                   "stomach cancer"
+                          )  
+        ) |>
+   mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "diffuse stomach cancer",
+                                   "stomach cancer"
+                          )  
+        )
+
+```
+
+### Squamous cell carcinoma 
+
+```{r group_squamous_cell_carcinoma}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "cutaneous squamous cell cancer",
+                                   "squamous cell cancer"
+                          )  
+        )
+
+```
+
+### Testicular cancer
+
+### Thyroid cancer
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_1781/descendants"
+
+thyroid_cancer_terms <- get_descendants(url)
+
+thyroid_cancer_terms = stringr::str_replace_all(thyroid_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+thyroid_cancer_terms = c("differentiated thyroid cancer",
+                         thyroid_cancer_terms)
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(thyroid_cancer_terms, collapse = "|"),
+                                   "thyroid cancer"
+                          )  
+        )
+
+```
+
+### Uterine cancer
+
+```{r}
+
+uterine_cancer_terms <- c("uterine corpus cancer",
+                          "uterine adnexa cancer")
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(uterine_cancer_terms, collapse = "|"),
+                                   "uterine cancer"
+                          )  
+        )
+
+```
+
+
+
+
+## Ocular Melanoma
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "uveal melanoma|uveal melanoma disease severity|epithelioid cell uveal melanoma|choroidal melanoma",
+                          "ocular melanoma"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "ocular melanoma disease severity",
+                          "ocular melanoma"
+         ))
+
+
+```
+
+# Final summary - number of unique study terns
+
+```{r final_summary}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(l1_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(l1_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+### When separate studies with multiple terms
+
+```{r final_diseases}
+
+diseases <- stringr::str_split(pattern = ", ", 
+                               gwas_study_info$l1_all_disease_terms[gwas_study_info$l1_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+
+test <- data.frame(trait = unique(diseases))
+
+length(unique(diseases))
+
+# make frequency table
+freq <- table(as.factor(diseases))
+
+# sort in decreasing order
+freq_sorted <- sort(freq, decreasing = TRUE)
+
+# show top N, e.g. top 10
+head(freq_sorted, 10)
+
+```
+
+### Save the updated gwas_study_info with harmonized disease terms
+
+```{r}
+
+fwrite(gwas_study_info,
+        here::here("output/gwas_cat/gwas_study_info_group_l1_v2.csv")
+         )
+
+```
+
+
+
+
+
