@@ -1,0 +1,1139 @@
+---
+title: "Level 1 Disease Trait Grouping - Non-cancer"
+author: "Isobel Beasley"
+date: "2025-09-08"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Set up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r required_fns, message = F, warning= F}
+
+library(dplyr)
+library(data.table)
+library(stringr)
+
+```
+
+## Ontology help - for getting disease subtypes
+
+```{r ontology_fns}
+
+source(here::here("code/get_term_descendants.R"))
+
+```
+
+```{r setup_2, message = FALSE, warning= FALSE}
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_simplified.csv"))
+
+```
+
+# Initial summary
+
+## Objectives of this analysis:
+
+Level 1 disease grouping: 
+-   collapse disease causes, e.g. contact dermatitis due to nickel to contact dermatitis
+-   collapse disease subtypes, e.g. bipolar I and bipolar II to bipolar disorder
+-   collapse disease onset times, e.g. early-onset alzheimers disease and late-onset alzheimers disease to alzheimers disease
+-   collapse disease stages
+
+
+## Grouping - level 1 set up 
+
+```{r group_l1}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = collected_all_disease_terms)
+
+```
+
+## Initial summary - number of unique study terms
+
+```{r}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(collected_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+### When separate studies with multiple terms 
+
+```{r}
+
+diseases <- stringr::str_split(pattern = ", ", 
+ gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+length(unique(diseases))
+
+```
+
+
+# Disease stage grouping
+
+## Chronic kidney disease (CKD)
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "chronic kidney disease stage 5|chronic kidney disease stage 4",
+                          "chronic kidney disease"
+         ))
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "stage 5 chronic kidney disease",
+                          "chronic kidney disease"
+         ))
+
+```
+
+# Disease cause grouping
+
+## Contact dermatitis
+
+```{r}
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "contact dermatitis due to nickel",
+                          "contact dermatitis"
+         ))
+
+
+
+```
+
+# Disease subtype grouping (non-cancer)
+
+## Abortion
+
+```{r pregnancy_loss}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "habitual abortion|abortion|spontaneous loss of pregnancy|incomplete loss of pregnancy",
+                          "loss of pregnancy"
+         ))
+# exact synonyms (to avoid partial matches
+# https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001491?lang=en
+
+```
+
+## Acute pancreatitis
+
+```{r acute_pancreatitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "asparaginase-induced acute pancreatitis",
+                          "acute pancreatitis"
+         ))
+
+```
+
+## Alopecia
+
+```{r alopecia, eval = F}
+
+url<-  "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0004907/descendants"
+
+alopecia_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(alopecia_terms, collapse = "(?=,|$)|\\b"),
+                          "alopecia"
+         ))
+
+
+```
+
+## Alcohol-use disorders
+
+```{r alchol_use_disorders}
+
+alchol_use_disorder_terms <- c("alcohol dependence",
+                             "alcohol withdrawal",
+                             "alcohol withdrawal delirium",
+                             "alcohol abuse",
+                             "alcohol-related disorders delirium",
+                             "alcohol use disorder",
+                             "addictive alcohol use"
+                             )
+
+gwas_study_info = gwas_study_info |>
+      mutate(l1_all_disease_terms = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                            paste0(alchol_use_disorder_terms, collapse = "(?=,|$)|\\b"),
+                            "alcohol-related disorders"
+           ))
+
+gwas_study_info = gwas_study_info |>
+      mutate(l1_all_disease_terms = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                            paste0(alchol_use_disorder_terms, collapse = "(?=,|$)|\\b"),
+                            "alcohol-related disorders"
+           ))
+
+
+```
+
+
+## Alcoholic liver disease
+
+```{r alcoholic_liver_disease}
+
+alcoholic_liver_disease_terms <- c("alcoholic liver cirrhosis",
+                                   "alcoholic fatty liver disease",
+                                   "alcoholic hepatitis"
+                                   )
+
+
+gwas_study_info = gwas_study_info |>
+      mutate(l1_all_disease_terms = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                             paste0(alcoholic_liver_disease_terms, collapse = "(?=,|$)|\\b"),
+                            "alcoholic liver disease"
+           ))
+
+```
+
+## Alzheimer's disease
+
+```{r alzheimers_disease}}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "early-onset alzheimers disease|late-onset alzheimers disease",
+                          "alzheimers disease"
+         ))
+
+```
+
+## Allergic contact dermatitis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "allergic contact dermatitis of eyelid",
+                          "allergic contact dermatitis"
+         ))
+
+```
+
+## Allergic rhinitis
+
+```{r allergic_rhinitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "seasonal allergic rhinitis",
+                          "allergic rhinitis"
+         ))
+
+
+
+```
+
+## Astigmatism
+
+```{r astigmatism}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "corneal astigmatism",
+                          "astigmatism"
+         ))
+
+```
+
+## Asthma
+
+```{r asthma}
+
+gwas_study_info = gwas_study_info |>
+      mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                            "atopic asthma|chronic obstructive asthma",
+                            "asthma"
+           )) |>
+    mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                            "childhood onset asthma|adult onset asthma|aspirin-induced asthma",
+                            "asthma"
+           ))
+
+```
+
+## Autoimmune pancreatitis
+
+```{r autoimmune_pancreatitis}
+
+gwas_study_info = gwas_study_info |>
+      mutate(l1_all_disease_terms  = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                            "autoimmune pancreatitis type 1",
+                            "autoimmune pancreatitis"
+           )) 
+
+
+```
+
+## Back pain 
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "low back pain",
+                          "back pain"
+         ))
+
+```
+
+## Bipolar disorder
+
+```{r bipolar_disorder}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "bipolar ii disorder|bipolar i disorder",
+                          "bipolar disorder"
+         ))
+
+```
+
+## Celiac disease
+
+```{r celiac_disease}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "refractory celiac disease",
+                                   "celiac disease"
+                          )  
+        )
+
+
+```
+
+## Chronic pancreatitis
+
+```{r chronic_pancreatitis, eval = F}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "thiopurine immunosuppressant-induced pancreatitis|non-alcoholic pancreatitis",
+                          "chronic pancreatitis"
+         ))
+
+```
+
+## Chronic rhinosinusitis 
+
+```{r chronic_rhinosinusitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "chronic rhinosinusitis with nasal polyps",
+                          "chronic rhinosinusitis"
+         ))
+
+```
+
+
+## Coronary artery disease
+
+```{r coronary_artery_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001645/descendants"
+
+coronary_artery_disease_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(coronary_artery_disease_terms, collapse = "(?=,|$)|\\b"),
+                          "coronary artery disease"
+         ))
+
+```
+## Congestive heart failure
+
+```{r congestive_heart_failure}
+
+congestive_heart_failure_terms <- c("systolic heart failure",
+                                 "diastolic heart failure",
+                                 "cor pulmonale",
+                                 "congenital heart disease",
+                                 "chronic pulmonary heart disease"
+                                 )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(congestive_heart_failure_terms, collapse = "(?=,|$)|\\b"),
+                          "congestive heart failure"
+         ))
+
+```
+
+
+## Dental caries
+
+```{r dental_caries}
+
+
+dental_caries_terms <- c("pit and fissure surface dental caries",
+                         "smooth surface dental caries",
+                         "primary dental caries",
+                         "enamel caries",
+                         "permanent dental caries"
+                         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(dental_caries_terms, collapse = "(?=,|$)|\\b"),
+                          "dental caries"
+         )
+)
+
+```
+
+## Drug allergy
+
+```{r drug_allergy}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "beta-lactam allergy",
+                          "drug allergy"
+         ))
+
+```
+
+## Food allergy
+
+```{r food_allergy}
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "peanut allergy|milk allergy|egg allergy|wheat allergic reaction",
+                          "food allergy"
+         ))
+```
+
+## Hemolytic anemia
+
+```{r hemolytic_anemia}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0003664/descendants"
+
+
+hemolytic_anemia_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hemolytic_anemia_terms, collapse = "(?=,|$)|\\b"),
+                          "hemolytic anemia"
+         ))
+
+```
+
+## Herpes
+
+```{r}
+
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "herpes simplex infection",
+                                   "herpesviridae infectious disease"
+                          )  
+        )
+
+
+```
+
+## Hypertension
+
+```{r}
+
+url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000537/descendants"
+
+hypertension_terms <- get_descendants(url)
+
+hypertension_terms = c("primary hypertension",
+                      hypertension_terms
+                      )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hypertension_terms, collapse = "(?=,|$)|\\b"),
+                          "hypertension"
+         ))
+
+```
+
+
+
+
+## HIV 
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+    mutate(l1_all_disease_terms = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "hiv-1 infection",
+                          "hiv infection"
+         ))
+
+
+```
+
+## Hyperlipidemia
+
+```{r}
+
+hyperlipidemia_terms <- c("hypercholesterolemia",
+                         "familial hypercholesterolemia",
+                         "familial hyperlipidemia"
+                         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hyperlipidemia_terms, collapse = "(?=,|$)|\\b"),
+                          "hyperlipidemia"
+         ))
+  
+```
+
+## Inborn errors of metabolism
+
+```{r}
+
+inborn_error_metab <- c("inborn disorder of amino acid metabolism",
+                        "inborn disorder of amino acid transport",
+                        "inborn disorder of porphyrin metabolism",
+                        "inborn carbohydrate metabolic disorder",
+                        "familial lipoprotein lipase deficiency",
+                        "lactose intolerance",
+                        "hereditary hemochromatosis",
+                        "alpha 1-antitrypsin deficiency",
+                        "urea cycle disorder",
+                        "gaucher disease",
+                        "plasma protein metabolism disease",
+                        "disorder of metabolite absorption and transport")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(inborn_error_metab, collapse = "(?=,|$)|\\b"),
+                          "inborn errors of metabolism"
+         ))
+
+
+```
+
+## Infectious meningitis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "bacterial meningitis|pneumococcal meningitis|viral meningitis",
+                          "infectious meningitis"
+         ))
+
+```
+
+## Infertility (female & male)
+
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "tubal factor infertility",
+                          "female infertility"
+                          )) |>
+  mutate(l1_all_disease_terms  = 
+                  stringr::str_replace_all(l1_all_disease_terms,
+                          "azoospermia",
+                          "male infertility"
+                          )  )
+
+```
+
+## Influenza a (h1n1) (subset of influenza)
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+    mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "influenza a \\(h1n1\\)",
+                          "influenza"
+         ))
+
+```
+
+
+## Juvenile idiopathic arthritis
+
+```{r juvenile_idiopathic_arthritis_onset_group}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms ,
+                         "systemic juvenile idiopathic arthritis|oligoarticular juvenile idiopathic arthritis|
+                         polyarticular juvenile idiopathic arthritis",
+                         "juvenile idiopathic arthritis")
+        )
+
+```
+
+## Lewy body dementia
+
+```{r lewy_body_dementia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "lewy body attribute",
+                          "lewy body dementia"
+         ))
+
+
+```
+## Malaria
+
+```{r malaria}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "plasmodium falciparum malaria|plasmodium vivax malaria",
+                          "malaria"
+         ))
+
+```
+
+## Methamphetamine use disorders 
+
+```{r methamphetamine_use_disorders}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "methamphetamine dependence|methamphetamine-induced psychosis",
+                          "methamphetamine use disorders"
+         ))
+
+```
+
+## Migrane 
+
+```{r migraine}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "migraine disorder|migraine with aura|migraine without aura",
+                          "migraine"
+         ))
+
+```
+
+## Multiple sclerosis
+
+```{r multiple_sclerosis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "relapsing-remitting multiple sclerosis",
+                          "multiple sclerosis"
+         ))
+
+```
+
+## Myocardial infarction
+
+```{r myocardial_infarction}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000612/descendants"
+
+myocardial_infarction_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(myocardial_infarction_terms, collapse = "(?=,|$)|\\b"),
+                          "myocardial infarction"
+         ))
+
+```
+
+## Photosensitivity disease
+
+```{r photosensitivity_disease}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms,
+                         "phototoxic dermatitis|skin sensitivity to sun",
+                         "photosensitivity disease")
+        )
+
+```
+
+## Phobic disorder
+
+```{r phobic_disorder}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001908/descendants"
+
+phobic_disorder_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(phobic_disorder_terms, collapse = "(?=,|$)|\\b"),
+                          "phobic disorder"
+         ))
+
+```
+
+## Hereditary heterochromatosis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "hereditary hemochromatosis type 1",
+                          "hereditary hemochromatosis"
+         ))
+
+```
+
+
+
+
+## Myasthenia gravis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "late-onset myasthenia gravis",
+                          "myasthenia gravis"
+         ))
+
+
+```
+
+
+
+## Neuromyelitis optica 
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "aqp4-igg-negative neuromyelitis optica|aqp4-igg-positive neuromyelitis optica",
+                          "neuromyelitis optica"
+         ))
+
+```
+
+## Neurofibromatosis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "neurofibromatosis type 1|neurofibromatosis type 2",
+                          "neurofibromatosis"
+         ))
+
+```
+
+## Non-alcoholic fatty liver disease (NAFLD)
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "non-alcoholic steatohepatitis|non-alcoholic liver disease",
+                          "non-alcoholic fatty liver disease"
+         ))
+
+```
+
+
+## Obesity
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = "morbid obesity|metabolically healthy obesity",
+                                   "obesity"
+                          )  
+        )
+
+```
+
+
+## Pericardium disorder
+
+```{r pericardium_disorder}
+
+pericardium_disorder_terms <- c("pericarditis",
+                               "pericardial effusion"
+                               )
+
+```
+
+## Psoriasis
+
+```{r}
+
+psoriasis_terms <- c("psoriasis vulgaris",
+                      "psoriasis area and severity index",
+                      "cutaneous psoriasis",
+                      "psoriatic arthritis",
+                     "parapsoriasis")
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(psoriasis_terms, collapse = "(?=,|$)|\\b"),
+                          "psoriasis")
+  )
+
+```
+
+
+## Rheumatoid arthritis
+
+```{r}
+
+ra_terms <- c("acpa-positive rheumatoid arthritis",
+               "acpa-negative rheumatoid arthritis")
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = paste0(ra_terms, collapse = "(?=,|$)|\\b"),
+                                   "rheumatoid arthritis"
+                          )  
+        )
+
+```
+
+## Scoliosis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "adolescent idiopathic scoliosis",
+                          "scoliosis")
+         )
+
+```
+
+## Sickle cell disease 
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "sickle cell anemia",
+                          "sickle cell disease and related diseases")
+         )
+
+```
+
+## Sleep apnea 
+
+```{r}
+
+sleep_apnea_terms <- c("sleep apnea measurement during non-rem sleep",
+                      "sleep apnea measurement during rem sleep",
+                      "obstructive sleep apnea")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(sleep_apnea_terms, collapse = "(?=,|$)|\\b"),
+                          "sleep apnea")
+  )
+
+
+```
+
+## Staphylococcus aureus infection
+
+```{r staphylococcus_aureus_infection}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "methicillin-resistant staphylococcus aureus infection",
+                          "staphylococcus aureus infection"
+         ))
+
+```
+
+## Stroke
+
+https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000712?lang=en
+
+```{r}
+
+
+hemorrhage_terms <- c("intracerebral hemorrhage",
+                      "non-lobar intracerebral hemorrhage",
+                      "lobar intracerebral hemorrhage")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hemorrhage_terms, collapse = "(?=,|$)|\\b"),
+                          "hemorrhagic stroke")
+  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "stroke outcome|large artery stroke|small vessel stroke|ischemic stroke|stroke disorder|cardioembolic stroke",
+                          "stroke")
+  )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "post-operative stroke",
+                          "post-operative, stroke")
+  )
+
+```
+
+## Systemic scleroderma
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000717/descendants"
+
+scleroderma_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(scleroderma_terms, collapse = "(?=,|$)|\\b"),
+                          "systemic scleroderma"
+         ))
+
+```
+
+## Tenosynovitis
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+        stringr::str_replace_all(l1_all_disease_terms,
+                         "stenosing tenosynovitis",
+                         "tenosynovitis")
+        )
+
+```
+
+## Type 1 diabetes
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "latent autoimmune diabetes in adults",
+                          "type 1 diabetes mellitus"
+         ))
+
+```
+
+## Thrombocytopenia
+
+```{r thrombocytopenia}
+
+thrombocytopenia_terms <- c("thrombocytopenia 4",
+                           "acquired thrombocytopenia",
+                           "primary thrombocytopenia"
+                           )
+
+```
+
+## Tinea 
+
+```{r}
+
+tinea_terms <- c("tinea pedis",
+                 "tinea unguium",
+                 "dermatophytosis"
+                 )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(tinea_terms, collapse = "(?=,|$)|\\b"),
+                          "tinea"
+         ))
+
+```
+
+## Vitamin b deficiency
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "vitamin b12 deficiency",
+                          "vitamin b deficiency"
+         ))
+
+```
+
+
+
+
+
+# Final summary - number of unique study terns
+
+```{r final_summary}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(l1_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(l1_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+### When separate studies with multiple terms
+
+```{r final_diseases}
+
+diseases <- stringr::str_split(pattern = ", ", 
+                               gwas_study_info$l1_all_disease_terms[gwas_study_info$l1_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+
+test <- data.frame(trait = unique(diseases))
+
+length(unique(diseases))
+
+# make frequency table
+freq <- table(as.factor(diseases))
+
+# sort in decreasing order
+freq_sorted <- sort(freq, decreasing = TRUE)
+
+# show top N, e.g. top 10
+head(freq_sorted, 10)
+
+```
+
+### Save the updated gwas_study_info with harmonized disease terms
+
+```{r}
+
+fwrite(gwas_study_info,
+        here::here("output/gwas_cat/gwas_study_info_group_l1.csv")
+         )
+
+```
+
+
+
