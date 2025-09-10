@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0c1ee67f2860d4fd5f491ae36602df76361b51fctargetblank0c1ee67a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreec096bdd318cf50032fa6ddb8186d960f72ff32dctargetblankc096bdda">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0c1ee67f2860d4fd5f491ae36602df76361b51fc" target="_blank">0c1ee67</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/c096bdd318cf50032fa6ddb8186d960f72ff32dc" target="_blank">c096bdd</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0c1ee67f2860d4fd5f491ae36602df76361b51fctargetblank0c1ee67a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreec096bdd318cf50032fa6ddb8186d960f72ff32dctargetblankc096bdda"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0c1ee67f2860d4fd5f491ae36602df76361b51fc" target="_blank">0c1ee67</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/c096bdd318cf50032fa6ddb8186d960f72ff32dc" target="_blank">c096bdd</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -561,7 +561,6 @@ Untracked files:
 Unstaged changes:
     Modified:   analysis/disease_inves_by_ancest.Rmd
     Modified:   analysis/index.Rmd
-    Modified:   analysis/level_1_disease_group.Rmd
     Modified:   analysis/level_2_disease_group.Rmd
 
 </code></pre>
@@ -608,6 +607,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/c096bdd318cf50032fa6ddb8186d960f72ff32dc/analysis/trait_ontology_collapse.Rmd" target="_blank">c096bdd</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-09
+</td>
+<td>
+Fixing disease terms with commas in them
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/cc7742884dea0d9737324869302e0aa203976701/docs/trait_ontology_collapse.html" target="_blank">cc77428</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-09
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -750,7 +783,141 @@ library(stringr)</code></pre>
 number="2">
 <h1><span class="header-section-number">2</span> Overlap ontology terms
 and GWAS traits</h1>
-<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_cohort_corrected.csv&quot;))</code></pre>
+<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_study_info_cohort_corrected.csv&quot;))
+
+# fixing weird terms- where comma is in the term
+# gwas_study_info |&gt; 
+#  mutate(n_commas_trait = stringr::str_count(MAPPED_TRAIT, &quot;, &quot;),
+#         n_commas_uri = stringr::str_count(MAPPED_TRAIT_URI, &quot;,&quot;)) |&gt;
+#   filter(n_commas_trait != n_commas_uri)
+
+
+gwas_study_info =
+gwas_study_info |&gt; 
+  rowwise() |&gt;
+  mutate(MAPPED_TRAIT = case_when(
+                         # osteoarthritis, hip ... http://www.ebi.ac.uk/efo/EFO_1000786
+                         grepl(&quot;EFO_1000786&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;osteoarthritis, hip&quot;, &quot;hip osteoarthritis&quot;),
+                         #  osteoarthritis, hand ... http://www.ebi.ac.uk/efo/EFO_1000789
+                         grepl(&quot;EFO_1000789&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;osteoarthritis, hand&quot;, &quot;hand osteoarthritis&quot;),
+                         #  osteoarthritis, spine ... http://www.ebi.ac.uk/efo/EFO_1000787
+                         grepl(&quot;EFO_1000787&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;osteoarthritis, spine&quot;, &quot;spine osteoarthritis&quot;),
+                         #  Hepatitis, Alcoholic, http://www.ebi.ac.uk/efo/EFO_1001345
+                         grepl(&quot;EFO_1001345&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;Hepatitis, Alcoholic&quot;, &quot;Alcoholic Hepatitis&quot;),
+                         # psoriasis 14, pustular http://purl.obolibrary.org/obo/MONDO_0013626
+                         grepl(&quot;MONDO_0013626&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;psoriasis 14, pustula&quot;, &quot;pustular psoriasis 14&quot;),
+                         # hypertension, pregnancy-induced http://purl.obolibrary.org/obo/MONDO_0024664
+                         grepl(&quot;MONDO_0024664&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;hypertension, pregnancy-induced&quot;, &quot;pregnancy-induced hypertension&quot;),
+                         # renal agenesis, unilateral http://purl.obolibrary.org/obo/MONDO_0019636
+                         grepl(&quot;MONDO_0019636&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;renal agenesis, unilateral&quot;, &quot;unilateral renal agenesis&quot;),
+                         #  Cholecystitis, Acute http://www.ebi.ac.uk/efo/EFO_1001289
+                         grepl(&quot;EFO_1001289&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;Cholecystitis, Acute&quot;, &quot;Acute Cholecystitis&quot;),
+                         #  Genital neoplasm, female http://www.ebi.ac.uk/efo/EFO_1001331
+                         grepl(&quot;EFO_1001331&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;Genital neoplasm, female&quot;, &quot;female reproductive organ cancer&quot;),
+                         #  Anemia, Hemolytic, Autoimmune http://www.ebi.ac.uk/efo/EFO_1001264
+                          grepl(&quot;EFO_1001264&quot;, MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;Anemia, Hemolytic, Autoimmune&quot;, &quot;autoimmune haemolytic anemia&quot;),
+                         TRUE ~ MAPPED_TRAIT
+                         )
+  ) |&gt;
+  ungroup()
+
+# osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(
+                         grepl(&quot;EFO_0004616&quot;, MAPPED_TRAIT_URI),
+                         stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;osteoarthritis, knee&quot;, &quot;knee osteoarthritis&quot;),
+                         MAPPED_TRAIT
+  )
+  ) 
+
+# rheumatoid factor-negative juvenile idiopathic arthritis
+# polyarticular juvenile idiopathic arthritis, rheumatoid factor negative
+# http://www.ebi.ac.uk/efo/EFO_1002020
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;EFO_1002020&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = &quot;polyarticular juvenile idiopathic arthritis, rheumatoid factor negative&quot;, 
+                                                        &quot;rheumatoid factor-negative juvenile idiopathic arthritis&quot;),
+                               MAPPED_TRAIT)
+         )
+
+# http://www.ebi.ac.uk/efo/EFO_0007294, hand, foot and mouth disease,
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;EFO_0007294&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = &quot;hand, foot and mouth disease&quot;, 
+                                                        &quot;hand foot and mouth disease&quot;),
+                               MAPPED_TRAIT)
+         )
+
+# susceptibility to migriane without aura http://purl.obolibrary.org/obo/MONDO_0011847 
+
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;MONDO_0011847&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;migraine without aura, susceptibility to, 4&quot;, &quot;migraine without aura&quot;),
+                               MAPPED_TRAIT)
+         )
+
+#   neural tube defects, susceptibility to, http://purl.obolibrary.org/obo/MONDO_0020705
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;MONDO_0020705&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = &quot;neural tube defects, susceptibility to&quot;, 
+                                                        &quot;neural tube defects&quot;),
+                               MAPPED_TRAIT)
+         )
+
+# infantile diarrhea
+# Diarrhea, Infantile http://www.ebi.ac.uk/efo/EFO_1001306
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;EFO_1001306&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = &quot;Diarrhea, Infantile&quot;, 
+                                                        &quot;infantile diarrhea&quot;),
+                               MAPPED_TRAIT)
+         )
+
+# self reported traits 
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;EFO_0009803|EFO_0009822|EFO_0009803|EFO_0009817|EFO_0009822|EFO_0009819|EFO_0009823|EFO_0009824&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = &quot;, self-reported$&quot;, 
+                                                        &quot; self-reported&quot;),
+                               MAPPED_TRAIT)
+         )
+
+
+# Hodgkins lymphoma, mixed cellularity http://www.ebi.ac.uk/efo/EFO_1002031
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;EFO_1002031&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, pattern = &quot;Hodgkins lymphoma, mixed cellularity&quot;, &quot;Hodgkins lymphoma mixed cellularity&quot;),
+                               MAPPED_TRAIT)
+         )
+
+# encephalopathy, acute, infection-induced, http://purl.obolibrary.org/obo/MONDO_0000166
+gwas_study_info =
+gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = ifelse(grepl(&quot;MONDO_0000166&quot;, MAPPED_TRAIT_URI),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = &quot;encephalopathy, acute, infection-induced&quot;, 
+                                                        &quot;encephalopathy acute infection-induced&quot;),
+                               MAPPED_TRAIT)
+         )
+
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(MAPPED_TRAIT = stringr::str_replace_all(MAPPED_TRAIT, 
+                                                 &quot;^level of .+, mitochondrial in blood$&quot;, &quot;blood protein amount&quot;)
+         )</code></pre>
 <pre class="r"><code>all_gwas_terms = unique(gwas_study_info$MAPPED_TRAIT)
 
 all_gwas_terms = stringr::str_trim(tolower(all_gwas_terms))</code></pre>
@@ -794,7 +961,10 @@ other &lt;- c(&quot;Allergic disease&quot;,
            &quot;Respiratory System Disease&quot;,
   &quot;Iron deficiency anemia (disorder)&quot;,
   &quot;Alzheimer disease, APOE carrier status&quot;,
- &quot;HIV-associated neurocognitive disorder&quot;
+  &quot;Alzheimer&#39;s disease biomarker measurement&quot;,
+ &quot;Genital neoplasm, female&quot;,
+ &quot;HIV-associated neurocognitive disorder&quot;,
+ &quot;encephalopathy acute infection-induced&quot;
            )
 
 disease_terms = c(mondo_descendants,
@@ -813,7 +983,7 @@ disease_terms = stringr::str_trim(tolower(disease_terms))
 print(&quot;Number of terms related to disease or disorder&quot;)</code></pre>
 <pre><code>[1] &quot;Number of terms related to disease or disorder&quot;</code></pre>
 <pre class="r"><code>length(disease_terms)</code></pre>
-<pre><code>[1] 53395</code></pre>
+<pre><code>[1] 53397</code></pre>
 <pre class="r"><code># Find GWAS traits that fall within disease or disorder terms
 simple_disease_terms = all_gwas_terms[all_gwas_terms %in% disease_terms]
 
@@ -837,7 +1007,7 @@ not_disease_terms = not_simple_disease_terms[!not_simple_disease_terms %in% addi
 print(&quot;Number of GWAS traits under disease or disorder terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits under disease or disorder terms&quot;</code></pre>
 <pre class="r"><code>length(all_gwas_terms) - length(not_disease_terms)</code></pre>
-<pre><code>[1] 3508</code></pre>
+<pre><code>[1] 3501</code></pre>
 <pre class="r"><code>print(&quot;Percentage of GWAS traits under disease or disorder terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under disease or disorder terms&quot;</code></pre>
 <pre class="r"><code>round(100 * (length(all_gwas_terms) - length(not_disease_terms)) / length(all_gwas_terms),
@@ -881,11 +1051,11 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 83.1</code></pre>
+<pre><code>[1] 83.2</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 19023</code></pre>
+<pre><code>[1] 18990</code></pre>
 </div>
 <div
 id="add-disease-phenotypic-abnormality-terms-to-gwas-study-info-dataset"
@@ -917,7 +1087,18 @@ gwas_study_info &lt;-
       ifelse(stringr::str_trim(tolower(MAPPED_TRAIT)) %in% c(disease_gwas,pheno_abnorm_gwas),
              find_disease_terms(stringr::str_trim(tolower(MAPPED_TRAIT))),
              NA)
-  )</code></pre>
+  )
+
+gwas_study_info &lt;- 
+  gwas_study_info |&gt;
+  rowwise() |&gt;
+  dplyr::mutate(
+   disease_terms = 
+      ifelse(BACKGROUND_TRAIT == &quot;&quot;,
+             NA,
+            disease_terms)
+  ) |&gt;
+  ungroup()</code></pre>
 </div>
 <div
 id="measurement-overlap-how-many-gwas-traits-fall-within-measurement-terms"
@@ -935,7 +1116,9 @@ measurement &lt;- c(total_choles,
 
 measurement &lt;- unique(measurement)
 
-measurement &lt;- c(&quot;cerebrospinal fluid composition attribute&quot;, measurement)
+measurement &lt;- c(&quot;cerebrospinal fluid composition attribute&quot;,
+                 &quot;blood protein amount&quot;,
+                 measurement)
 
 measurement = stringr::str_trim(tolower(measurement))</code></pre>
 <pre class="r"><code># Find terms where all comma-split pieces are in measurement
@@ -952,12 +1135,12 @@ measurement_gwas  = c(measurement_gwas, additional_measurement) |&gt; unique()
 print(&quot;Number of GWAS traits under measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits under measurement terms&quot;</code></pre>
 <pre class="r"><code>length(measurement_gwas)</code></pre>
-<pre><code>[1] 18108</code></pre>
+<pre><code>[1] 18068</code></pre>
 <pre class="r"><code>print(&quot;Percentage of GWAS traits under measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under measurement terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(measurement_gwas) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 79.2</code></pre>
+<pre><code>[1] 79.1</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
 
 print(&quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
@@ -968,7 +1151,7 @@ print(&quot;Percentage of GWAS traits not accounted for by disease, disorder or 
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 914</code></pre>
+<pre><code>[1] 921</code></pre>
 </div>
 </div>
 <div id="response-to-stimulus" class="section level2" number="2.5">
@@ -1010,11 +1193,11 @@ print(&quot;Percentage of GWAS traits not accounted for by disease, measurement 
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.3</code></pre>
+<pre><code>[1] 3.4</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 761</code></pre>
+<pre><code>[1] 768</code></pre>
 </div>
 </div>
 <div id="mental-process" class="section level2" number="2.6">
@@ -1035,11 +1218,11 @@ print(&quot;Percentage of GWAS traits not accounted for thus far&quot;)</code></
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for thus far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.2</code></pre>
+<pre><code>[1] 3.3</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for thus far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for thus far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 743</code></pre>
+<pre><code>[1] 750</code></pre>
 </div>
 <div id="behavior" class="section level2" number="2.7">
 <h2><span class="header-section-number">2.7</span> Behavior</h2>
@@ -1059,11 +1242,11 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 3.1</code></pre>
+<pre><code>[1] 3.2</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 720</code></pre>
+<pre><code>[1] 727</code></pre>
 </div>
 <div id="injury" class="section level2" number="2.8">
 <h2><span class="header-section-number">2.8</span> Injury</h2>
@@ -1088,7 +1271,7 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 701</code></pre>
+<pre><code>[1] 708</code></pre>
 </div>
 <div id="phenotype" class="section level2" number="2.9">
 <h2><span class="header-section-number">2.9</span> Phenotype</h2>
@@ -1113,7 +1296,7 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 654</code></pre>
+<pre><code>[1] 661</code></pre>
 </div>
 </div>
 <div id="add-categories-to-gwas-info" class="section level1" number="3">
@@ -1171,16 +1354,26 @@ print(&quot;Number of background GWAS traits under disease or disorder terms&quo
       ifelse(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% c(disease_gwas, pheno_abnorm_gwas),
              find_disease_terms(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT))),
              NA)
-  )</code></pre>
+  ) |&gt;
+  ungroup()
+
+
+gwas_study_info &lt;- 
+  gwas_study_info |&gt;
+  rowwise() |&gt;
+  dplyr::mutate(
+    background_disease_terms = 
+      ifelse(MAPPED_BACKGROUND_TRAIT == &quot;&quot;,
+             NA,
+             background_disease_terms)
+  ) |&gt;
+  ungroup()</code></pre>
 </div>
 <div id="phenotype-abnormality-overlap-1" class="section level2"
 number="4.2">
 <h2><span class="header-section-number">4.2</span> Phenotype abnormality
 overlap</h2>
-<pre class="r"><code>pheno_abnorm &lt;- readLines(here::here(&quot;output/trait_ontology/hp_0000118_descendants.txt&quot;))
-pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
-
-# Find terms where all comma-split pieces are in measurement
+<pre class="r"><code># Find terms where all comma-split pieces are in measurement
 pheno_abnorm_gwas &lt;- not_accounted_for[
   sapply(strsplit(not_accounted_for, &quot;, &quot;), function(parts) {
     parts &lt;- trimws(parts) # remove extra spaces
@@ -1299,10 +1492,10 @@ categories</h1>
 # Groups:   MAPPED_TRAIT_CATEGORY [9]
    MAPPED_TRAIT_CATEGORY  BACKGROUND_TRAIT_CATEGORY n_studies
    &lt;chr&gt;                  &lt;chr&gt;                         &lt;int&gt;
- 1 Measurement            &lt;NA&gt;                         101886
- 2 Disease/Disorder       &lt;NA&gt;                          20297
+ 1 Measurement            &lt;NA&gt;                         101836
+ 2 Disease/Disorder       &lt;NA&gt;                          20314
  3 Measurement            Disease/Disorder              12223
- 4 Other                  &lt;NA&gt;                           2692
+ 4 Other                  &lt;NA&gt;                           2725
  5 Phenotypic Abnormality &lt;NA&gt;                           2328
  6 Measurement            Measurement                     969
  7 Disease/Disorder       Disease/Disorder                549
@@ -1321,8 +1514,16 @@ gwas_study_info |&gt;
                           T, F )
                 ) |&gt;
   dplyr::ungroup() </code></pre>
-<div id="giving-the-disease-labels" class="section level2" number="5.1">
-<h2><span class="header-section-number">5.1</span> Giving the disease
+<div id="number-of-disease-studies" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Number of disease
+studies</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(DISEASE_STUDY == T) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 36022</code></pre>
+</div>
+<div id="giving-the-disease-labels" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> Giving the disease
 labels</h2>
 <pre class="r"><code>combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
   
