@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree6b00297bf946a33295746cb3b74bbc3e9acdcf68targetblank6b00297a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree636644ff0255026926048a601babb22992816d56targetblank636644fa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/6b00297bf946a33295746cb3b74bbc3e9acdcf68" target="_blank">6b00297</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/636644ff0255026926048a601babb22992816d56" target="_blank">636644f</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree6b00297bf946a33295746cb3b74bbc3e9acdcf68targetblank6b00297a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree636644ff0255026926048a601babb22992816d56targetblank636644fa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/6b00297bf946a33295746cb3b74bbc3e9acdcf68" target="_blank">6b00297</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/636644ff0255026926048a601babb22992816d56" target="_blank">636644f</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -606,6 +606,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/636644ff0255026926048a601babb22992816d56/analysis/non_ontology_trait_collapse.Rmd" target="_blank">636644f</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-09
+</td>
+<td>
+Minor fixing of disease trait categorisation
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/ddadb56eceb5de45dda046d1d5b0c999c2410d44/docs/non_ontology_trait_collapse.html" target="_blank">ddadb56</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-09
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -1077,20 +1111,155 @@ disease/trait term before any grouping or collapsing.</p>
 
 head(n_studies_trait)</code></pre>
 <pre><code># A tibble: 6 × 2
-  all_disease_terms           n_studies
-  &lt;chr&gt;                           &lt;int&gt;
-1 &quot;&quot;                               3895
-2 &quot;type 2 diabetes mellitus&quot;         38
-3 &quot;asthma&quot;                           28
-4 &quot;breast carcinoma&quot;                 26
-5 &quot;major depressive disorder&quot;        26
-6 &quot;schizophrenia&quot;                    25</code></pre>
+  all_disease_terms         n_studies
+  &lt;chr&gt;                         &lt;int&gt;
+1 type 2 diabetes mellitus        144
+2 major depressive disorder       108
+3 alzheimer disease               104
+4 asthma                           99
+5 schizophrenia                    99
+6 breast carcinoma                 98</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 223   2</code></pre>
+<pre><code>[1] 3201    2</code></pre>
+</div>
+<div id="minor-fixes-of-trait-categorisation" class="section level1"
+number="4">
+<h1><span class="header-section-number">4</span> Minor fixes of trait
+categorisation</h1>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(DISEASE_STUDY == T) |&gt; 
+  filter(all_disease_terms == &quot;&quot;)  |&gt; 
+  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |&gt; 
+  distinct() |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 24</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt;
+  rowwise() |&gt;
+  mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT == &quot;&quot;,
+                                        &quot;Other&quot;,
+                                        MAPPED_TRAIT_CATEGORY)) |&gt;
+  mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT == &quot;fractures, ununited&quot;,
+                                        &quot;Injury&quot;,
+                                        MAPPED_TRAIT_CATEGORY))   
+
+gwas_study_info = 
+gwas_study_info |&gt;
+  rowwise() |&gt;
+  mutate(BACKGROUND_TRAIT_CATEGORY = ifelse(MAPPED_BACKGROUND_TRAIT == &quot;&quot;,
+                                        &quot;Other&quot;,
+                                        BACKGROUND_TRAIT_CATEGORY)) 
+
+
+other_response_terms = c(&quot;response to COVID-19 vaccine, localized superficial swelling, mass, or lump&quot;,
+                         &quot;response to COVID-19 vaccine, SARS-CoV-2 neutralizing antibody measurement&quot;,
+                         &quot;Anti-hepatitis B virus surface antigen IgG measurement, response to vaccine&quot;,
+                         &quot;anti-SARS-CoV-2 IgG measurement, response to COVID-19 vaccine&quot;,
+                         &quot;anti-tetanus toxoid IgG measurement, response to vaccine&quot;,
+                         &quot;height growth attribute, response to growth hormone&quot;,
+                         &quot;adrenal suppression measurement, response to corticosteroid&quot;,
+                         &quot;asthenia, response to COVID-19 vaccine&quot;,
+                         &quot;SARS-CoV-2 antibody measurement, response to COVID-19 vaccine&quot;,
+                         &quot;response to vaccine, anti-Haemophilus influenzae type b polyribosylribitol phosphate IgG measurement&quot;,
+                         &quot;height growth attribute, response to growth hormone&quot;
+                )
+
+other_measurement_terms = c(&quot;amygdala volume, pallidum volume, nucleus accumbens volume, hippocampal volume, putamen volume, intracranial volume measurement, thalamus volume, caudate nucleus volume&quot;,
+                            &quot;lamina-associated polypeptide 2, isoforms beta/gamma measurement&quot;,
+                            &quot;apoptosis-inducing factor 1, mitochondrial measurement&quot;,
+                            &quot;central corneal thickness, intraocular pressure measurement&quot;,
+                            &quot;level of apoptosis-inducing factor 1, mitochondrial in blood serum&quot;,
+                            &quot;level of MHC class I polypeptide-related sequence A in blood, level of MHC class I polypeptide-related sequence B in blood&quot;,
+                            &quot;psychosocial stress measurement, intracranial volume measurement&quot;)
+
+other_terms = c(&quot;insulin metabolic clearance rate measurement, disposition index measurement, insulin sensitivity measurement, glucose homeostasis trait, glucose effectiveness measurement, acute insulin response measurement&quot;,
+                &quot;disease recurrence, response to allogeneic hematopoietic stem cell transplant&quot;,
+                &quot;disease recurrence, response to allogeneic hematopoietic stem cell transplant, donor genotype effect measurement&quot;
+)
+
+gwas_study_info =
+  gwas_study_info |&gt;
+    mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT %in% other_response_terms,
+                                        &quot;Response&quot;,
+                                        MAPPED_TRAIT_CATEGORY)) |&gt;
+    mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT %in% other_measurement_terms,
+                                        &quot;Response&quot;,
+                                        MAPPED_TRAIT_CATEGORY)) |&gt;
+    mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT %in% other_terms,
+                                        &quot;Other&quot;,
+                                        MAPPED_TRAIT_CATEGORY))  
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+    mutate(disease_terms = ifelse(grepl(&quot;spine osteoarthritis&quot;, MAPPED_TRAIT),
+                                        paste0(&quot;spine psteoarthritis&quot;, disease_terms, collapse = &quot;,&quot;),
+                                        disease_terms)
+    ) |&gt;
+      mutate(all_disease_terms = ifelse(grepl(&quot;spine osteoarthritis&quot;, MAPPED_TRAIT),
+                                        paste0(&quot;spine psteoarthritis&quot;, all_disease_terms, collapse = &quot;,&quot;),
+                                        all_disease_terms)
+    )
+
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+    mutate(disease_terms = ifelse(grepl(&quot;liver disease biomarker&quot;, MAPPED_TRAIT),
+                                        paste0(&quot;liver disease&quot;, disease_terms, collapse = &quot;,&quot;),
+                                        disease_terms)
+    ) |&gt;
+      mutate(all_disease_terms = ifelse(grepl(&quot;liver disease biomarker&quot;, MAPPED_TRAIT),
+                                        paste0(&quot;liver disease&quot;, all_disease_terms, collapse = &quot;,&quot;),
+                                        all_disease_terms)
+    )
+
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+    mutate(disease_terms = ifelse(grepl(&quot;liver disease biomarker&quot;, MAPPED_TRAIT),
+                                        paste0(&quot;liver disease&quot;, disease_terms, collapse = &quot;,&quot;),
+                                        disease_terms)
+    ) |&gt;
+      mutate(all_disease_terms = ifelse(grepl(&quot;liver disease biomarker&quot;, MAPPED_TRAIT),
+                                        paste0(&quot;liver disease&quot;, all_disease_terms, collapse = &quot;,&quot;),
+                                        all_disease_terms)
+    )
+
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+    mutate(background_disease_terms= ifelse(grepl(&quot;Growth delay&quot;, MAPPED_BACKGROUND_TRAIT),
+                                        paste0(&quot;growth delay&quot;, background_disease_terms, collapse = &quot;,&quot;),
+                                        background_disease_terms)
+    ) |&gt; 
+      mutate(all_disease_terms = ifelse(grepl(&quot;Growth delay&quot;, MAPPED_BACKGROUND_TRAIT),
+                                        paste0(&quot;growth delay&quot;, all_disease_terms, collapse = &quot;,&quot;),
+                                        all_disease_terms)
+    )
+
+gwas_study_info = 
+gwas_study_info |&gt;
+  dplyr::rowwise() |&gt;
+  dplyr::mutate(DISEASE_STUDY = 
+                   ifelse(MAPPED_TRAIT_CATEGORY == &quot;Disease/Disorder&quot; | 
+                          MAPPED_TRAIT_CATEGORY == &quot;Phenotypic Abnormality&quot; |  
+                          BACKGROUND_TRAIT_CATEGORY == &quot;Disease/Disorder&quot; | 
+                          BACKGROUND_TRAIT_CATEGORY == &quot;Phenotypic Abnormality&quot;,
+                          T, F )
+                ) |&gt;
+  dplyr::ungroup() 
+
+
+gwas_study_info |&gt; 
+  filter(DISEASE_STUDY == T) |&gt; 
+  filter(all_disease_terms == &quot;&quot;)  |&gt; 
+  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |&gt; 
+  distinct() |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 0</code></pre>
 </div>
 <div id="disease-trait-collapsing-and-cleaning" class="section level1"
-number="4">
-<h1><span class="header-section-number">4</span> Disease trait
+number="5">
+<h1><span class="header-section-number">5</span> Disease trait
 collapsing and cleaning</h1>
 <pre class="r"><code># Basic cleaning of disease terms
 # Removes trailing commas, 
@@ -1108,14 +1277,14 @@ gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = all_disease_terms) </code></pre>
 <div
 id="where-a-study-investigates-a-given-aspect-of-of-disease-reduce-this-to-a-study-of-this-disease"
-class="section level2" number="4.1">
-<h2><span class="header-section-number">4.1</span> Where a study
+class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Where a study
 investigates a given aspect of of disease, reduce this to a study of
 this disease</h2>
 <div
 id="e.g-susceptibility-to-x-measurement-x-disorder-measurement-etc."
-class="section level3" number="4.1.1">
-<h3><span class="header-section-number">4.1.1</span> e.g Susceptibility
+class="section level3" number="5.1.1">
+<h3><span class="header-section-number">5.1.1</span> e.g Susceptibility
 to X measurement, X disorder measurement etc.</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1183,8 +1352,8 @@ gwas_study_info = gwas_study_info |&gt;
                            &quot;\\bdisorder\\s+measurement\\b&quot;,
                            &quot;disorder&quot;)) </code></pre>
 </div>
-<div id="e.g-age-of-onset-of" class="section level3" number="4.1.2">
-<h3><span class="header-section-number">4.1.2</span> e.g age of onset
+<div id="e.g-age-of-onset-of" class="section level3" number="5.1.2">
+<h3><span class="header-section-number">5.1.2</span> e.g age of onset
 of</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
@@ -1211,8 +1380,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="e.g.-family-history-of" class="section level3" number="4.1.3">
-<h3><span class="header-section-number">4.1.3</span> e.g. Family history
+<div id="e.g.-family-history-of" class="section level3" number="5.1.3">
+<h3><span class="header-section-number">5.1.3</span> e.g. Family history
 of</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
@@ -1227,11 +1396,11 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;alzheimers disease&quot;
          ))</code></pre>
 </div>
-<div id="time-to-remission" class="section level3" number="4.1.4">
-<h3><span class="header-section-number">4.1.4</span> Time to
+<div id="time-to-remission" class="section level3" number="5.1.4">
+<h3><span class="header-section-number">5.1.4</span> Time to
 remission</h3>
-<div id="covid" class="section level4" number="4.1.4.1">
-<h4><span class="header-section-number">4.1.4.1</span> COVID</h4>
+<div id="covid" class="section level4" number="5.1.4.1">
+<h4><span class="header-section-number">5.1.4.1</span> COVID</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1240,11 +1409,11 @@ remission</h3>
          ))</code></pre>
 </div>
 </div>
-<div id="symptom-measurement" class="section level3" number="4.1.5">
-<h3><span class="header-section-number">4.1.5</span> Symptom
+<div id="symptom-measurement" class="section level3" number="5.1.5">
+<h3><span class="header-section-number">5.1.5</span> Symptom
 measurement</h3>
-<div id="adhd" class="section level4" number="4.1.5.1">
-<h4><span class="header-section-number">4.1.5.1</span> ADHD</h4>
+<div id="adhd" class="section level4" number="5.1.5.1">
+<h4><span class="header-section-number">5.1.5.1</span> ADHD</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
   mutate(collected_all_disease_terms = 
            stringr::str_replace_all(collected_all_disease_terms,
@@ -1252,8 +1421,8 @@ measurement</h3>
                             &quot;adhd&quot;)
          )</code></pre>
 </div>
-<div id="agoraphobia" class="section level4" number="4.1.5.2">
-<h4><span class="header-section-number">4.1.5.2</span> Agoraphobia</h4>
+<div id="agoraphobia" class="section level4" number="5.1.5.2">
+<h4><span class="header-section-number">5.1.5.2</span> Agoraphobia</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1262,8 +1431,8 @@ measurement</h3>
          ))</code></pre>
 </div>
 <div id="alzheimers-disease---neuropathological-change"
-class="section level4" number="4.1.5.3">
-<h4><span class="header-section-number">4.1.5.3</span> Alzheimer’s
+class="section level4" number="5.1.5.3">
+<h4><span class="header-section-number">5.1.5.3</span> Alzheimer’s
 disease - neuropathological change</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1272,8 +1441,8 @@ disease - neuropathological change</h4>
                           &quot;alzheimers disease&quot;
          ))</code></pre>
 </div>
-<div id="asthma" class="section level4" number="4.1.5.4">
-<h4><span class="header-section-number">4.1.5.4</span> Asthma</h4>
+<div id="asthma" class="section level4" number="5.1.5.4">
+<h4><span class="header-section-number">5.1.5.4</span> Asthma</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1286,8 +1455,8 @@ disease - neuropathological change</h4>
                             &quot;asthma&quot;
            )) </code></pre>
 </div>
-<div id="covid-symptoms" class="section level4" number="4.1.5.5">
-<h4><span class="header-section-number">4.1.5.5</span> COVID
+<div id="covid-symptoms" class="section level4" number="5.1.5.5">
+<h4><span class="header-section-number">5.1.5.5</span> COVID
 symptoms</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1297,8 +1466,8 @@ symptoms</h4>
   )</code></pre>
 </div>
 <div id="irritable-bowel-syndrome" class="section level4"
-number="4.1.5.6">
-<h4><span class="header-section-number">4.1.5.6</span> Irritable bowel
+number="5.1.5.6">
+<h4><span class="header-section-number">5.1.5.6</span> Irritable bowel
 syndrome</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1309,11 +1478,11 @@ syndrome</h4>
 </div>
 </div>
 <div id="obsessive-compulsive-disorder" class="section level3"
-number="4.1.6">
-<h3><span class="header-section-number">4.1.6</span> Obsessive
+number="5.1.6">
+<h3><span class="header-section-number">5.1.6</span> Obsessive
 compulsive disorder</h3>
-<div id="parkinsons-disease" class="section level4" number="4.1.6.1">
-<h4><span class="header-section-number">4.1.6.1</span> Parkinson’s
+<div id="parkinsons-disease" class="section level4" number="5.1.6.1">
+<h4><span class="header-section-number">5.1.6.1</span> Parkinson’s
 disease</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1322,8 +1491,8 @@ disease</h4>
                           &quot;parkinsons disease&quot;
          ))</code></pre>
 </div>
-<div id="ptsd" class="section level4" number="4.1.6.2">
-<h4><span class="header-section-number">4.1.6.2</span> PTSD</h4>
+<div id="ptsd" class="section level4" number="5.1.6.2">
+<h4><span class="header-section-number">5.1.6.2</span> PTSD</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1332,8 +1501,8 @@ disease</h4>
          ))</code></pre>
 </div>
 <div id="respiratory-symptom-change" class="section level4"
-number="4.1.6.3">
-<h4><span class="header-section-number">4.1.6.3</span> Respiratory
+number="5.1.6.3">
+<h4><span class="header-section-number">5.1.6.3</span> Respiratory
 symptom change</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1343,10 +1512,10 @@ symptom change</h4>
          ))</code></pre>
 </div>
 </div>
-<div id="measurement" class="section level3" number="4.1.7">
-<h3><span class="header-section-number">4.1.7</span> Measurement</h3>
-<div id="anxiety-disorder" class="section level4" number="4.1.7.1">
-<h4><span class="header-section-number">4.1.7.1</span> Anxiety
+<div id="measurement" class="section level3" number="5.1.7">
+<h3><span class="header-section-number">5.1.7</span> Measurement</h3>
+<div id="anxiety-disorder" class="section level4" number="5.1.7.1">
+<h4><span class="header-section-number">5.1.7.1</span> Anxiety
 disorder</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
@@ -1356,8 +1525,8 @@ disorder</h4>
          ))</code></pre>
 </div>
 <div id="coronary-atherosclerosis" class="section level4"
-number="4.1.7.2">
-<h4><span class="header-section-number">4.1.7.2</span> Coronary
+number="5.1.7.2">
+<h4><span class="header-section-number">5.1.7.2</span> Coronary
 atherosclerosis</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1367,16 +1536,16 @@ atherosclerosis</h4>
   ) </code></pre>
 </div>
 </div>
-<div id="insommnia" class="section level3" number="4.1.8">
-<h3><span class="header-section-number">4.1.8</span> Insommnia</h3>
+<div id="insommnia" class="section level3" number="5.1.8">
+<h3><span class="header-section-number">5.1.8</span> Insommnia</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
                           &quot;insomnia measurement&quot;,
                           &quot;insomnia&quot;
          ))</code></pre>
-<div id="lewy-body-dementia" class="section level4" number="4.1.8.1">
-<h4><span class="header-section-number">4.1.8.1</span> Lewy body
+<div id="lewy-body-dementia" class="section level4" number="5.1.8.1">
+<h4><span class="header-section-number">5.1.8.1</span> Lewy body
 dementia</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
@@ -1386,8 +1555,8 @@ dementia</h4>
          ))</code></pre>
 </div>
 <div id="psychosis-predisposition" class="section level4"
-number="4.1.8.2">
-<h4><span class="header-section-number">4.1.8.2</span> Psychosis
+number="5.1.8.2">
+<h4><span class="header-section-number">5.1.8.2</span> Psychosis
 predisposition</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1397,8 +1566,8 @@ predisposition</h4>
         )</code></pre>
 </div>
 <div id="sleep-apnea-measurement" class="section level4"
-number="4.1.8.3">
-<h4><span class="header-section-number">4.1.8.3</span> Sleep apnea
+number="5.1.8.3">
+<h4><span class="header-section-number">5.1.8.3</span> Sleep apnea
 measurement</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
         mutate(collected_all_disease_terms = 
@@ -1408,8 +1577,8 @@ measurement</h4>
          ))</code></pre>
 </div>
 <div id="susceptibility-to-infectious-disease" class="section level4"
-number="4.1.8.4">
-<h4><span class="header-section-number">4.1.8.4</span> Susceptibility to
+number="5.1.8.4">
+<h4><span class="header-section-number">5.1.8.4</span> Susceptibility to
 infectious disease</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1420,11 +1589,11 @@ infectious disease</h4>
 </div>
 </div>
 <div id="substance-abuse-measurement" class="section level3"
-number="4.1.9">
-<h3><span class="header-section-number">4.1.9</span> Substance abuse
+number="5.1.9">
+<h3><span class="header-section-number">5.1.9</span> Substance abuse
 measurement</h3>
-<div id="alcohol" class="section level4" number="4.1.9.1">
-<h4><span class="header-section-number">4.1.9.1</span> Alcohol</h4>
+<div id="alcohol" class="section level4" number="5.1.9.1">
+<h4><span class="header-section-number">5.1.9.1</span> Alcohol</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1432,8 +1601,8 @@ measurement</h3>
                           &quot;alcohol dependence&quot;
          ))</code></pre>
 </div>
-<div id="cannibis" class="section level4" number="4.1.9.2">
-<h4><span class="header-section-number">4.1.9.2</span> Cannibis</h4>
+<div id="cannibis" class="section level4" number="5.1.9.2">
+<h4><span class="header-section-number">5.1.9.2</span> Cannibis</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1441,8 +1610,8 @@ measurement</h3>
                           &quot;cannabis dependence&quot;
          ))</code></pre>
 </div>
-<div id="cocaine" class="section level4" number="4.1.9.3">
-<h4><span class="header-section-number">4.1.9.3</span> Cocaine</h4>
+<div id="cocaine" class="section level4" number="5.1.9.3">
+<h4><span class="header-section-number">5.1.9.3</span> Cocaine</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1450,8 +1619,8 @@ measurement</h3>
                           &quot;cocaine-related disorders&quot;
          ))</code></pre>
 </div>
-<div id="nicotine" class="section level4" number="4.1.9.4">
-<h4><span class="header-section-number">4.1.9.4</span> Nicotine</h4>
+<div id="nicotine" class="section level4" number="5.1.9.4">
+<h4><span class="header-section-number">5.1.9.4</span> Nicotine</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1468,11 +1637,11 @@ gwas_study_info = gwas_study_info |&gt;
 </div>
 </div>
 </div>
-<div id="deal-with-basic-synonyms" class="section level2" number="4.2">
-<h2><span class="header-section-number">4.2</span> Deal with basic
+<div id="deal-with-basic-synonyms" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> Deal with basic
 synonyms</h2>
-<div id="carcinoma-cancer" class="section level3" number="4.2.1">
-<h3><span class="header-section-number">4.2.1</span> Carcinoma =
+<div id="carcinoma-cancer" class="section level3" number="5.2.1">
+<h3><span class="header-section-number">5.2.1</span> Carcinoma =
 Cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
@@ -1489,8 +1658,8 @@ gwas_study_info = gwas_study_info |&gt;
            ))</code></pre>
 </div>
 <div id="coronary-artery-disease-coronary-atherosclerosis"
-class="section level3" number="4.2.2">
-<h3><span class="header-section-number">4.2.2</span> Coronary artery
+class="section level3" number="5.2.2">
+<h3><span class="header-section-number">5.2.2</span> Coronary artery
 disease = coronary atherosclerosis</h3>
 <p><a
 href="https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001645"
@@ -1503,8 +1672,8 @@ class="uri">https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252
          ))</code></pre>
 </div>
 <div id="head-and-neck-cancer-head-and-neck-malignant-neoplasia"
-class="section level3" number="4.2.3">
-<h3><span class="header-section-number">4.2.3</span> Head and neck
+class="section level3" number="5.2.3">
+<h3><span class="header-section-number">5.2.3</span> Head and neck
 cancer = head and neck malignant neoplasia</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1514,8 +1683,8 @@ cancer = head and neck malignant neoplasia</h3>
          ))</code></pre>
 </div>
 <div id="hepatitis-virus-infection-hepatitis-infection"
-class="section level3" number="4.2.4">
-<h3><span class="header-section-number">4.2.4</span> Hepatitis virus
+class="section level3" number="5.2.4">
+<h3><span class="header-section-number">5.2.4</span> Hepatitis virus
 infection = hepatitis infection</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
@@ -1553,8 +1722,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hepatitis, liver cancer&quot;
          ))</code></pre>
 </div>
-<div id="hiv" class="section level3" number="4.2.5">
-<h3><span class="header-section-number">4.2.5</span> HIV</h3>
+<div id="hiv" class="section level3" number="5.2.5">
+<h3><span class="header-section-number">5.2.5</span> HIV</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1563,8 +1732,8 @@ gwas_study_info = gwas_study_info |&gt;
          ))</code></pre>
 </div>
 <div id="mumps-virus-infection-mumps" class="section level3"
-number="4.2.6">
-<h3><span class="header-section-number">4.2.6</span> Mumps virus
+number="5.2.6">
+<h3><span class="header-section-number">5.2.6</span> Mumps virus
 infection = mumps</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
@@ -1574,8 +1743,8 @@ infection = mumps</h3>
          ))</code></pre>
 </div>
 <div id="renal-cancer-kidney-cancer" class="section level3"
-number="4.2.7">
-<h3><span class="header-section-number">4.2.7</span> Renal cancer =
+number="5.2.7">
+<h3><span class="header-section-number">5.2.7</span> Renal cancer =
 kidney cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1584,8 +1753,8 @@ kidney cancer</h3>
                           &quot;kidney cancer&quot;
          ))</code></pre>
 </div>
-<div id="rubella-infect-rubella" class="section level3" number="4.2.8">
-<h3><span class="header-section-number">4.2.8</span> Rubella infect =
+<div id="rubella-infect-rubella" class="section level3" number="5.2.8">
+<h3><span class="header-section-number">5.2.8</span> Rubella infect =
 rubella</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
@@ -1601,8 +1770,8 @@ rubella</h3>
          ))  </code></pre>
 </div>
 <div id="autism-autism-spectrum-disorder-asperger-syndrome"
-class="section level3" number="4.2.9">
-<h3><span class="header-section-number">4.2.9</span> Autism = Autism
+class="section level3" number="5.2.9">
+<h3><span class="header-section-number">5.2.9</span> Autism = Autism
 Spectrum Disorder = Asperger Syndrome</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1618,8 +1787,8 @@ Spectrum Disorder = Asperger Syndrome</h3>
 </div>
 </div>
 <div id="type-1-diabetes-type-1-diabetes-mellitus"
-class="section level2" number="4.3">
-<h2><span class="header-section-number">4.3</span> Type 1 diabetes =
+class="section level2" number="5.3">
+<h2><span class="header-section-number">5.3</span> Type 1 diabetes =
 type 1 diabetes mellitus</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1633,8 +1802,8 @@ type 1 diabetes mellitus</h2>
                          &quot;type 1 diabetes mellitus&quot;)
         )</code></pre>
 <div id="adhd-attention-deficit-hyperactivity-disorder"
-class="section level3" number="4.3.1">
-<h3><span class="header-section-number">4.3.1</span> ADHD = attention
+class="section level3" number="5.3.1">
+<h3><span class="header-section-number">5.3.1</span> ADHD = attention
 deficit hyperactivity disorder</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
@@ -1645,8 +1814,8 @@ deficit hyperactivity disorder</h3>
 </div>
 </div>
 <div id="narcolepsy-narcolepsy-without-cataplexy" class="section level2"
-number="4.4">
-<h2><span class="header-section-number">4.4</span> Narcolepsy =
+number="5.4">
+<h2><span class="header-section-number">5.4</span> Narcolepsy =
 Narcolepsy without cataplexy</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1655,10 +1824,10 @@ Narcolepsy without cataplexy</h2>
                           &quot;narcolepsy&quot;
          ))</code></pre>
 </div>
-<div id="typos" class="section level2" number="4.5">
-<h2><span class="header-section-number">4.5</span> Typos</h2>
-<div id="alzheimer---alzheimers" class="section level3" number="4.5.1">
-<h3><span class="header-section-number">4.5.1</span> Alzheimer -&gt;
+<div id="typos" class="section level2" number="5.5">
+<h2><span class="header-section-number">5.5</span> Typos</h2>
+<div id="alzheimer---alzheimers" class="section level3" number="5.5.1">
+<h3><span class="header-section-number">5.5.1</span> Alzheimer -&gt;
 alzheimers</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
@@ -1667,8 +1836,8 @@ alzheimers</h3>
                           &quot;alzheimers disease&quot;
          ))</code></pre>
 </div>
-<div id="parkinson---parkinsons" class="section level3" number="4.5.2">
-<h3><span class="header-section-number">4.5.2</span> Parkinson -&gt;
+<div id="parkinson---parkinsons" class="section level3" number="5.5.2">
+<h3><span class="header-section-number">5.5.2</span> Parkinson -&gt;
 parkinsons</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
@@ -1679,8 +1848,8 @@ parkinsons</h3>
 </div>
 </div>
 </div>
-<div id="putting-it-all-together" class="section level1" number="5">
-<h1><span class="header-section-number">5</span> Putting it all
+<div id="putting-it-all-together" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Putting it all
 together</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   rowwise() |&gt;
@@ -1701,8 +1870,8 @@ gwas_study_info$collected_all_disease_terms = sub(&quot;,$&quot;, &quot;&quot;, 
 gwas_study_info$collected_all_disease_terms = stringr::str_replace_all(gwas_study_info$collected_all_disease_terms, &quot;^, &quot;, &quot;&quot;)</code></pre>
 <div
 id="final-summary---number-of-studies-per-trait---after-harmonization"
-class="section level2" number="5.1">
-<h2><span class="header-section-number">5.1</span> Final summary -
+class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Final summary -
 number of studies per trait - after harmonization</h2>
 <pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
   dplyr::filter(DISEASE_STUDY == T) |&gt;
@@ -1716,24 +1885,24 @@ head(n_studies_trait)</code></pre>
 <pre><code># A tibble: 6 × 2
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
-1 &quot;&quot;                               3895
-2 &quot;type 2 diabetes mellitus&quot;         38
-3 &quot;breast cancer&quot;                    29
-4 &quot;asthma&quot;                           28
-5 &quot;major depressive disorder&quot;        26
-6 &quot;schizophrenia&quot;                    25</code></pre>
+1 type 2 diabetes mellitus          145
+2 alzheimers disease                113
+3 breast cancer                     113
+4 asthma                            110
+5 major depressive disorder         108
+6 schizophrenia                     103</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 217   2</code></pre>
+<pre><code>[1] 3088    2</code></pre>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
                                gwas_study_info$collected_all_disease_terms)  |&gt; 
             unlist() |&gt;
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 192</code></pre>
+<pre><code>[1] 2201</code></pre>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
-class="section level3" number="5.1.1">
-<h3><span class="header-section-number">5.1.1</span> Save the updated
+class="section level3" number="6.1.1">
+<h3><span class="header-section-number">6.1.1</span> Save the updated
 gwas_study_info with harmonized disease terms</h3>
 <pre class="r"><code>gwas_study_info &lt;- fwrite(gwas_study_info,
                           here::here(&quot;output/gwas_study_info_trait_ontology_info.csv&quot;))</code></pre>
