@@ -27,11 +27,24 @@ library(stringr)
 
 ```
 
-```{r}
+## Ontology help - for getting disease subtypes
 
-gwas_study_info <- fread(here::here("output/gwas_study_info_trait_ontology_info_l1.csv"))
+```{r ontology_fns}
+
+source(here::here("code/get_term_descendants.R"))
 
 ```
+
+```{r setup_2, message = FALSE, warning= FALSE}
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group_l1.csv"))
+
+```
+
+
+# Objectives: 
+
+- Further group disease terms (level 2 categories) to match GBD (globalqburden of disease) categories more closely.
 
 ## Grouping - level 2 set up 
 
@@ -42,53 +55,10 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Ontology help - for getting disease subtypes
 
-```{r ontology_fns}
+# Rename disease terms to match GBD categories more closely
 
-
-library(httr)
-library(jsonlite)
-
-
-get_descendants <- function(url){
-  
-  terms <- c()
-
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  terms <- c(terms, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-  
-terms = unlist(terms)
-terms = stringr::str_trim(tolower(terms))
-terms = unique(terms)
-  
-print("Number of terms collected:")
-print(length(terms))
-
-print("\n Some example terms")
-print(terms[1:5])
-
-return(terms)
-
-
-}
-
-
-```
-
-## Acne vulgaris
+## Acne -> acne vulgaris
 
 ```{r acne}
 
@@ -183,7 +153,9 @@ gwas_study_info |>
 
 ```{r dementia}
 
-dementia <- c("aids dementia",
+dementia <- c("alzheimers disease biomarker measurement",
+              "alzheimers disease neuropathologic change",
+              "aids dementia",
               "dementia",
               "frontotemporal dementia",
               "lewy body dementia",
@@ -213,6 +185,8 @@ gwas_study_info |>
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mesh/terms/http%253A%252F%252Fid.nlm.nih.gov%252Fmesh%252FD001008/descendants"
 
 anxiety_terms <- get_descendants(url)
+
+anxiety_terms <- c(anxiety_terms, "obsessive-compulsive symptom measurement")
 
 gwas_study_info = 
 gwas_study_info |> 
@@ -407,6 +381,15 @@ gwas_study_info |>
 
 ```
 
+## Malignant skin melanoma 
+
+```{r}
+
+skin_melanoma <- c("cutaneous melanoma",
+                   "melanoma")
+
+```
+
 #### Non-hodgkin lymphoma 
 
 ```{r}
@@ -438,7 +421,7 @@ gwas_study_info |>
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
                                   pattern = paste0(resp_cancer_terms, collapse = "|"),
-                                   "tracheal, bronchus, and lung cancer"
+                                   "tracheal bronchus and lung cancer"
                           )  
         )
 
@@ -452,6 +435,12 @@ url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252
 
 chronic_liver_disease_terms <- get_descendants(url)
 
+chronic_liver_disease_terms <- c("primary biliary cirrhosis",
+                                 "alcoholic liver cirrhosis",
+                                 "chronic hepatitis B virus infection", 
+                                 "acute-on-chronic liver failure",
+                                 chronic_liver_disease_terms)
+
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms,
@@ -460,6 +449,13 @@ gwas_study_info = gwas_study_info |>
                           )  
         )
 
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = "liver disease",
+                                   "cirrhosis and other chronic liver diseases"
+                          )  
+        )
 
 ```
 
@@ -633,6 +629,25 @@ gwas_study_info |>
 
 ```
 
+## Personality disorders
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002028/descendants"
+
+personality_disorders <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(personality_disorders, collapse = "|"),
+                                   "personality disorders"
+                          )  
+        )
+
+
+```
+
 ## Other drug use disorders
 
 ```{r}
@@ -650,6 +665,32 @@ gwas_study_info |>
 
 ```
 
+## Sleep disorders
+
+```{r sleep disorders}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_535/descendants"
+
+sleep_disorders <- get_descendants(url)
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0008568/descendants"
+
+other_sleep_disorders <- get_descendants(url)
+
+sleep_disorders <- c(sleep_disorders,
+                    other_sleep_disorders)
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(sleep_disorders, collapse = "|"),
+                                   "sleep disorders"
+                          )  
+        )
+
+
+```
+
 # Other neurodegenerative disorder (to do)
 
 take url: "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F52522001/descendants"
@@ -660,14 +701,64 @@ and remove alz, parks, dementia
 
 # Other mental disorders
 
+```{r}
+
+other_mental_disorders <- c("schizophrenia",
+                            "manic or hypomanic episode",
+                            "mental or behavioural disorder",
+                            "mental disorder"
+)
+
+```
+
+# Other neurological disorders
+
+```{r}
+
+other_neuro <- c("mild neurocognitive disorder",
+                 "hiv-associated neurocognitive disorder")
+
+```
+
+# Other sensory 
+
+disturbances of sensation of smell and taste
+
 # Check compatibility with gbd data 
+
+## Weird fix 
+
+```{r}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "disorderss",
+                                   "disorders"
+                          )  
+        )
+
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "anxiety disorders disorderss",
+                                   "anxiety disorders"
+                          )  
+        )
+
+```
 
 ```{r}
 
 gbd_data <- data.table::fread(here::here("data/gbd/IHME-GBD_2021_DATA-aa22a7fd-1.csv"))
 
+gbd_data$cause <- stringr::str_remove_all(gbd_data$cause, ",")
+
 diseases <- stringr::str_split(pattern = ", ", 
-                               gwas_study_info$l2_all_disease_terms)  |> 
+                               gwas_study_info$l2_all_disease_terms[gwas_study_info$l2_all_disease_terms != ""])  |> 
             unlist() |>
             stringr::str_trim()
 
@@ -675,11 +766,28 @@ gbd_data$cause[!tolower(gbd_data$cause) %in% unique(diseases)] |> sort()
 
 ```
 
+```{r}
+
+gbd_data =
+  gbd_data |>
+  mutate(cause = tolower(cause))
+
+gwas_disease_traits = data.frame(cause = diseases)
+  # gwas_study_info |>
+  # filter(DISEASE_STUDY == T) |>
+  # select(all_disease_terms, l1_all_disease_terms, cause = l2_all_disease_terms) |>
+  # distinct()
+
+left_join(gwas_disease_traits, 
+          gbd_data) |>
+  head()
+
+```
 
 ```{r}
 
 diseases <- stringr::str_split(pattern = ", ", 
-                               gwas_study_info$l2_all_disease_terms)  |> 
+                               gwas_study_info$l2_all_disease_terms[gwas_study_info$l2_all_disease_terms != ""])  |> 
             unlist() |>
             stringr::str_trim()
 
