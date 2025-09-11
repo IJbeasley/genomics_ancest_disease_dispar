@@ -119,7 +119,7 @@ gwas_study_info |> select(STUDY_ACCESSION,
                           DISEASE_STUDY,
                           MAPPED_TRAIT_CATEGORY,
                           BACKGROUND_TRAIT_CATEGORY,
-                          collected_all_disease_terms),
+                          l2_all_disease_terms),
 by = "STUDY_ACCESSION"
 )
 
@@ -156,11 +156,11 @@ head(n_studies_trait)
 
 n_studies_trait = gwas_study_info |>
   dplyr::filter(DISEASE_STUDY == T) |>
-  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
-  dplyr::mutate(collected_all_disease_terms = stringr::str_split(collected_all_disease_terms, ",\\s*")) |>
-  tidyr::unnest_longer(collected_all_disease_terms) |>
+  dplyr::select(l2_all_disease_terms, PUBMED_ID) |>
+  dplyr::mutate(l2_all_disease_terms = stringr::str_split(l2_all_disease_terms, ",\\s*")) |>
+  tidyr::unnest_longer(l2_all_disease_terms) |>
   dplyr::distinct() |>
-  dplyr::group_by(collected_all_disease_terms) |>
+  dplyr::group_by(l2_all_disease_terms) |>
   dplyr::summarise(n_studies = dplyr::n()) |>
   dplyr::arrange(desc(n_studies))
 
@@ -295,7 +295,7 @@ gwas_ancest_info_plot |>
 ```
 
 
-# Proportion European per trait 
+# Calculate Per Trait: Proportion European, Number of studies, Total number of individuals, Highest sample size in a single study
 
 ## Proportion European overall 
 
@@ -319,46 +319,103 @@ total_n = gwas_ancest_info |>
 
 ```{r prop_euro_per_trait}
 
-prop_euro = vector()
-total_n_vec = vector()
 
 gwas_ancest_trait_info = gwas_ancest_info |> 
   dplyr::filter(DISEASE_STUDY == T) |>
-  dplyr::select(collected_all_disease_terms, 
+  dplyr::select(l2_all_disease_terms, 
                 PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS) |>
-  dplyr::mutate(collected_all_disease_terms = stringr::str_split(collected_all_disease_terms, ",\\s*")) |>
-  tidyr::unnest_longer(collected_all_disease_terms) |>
+  dplyr::mutate(l2_all_disease_terms = stringr::str_split(l2_all_disease_terms, ",\\s*")) |>
+  tidyr::unnest_longer(l2_all_disease_terms) |>
   dplyr::distinct()
 
 n_studies_trait = n_studies_trait |> 
                   dplyr::filter(n_studies > 2) |>
-                  dplyr::filter(collected_all_disease_terms != "")
+                  dplyr::filter(l2_all_disease_terms != "")
 
-for(trait in n_studies_trait$collected_all_disease_terms){
+total_n_euro_vec = vector()
+prop_euro_vec = vector()
+med_prop_euro_vec = vector()
+first_quartile_prop_euro_vec = vector()
+total_n_vec = vector()
+med_sample_size_vec = vector()
+n_studies_vec = vector()
+highest_sample_size_vec = vector()
+
+for(trait in n_studies_trait$l2_all_disease_terms){
   
-  euro_n = gwas_ancest_trait_info |>
-           filter(ancestry_group == "European") |>
-           filter(collected_all_disease_terms %in% trait) |>
-           pull(NUMBER_OF_INDIVIDUALS) |>
-           sum(na.rm = T)
+  # Calculate the number of European ancestry individuals (studied for this trait)
+  total_euro_n = gwas_ancest_trait_info |>
+                 filter(ancestry_group == "European") |>
+                 filter(l2_all_disease_terms %in% trait) |>
+                 pull(NUMBER_OF_INDIVIDUALS) |>
+                 sum(na.rm = T)
   
-  total_n = gwas_ancest_trait_info |>
-            filter(collected_all_disease_terms %in% trait) |>
-            pull(NUMBER_OF_INDIVIDUALS) |>
-            sum(na.rm = T)
+  total_n_euro_vec[trait] = total_euro_n
   
-  prop_euro[trait] = 100 * euro_n / total_n
+  # Calculate the total number of individuals (studied for this trait)
+  all_study_n = gwas_ancest_trait_info |>
+                filter(l2_all_disease_terms %in% trait) |>
+                pull(NUMBER_OF_INDIVIDUALS) 
+  
+  total_n  = all_study_n |>
+             sum(na.rm = T)
+  
   total_n_vec[trait] = total_n
+  
+  # Get the highest sample size in a single study (for this trait)
+  highest_sample_size = max(all_study_n, na.rm = T)
+  
+  highest_sample_size_vec[trait] = highest_sample_size
+  
+  # Get the median sample size in a single study (for this trait)
+  med_sample_size_vec[trait] = median(all_study_n, na.rm = T)
+  
+  # Calculate the proportion of European ancestry individuals (across all studies for this trait)
+  prop_euro_vec[trait] = 100 * total_euro_n / total_n
+  
+  # Calculate the number of unique studies (pubmed ids) for this trait
+  n_studies = gwas_ancest_trait_info |>
+              filter(l2_all_disease_terms %in% trait) |>
+              pull(PUBMED_ID) |>
+              unique() |>
+              length()
+  
+  n_studies_vec[trait] = n_studies
+  
+  # Calculate the proportion of European ancestry individuals (per study for this trait)
+  euro_n_per_study = gwas_ancest_trait_info |>
+            filter(ancestry_group == "European") |>
+            filter(l2_all_disease_terms %in% trait) |>
+            group_by(PUBMED_ID) |>
+            summarise(n_euro = sum(NUMBER_OF_INDIVIDUALS, na.rm = T))
+  
+  
+  total_n_per_study = gwas_ancest_trait_info |>
+            filter(l2_all_disease_terms %in% trait) |>
+            group_by(PUBMED_ID) |>
+            summarise(n_total = sum(NUMBER_OF_INDIVIDUALS, na.rm = T))
+  
+  prop_euro_per_study = inner_join(euro_n_per_study,
+                                   total_n_per_study,
+                                   by = "PUBMED_ID") |>
+                         mutate(prop_euro = 100 * n_euro / n_total) 
+  
+  med_prop_euro_vec[trait] = median(prop_euro_per_study$prop_euro, na.rm = T)
+  
+  first_quartile_prop_euro_vec[trait] = quantile(prop_euro_per_study$prop_euro, probs = 0.25, na.rm = T)
   
 }
 
-prop_euro_df = data.frame(prop_euro = prop_euro, 
-                          trait = names(prop_euro),
-                          total_n = total_n_vec)
-
-prop_euro_df = left_join(prop_euro_df,
-                         n_studies_trait |> rename(trait = collected_all_disease_terms),
-                         by = "trait")
+prop_euro_df = data.frame(trait = n_studies_trait$l2_all_disease_terms,
+                          total_n = total_n_vec,
+                          total_n_euro = total_n_euro_vec,
+                         prop_euro = prop_euro_vec,
+                          median_prop_euro = med_prop_euro_vec,
+                          n_studies = n_studies_vec,
+                          highest_sample_size = highest_sample_size_vec,
+                          median_sample_size = med_sample_size_vec,
+                         first_quartile_prop_euro = first_quartile_prop_euro_vec
+                          )
 
 ```
 
@@ -373,21 +430,31 @@ prop_euro_df |> ungroup() |> dplyr::slice_max(total_n, n = 5)
 
 ```
 
+# Plot variation across disease traits: 
 
-### Distribution of proportion european (per disease trait)
+## Distribution plots 
+
+### Number of studies and sample size 
+
+#### Averaege number of individuals per study (for each disease)
 
 ```{r}
 
-prop_euro_df$prop_euro |> summary()
+prop_euro_df = prop_euro_df |>
+  dplyr::mutate(avg_n_per_study = total_n / n_studies)
+
+print("Average number of individuals per study (for this trait) - in millions")
+c(prop_euro_df$avg_n_per_study / 10^6) |> summary()
 
 prop_euro_df |>
-  ggplot(aes(x = prop_euro)) + 
+  ggplot(aes(x = avg_n_per_study)) + 
   geom_histogram() + 
-  theme_bw()
+  theme_bw() + 
+  labs(x = "Average number of individuals per study (for this trait)")
 
 ```
 
-### Distribution of total number of individuals (per disease trait)
+### Total number of individuals (per disease trait)
 
 ```{r}
 print("Total number of individuals (studied for each trait) - in millions")
@@ -397,7 +464,112 @@ prop_euro_df |>
   ggplot(aes(x = total_n)) + 
   geom_histogram() + 
   theme_bw() + 
-  labs(x = "Total number of individuals (studied for this trait)")
+  scale_x_continuous(labels = scales::label_log()) + 
+  labs(x = "Total number of GWAS participants for each trait")
+
+
+prop_euro_df |>
+  mutate(total_n = log10(total_n)) |>
+  ggplot(aes(x = total_n)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(x = "log10(total number of GWAS participants for each trait)") 
+```
+
+#### Number of European individuals (per disease trait)
+
+```{r}
+
+print("Number of European ancestry individuals (studied for each trait) - in millions")
+c(prop_euro_df$total_n_euro / 10^6) |> summary()
+
+prop_euro_df |>
+  ggplot(aes(x = total_n_euro)) + 
+  geom_histogram() +
+  theme_bw() +
+  scale_x_continuous(labels = scales::label_log()) +
+  labs(x = "Number of European ancestry individuals (studied for each trait)")
+
+```
+
+#### Highest sample size in a single study (per disease trait)
+
+```{r}
+
+print("Highest sample size in a single study (for this trait) - in millions")
+c(prop_euro_df$highest_sample_size / 10^6) |> summary()
+
+prop_euro_df |>
+  ggplot(aes(x = highest_sample_size)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  scale_x_continuous(labels = scales::label_log()) + 
+  labs(x = "Highest sample size in a single study (for this trait)")
+
+
+```
+
+### Proportion european
+
+#### Distribution of proportion european 
+
+```{r}
+
+print("Proportion European ancestry individuals (studied for each trait)")
+prop_euro_df$prop_euro |> summary()
+
+prop_euro_df |>
+  ggplot(aes(x = prop_euro)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(x = "Proportion of European ancestry individuals (studied for each trait)")
+
+```
+
+
+#### Distribution of median proportion european (per study, per disease trait)
+
+```{r}
+
+print("Median proportion European ancestry individuals (per study, for each trait)")
+prop_euro_df$median_prop_euro |> summary()
+
+prop_euro_df |>
+  ggplot(aes(x = median_prop_euro)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(x = "Median proportion of European ancestry individuals (per study, for each trait)")
+
+
+```
+
+#### Distribution of first quartile proportion european (per study, per disease trait)
+
+```{r}
+
+print("First quartile proportion European ancestry individuals (per study, for each trait)")
+prop_euro_df$first_quartile_prop_euro |> summary()
+
+prop_euro_df |>
+  ggplot(aes(x = first_quartile_prop_euro)) + 
+  geom_histogram() + 
+  theme_bw() + 
+  labs(x = "First quartile proportion of European ancestry individuals (per study, for each trait)")
+
+
+```
+
+
+## Scatter plots against number and proportion European 
+
+```{r}
+
+third_quartile_prop = quantile(prop_euro_df$prop_euro, probs = 0.75)
+
+first_quartile_prop = quantile(prop_euro_df$prop_euro, probs = 0.25)
+
+fifth_percentile_prop = quantile(prop_euro_df$prop_euro, probs = 0.05)
+
 
 ```
 
@@ -418,13 +590,59 @@ prop_euro_df |>
                       method = "spearman",
     use = "pairwise.complete.obs"))
 
+plot = 
 prop_euro_df |>
-  ggplot(aes(x = total_n, y = prop_euro)) + 
+  ggplot(aes(x = total_n, y = prop_euro, disease = trait)) + 
   geom_point() + 
   theme_bw() + 
+  scale_x_log10(labels = scales::label_log(),
+                limits = c(min(prop_euro_df$total_n), max(prop_euro_df$total_n) * 1.1)) +
+  geom_hline(yintercept = third_quartile_prop, linetype="dashed", color = "red") +
+  geom_hline(yintercept = first_quartile_prop, linetype="dashed", color = "blue") +
+  geom_hline(yintercept = fifth_percentile_prop, linetype="dashed", color = "purple") +
+  annotate("text", x = max(prop_euro_df$total_n) - 10^3, y = third_quartile_prop + 1,
+           label = "3rd quart.", vjust = -0.5, hjust = 1, color = "red") +
+  annotate("text", x = max(prop_euro_df$total_n) - 10^3, y = first_quartile_prop + 1,
+           label = "1st quart.", vjust = -0.5, hjust = 1, color = "blue") +
+  annotate("text", x = max(prop_euro_df$total_n) -10^3, y = fifth_percentile_prop + 1,
+           label = "5th percent.", vjust = -0.5, hjust = 1, color = "purple") +
   labs(x = "Total number of individuals (studied for this trait)",
-       y = "Proportion of European ancestry idividuals (studied for this trait)")
+       y = "% European ancestry idividuals (studied for this trait)")
 
+
+plotly::ggplotly(plot)
+
+```
+
+### Number of European individuals - vs. total number of individuals
+
+```{r}
+
+print("Number of European ancestry individuals vs. total number of individuals - spearman correlation")
+cor(prop_euro_df$total_n_euro, prop_euro_df$total_n, 
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+print("Number of European ancestry individuals vs. total number of individuals - spearman correlation - only traits with > 5 studies")
+prop_euro_df |>
+  filter(n_studies > 5) |>
+  summarise(cor = cor(total_n_euro, total_n,   
+                      method = "spearman",
+    use = "pairwise.complete.obs")
+    )
+
+plot = 
+prop_euro_df |>
+  ggplot(aes(x = total_n, y = total_n_euro, disease = trait)) + 
+  geom_point() + 
+  theme_bw() + 
+  scale_x_continuous(labels = scales::label_log()) +
+  scale_y_continuous(labels = scales::label_log()) +
+  labs(x = "Total number of individuals (studied for this trait)",
+       y = "Number of European ancestry idividuals (studied for this trait)") + 
+  geom_abline(slope = 1, intercept = 0, linetype="dashed", color = "red")
+
+plotly::ggplotly(plot)
 
 ```
 
@@ -446,13 +664,112 @@ prop_euro_df |>
     use = "pairwise.complete.obs")
     )
 
-
+plot = 
 prop_euro_df |>
   ggplot(aes(x = n_studies, y = prop_euro)) + 
   geom_point() + 
   theme_bw() + 
+  scale_x_log10(labels = scales::label_log()) +
   labs(x = "Total number of unique PUBMED IDs for this trait",
        y = "Proportion of European ancestry idividuals (studied for this trait)")
+
+
+plotly::ggplotly(plot)
+
+```
+
+### Number of European individuals vs number of studies
+
+```{r}
+
+print("Number of European ancestry individuals vs. number of studies - spearman correlation")
+cor(prop_euro_df$total_n_euro, prop_euro_df$n_studies, 
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+
+prop_euro_df |>
+  filter(n_studies > 5) |>
+  summarise(cor = cor(total_n_euro, n_studies,   
+                      method = "spearman",
+    use = "pairwise.complete.obs")
+    )
+
+plot = 
+prop_euro_df |>
+  ggplot(aes(x = total_n_euro, y = n_studies, disease = trait)) + 
+  geom_point() + 
+  theme_bw() + 
+#  scale_x_continuous(labels = scales::label_log()) +
+  labs(x = "Number of European ancestry idividuals (studied for this trait)",
+       y = "Total number of unique PUBMED IDs for this trait")
+
+
+plotly::ggplotly(plot)
+
+```
+
+### First quartile proportion european vs number of studies
+
+```{r}
+
+cor(prop_euro_df$first_quartile_prop_euro, prop_euro_df$n_studies, 
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+
+prop_euro_df |>
+  filter(n_studies > 5) |>
+  summarise(cor = cor(first_quartile_prop_euro, n_studies,   
+                      method = "spearman",
+    use = "pairwise.complete.obs")
+    )
+
+plot = 
+prop_euro_df |>
+  ggplot(aes(x = n_studies, y = first_quartile_prop_euro, disease = trait)) + 
+  geom_point() + 
+  theme_bw() + 
+  scale_x_log10(labels = scales::label_log()) +
+  labs(x = "Total number of unique PUBMED IDs for this trait",
+       y = "First quartile proportion of European ancestry idividuals (studied for this trait)")
+
+
+plotly::ggplotly(plot)
+
+
+```
+
+### First quartile proportion european vs total number of individuals
+
+```{r}
+
+print("First quartile proportion European vs. total number of individuals - spearman correlation")
+cor(prop_euro_df$first_quartile_prop_euro, prop_euro_df$total_n, 
+    method = "spearman",
+    use = "pairwise.complete.obs")
+
+
+print("First quartile proportion European vs. total number of individuals - spearman correlation - only traits with > 5 studies")
+prop_euro_df |>
+  filter(n_studies > 5) |>
+  summarise(cor = cor(first_quartile_prop_euro, total_n,   
+                      method = "spearman",
+    use = "pairwise.complete.obs")
+    )
+
+
+plot =
+prop_euro_df |>
+  ggplot(aes(x = total_n, y = first_quartile_prop_euro, disease = trait)) + 
+  geom_point() + 
+  theme_bw() + 
+  scale_x_log10() + 
+  labs(x = "Total number of individuals (studied for this trait)",
+       y = "First quartile proportion of European ancestry idividuals (studied for this trait)")
+
+
+plotly::ggplotly(plot)
 
 ```
 
@@ -473,33 +790,21 @@ prop_euro_df |>
     use = "pairwise.complete.obs")
     )
 
+plot = 
 prop_euro_df |>
-  ggplot(aes(x = total_n, y = n_studies)) + 
+  ggplot(aes(x = total_n, y = n_studies, diseae = trait)) + 
   geom_point() + 
   theme_bw() + 
   labs(x = "Total number of individuals (studied for this trait)",
        y = "Total number of unique PUBMED IDs for this trait")
 
-```
 
-
-### Averaege number of individuals per study (for each disease)
-
-```{r}
-
-prop_euro_df = prop_euro_df |>
-  dplyr::mutate(avg_n_per_study = total_n / n_studies)
-
-print("Average number of individuals per study (for this trait) - in millions")
-c(prop_euro_df$avg_n_per_study / 10^6) |> summary()
-
-prop_euro_df |>
-  ggplot(aes(x = avg_n_per_study)) + 
-  geom_histogram() + 
-  theme_bw() + 
-  labs(x = "Average number of individuals per study (for this trait)")
+plotly::ggplotly(plot)
 
 ```
+
+
+
 
 ### Proportion european - vs. average number of individuals per study
 
@@ -518,12 +823,15 @@ prop_euro_df |>
     use = "pairwise.complete.obs")
     )
 
+plot = 
 prop_euro_df |>
-  ggplot(aes(x = avg_n_per_study, y = prop_euro)) + 
+  ggplot(aes(x = avg_n_per_study, y = prop_euro, disease = trait)) + 
   geom_point() + 
   theme_bw() + 
   labs(x = "Average number of individuals per study (for this trait)",
        y = "Proportion of European ancestry idividuals (studied for this trait)")
+
+plotly::ggplotly(plot)
 
 ```
 
@@ -545,12 +853,15 @@ prop_euro_df |>
     use = "pairwise.complete.obs")
     )
 
+plot = 
 prop_euro_df |>
-  ggplot(aes(x = n_studies, y = avg_n_per_study)) + 
+  ggplot(aes(x = n_studies, y = avg_n_per_study, disease = trait)) + 
   geom_point() + 
   theme_bw() + 
   labs(x = "Total number of unique PUBMED IDs for this trait",
        y = "Average number of individuals per study (for this trait)")
+
+plotly::ggplotly(plot)
 
 ```
 
@@ -560,6 +871,12 @@ prop_euro_df |>
 ```{r gbd_stats}
 
 gbd_data <- data.table::fread(here::here("data/gbd/IHME-GBD_2021_DATA-aa22a7fd-1.csv"))
+
+```
+
+## Total number of individuals vs global DALYs
+
+```{r}
 
 compare_stats =
 left_join(prop_euro_df |> rename(cause = trait),
@@ -577,12 +894,42 @@ compare_stats |>
   ggplot(aes(y = total_n, x = val, trait = cause)) + 
   geom_point() + 
   theme_bw() + 
+  scale_y_log10(labels = scales::label_log())  +
+  scale_x_log10(labels = scales::label_log()) +
   labs(y = "Total number of individuals (studied for this trait)",
        x = "Global DALYs (2019, GBD)")
 
 plotly::ggplotly(plot)
 
 ```
+
+## Largest sample size vs global DALYs
+
+```{r}
+
+cor(compare_stats$highest_sample_size, 
+    compare_stats$val, 
+    method = "spearman",
+    use = "pairwise.complete.obs"
+)
+
+
+plot = compare_stats |>
+  ggplot(aes(y = highest_sample_size, 
+             x = val, 
+             trait = cause)) + 
+  geom_point() + 
+  scale_y_log10(labels = scales::label_log())  +
+  scale_x_log10(labels = scales::label_log()) +
+  theme_bw() + 
+  labs(y = "Largest sample size in a single study (for this trait)",
+       x = "Global DALYs (2019, GBD)")
+
+plotly::ggplotly(plot)
+
+```
+
+## Number of studies vs global DALYs
 
 ```{r}
 
@@ -593,11 +940,16 @@ cor(compare_stats$n_studies,
 )
 
 plot = compare_stats |>
-  ggplot(aes(x = n_studies, y = val, trait = cause)) + 
+  ggplot(aes(y = n_studies, 
+             x = val, 
+             trait = cause)) + 
   geom_point() + 
+  scale_y_log10(labels = scales::label_log())  +
+  scale_x_log10(labels = scales::label_log()) +
   theme_bw() + 
   labs(y = "Total number of studies (for this trait)",
        x = "Global DALYs (2019, GBD)")
 
 plotly::ggplotly(plot)
+
 ```
