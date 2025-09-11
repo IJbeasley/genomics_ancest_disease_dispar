@@ -1,0 +1,192 @@
+---
+title: "Global burden of disease statistics"
+author: "Isobel Beasley"
+date: "2025-09-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup_packages}
+
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+```{r load_data}
+
+gbd_data <- data.table::fread(here::here("data/gbd/IHME-GBD_2021_DATA-aa22a7fd-1.csv"))
+
+```
+
+# Global disease burden - top 15 non-communicable diseases by DALYs (2019)
+
+```{r}
+
+gbd_data |>
+slice_max(n = 15, order_by = val) |>
+ggplot(aes(x = reorder(cause, val), y = val)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
+  coord_flip() +
+  labs(
+    x = "Disease",
+    y = "DALYs (rate per 100,000)",
+    title = "Non-communicable diseases with the greatest global disease durden (DALYs - 2019)"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+## Distribution of DALYs (rate per 100,000) for non-communicable diseases (2019)
+
+
+```{r}
+
+gbd_data |>
+  ggplot(aes(x = val)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "black") +
+  labs(
+    x = "DALYs (rate per 100,000)",
+    y = "# non-communicable diseases",
+    title = "Distribution of DALYs (rate per 100,000) for non-communicable diseases (2019)"
+  ) +
+  theme_minimal(base_size = 14)
+
+
+```
+
+
+
+```{r}
+
+top_non_comm_diseases <- gbd_data |>
+  slice_max(n = 15, order_by = val) 
+
+top_non_comm_diseases_daly = top_non_comm_diseases |> pull(val)
+top_non_comm_diseases = top_non_comm_diseases |> pull(cause)
+
+```
+
+# Global disease burden - Population Attributable Fraction (PAF) for top 15 non-communicable diseases by DALYs (2019)
+
+
+## Load + basic processing of GBD PAF data
+
+```{r}
+
+gbd_paf_dir <- "data/gbd/IHME_GBD_2021_RISK_1990_2021_RESULTS_APPENDIX_TABLES"
+
+paf_file <- paste0(gbd_paf_dir,
+                     "/IHME_GBD_2021_RISK_1990_2021_RESULTS_APPENDIX_TABLE_S1_GLOBAL_Y2024M05D14.XLSX")
+
+gbd_paf_data <- readxl::read_xlsx(here::here(paf_file),
+                                  skip = 1
+                                  )
+
+# Clean column names
+names(gbd_paf_data) <- names(gbd_paf_data) |>
+  stringr::str_replace_all("\\r|\\n", " ") |>   # remove carriage returns/newlines
+  stringr::str_squish() |>                     # trim extra spaces
+  stringr::str_replace_all(" ", "_") |># replace spaces with underscores
+  stringr::str_replace("^([0-9]{4})_(.*)$", "\\2_\\1")
+
+# Clean all character cells
+gbd_paf_data <- gbd_paf_data |>
+  dplyr::mutate(across(where(is.character),
+                ~ .x |> stringr::str_replace_all("\\r|\\n", " ") |> stringr::str_squish()))
+
+head(gbd_paf_data)
+
+
+```
+
+## Grouping and filtering of GBD PAF data
+
+```{r}
+
+# remove risk factor rows 
+gbd_paf_data = gbd_paf_data |>
+  rowwise() |>
+  mutate(causal_group = ifelse(grepl("All causes", Risk_Name), Risk_Name, NA)) |>
+  ungroup() |>
+  tidyr::fill(causal_group, .direction = "down") |>
+  relocate(causal_group, .before = Risk_Name)
+
+
+gbd_paf_data = gbd_paf_data |>
+  filter(!grepl("All causes", Risk_Name)) |>
+  mutate(causal_group = stringr::str_remove_all(causal_group, ": All causes")) 
+
+
+head(gbd_paf_data)
+
+```
+
+```{r}
+
+gbd_paf_data |>
+  select(causal_group, Risk_Name, DALYs_PAF_2021, 'all-age_DALYs_rate_(per_100,000)_2021') |>
+  distinct() |>
+  arrange(Risk_Name)
+
+
+```
+
+
+## Looking into 2021 PAF data for top 15 non-communicable diseases by DALYs (2019)
+
+```{r}
+
+
+gbd_paf_data <- gbd_paf_data |>
+  # Work just on the DALYs_PAF_2021 column
+  mutate(DALYs_PAF_2021 = str_replace_all(DALYs_PAF_2021, "·", ".")) |>  # replace middle dot with .
+  tidyr::extract(
+    DALYs_PAF_2021,
+    into = c("val", "lower", "upper"),
+    regex = "([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)",
+    convert = TRUE
+  ) 
+
+
+gbd_paf_data |>
+  select(val, lower, upper, Risk_Name)|>
+  filter(Risk_Name == "Chronic kidney disease")
+
+gbd_paf_plot_data =
+gbd_paf_data |>
+  select(val, lower, upper, Risk_Name) |>
+  filter(grepl(paste0(top_non_comm_diseases, collapse = "|"), Risk_Name)) |> 
+  mutate(Risk_Name = 
+        case_when(grepl("Chronic kidney disease due to", Risk_Name) ~ "Chronic kidney disease",
+                  TRUE ~ Risk_Name
+         )) |>
+  group_by(Risk_Name) |>
+  summarise(val = sum(val, na.rm = TRUE),
+            lower = sum(lower, na.rm = TRUE),
+            upper = sum(upper, na.rm = TRUE)
+            ) 
+
+left_join(gbd_paf_plot_data,
+          data.frame(Risk_Name = top_non_comm_diseases,
+                     daly = top_non_comm_diseases),
+          by = "Risk_Name") |>
+  mutate(Risk_Name = factor(Risk_Name, levels = unique(Risk_Name))) |>
+  ggplot(aes(x = reorder(Risk_Name, val), y = val)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
+  coord_flip() +
+  labs(
+    x = "Risk factor",
+    y = "Population Attributable Fraction (%)",
+    title = "Risk factors with the greatest global disease burden (PAF - 2021)"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
