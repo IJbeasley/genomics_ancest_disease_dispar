@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree18ffbd128e9f0255052166cc4e29d56417b8a919targetblank18ffbd1a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree296be715b935113e74857899827a5d4cdc98d4fctargetblank296be71a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/18ffbd128e9f0255052166cc4e29d56417b8a919" target="_blank">18ffbd1</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/296be715b935113e74857899827a5d4cdc98d4fc" target="_blank">296be71</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree18ffbd128e9f0255052166cc4e29d56417b8a919targetblank18ffbd1a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree296be715b935113e74857899827a5d4cdc98d4fctargetblank296be71a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/18ffbd128e9f0255052166cc4e29d56417b8a919" target="_blank">18ffbd1</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/296be715b935113e74857899827a5d4cdc98d4fc" target="_blank">296be71</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -543,6 +543,7 @@ were generated:
 Ignored files:
     Ignored:    .DS_Store
     Ignored:    .Rproj.user/
+    Ignored:    analysis/figure/
     Ignored:    data/.DS_Store
     Ignored:    data/gwas_catalog/
     Ignored:    output/gwas_cat/
@@ -607,6 +608,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/296be715b935113e74857899827a5d4cdc98d4fc/analysis/gbd_data_plots.Rmd" target="_blank">296be71</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-12
+</td>
+<td>
+Updating disease burden plots with new paf information
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/6caf7213eeb30c8d88cc0b856650ddda3216b938/docs/gbd_data_plots.html" target="_blank">6caf721</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-12
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -680,12 +715,38 @@ Attaching package: &#39;dplyr&#39;</code></pre>
     intersect, setdiff, setequal, union</code></pre>
 <pre class="r"><code>library(ggplot2)
 library(stringr)</code></pre>
+<div id="global-burden-of-disease-statistics" class="section level1">
+<h1>Global burden of disease statistics</h1>
 <pre class="r"><code>gbd_data &lt;- data.table::fread(here::here(&quot;data/gbd/IHME-GBD_2021_DATA-aa22a7fd-1.csv&quot;))</code></pre>
+<div id="top-non-communicable-diseases-by-dalys-2019"
+class="section level2">
+<h2>Top non-communicable diseases by DALYs (2019)</h2>
+<pre class="r"><code>top_non_comm_diseases = 
+  gbd_data |&gt;
+  slice_max(n = 15, order_by = val) |&gt;
+  pull(cause)
+
+print(top_non_comm_diseases)</code></pre>
+<pre><code> [1] &quot;Ischemic heart disease&quot;                    
+ [2] &quot;Stroke&quot;                                    
+ [3] &quot;Chronic obstructive pulmonary disease&quot;     
+ [4] &quot;Diabetes mellitus&quot;                         
+ [5] &quot;Low back pain&quot;                             
+ [6] &quot;Depressive disorders&quot;                      
+ [7] &quot;Headache disorders&quot;                        
+ [8] &quot;Cirrhosis and other chronic liver diseases&quot;
+ [9] &quot;Tracheal, bronchus, and lung cancer&quot;       
+[10] &quot;Other musculoskeletal disorders&quot;           
+[11] &quot;Age-related and other hearing loss&quot;        
+[12] &quot;Chronic kidney disease&quot;                    
+[13] &quot;Anxiety disorders&quot;                         
+[14] &quot;Alzheimer&#39;s disease and other dementias&quot;   
+[15] &quot;Blindness and vision loss&quot;                 </code></pre>
 <div
 id="global-disease-burden---top-15-non-communicable-diseases-by-dalys-2019"
-class="section level1">
-<h1>Global disease burden - top 15 non-communicable diseases by DALYs
-(2019)</h1>
+class="section level3">
+<h3>Global disease burden - top 15 non-communicable diseases by DALYs
+(2019)</h3>
 <pre class="r"><code>gbd_data |&gt;
 slice_max(n = 15, order_by = val) |&gt;
 ggplot(aes(x = reorder(cause, val), y = val)) +
@@ -696,58 +757,6 @@ ggplot(aes(x = reorder(cause, val), y = val)) +
     x = &quot;Disease&quot;,
     y = &quot;DALYs (rate per 100,000)&quot;,
     title = &quot;Non-communicable diseases with the greatest global disease durden (DALYs - 2019)&quot;
-  ) +
-  theme_minimal(base_size = 14)</code></pre>
-<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-1-1.png" width="672" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-unnamed-chunk-1-1">
-Past versions of unnamed-chunk-1-1.png
-</button>
-</p>
-<div id="fig-unnamed-chunk-1-1" class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/f8b699d3e6e8ef06fe762def610e088c88884711/docs/figure/gbd_data_plots.Rmd/unnamed-chunk-1-1.png" target="_blank">f8b699d</a>
-</td>
-<td>
-IJbeasley
-</td>
-<td>
-2025-09-11
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div
-id="distribution-of-dalys-rate-per-100000-for-non-communicable-diseases-2019"
-class="section level2">
-<h2>Distribution of DALYs (rate per 100,000) for non-communicable
-diseases (2019)</h2>
-<pre class="r"><code>gbd_data |&gt;
-  ggplot(aes(x = val)) +
-  geom_histogram(bins = 30, fill = &quot;steelblue&quot;, color = &quot;black&quot;) +
-  labs(
-    x = &quot;DALYs (rate per 100,000)&quot;,
-    y = &quot;# non-communicable diseases&quot;,
-    title = &quot;Distribution of DALYs (rate per 100,000) for non-communicable diseases (2019)&quot;
   ) +
   theme_minimal(base_size = 14)</code></pre>
 <p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-2-1.png" width="672" style="display: block; margin: auto;" /></p>
@@ -788,142 +797,34 @@ IJbeasley
 </table>
 </div>
 </div>
-<pre class="r"><code>top_non_comm_diseases &lt;- gbd_data |&gt;
-  slice_max(n = 15, order_by = val) 
-
-top_non_comm_diseases_daly = top_non_comm_diseases |&gt; pull(val)
-top_non_comm_diseases = top_non_comm_diseases |&gt; pull(cause)</code></pre>
 </div>
 </div>
 <div
-id="global-disease-burden---population-attributable-fraction-paf-for-top-15-non-communicable-diseases-by-dalys-2019"
-class="section level1">
-<h1>Global disease burden - Population Attributable Fraction (PAF) for
-top 15 non-communicable diseases by DALYs (2019)</h1>
-<div id="load-basic-processing-of-gbd-paf-data" class="section level2">
-<h2>Load + basic processing of GBD PAF data</h2>
-<pre class="r"><code>gbd_paf_dir &lt;- &quot;data/gbd/IHME_GBD_2021_RISK_1990_2021_RESULTS_APPENDIX_TABLES&quot;
-
-paf_file &lt;- paste0(gbd_paf_dir,
-                     &quot;/IHME_GBD_2021_RISK_1990_2021_RESULTS_APPENDIX_TABLE_S1_GLOBAL_Y2024M05D14.XLSX&quot;)
-
-gbd_paf_data &lt;- readxl::read_xlsx(here::here(paf_file),
-                                  skip = 1
-                                  )
-
-# Clean column names
-names(gbd_paf_data) &lt;- names(gbd_paf_data) |&gt;
-  stringr::str_replace_all(&quot;\\r|\\n&quot;, &quot; &quot;) |&gt;   # remove carriage returns/newlines
-  stringr::str_squish() |&gt;                     # trim extra spaces
-  stringr::str_replace_all(&quot; &quot;, &quot;_&quot;) |&gt;# replace spaces with underscores
-  stringr::str_replace(&quot;^([0-9]{4})_(.*)$&quot;, &quot;\\2_\\1&quot;)
-
-# Clean all character cells
-gbd_paf_data &lt;- gbd_paf_data |&gt;
-  dplyr::mutate(across(where(is.character),
-                ~ .x |&gt; stringr::str_replace_all(&quot;\\r|\\n&quot;, &quot; &quot;) |&gt; stringr::str_squish()))
-
-gbd_paf_data[1:3, 1:4]</code></pre>
-<pre><code># A tibble: 3 × 4
-  Risk_Name                      Deaths_PAF_1990 Deaths_PAF_2000 Deaths_PAF_2010
-  &lt;chr&gt;                          &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;          
-1 All risk factors: All causes   59·6 (57·1 – 6… 59·9 (57·4 – 6… 59·7 (56·8 – 6…
-2 Environmental/occupational ri… 27·3 (24·3 – 3… 25·6 (22·8 – 2… 24·5 (21·8 – 2…
-3 Unsafe water, sanitation, and… 6·84 (4·83 – 8… 4·91 (3·30 – 6… 3·64 (2·33 – 4…</code></pre>
-</div>
-<div id="are-pafs-percentages" class="section level2">
-<h2>Are PAFs percentages?</h2>
-<pre class="r"><code>gbd_paf_data |&gt;
-    # Work just on the DALYs_PAF_2021 column
-    mutate(DALYs_PAF_2021 := str_replace_all(DALYs_PAF_2021, &quot;·&quot;, &quot;.&quot;)) |&gt;  # replace middle dot with .
-    tidyr::extract(
-        DALYs_PAF_2021,
-        into = c(&quot;val&quot;, &quot;lower&quot;, &quot;upper&quot;),
-        regex = &quot;([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)&quot;,
-        convert = TRUE
-    ) |&gt; pull(val) |&gt; summary()</code></pre>
-<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-   0.00    0.95    4.01   12.55   12.55  100.00 </code></pre>
-</div>
-<div id="grouping-and-filtering-of-gbd-paf-data" class="section level2">
-<h2>Grouping and filtering of GBD PAF data</h2>
-<pre class="r"><code># remove risk factor rows 
-gbd_paf_data = gbd_paf_data |&gt;
-  rowwise() |&gt;
-  mutate(causal_group = ifelse(grepl(&quot;All causes&quot;, Risk_Name), Risk_Name, NA)) |&gt;
-  ungroup() |&gt;
-  tidyr::fill(causal_group, .direction = &quot;down&quot;) |&gt;
-  relocate(causal_group, .before = Risk_Name)
-
-
-gbd_paf_data = gbd_paf_data |&gt;
-  filter(!grepl(&quot;All causes&quot;, Risk_Name)) |&gt;
-  mutate(causal_group = stringr::str_remove_all(causal_group, &quot;: All causes&quot;)) 
-
-
-gbd_paf_data[1:5,1:4]</code></pre>
-<pre><code># A tibble: 5 × 4
-  causal_group                         Risk_Name Deaths_PAF_1990 Deaths_PAF_2000
-  &lt;chr&gt;                                &lt;chr&gt;     &lt;chr&gt;           &lt;chr&gt;          
-1 Unsafe water source                  Diarrhoe… 74·2 (43·8 – 9… 73·7 (43·0 – 9…
-2 Unsafe sanitation                    Diarrhoe… 63·6 (57·9 – 6… 62·1 (56·4 – 6…
-3 No access to handwashing facility    Diarrhoe… 23·6 (3·36 – 4… 23·8 (3·38 – 4…
-4 No access to handwashing facility    Lower re… 14·7 (-10·7 – … 14·0 (-10·3 – …
-5 Ambient particulate matter pollution Diarrhoe… 0·256 (0·157 –… 0·216 (0·135 –…</code></pre>
-<pre class="r"><code>gbd_paf_data |&gt;
-  select(causal_group, Risk_Name, DALYs_PAF_2021, &#39;all-age_DALYs_rate_(per_100,000)_2021&#39;) |&gt;
-  distinct() |&gt;
-  arrange(Risk_Name) |&gt;
-  head(1)</code></pre>
-<pre><code># A tibble: 1 × 4
-  causal_group Risk_Name         DALYs_PAF_2021      all-age_DALYs_rate_(per_1…¹
-  &lt;chr&gt;        &lt;chr&gt;             &lt;chr&gt;               &lt;chr&gt;                      
-1 Drug use     Acute hepatitis B 1·04 (0·630 – 1·69) 0·3 (0·1 – 0·4)            
-# ℹ abbreviated name: ¹​`all-age_DALYs_rate_(per_100,000)_2021`</code></pre>
-</div>
-<div
-id="looking-into-2021-paf-data-for-top-15-non-communicable-diseases-by-dalys-2019"
+id="distribution-of-dalys-rate-per-100000-for-non-communicable-diseases-2019"
 class="section level2">
-<h2>Looking into 2021 PAF data for top 15 non-communicable diseases by
-DALYs (2019)</h2>
-<pre class="r"><code>gbd_paf_plot_data &lt;- gbd_paf_data |&gt;
-  rename(DALY_rate_2021 := &#39;all-age_DALYs_rate_(per_100,000)_2021&#39;) |&gt;
-  select(causal_group, Risk_Name, DALYs_PAF_2021, DALY_rate_2021)
-
-
-# gbd_paf_plot_data &lt;- gbd_paf_data |&gt;
-#   # Work just on the DALYs_PAF_2021 column
-#   mutate(&#39;all-age_DALYs_rate_(per_100,000)_2021&#39; := str_replace_all(&#39;all-age_DALYs_rate_(per_100,000)_2021&#39;, &quot;·&quot;, &quot;.&quot;)) |&gt;  # replace middle dot with .
-#   tidyr::extract(
-#     &quot;all-age_DALYs_rate_(per_100,000)_2021&quot;,
-#     into = c(&quot;val&quot;, &quot;lower&quot;, &quot;upper&quot;),
-#     regex = &quot;([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)&quot;,
-#     convert = TRUE
-#   ) 
-
-gbd_paf_plot_data = 
-gbd_paf_plot_data |&gt;
-    # Work just on the DALYs_PAF_2021 column
-    mutate(DALYs_PAF_2021 := str_replace_all(DALYs_PAF_2021, &quot;·&quot;, &quot;.&quot;)) |&gt;  # replace middle dot with .
-    tidyr::extract(
-        DALYs_PAF_2021,
-        into = c(&quot;daly_paf&quot;, &quot;lower_daly_paf&quot;, &quot;upper_daly_paf&quot;),
-        regex = &quot;([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)&quot;,
-        convert = TRUE
-    ) 
-
-
-gbd_paf_plot_data = 
-gbd_paf_plot_data |&gt;
-    # Work just on the DALYs_PAF_2021 column
-    mutate(DALY_rate_2021 := str_replace_all(DALY_rate_2021 , &quot;·&quot;, &quot;.&quot;)) |&gt;  # replace middle dot with .
-    tidyr::extract(
-        DALY_rate_2021,
-        into = c(&quot;daly_rate&quot;, &quot;lower_daly_rate&quot;, &quot;upper_daly_rate&quot;),
-        regex = &quot;([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)&quot;,
-        convert = TRUE
-    ) </code></pre>
-<pre class="r"><code>gbd_paf_data &lt;- data.table::fread(here::here(paste0(&quot;data/gbd&quot;, &quot;/IHME-GBD_2021_DATA-923822a5-1.csv&quot;)))
+<h2>Distribution of DALYs (rate per 100,000) for non-communicable
+diseases (2019)</h2>
+<pre class="r"><code>gbd_data |&gt;
+  ggplot(aes(x = val)) +
+  geom_histogram(bins = 30, fill = &quot;steelblue&quot;, color = &quot;black&quot;) +
+  labs(
+    x = &quot;DALYs (rate per 100,000)&quot;,
+    y = &quot;# non-communicable diseases&quot;,
+    title = &quot;Distribution of DALYs (rate per 100,000) for non-communicable diseases (2019)&quot;
+  ) +
+  theme_minimal(base_size = 14)</code></pre>
+<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-3-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div
+id="population-attributable-fraction-paf-for-risk-factors-for-non-communicable-diseases-2021"
+class="section level1">
+<h1>Population Attributable Fraction (PAF) for risk factors for
+non-communicable diseases (2021)</h1>
+<div id="load-paf-data-intergrate-with-daly-data"
+class="section level2">
+<h2>Load PAF data + intergrate with DALY data</h2>
+<pre class="r"><code>gbd_paf_data &lt;- data.table::fread(here::here(paste0(&quot;data/gbd/IHME-GBD_2021_DATA-923822a5-1.csv&quot;)))
 
 gbd_paf_data |&gt; head()</code></pre>
 <pre><code>                                  measure location    sex      age
@@ -950,6 +851,19 @@ gbd_paf_data |&gt; head()</code></pre>
 4: 0.76230820 0.8034076 0.71682671
 5: 1.00000000 1.0000000 1.00000000
 6: 0.11669746 0.1321659 0.10062968</code></pre>
+<pre class="r"><code>gbd_paf_data =
+left_join(gbd_paf_data,
+          gbd_data |&gt; select(cause, daly_rate = val)) |&gt;
+  mutate(across(c(val, lower, upper), ~ ifelse(.x &lt; 0, 0, .x))) |&gt;
+  mutate(paf_total = daly_rate * (1- val)) |&gt;
+  mutate(paf_total_lower = daly_rate * (1-lower)  ) |&gt;
+  mutate(paf_total_upper = daly_rate * (1-upper)  ) </code></pre>
+<pre><code>Joining with `by = join_by(cause)`</code></pre>
+<div
+id="top-25-non-communicable-diseases-by-dalys-explained-by-all-risk-factors-2019"
+class="section level3">
+<h3>Top 25 non-communicable diseases by % DALYs explained by all risk
+factors (2019)</h3>
 <pre class="r"><code>gbd_paf_data |&gt;
   slice_max(n = 25, order_by = val) |&gt;
   ggplot(aes(y = val, x = reorder(cause, val))) + 
@@ -960,13 +874,14 @@ gbd_paf_data |&gt; head()</code></pre>
   labs(y = &quot;% DALYs explained by all risk factors&quot;,
        x = &quot;Disease&quot;
        )</code></pre>
-<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-9-1.png" width="672" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>left_join(gbd_paf_data,
-          gbd_data |&gt; select(cause, daly_rate = val)) |&gt;
-  mutate(across(c(val, lower, upper), ~ ifelse(.x &lt; 0, 0, .x))) |&gt;
-  mutate(paf_total = daly_rate * (1- val)) |&gt;
-  mutate(paf_total_lower = daly_rate * (1-lower)  ) |&gt;
-  mutate(paf_total_upper = daly_rate * (1-upper)  ) |&gt;
+<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div
+id="top-15-non-communicable-diseases-by-dalys-not-explained-by-measured-environmental-risk-factors-2019"
+class="section level3">
+<h3>Top 15 non-communicable diseases by DALYs not explained by measured
+environmental risk factors (2019)</h3>
+<pre class="r"><code>gbd_paf_data |&gt;
   slice_max(n = 15, order_by = paf_total) |&gt;
   ggplot(aes(y= paf_total, x = reorder(cause, paf_total))) +
   geom_col(fill = &quot;steelblue&quot;) +
@@ -977,38 +892,89 @@ gbd_paf_data |&gt; head()</code></pre>
   labs(y = &quot;DALYs (rate per 100,000) not explained by measured environmental risk factors&quot;,
        x = &quot;Disease&quot;,
        title = &quot;Non-communicable diseases with the greatest global disease durden (DALYs - 2019)&quot;)</code></pre>
-<pre><code>Joining with `by = join_by(cause)`</code></pre>
-<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-9-2.png" width="672" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>top_non_comm_diseases_pattern = c(&quot;cirrhosis&quot;, &quot;liver disease&quot;, &quot;depressive&quot;, top_non_comm_diseases)
-top_non_comm_pattern = paste0(top_non_comm_diseases_pattern, collapse = &quot;|&quot;)
-
-gbd_paf_plot_data =
-gbd_paf_plot_data |&gt;
-  filter(grepl(pattern = top_non_comm_pattern, Risk_Name, ignore.case = T)) |&gt; 
-  group_by(Risk_Name) |&gt;
-  # see formula in page 40 of: https://www.thelancet.com/cms/10.1016/S0140-6736(24)00933-4/attachment/e175b500-3467-4cc5-aff8-ded0c0eea399/mmc1.pdf
-  summarise(daly_paf = 1 - prod(1 - daly_paf / 100)) 
-
-# left_join(gbd_paf_plot_data,
-#           data.frame(Risk_Name = top_non_comm_diseases,
-#                      daly = top_non_comm_diseases_daly),
-#           by = &quot;Risk_Name&quot;) |&gt;
-#   filter(!is.na(daly)) |&gt;
-#   mutate(paf_total = 100 * daly_paf_rate / daly) |&gt; 
-  
-  gbd_paf_plot_data |&gt; 
-  mutate(Risk_Name = factor(Risk_Name, levels = unique(Risk_Name))) |&gt;
-  ggplot(aes(x = reorder(Risk_Name, daly_paf), y = daly_paf)) +
-  geom_col(fill = &quot;steelblue&quot;) +
-  # geom_errorbar(width = 0.3) +
-  coord_flip() +
+<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div
+id="distribution-of-dalys-not-explained-by-measured-environmental-risk-factors-2019"
+class="section level3">
+<h3>Distribution of DALYs not explained by measured environmental risk
+factors (2019)</h3>
+<pre class="r"><code>gbd_paf_data |&gt;
+  ggplot(aes(x = paf_total)) +
+  geom_histogram(bins = 30, fill = &quot;steelblue&quot;, color = &quot;black&quot;) +
   labs(
-    x = &quot;Risk factor&quot;,
-    y = &quot;Population Attributable Fraction (%)&quot;,
-    title = &quot;Risk factors with the greatest global disease burden (PAF - 2021)&quot;
+    x = &quot;DALYs (rate per 100,000) not explained by measured environmental risk factors&quot;,
+    y = &quot;# non-communicable diseases&quot;,
+    title = &quot;Distribution of DALYs (rate per 100,000) not explained by measured environmental risk factors (2019)&quot;
   ) +
   theme_minimal(base_size = 14)</code></pre>
-<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-10-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre><code>Warning: Removed 11 rows containing non-finite outside the scale range
+(`stat_bin()`).</code></pre>
+<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>
+<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-unnamed-chunk-7-1">
+Past versions of unnamed-chunk-7-1.png
+</button>
+</p>
+<div id="fig-unnamed-chunk-7-1" class="collapse">
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/6caf7213eeb30c8d88cc0b856650ddda3216b938/docs/figure/gbd_data_plots.Rmd/unnamed-chunk-7-1.png" target="_blank">6caf721</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-12
+</td>
+</tr>
+<tr>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/f8b699d3e6e8ef06fe762def610e088c88884711/docs/figure/gbd_data_plots.Rmd/unnamed-chunk-7-1.png" target="_blank">f8b699d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-11
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div
+id="dalys-not-explained-by-measured-environmental-risk-factors-for-top-non-communicable-diseases-by-dalys-2019"
+class="section level3">
+<h3>Dalys not explained by measured environmental risk factors for top
+non-communicable diseases by DALYs (2019)</h3>
+<pre class="r"><code>gbd_paf_data |&gt;
+  filter(cause %in% top_non_comm_diseases) |&gt;
+  ggplot(aes(x= reorder(cause, daly_rate), y = paf_total)) +
+  geom_col(fill = &quot;steelblue&quot;) +
+  theme_bw() +
+  coord_flip() +
+  labs(y = &quot;DALYs (rate per 100,000)&quot;,
+       x = &quot;Disease&quot;,
+       title = &quot;DALYs (rate per 100,000) for top non-communicable diseases (2019)&quot;)</code></pre>
+<p><img src="figure/gbd_data_plots.Rmd/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" /></p>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
@@ -1040,20 +1006,20 @@ other attached packages:
 [5] workflowr_1.7.1  
 
 loaded via a namespace (and not attached):
- [1] sass_0.4.10        utf8_1.2.6         generics_0.1.4     tidyr_1.3.1       
- [5] renv_1.0.3         stringi_1.8.7      digest_0.6.37      magrittr_2.0.3    
- [9] evaluate_1.0.4     grid_4.3.1         RColorBrewer_1.1-3 fastmap_1.2.0     
-[13] cellranger_1.1.0   rprojroot_2.1.0    jsonlite_2.0.0     processx_3.8.6    
-[17] whisker_0.4.1      ps_1.9.1           promises_1.3.3     httr_1.4.7        
-[21] purrr_1.1.0        scales_1.4.0       jquerylib_0.1.4    cli_3.6.5         
-[25] rlang_1.1.6        withr_3.0.2        cachem_1.1.0       yaml_2.3.10       
-[29] tools_4.3.1        httpuv_1.6.16      here_1.0.1         vctrs_0.6.5       
-[33] R6_2.6.1           lifecycle_1.0.4    git2r_0.36.2       fs_1.6.6          
-[37] pkgconfig_2.0.3    callr_3.7.6        pillar_1.11.0      bslib_0.9.0       
-[41] later_1.4.2        gtable_0.3.6       glue_1.8.0         Rcpp_1.1.0        
-[45] xfun_0.52          tibble_3.3.0       tidyselect_1.2.1   rstudioapi_0.17.1 
-[49] knitr_1.50         farver_2.1.2       htmltools_0.5.8.1  rmarkdown_2.29    
-[53] labeling_0.4.3     compiler_4.3.1     getPass_0.2-4      readxl_1.4.5      </code></pre>
+ [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.3.1     renv_1.0.3        
+ [5] promises_1.3.3     tidyselect_1.2.1   Rcpp_1.1.0         git2r_0.36.2      
+ [9] callr_3.7.6        later_1.4.2        jquerylib_0.1.4    scales_1.4.0      
+[13] yaml_2.3.10        fastmap_1.2.0      here_1.0.1         R6_2.6.1          
+[17] labeling_0.4.3     generics_0.1.4     knitr_1.50         tibble_3.3.0      
+[21] rprojroot_2.1.0    RColorBrewer_1.1-3 bslib_0.9.0        pillar_1.11.0     
+[25] rlang_1.1.6        cachem_1.1.0       stringi_1.8.7      httpuv_1.6.16     
+[29] xfun_0.52          getPass_0.2-4      fs_1.6.6           sass_0.4.10       
+[33] cli_3.6.5          withr_3.0.2        magrittr_2.0.3     ps_1.9.1          
+[37] grid_4.3.1         digest_0.6.37      processx_3.8.6     rstudioapi_0.17.1 
+[41] lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.4     glue_1.8.0        
+[45] farver_2.1.2       whisker_0.4.1      rmarkdown_2.29     httr_1.4.7        
+[49] tools_4.3.1        pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+</div>
 </div>
 </div>
 </div>
