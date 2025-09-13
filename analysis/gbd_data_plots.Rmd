@@ -75,7 +75,6 @@ top_non_comm_diseases = top_non_comm_diseases |> pull(cause)
 
 # Global disease burden - Population Attributable Fraction (PAF) for top 15 non-communicable diseases by DALYs (2019)
 
-
 ## Load + basic processing of GBD PAF data
 
 ```{r}
@@ -101,10 +100,26 @@ gbd_paf_data <- gbd_paf_data |>
   dplyr::mutate(across(where(is.character),
                 ~ .x |> stringr::str_replace_all("\\r|\\n", " ") |> stringr::str_squish()))
 
-head(gbd_paf_data)
+gbd_paf_data[1:3, 1:4]
 
 
 ```
+## Are PAFs percentages?
+
+```{r}
+
+gbd_paf_data |>
+    # Work just on the DALYs_PAF_2021 column
+    mutate(DALYs_PAF_2021 := str_replace_all(DALYs_PAF_2021, "·", ".")) |>  # replace middle dot with .
+    tidyr::extract(
+        DALYs_PAF_2021,
+        into = c("val", "lower", "upper"),
+        regex = "([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)",
+        convert = TRUE
+    ) |> pull(val) |> summary()
+
+```
+
 
 ## Grouping and filtering of GBD PAF data
 
@@ -124,7 +139,7 @@ gbd_paf_data = gbd_paf_data |>
   mutate(causal_group = stringr::str_remove_all(causal_group, ": All causes")) 
 
 
-head(gbd_paf_data)
+gbd_paf_data[1:5,1:4]
 
 ```
 
@@ -133,7 +148,8 @@ head(gbd_paf_data)
 gbd_paf_data |>
   select(causal_group, Risk_Name, DALYs_PAF_2021, 'all-age_DALYs_rate_(per_100,000)_2021') |>
   distinct() |>
-  arrange(Risk_Name)
+  arrange(Risk_Name) |>
+  head(1)
 
 
 ```
@@ -143,44 +159,108 @@ gbd_paf_data |>
 
 ```{r}
 
+gbd_paf_plot_data <- gbd_paf_data |>
+  rename(DALY_rate_2021 := 'all-age_DALYs_rate_(per_100,000)_2021') |>
+  select(causal_group, Risk_Name, DALYs_PAF_2021, DALY_rate_2021)
 
-gbd_paf_data <- gbd_paf_data |>
-  # Work just on the DALYs_PAF_2021 column
-  mutate(DALYs_PAF_2021 = str_replace_all(DALYs_PAF_2021, "·", ".")) |>  # replace middle dot with .
-  tidyr::extract(
-    DALYs_PAF_2021,
-    into = c("val", "lower", "upper"),
-    regex = "([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)",
-    convert = TRUE
-  ) 
 
+# gbd_paf_plot_data <- gbd_paf_data |>
+#   # Work just on the DALYs_PAF_2021 column
+#   mutate('all-age_DALYs_rate_(per_100,000)_2021' := str_replace_all('all-age_DALYs_rate_(per_100,000)_2021', "·", ".")) |>  # replace middle dot with .
+#   tidyr::extract(
+#     "all-age_DALYs_rate_(per_100,000)_2021",
+#     into = c("val", "lower", "upper"),
+#     regex = "([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)",
+#     convert = TRUE
+#   ) 
+
+gbd_paf_plot_data = 
+gbd_paf_plot_data |>
+    # Work just on the DALYs_PAF_2021 column
+    mutate(DALYs_PAF_2021 := str_replace_all(DALYs_PAF_2021, "·", ".")) |>  # replace middle dot with .
+    tidyr::extract(
+        DALYs_PAF_2021,
+        into = c("daly_paf", "lower_daly_paf", "upper_daly_paf"),
+        regex = "([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)",
+        convert = TRUE
+    ) 
+
+
+gbd_paf_plot_data = 
+gbd_paf_plot_data |>
+    # Work just on the DALYs_PAF_2021 column
+    mutate(DALY_rate_2021 := str_replace_all(DALY_rate_2021 , "·", ".")) |>  # replace middle dot with .
+    tidyr::extract(
+        DALY_rate_2021,
+        into = c("daly_rate", "lower_daly_rate", "upper_daly_rate"),
+        regex = "([0-9.]+) \\(([-0-9.]+) – ([-0-9.]+)\\)",
+        convert = TRUE
+    ) 
+```
+
+
+```{r}
+
+gbd_paf_data <- data.table::fread(here::here(paste0("data/gbd", "/IHME-GBD_2021_DATA-923822a5-1.csv")))
+
+gbd_paf_data |> head()
 
 gbd_paf_data |>
-  select(val, lower, upper, Risk_Name)|>
-  filter(Risk_Name == "Chronic kidney disease")
+  slice_max(n = 25, order_by = val) |>
+  ggplot(aes(y = val, x = reorder(cause, val))) + 
+  geom_col(fill = "steelblue") +
+  theme_bw() +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
+  coord_flip() +
+  labs(y = "% DALYs explained by all risk factors",
+       x = "Disease"
+       )
+
+
+left_join(gbd_paf_data,
+          gbd_data |> select(cause, daly_rate = val)) |>
+  mutate(across(c(val, lower, upper), ~ ifelse(.x < 0, 0, .x))) |>
+  mutate(paf_total = daly_rate * (1- val)) |>
+  mutate(paf_total_lower = daly_rate * (1-lower)  ) |>
+  mutate(paf_total_upper = daly_rate * (1-upper)  ) |>
+  slice_max(n = 15, order_by = paf_total) |>
+  ggplot(aes(y= paf_total, x = reorder(cause, paf_total))) +
+  geom_col(fill = "steelblue") +
+  theme_bw() +
+  geom_errorbar(aes(ymin = paf_total_lower, 
+                    ymax = paf_total_upper), width = 0.3) +
+  coord_flip() +
+  labs(y = "DALYs (rate per 100,000) not explained by measured environmental risk factors",
+       x = "Disease",
+       title = "Non-communicable diseases with the greatest global disease durden (DALYs - 2019)")
+
+
+```
+
+```{r}
+
+top_non_comm_diseases_pattern = c("cirrhosis", "liver disease", "depressive", top_non_comm_diseases)
+top_non_comm_pattern = paste0(top_non_comm_diseases_pattern, collapse = "|")
 
 gbd_paf_plot_data =
-gbd_paf_data |>
-  select(val, lower, upper, Risk_Name) |>
-  filter(grepl(paste0(top_non_comm_diseases, collapse = "|"), Risk_Name)) |> 
-  mutate(Risk_Name = 
-        case_when(grepl("Chronic kidney disease due to", Risk_Name) ~ "Chronic kidney disease",
-                  TRUE ~ Risk_Name
-         )) |>
+gbd_paf_plot_data |>
+  filter(grepl(pattern = top_non_comm_pattern, Risk_Name, ignore.case = T)) |> 
   group_by(Risk_Name) |>
-  summarise(val = sum(val, na.rm = TRUE),
-            lower = sum(lower, na.rm = TRUE),
-            upper = sum(upper, na.rm = TRUE)
-            ) 
+  # see formula in page 40 of: https://www.thelancet.com/cms/10.1016/S0140-6736(24)00933-4/attachment/e175b500-3467-4cc5-aff8-ded0c0eea399/mmc1.pdf
+  summarise(daly_paf = 1 - prod(1 - daly_paf / 100)) 
 
-left_join(gbd_paf_plot_data,
-          data.frame(Risk_Name = top_non_comm_diseases,
-                     daly = top_non_comm_diseases),
-          by = "Risk_Name") |>
+# left_join(gbd_paf_plot_data,
+#           data.frame(Risk_Name = top_non_comm_diseases,
+#                      daly = top_non_comm_diseases_daly),
+#           by = "Risk_Name") |>
+#   filter(!is.na(daly)) |>
+#   mutate(paf_total = 100 * daly_paf_rate / daly) |> 
+  
+  gbd_paf_plot_data |> 
   mutate(Risk_Name = factor(Risk_Name, levels = unique(Risk_Name))) |>
-  ggplot(aes(x = reorder(Risk_Name, val), y = val)) +
+  ggplot(aes(x = reorder(Risk_Name, daly_paf), y = daly_paf)) +
   geom_col(fill = "steelblue") +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
+  # geom_errorbar(width = 0.3) +
   coord_flip() +
   labs(
     x = "Risk factor",
