@@ -46,21 +46,44 @@ gwas_study_info |>
   rowwise() |>
   mutate(MAPPED_TRAIT = case_when(
                          # osteoarthritis, hip ... http://www.ebi.ac.uk/efo/EFO_1000786
-                         grepl("EFO_1000786", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, hip", "hip osteoarthritis"),
+                         grepl("EFO_1000786", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "osteoarthritis, hip", 
+                                                                                           "hip osteoarthritis"),
+                         
                          # 	osteoarthritis, hand ... http://www.ebi.ac.uk/efo/EFO_1000789
-                         grepl("EFO_1000789", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, hand", "hand osteoarthritis"),
+                         grepl("EFO_1000789", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "osteoarthritis, hand", 
+                                                                                           "hand osteoarthritis"),
+                         
                          # 	osteoarthritis, spine ... http://www.ebi.ac.uk/efo/EFO_1000787
-                         grepl("EFO_1000787", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, spine", "spine osteoarthritis"),
+                         grepl("EFO_1000787", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "osteoarthritis, spine", 
+                                                                                           "spine osteoarthritis"),
+                         
                          # 	Hepatitis, Alcoholic, http://www.ebi.ac.uk/efo/EFO_1001345
-                         grepl("EFO_1001345", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Hepatitis, Alcoholic", "Alcoholic Hepatitis"),
+                         grepl("EFO_1001345", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "Hepatitis, Alcoholic", 
+                                                                                           "Alcoholic Hepatitis"),
+                         
                          # psoriasis 14, pustular http://purl.obolibrary.org/obo/MONDO_0013626
-                         grepl("MONDO_0013626", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "psoriasis 14, pustula", "pustular psoriasis 14"),
+                         grepl("MONDO_0013626", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                             pattern = "psoriasis 14, pustular", 
+                                                                                             "pustular psoriasis 14"),
+                         
                          # hypertension, pregnancy-induced http://purl.obolibrary.org/obo/MONDO_0024664
-                         grepl("MONDO_0024664", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "hypertension, pregnancy-induced", "pregnancy-induced hypertension"),
+                         grepl("MONDO_0024664", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                             pattern = "hypertension, pregnancy-induced", 
+                                                                                             "pregnancy-induced hypertension"),
+                         
                          # renal agenesis, unilateral http://purl.obolibrary.org/obo/MONDO_0019636
-                         grepl("MONDO_0019636", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "renal agenesis, unilateral", "unilateral renal agenesis"),
+                         grepl("MONDO_0019636", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                             pattern = "renal agenesis, unilateral", 
+                                                                                             "unilateral renal agenesis"),
+                         
                          # 	Cholecystitis, Acute http://www.ebi.ac.uk/efo/EFO_1001289
-                         grepl("EFO_1001289", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Cholecystitis, Acute", "Acute Cholecystitis"),
+                         grepl("EFO_1001289", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "Cholecystitis, Acute", 
+                                                                                           "Acute Cholecystitis"),
                          # 	Genital neoplasm, female http://www.ebi.ac.uk/efo/EFO_1001331
                          grepl("EFO_1001331", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Genital neoplasm, female", "female reproductive organ cancer"),
                          # 	Anemia, Hemolytic, Autoimmune http://www.ebi.ac.uk/efo/EFO_1001264
@@ -438,9 +461,10 @@ response_gwas <- not_accounted_for[
     all(parts %in% response)
   })
 ]
+
 additional_response <- not_accounted_for[not_accounted_for %in% response]
 
-measurement_gwas  = c(measurement_gwas, additional_response) |> unique()
+response_gwas  = c(response_gwas, additional_response) |> unique()
 
 print("Percentage of GWAS traits under response terms")
 round(100 * length(response_gwas) / length(all_gwas_terms),
@@ -565,6 +589,7 @@ length(not_accounted_for)
 gwas_study_info = 
 gwas_study_info |>
   dplyr::mutate(MAPPED_TRAIT_CATEGORY = dplyr::case_when(is.na(MAPPED_TRAIT) ~ NA,
+                                                         MAPPED_TRAIT == "" ~ NA,
                                                          tolower(MAPPED_TRAIT) %in% disease_gwas ~ "Disease/Disorder",
                                                          tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
                                                          tolower(MAPPED_TRAIT) %in% measurement_gwas ~ "Measurement",
@@ -682,10 +707,10 @@ measurement_gwas <- not_accounted_for[
   })
 ]
 
-measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
 additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
 
 measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
+
 
 not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
 
@@ -710,6 +735,7 @@ response_gwas <- not_accounted_for[
     all(parts %in% response)
   })
 ]
+
 additional_response <- not_accounted_for[not_accounted_for %in% response]
 
 response_gwas  = c(response_gwas, additional_response) |> unique()
@@ -743,6 +769,7 @@ gwas_study_info |>
   dplyr::mutate(BACKGROUND_TRAIT_CATEGORY = 
                    dplyr::case_when(
                                       MAPPED_BACKGROUND_TRAIT == "" ~ NA,
+                                      is.na(MAPPED_BACKGROUND_TRAIT) ~ NA,
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% disease_gwas ~ "Disease/Disorder",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% measurement_gwas ~ "Measurement",
