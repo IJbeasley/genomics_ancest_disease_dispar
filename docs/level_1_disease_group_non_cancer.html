@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9cc22baacefb040edb910e3155cb32017f853215targetblank9cc22baa">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeffbf74a538da80378b9854e07111393880703caftargetblankffbf74aa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9cc22baacefb040edb910e3155cb32017f853215" target="_blank">9cc22ba</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ffbf74a538da80378b9854e07111393880703caf" target="_blank">ffbf74a</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9cc22baacefb040edb910e3155cb32017f853215targetblank9cc22baa"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeffbf74a538da80378b9854e07111393880703caftargetblankffbf74aa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9cc22baacefb040edb910e3155cb32017f853215" target="_blank">9cc22ba</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ffbf74a538da80378b9854e07111393880703caf" target="_blank">ffbf74a</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -563,6 +563,7 @@ Ignored files:
 
 Unstaged changes:
     Modified:   analysis/level_1_disease_group_cancer.Rmd
+    Modified:   code/get_term_descendants.R
 
 </code></pre>
 <p>
@@ -608,6 +609,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/ffbf74a538da80378b9854e07111393880703caf/analysis/level_1_disease_group_non_cancer.Rmd" target="_blank">ffbf74a</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-15
+</td>
+<td>
+Further grouping of disease terms
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/b19b361b89211b1e2194727f13a659bfd6936dd2/docs/level_1_disease_group_non_cancer.html" target="_blank">b19b361</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-15
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -829,12 +864,21 @@ number="5">
 grouping (non-cancer)</h1>
 <div id="abortion" class="section level2" number="5.1">
 <h2><span class="header-section-number">5.1</span> Abortion</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+<pre class="r"><code>pregnancy_loss_terms &lt;- c(&quot;habitual abortion&quot;,
+                          &quot;incomplete abortion&quot;,
+                          &quot;spontaneous abortion&quot;,
+                          &quot;abortion&quot;,
+                          &quot;spontaneous loss of pregnancy&quot;,
+                          &quot;incomplete loss of pregnancy&quot;
+                          )
+
+gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          &quot;habitual abortion|abortion|spontaneous loss of pregnancy|incomplete loss of pregnancy&quot;,
+                          paste0(pregnancy_loss_terms, collapse = &quot;(?=,|$)|\\b&quot;),
                           &quot;loss of pregnancy&quot;
          ))
+
 # exact synonyms (to avoid partial matches
 # https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001491?lang=en</code></pre>
 </div>
@@ -848,8 +892,38 @@ pancreatitis</h2>
                           &quot;acute pancreatitis&quot;
          ))</code></pre>
 </div>
-<div id="alopecia" class="section level2" number="5.3">
-<h2><span class="header-section-number">5.3</span> Alopecia</h2>
+<div id="age-related-macular-degeneration" class="section level2"
+number="5.3">
+<h2><span class="header-section-number">5.3</span> Age-related macular
+degeneration</h2>
+<pre class="r"><code># from: http://purl.obolibrary.org/obo/HP_0011141
+age_related_macular_degeneration_terms &lt;- c(&quot;age-related cortical cataract&quot;,
+                                             &quot;age-related nuclear cataract&quot;,
+                                             &quot;age-related posterior subcapsular cataract&quot;
+                                         )
+
+url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001365/descendants&quot;
+
+age_related_macular_degeneration_terms &lt;- c(age_related_macular_degeneration_terms,
+                                             get_descendants(url)
+                                             )</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 11
+[1] &quot;\n Some example terms&quot;
+[1] &quot;macular dystrophy with central cone involvement&quot;
+[2] &quot;dry age related macular degeneration&quot;           
+[3] &quot;macular degeneration, age-related, 3&quot;           
+[4] &quot;age related macular degeneration 12&quot;            
+[5] &quot;age related macular degeneration 11&quot;            </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(age_related_macular_degeneration_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;age-related macular degeneration&quot;
+         ))</code></pre>
+</div>
+<div id="alopecia" class="section level2" number="5.4">
+<h2><span class="header-section-number">5.4</span> Alopecia</h2>
 <pre class="r"><code>url&lt;-  &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0004907/descendants&quot;
 
 alopecia_terms &lt;- get_descendants(url)
@@ -861,8 +935,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;alopecia&quot;
          ))</code></pre>
 </div>
-<div id="alcohol-use-disorders" class="section level2" number="5.4">
-<h2><span class="header-section-number">5.4</span> Alcohol-use
+<div id="alcohol-use-disorders" class="section level2" number="5.5">
+<h2><span class="header-section-number">5.5</span> Alcohol-use
 disorders</h2>
 <pre class="r"><code>alchol_use_disorder_terms &lt;- c(&quot;alcohol dependence&quot;,
                              &quot;alcohol withdrawal&quot;,
@@ -887,8 +961,8 @@ gwas_study_info = gwas_study_info |&gt;
                             &quot;alcohol-related disorders&quot;
            ))</code></pre>
 </div>
-<div id="alcoholic-liver-disease" class="section level2" number="5.5">
-<h2><span class="header-section-number">5.5</span> Alcoholic liver
+<div id="alcoholic-liver-disease" class="section level2" number="5.6">
+<h2><span class="header-section-number">5.6</span> Alcoholic liver
 disease</h2>
 <pre class="r"><code>alcoholic_liver_disease_terms &lt;- c(&quot;alcoholic liver cirrhosis&quot;,
                                    &quot;alcoholic fatty liver disease&quot;,
@@ -903,8 +977,8 @@ gwas_study_info = gwas_study_info |&gt;
                             &quot;alcoholic liver disease&quot;
            ))</code></pre>
 </div>
-<div id="alzheimers-disease" class="section level2" number="5.6">
-<h2><span class="header-section-number">5.6</span> Alzheimer’s
+<div id="alzheimers-disease" class="section level2" number="5.7">
+<h2><span class="header-section-number">5.7</span> Alzheimer’s
 disease</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -914,8 +988,8 @@ disease</h2>
          ))</code></pre>
 </div>
 <div id="allergic-contact-dermatitis" class="section level2"
-number="5.7">
-<h2><span class="header-section-number">5.7</span> Allergic contact
+number="5.8">
+<h2><span class="header-section-number">5.8</span> Allergic contact
 dermatitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -924,8 +998,8 @@ dermatitis</h2>
                           &quot;allergic contact dermatitis&quot;
          ))</code></pre>
 </div>
-<div id="allergic-rhinitis" class="section level2" number="5.8">
-<h2><span class="header-section-number">5.8</span> Allergic
+<div id="allergic-rhinitis" class="section level2" number="5.9">
+<h2><span class="header-section-number">5.9</span> Allergic
 rhinitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -934,8 +1008,28 @@ rhinitis</h2>
                           &quot;allergic rhinitis&quot;
          ))</code></pre>
 </div>
-<div id="astigmatism" class="section level2" number="5.9">
-<h2><span class="header-section-number">5.9</span> Astigmatism</h2>
+<div id="aplastic-anemia" class="section level2" number="5.10">
+<h2><span class="header-section-number">5.10</span> Aplastic anemia</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0015909/descendants&quot;
+
+aplastic_anemia_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 62
+[1] &quot;\n Some example terms&quot;
+[1] &quot;diamond-blackfan anemia 15 with mandibulofacial dysostosis&quot;
+[2] &quot;diamond-blackfan anemia 14 with mandibulofacial dysostosis&quot;
+[3] &quot;cellular phase chronic idiopathic myelofibrosis&quot;           
+[4] &quot;autosomal dominant aplasia and myelodysplasia&quot;             
+[5] &quot;pancytopenia-developmental delay syndrome&quot;                 </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(aplastic_anemia_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;aplastic anemia&quot;
+         ))</code></pre>
+</div>
+<div id="astigmatism" class="section level2" number="5.11">
+<h2><span class="header-section-number">5.11</span> Astigmatism</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -943,8 +1037,8 @@ rhinitis</h2>
                           &quot;astigmatism&quot;
          ))</code></pre>
 </div>
-<div id="asthma" class="section level2" number="5.10">
-<h2><span class="header-section-number">5.10</span> Asthma</h2>
+<div id="asthma" class="section level2" number="5.12">
+<h2><span class="header-section-number">5.12</span> Asthma</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(l1_all_disease_terms  = 
            stringr::str_replace_all(l1_all_disease_terms,
@@ -957,8 +1051,8 @@ rhinitis</h2>
                             &quot;asthma&quot;
            ))</code></pre>
 </div>
-<div id="autoimmune-pancreatitis" class="section level2" number="5.11">
-<h2><span class="header-section-number">5.11</span> Autoimmune
+<div id="autoimmune-pancreatitis" class="section level2" number="5.13">
+<h2><span class="header-section-number">5.13</span> Autoimmune
 pancreatitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(l1_all_disease_terms  = 
@@ -967,17 +1061,8 @@ pancreatitis</h2>
                             &quot;autoimmune pancreatitis&quot;
            )) </code></pre>
 </div>
-<div id="back-pain" class="section level2" number="5.12">
-<h2><span class="header-section-number">5.12</span> Back pain</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          &quot;low back pain&quot;,
-                          &quot;back pain&quot;
-         ))</code></pre>
-</div>
-<div id="bipolar-disorder" class="section level2" number="5.13">
-<h2><span class="header-section-number">5.13</span> Bipolar
+<div id="bipolar-disorder" class="section level2" number="5.14">
+<h2><span class="header-section-number">5.14</span> Bipolar
 disorder</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(l1_all_disease_terms  = 
@@ -986,8 +1071,8 @@ disorder</h2>
                           &quot;bipolar disorder&quot;
          ))</code></pre>
 </div>
-<div id="bundle-branch-block" class="section level2" number="5.14">
-<h2><span class="header-section-number">5.14</span> Bundle branch
+<div id="bundle-branch-block" class="section level2" number="5.15">
+<h2><span class="header-section-number">5.15</span> Bundle branch
 block</h2>
 <pre class="r"><code>bundle_branch_block_terms &lt;- c(&quot;left bundle branch block&quot;,
                              &quot;right bundle branch block&quot;,
@@ -1002,8 +1087,28 @@ gwas_study_info = gwas_study_info |&gt;
          )
   )</code></pre>
 </div>
-<div id="carotid-artery-disease" class="section level2" number="5.15">
-<h2><span class="header-section-number">5.15</span> Carotid artery
+<div id="cardiomyopathy" class="section level2" number="5.16">
+<h2><span class="header-section-number">5.16</span> Cardiomyopathy</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/hp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0001638/descendants&quot;
+
+cardiomyopathy_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 14
+[1] &quot;\n Some example terms&quot;
+[1] &quot;right ventricular noncompaction cardiomyopathy&quot;
+[2] &quot;left ventricular noncompaction cardiomyopathy&quot; 
+[3] &quot;biventricular noncompaction cardiomyopathy&quot;    
+[4] &quot;concentric hypertrophic cardiomyopathy&quot;        
+[5] &quot;apical hypertrophic cardiomyopathy&quot;            </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cardiomyopathy_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;cardiomyopathy&quot;
+         ))</code></pre>
+</div>
+<div id="carotid-artery-disease" class="section level2" number="5.17">
+<h2><span class="header-section-number">5.17</span> Carotid artery
 disease</h2>
 <pre class="r"><code>carotid_artery_disease_terms &lt;- c(&quot;carotid artery thrombosis&quot;,
                              &quot;carotid atherosclerosis&quot;
@@ -1016,8 +1121,28 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;carotid artery disease&quot;
          ))</code></pre>
 </div>
-<div id="celiac-disease" class="section level2" number="5.16">
-<h2><span class="header-section-number">5.16</span> Celiac disease</h2>
+<div id="cataract" class="section level2" number="5.18">
+<h2><span class="header-section-number">5.18</span> Cataract</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005129/descendants&quot;
+
+cataract_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 80
+[1] &quot;\n Some example terms&quot;
+[1] &quot;autosomal recessive nonsyndromic congenital nuclear cataract&quot;
+[2] &quot;diabetes mellitus type 2 associated cataract&quot;                
+[3] &quot;early-onset posterior subcapsular cataract&quot;                  
+[4] &quot;autosomal dominant non-nuclear cataract&quot;                     
+[5] &quot;kozlowski rafinski klicharska syndrome&quot;                      </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cataract_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;cataract&quot;
+         ))</code></pre>
+</div>
+<div id="celiac-disease" class="section level2" number="5.19">
+<h2><span class="header-section-number">5.19</span> Celiac disease</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
  mutate(l1_all_disease_terms  = 
@@ -1027,8 +1152,26 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="chronic-pancreatitis" class="section level2" number="5.17">
-<h2><span class="header-section-number">5.17</span> Chronic
+<div id="chronic-pain" class="section level2" number="5.20">
+<h2><span class="header-section-number">5.20</span> Chronic pain</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0012532/descendants&quot;
+
+cchronic_pain_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 9
+[1] &quot;\n Some example terms&quot;
+[1] &quot;chronic musculoskeletal pain&quot; &quot;female chronic pelvic pain&quot;  
+[3] &quot;chronic widespread pain&quot;      &quot;multisite chronic pain&quot;      
+[5] &quot;chronic shoulder pain&quot;       </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cchronic_pain_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;chronic pain&quot;
+         ))</code></pre>
+</div>
+<div id="chronic-pancreatitis" class="section level2" number="5.21">
+<h2><span class="header-section-number">5.21</span> Chronic
 pancreatitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1037,8 +1180,8 @@ pancreatitis</h2>
                           &quot;chronic pancreatitis&quot;
          ))</code></pre>
 </div>
-<div id="chronic-rhinosinusitis" class="section level2" number="5.18">
-<h2><span class="header-section-number">5.18</span> Chronic
+<div id="chronic-rhinosinusitis" class="section level2" number="5.22">
+<h2><span class="header-section-number">5.22</span> Chronic
 rhinosinusitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1047,8 +1190,8 @@ rhinosinusitis</h2>
                           &quot;chronic rhinosinusitis&quot;
          ))</code></pre>
 </div>
-<div id="coronary-artery-disease" class="section level2" number="5.19">
-<h2><span class="header-section-number">5.19</span> Coronary artery
+<div id="coronary-artery-disease" class="section level2" number="5.23">
+<h2><span class="header-section-number">5.23</span> Coronary artery
 disease</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001645/descendants&quot;
 
@@ -1056,11 +1199,11 @@ coronary_artery_disease_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 16
 [1] &quot;\n Some example terms&quot;
-[1] &quot;non-obstructive coronary artery disease&quot;
-[2] &quot;myocardial ischemia&quot;                    
-[3] &quot;intermediate coronary syndrome&quot;         
-[4] &quot;coronary thrombosis&quot;                    
-[5] &quot;coronary aneurysm&quot;                      </code></pre>
+[1] &quot;coronary artery disease, autosomal dominant 2&quot;
+[2] &quot;non-obstructive coronary artery disease&quot;      
+[3] &quot;spontaneous coronary artery dissection&quot;       
+[4] &quot;postoperative ventricular dysfunction&quot;        
+[5] &quot;intermediate coronary syndrome&quot;               </code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1068,8 +1211,29 @@ coronary_artery_disease_terms &lt;- get_descendants(url)</code></pre>
                           &quot;coronary artery disease&quot;
          ))</code></pre>
 </div>
-<div id="congestive-heart-failure" class="section level2" number="5.20">
-<h2><span class="header-section-number">5.20</span> Congestive heart
+<div id="communication-disorder" class="section level2" number="5.24">
+<h2><span class="header-section-number">5.24</span> Communication
+disorder</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002182/descendants&quot;
+
+communication_disorder_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 20
+[1] &quot;\n Some example terms&quot;
+[1] &quot;mixed receptive-expressive language disorder&quot;
+[2] &quot;stuttering, familial persistent, 3&quot;          
+[3] &quot;stuttering, familial persistent, 4&quot;          
+[4] &quot;stuttering, familial persistent, 2&quot;          
+[5] &quot;stuttering, familial persistent, 1&quot;          </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(communication_disorder_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;communication disorder&quot;
+         ))</code></pre>
+</div>
+<div id="congestive-heart-failure" class="section level2" number="5.25">
+<h2><span class="header-section-number">5.25</span> Congestive heart
 failure</h2>
 <pre class="r"><code>congestive_heart_failure_terms &lt;- c(&quot;systolic heart failure&quot;,
                                  &quot;diastolic heart failure&quot;,
@@ -1087,8 +1251,8 @@ gwas_study_info = gwas_study_info |&gt;
          ))</code></pre>
 </div>
 <div id="creutzfeldt-jacob-disease" class="section level2"
-number="5.21">
-<h2><span class="header-section-number">5.21</span> Creutzfeldt jacob
+number="5.26">
+<h2><span class="header-section-number">5.26</span> Creutzfeldt jacob
 disease</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1097,8 +1261,8 @@ disease</h2>
                           &quot;creutzfeldt jacob disease&quot;
          ))</code></pre>
 </div>
-<div id="dental-caries" class="section level2" number="5.22">
-<h2><span class="header-section-number">5.22</span> Dental caries</h2>
+<div id="dental-caries" class="section level2" number="5.27">
+<h2><span class="header-section-number">5.27</span> Dental caries</h2>
 <pre class="r"><code>dental_caries_terms &lt;- c(&quot;pit and fissure surface dental caries&quot;,
                          &quot;smooth surface dental caries&quot;,
                          &quot;primary dental caries&quot;,
@@ -1114,8 +1278,28 @@ gwas_study_info = gwas_study_info |&gt;
          )
 )</code></pre>
 </div>
-<div id="drug-allergy" class="section level2" number="5.23">
-<h2><span class="header-section-number">5.23</span> Drug allergy</h2>
+<div id="dermatitis" class="section level2" number="5.28">
+<h2><span class="header-section-number">5.28</span> Dermatitis</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_2723/descendants&quot;
+
+dermatitis_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 93
+[1] &quot;\n Some example terms&quot;
+[1] &quot;epidermolysis bullosa with congenital localized absence of skin and deformity of nails&quot;
+[2] &quot;diphenylmethane-4,4&#39;-diisocyanate allergic contact dermatitis&quot;                         
+[3] &quot;1-chloro-2,4-dinitrobenzene allergic contact dermatitis&quot;                               
+[4] &quot;epidermolysis bullosa simplex with mottled pigmentation&quot;                               
+[5] &quot;junctional epidermolysis bullosa with pyloric atresia&quot;                                 </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(dermatitis_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;dermatitis&quot;
+         ))</code></pre>
+</div>
+<div id="drug-allergy" class="section level2" number="5.29">
+<h2><span class="header-section-number">5.29</span> Drug allergy</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1123,8 +1307,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;drug allergy&quot;
          ))</code></pre>
 </div>
-<div id="diabetic-eye-disease" class="section level2" number="5.24">
-<h2><span class="header-section-number">5.24</span> Diabetic eye
+<div id="diabetic-eye-disease" class="section level2" number="5.30">
+<h2><span class="header-section-number">5.30</span> Diabetic eye
 disease</h2>
 <pre class="r"><code>diabetic_eye_terms &lt;- c(&quot;diabetic maculopathy&quot;,
                         &quot;diabetic macular edema&quot;,
@@ -1143,8 +1327,8 @@ gwas_study_info =
            )  
   )</code></pre>
 </div>
-<div id="diabetic-neuropathy" class="section level2" number="5.25">
-<h2><span class="header-section-number">5.25</span> Diabetic
+<div id="diabetic-neuropathy" class="section level2" number="5.31">
+<h2><span class="header-section-number">5.31</span> Diabetic
 neuropathy</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1153,8 +1337,27 @@ neuropathy</h2>
                           &quot;diabetic neuropathy&quot;
          ))</code></pre>
 </div>
-<div id="food-allergy" class="section level2" number="5.26">
-<h2><span class="header-section-number">5.26</span> Food allergy</h2>
+<div id="deficiency-anemia" class="section level2" number="5.32">
+<h2><span class="header-section-number">5.32</span> Deficiency
+anemia</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;iron deficiency anemia&quot;,
+                          &quot;deficiency anemia&quot;
+         ))</code></pre>
+</div>
+<div id="endocarditis" class="section level2" number="5.33">
+<h2><span class="header-section-number">5.33</span> Endocarditis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;bacterial endocarditis&quot;,
+                          &quot;endocarditis&quot;
+         ))</code></pre>
+</div>
+<div id="food-allergy" class="section level2" number="5.34">
+<h2><span class="header-section-number">5.34</span> Food allergy</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1162,16 +1365,19 @@ neuropathy</h2>
                           &quot;food allergy&quot;
          ))</code></pre>
 </div>
-<div id="glaucoma" class="section level2" number="5.27">
-<h2><span class="header-section-number">5.27</span> Glaucoma</h2>
+<div id="glaucoma" class="section level2" number="5.35">
+<h2><span class="header-section-number">5.35</span> Glaucoma</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005041/descendants&quot;
 
 glaucoma_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 19
 [1] &quot;\n Some example terms&quot;
-[1] &quot;pigmentary glaucoma&quot;    &quot;open-angle glaucoma&quot;    &quot;hereditary glaucoma&quot;   
-[4] &quot;angle-closure glaucoma&quot; &quot;phacogenic glaucoma&quot;   </code></pre>
+[1] &quot;cyp1b1-related glaucoma with or without anterior segment dysgenesis&quot;
+[2] &quot;glaucoma secondary to spherophakia/ectopia lentis and megalocornea&quot; 
+[3] &quot;hereditary glaucoma, primary closed-angle&quot;                          
+[4] &quot;primary angle closure glaucoma&quot;                                     
+[5] &quot;secondary dysgenetic glaucoma&quot;                                      </code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1179,8 +1385,18 @@ glaucoma_terms &lt;- get_descendants(url)</code></pre>
                           &quot;glaucoma&quot;
          ))</code></pre>
 </div>
-<div id="heart-block" class="section level2" number="5.28">
-<h2><span class="header-section-number">5.28</span> Heart block</h2>
+<div id="gout" class="section level2" number="5.36">
+<h2><span class="header-section-number">5.36</span> Gout</h2>
+<pre class="r"><code># from: http://www.ebi.ac.uk/efo/EFO_0004274
+gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;renal overload-type gout&quot;,
+                          &quot;gout&quot;
+         ))</code></pre>
+</div>
+<div id="heart-block" class="section level2" number="5.37">
+<h2><span class="header-section-number">5.37</span> Heart block</h2>
 <pre class="r"><code>heart_block_terms &lt;- c(&quot;first degree atrioventricular block&quot;,
                       &quot;second degree atrioventricular block&quot;,
                       &quot;third-degree atrioventricular block&quot;,
@@ -1194,8 +1410,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;heart block&quot;
          ))</code></pre>
 </div>
-<div id="hemolytic-anemia" class="section level2" number="5.29">
-<h2><span class="header-section-number">5.29</span> Hemolytic
+<div id="hemolytic-anemia" class="section level2" number="5.38">
+<h2><span class="header-section-number">5.38</span> Hemolytic
 anemia</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0003664/descendants&quot;
 
@@ -1204,11 +1420,11 @@ hemolytic_anemia_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 76
 [1] &quot;\n Some example terms&quot;
-[1] &quot;paroxysmal nocturnal hemoglobinuria&quot;        
-[2] &quot;non-autoimmune hemolytic anemia&quot;            
-[3] &quot;6-phosphogluconate dehydrogenase deficiency&quot;
-[4] &quot;autoimmune hemolytic anemia&quot;                
-[5] &quot;hereditary stomatocytosis&quot;                  </code></pre>
+[1] &quot;dehydrated hereditary stomatocytosis with or without pseudohyperkalemia and/or perinatal edema&quot;
+[2] &quot;anemia, nonspherocytic hemolytic, associated with abnormality of red cell membrane&quot;            
+[3] &quot;anemia, nonspherocytic hemolytic, possibly due to defect in porphyrin metabolism&quot;              
+[4] &quot;x-linked dyserythropoetic anemia with abnormal platelets and neutropenia&quot;                      
+[5] &quot;hemolytic anemia due to erythrocyte adenosine deaminase overproduction&quot;                        </code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1216,8 +1432,27 @@ hemolytic_anemia_terms &lt;- get_descendants(url)</code></pre>
                           &quot;hemolytic anemia&quot;
          ))</code></pre>
 </div>
-<div id="herpes" class="section level2" number="5.30">
-<h2><span class="header-section-number">5.30</span> Herpes</h2>
+<div id="hernia-of-the-abdominal-wall" class="section level2"
+number="5.39">
+<h2><span class="header-section-number">5.39</span> Hernia of the
+abdominal wall</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/hp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0004299/children&quot;
+
+hernia_abdominal_wall_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 6
+[1] &quot;\n Some example terms&quot;
+[1] &quot;incisional hernia&quot; &quot;umbilical hernia&quot;  &quot;inguinal hernia&quot;  
+[4] &quot;femoral hernia&quot;    &quot;ventral hernia&quot;   </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hernia_abdominal_wall_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;hernia of the abdominal wall&quot;
+         ))</code></pre>
+</div>
+<div id="herpes" class="section level2" number="5.40">
+<h2><span class="header-section-number">5.40</span> Herpes</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
  mutate(l1_all_disease_terms  = 
@@ -1227,17 +1462,19 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="hypertension" class="section level2" number="5.31">
-<h2><span class="header-section-number">5.31</span> Hypertension</h2>
+<div id="hypertension" class="section level2" number="5.41">
+<h2><span class="header-section-number">5.41</span> Hypertension</h2>
 <pre class="r"><code>url &lt;-  &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000537/descendants&quot;
 
 hypertension_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 46
 [1] &quot;\n Some example terms&quot;
-[1] &quot;secondary hypertension&quot;           &quot;treatment-resistant hypertension&quot;
-[3] &quot;ocular hypertension&quot;              &quot;malignant hypertension&quot;          
-[5] &quot;intracranial hypertension&quot;       </code></pre>
+[1] &quot;pulmonary veno-occlusive disease and/or pulmonary capillary haemangiomatosis&quot;
+[2] &quot;pulmonary arterial hypertension associated with connective tissue disease&quot;   
+[3] &quot;pulmonary arterial hypertension associated with chronic hemolytic anemia&quot;    
+[4] &quot;pulmonary arterial hypertension associated with congenital heart disease&quot;    
+[5] &quot;hyperuricemia-pulmonary hypertension-renal failure-alkalosis syndrome&quot;       </code></pre>
 <pre class="r"><code>hypertension_terms = c(&quot;primary hypertension&quot;,
                       hypertension_terms
                       )
@@ -1249,8 +1486,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hypertension&quot;
          ))</code></pre>
 </div>
-<div id="hiv" class="section level2" number="5.32">
-<h2><span class="header-section-number">5.32</span> HIV</h2>
+<div id="hiv" class="section level2" number="5.42">
+<h2><span class="header-section-number">5.42</span> HIV</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(l1_all_disease_terms = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1258,8 +1495,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hiv infection&quot;
          ))</code></pre>
 </div>
-<div id="hyperlipidemia" class="section level2" number="5.33">
-<h2><span class="header-section-number">5.33</span> Hyperlipidemia</h2>
+<div id="hyperlipidemia" class="section level2" number="5.43">
+<h2><span class="header-section-number">5.43</span> Hyperlipidemia</h2>
 <pre class="r"><code>hyperlipidemia_terms &lt;- c(&quot;hypercholesterolemia&quot;,
                          &quot;familial hypercholesterolemia&quot;,
                          &quot;familial hyperlipidemia&quot;
@@ -1272,9 +1509,37 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hyperlipidemia&quot;
          ))</code></pre>
 </div>
+<div id="idiopathic-generalized-epilepsy" class="section level2"
+number="5.44">
+<h2><span class="header-section-number">5.44</span> Idiopathic
+generalized epilepsy</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F36803009/descendants&quot;
+
+idiopathic_generalized_epilepsy_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 4
+[1] &quot;\n Some example terms&quot;
+[1] &quot;epilepsy with generalized tonic-clonic seizures alone (disorder)&quot;
+[2] &quot;juvenile myoclonic epilepsy&quot;                                     
+[3] &quot;childhood absence epilepsy&quot;                                      
+[4] &quot;juvenile absence epilepsy&quot;                                       
+[5] NA                                                                </code></pre>
+<pre class="r"><code>idiopathic_generalized_epilepsy_terms = stringr::str_remove_all(
+                                        idiopathic_generalized_epilepsy_terms, 
+                                        &quot; \\(disorder\\)$&quot;
+                                        )
+
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(idiopathic_generalized_epilepsy_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;idiopathic generalized epilepsy&quot;
+         ))</code></pre>
+</div>
 <div id="inborn-errors-of-metabolism" class="section level2"
-number="5.34">
-<h2><span class="header-section-number">5.34</span> Inborn errors of
+number="5.45">
+<h2><span class="header-section-number">5.45</span> Inborn errors of
 metabolism</h2>
 <pre class="r"><code>inborn_error_metab &lt;- c(&quot;inborn disorder of amino acid metabolism&quot;,
                         &quot;inborn disorder of amino acid transport&quot;,
@@ -1296,8 +1561,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;inborn errors of metabolism&quot;
          ))</code></pre>
 </div>
-<div id="infectious-meningitis" class="section level2" number="5.35">
-<h2><span class="header-section-number">5.35</span> Infectious
+<div id="infectious-meningitis" class="section level2" number="5.46">
+<h2><span class="header-section-number">5.46</span> Infectious
 meningitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1306,8 +1571,8 @@ meningitis</h2>
                           &quot;infectious meningitis&quot;
          ))</code></pre>
 </div>
-<div id="infertility-female-male" class="section level2" number="5.36">
-<h2><span class="header-section-number">5.36</span> Infertility (female
+<div id="infertility-female-male" class="section level2" number="5.47">
+<h2><span class="header-section-number">5.47</span> Infertility (female
 &amp; male)</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1322,8 +1587,8 @@ meningitis</h2>
                           )  )</code></pre>
 </div>
 <div id="influenza-a-h1n1-subset-of-influenza" class="section level2"
-number="5.37">
-<h2><span class="header-section-number">5.37</span> Influenza a (h1n1)
+number="5.48">
+<h2><span class="header-section-number">5.48</span> Influenza a (h1n1)
 (subset of influenza)</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(l1_all_disease_terms  = 
@@ -1332,9 +1597,36 @@ number="5.37">
                           &quot;influenza&quot;
          ))</code></pre>
 </div>
+<div id="intestinal-obstruction" class="section level2" number="5.49">
+<h2><span class="header-section-number">5.49</span> Intestinal
+obstruction</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0004565/descendants&quot;
+
+intestinal_obstruction_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 21
+[1] &quot;\n Some example terms&quot;
+[1] &quot;intestinal obstruction in the newborn due to guanylate cyclase 2c deficiency&quot;
+[2] &quot;intestinal pseudoobstruction, neuronal, chronic idiopathic, x-linked&quot;        
+[3] &quot;visceral neuropathy, familial, 1, autosomal recessive&quot;                       
+[4] &quot;visceral neuropathy, familial, 3, autosomal dominant&quot;                        
+[5] &quot;cystic fibrosis associated meconium ileus&quot;                                   </code></pre>
+<pre class="r"><code># also add: http://purl.obolibrary.org/obo/DOID_8437
+
+intestinal_obstruction_terms = c(intestinal_obstruction_terms,
+                                 &quot;intestinal impaction&quot;
+                                 )
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(intestinal_obstruction_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;intestinal obstruction&quot;
+         ))</code></pre>
+</div>
 <div id="juvenile-idiopathic-arthritis" class="section level2"
-number="5.38">
-<h2><span class="header-section-number">5.38</span> Juvenile idiopathic
+number="5.50">
+<h2><span class="header-section-number">5.50</span> Juvenile idiopathic
 arthritis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1344,8 +1636,8 @@ arthritis</h2>
                          &quot;juvenile idiopathic arthritis&quot;)
         )</code></pre>
 </div>
-<div id="lewy-body-dementia" class="section level2" number="5.39">
-<h2><span class="header-section-number">5.39</span> Lewy body
+<div id="lewy-body-dementia" class="section level2" number="5.51">
+<h2><span class="header-section-number">5.51</span> Lewy body
 dementia</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1354,8 +1646,8 @@ dementia</h2>
                           &quot;lewy body dementia&quot;
          ))</code></pre>
 </div>
-<div id="malaria" class="section level2" number="5.40">
-<h2><span class="header-section-number">5.40</span> Malaria</h2>
+<div id="malaria" class="section level2" number="5.52">
+<h2><span class="header-section-number">5.52</span> Malaria</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1364,8 +1656,8 @@ dementia</h2>
          ))</code></pre>
 </div>
 <div id="methamphetamine-use-disorders" class="section level2"
-number="5.41">
-<h2><span class="header-section-number">5.41</span> Methamphetamine use
+number="5.53">
+<h2><span class="header-section-number">5.53</span> Methamphetamine use
 disorders</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1374,8 +1666,8 @@ disorders</h2>
                           &quot;methamphetamine use disorders&quot;
          ))</code></pre>
 </div>
-<div id="migrane" class="section level2" number="5.42">
-<h2><span class="header-section-number">5.42</span> Migrane</h2>
+<div id="migrane" class="section level2" number="5.54">
+<h2><span class="header-section-number">5.54</span> Migrane</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1383,8 +1675,8 @@ disorders</h2>
                           &quot;migraine&quot;
          ))</code></pre>
 </div>
-<div id="multiple-sclerosis" class="section level2" number="5.43">
-<h2><span class="header-section-number">5.43</span> Multiple
+<div id="multiple-sclerosis" class="section level2" number="5.55">
+<h2><span class="header-section-number">5.55</span> Multiple
 sclerosis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1393,8 +1685,8 @@ sclerosis</h2>
                           &quot;multiple sclerosis&quot;
          ))</code></pre>
 </div>
-<div id="myocardial-infarction" class="section level2" number="5.44">
-<h2><span class="header-section-number">5.44</span> Myocardial
+<div id="myocardial-infarction" class="section level2" number="5.56">
+<h2><span class="header-section-number">5.56</span> Myocardial
 infarction</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000612/descendants&quot;
 
@@ -1402,11 +1694,11 @@ myocardial_infarction_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 7
 [1] &quot;\n Some example terms&quot;
-[1] &quot;inferior myocardial infarction&quot;                                                     
-[2] &quot;anterolateral myocardial infarction&quot;                                                
-[3] &quot;subsequent st elevation (stemi) and non-st elevation (nstemi) myocardial infarction&quot;
-[4] &quot;acute myocardial infarction&quot;                                                        
-[5] &quot;acute anterolateral myocardial infarction&quot;                                          </code></pre>
+[1] &quot;subsequent st elevation (stemi) and non-st elevation (nstemi) myocardial infarction&quot;
+[2] &quot;acute anterolateral myocardial infarction&quot;                                          
+[3] &quot;non-st elevation myocardial infarction&quot;                                             
+[4] &quot;anterolateral myocardial infarction&quot;                                                
+[5] &quot;st elevation myocardial infarction&quot;                                                 </code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1414,8 +1706,8 @@ myocardial_infarction_terms &lt;- get_descendants(url)</code></pre>
                           &quot;myocardial infarction&quot;
          ))</code></pre>
 </div>
-<div id="photosensitivity-disease" class="section level2" number="5.45">
-<h2><span class="header-section-number">5.45</span> Photosensitivity
+<div id="photosensitivity-disease" class="section level2" number="5.57">
+<h2><span class="header-section-number">5.57</span> Photosensitivity
 disease</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1424,17 +1716,17 @@ disease</h2>
                          &quot;photosensitivity disease&quot;)
         )</code></pre>
 </div>
-<div id="phobic-disorder" class="section level2" number="5.46">
-<h2><span class="header-section-number">5.46</span> Phobic disorder</h2>
+<div id="phobic-disorder" class="section level2" number="5.58">
+<h2><span class="header-section-number">5.58</span> Phobic disorder</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001908/descendants&quot;
 
 phobic_disorder_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 11
 [1] &quot;\n Some example terms&quot;
-[1] &quot;specific phobia&quot;         &quot;social anxiety disorder&quot;
-[3] &quot;agoraphobia&quot;             &quot;nosophobia&quot;             
-[5] &quot;flying phobia&quot;          </code></pre>
+[1] &quot;panic disorder with agoraphobia&quot; &quot;blood-injection-injury phobia&quot;  
+[3] &quot;social anxiety disorder&quot;         &quot;specific phobia&quot;                
+[5] &quot;flying phobia&quot;                  </code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1443,8 +1735,8 @@ phobic_disorder_terms &lt;- get_descendants(url)</code></pre>
          ))</code></pre>
 </div>
 <div id="hereditary-heterochromatosis" class="section level2"
-number="5.47">
-<h2><span class="header-section-number">5.47</span> Hereditary
+number="5.59">
+<h2><span class="header-section-number">5.59</span> Hereditary
 heterochromatosis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1453,8 +1745,8 @@ heterochromatosis</h2>
                           &quot;hereditary hemochromatosis&quot;
          ))</code></pre>
 </div>
-<div id="myasthenia-gravis" class="section level2" number="5.48">
-<h2><span class="header-section-number">5.48</span> Myasthenia
+<div id="myasthenia-gravis" class="section level2" number="5.60">
+<h2><span class="header-section-number">5.60</span> Myasthenia
 gravis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1463,8 +1755,8 @@ gravis</h2>
                           &quot;myasthenia gravis&quot;
          ))</code></pre>
 </div>
-<div id="neuromyelitis-optica" class="section level2" number="5.49">
-<h2><span class="header-section-number">5.49</span> Neuromyelitis
+<div id="neuromyelitis-optica" class="section level2" number="5.61">
+<h2><span class="header-section-number">5.61</span> Neuromyelitis
 optica</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1473,8 +1765,8 @@ optica</h2>
                           &quot;neuromyelitis optica&quot;
          ))</code></pre>
 </div>
-<div id="neurofibromatosis" class="section level2" number="5.50">
-<h2><span class="header-section-number">5.50</span>
+<div id="neurofibromatosis" class="section level2" number="5.62">
+<h2><span class="header-section-number">5.62</span>
 Neurofibromatosis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1484,8 +1776,8 @@ Neurofibromatosis</h2>
          ))</code></pre>
 </div>
 <div id="non-alcoholic-fatty-liver-disease-nafld" class="section level2"
-number="5.51">
-<h2><span class="header-section-number">5.51</span> Non-alcoholic fatty
+number="5.63">
+<h2><span class="header-section-number">5.63</span> Non-alcoholic fatty
 liver disease (NAFLD)</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1494,8 +1786,8 @@ liver disease (NAFLD)</h2>
                           &quot;non-alcoholic fatty liver disease&quot;
          ))</code></pre>
 </div>
-<div id="obesity" class="section level2" number="5.52">
-<h2><span class="header-section-number">5.52</span> Obesity</h2>
+<div id="obesity" class="section level2" number="5.64">
+<h2><span class="header-section-number">5.64</span> Obesity</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
  mutate(l1_all_disease_terms  = 
@@ -1505,15 +1797,92 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="pericardium-disorder" class="section level2" number="5.53">
-<h2><span class="header-section-number">5.53</span> Pericardium
+<div id="obsessive-compulsive-disorder" class="section level2"
+number="5.65">
+<h2><span class="header-section-number">5.65</span> Obsessive-compulsive
+disorder</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;obsessive-compulsive trait&quot;,
+                          &quot;obsessive-compulsive disorder&quot;
+         ))</code></pre>
+</div>
+<div id="osteoarthritis" class="section level2" number="5.66">
+<h2><span class="header-section-number">5.66</span> Osteoarthritis</h2>
+<pre class="r"><code>osteoarthritis_terms &lt;- c(&quot;knee osteoarthritis&quot;,
+                         &quot;hip osteoarthritis&quot;,
+                         &quot;hand osteoarthritis&quot;,
+                         &quot;spine osteoarthritis&quot;,
+                         &quot;toe osteoarthritis&quot;
+                         )
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(osteoarthritis_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;osteoarthritis&quot;
+         )
+  )</code></pre>
+</div>
+<div id="pancreatitis" class="section level2" number="5.67">
+<h2><span class="header-section-number">5.67</span> Pancreatitis</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000278/descendants&quot;
+
+pancreatitis_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 9
+[1] &quot;\n Some example terms&quot;
+[1] &quot;thiopurine immunosuppressant-induced pancreatitis&quot;
+[2] &quot;asparaginase-induced acute pancreatitis&quot;          
+[3] &quot;hereditary chronic pancreatitis&quot;                  
+[4] &quot;autoimmune pancreatitis type 1&quot;                   
+[5] &quot;non-alcoholic pancreatitis&quot;                       </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(pancreatitis_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;pancreatitis&quot;
+         ))</code></pre>
+</div>
+<div id="pericardium-disorder" class="section level2" number="5.68">
+<h2><span class="header-section-number">5.68</span> Pericardium
 disorder</h2>
 <pre class="r"><code>pericardium_disorder_terms &lt;- c(&quot;pericarditis&quot;,
                                &quot;pericardial effusion&quot;
                                )</code></pre>
 </div>
-<div id="psoriasis" class="section level2" number="5.54">
-<h2><span class="header-section-number">5.54</span> Psoriasis</h2>
+<div id="poisoning" class="section level2" number="5.69">
+<h2><span class="header-section-number">5.69</span> Poisoning</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;carbon monoxide poisoning&quot;,
+                          &quot;poisoning&quot;
+         ))</code></pre>
+</div>
+<div id="polycythemia" class="section level2" number="5.70">
+<h2><span class="header-section-number">5.70</span> Polycythemia</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005804/descendants&quot;
+
+polycythemia_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 16
+[1] &quot;\n Some example terms&quot;
+[1] &quot;autosomal recessive secondary polycythemia not associated with vhl gene&quot;
+[2] &quot;primary familial polycythemia due to epo receptor mutation&quot;             
+[3] &quot;autosomal dominant secondary polycythemia&quot;                              
+[4] &quot;congenital secondary polycythemia&quot;                                      
+[5] &quot;acquired secondary polycythemia&quot;                                        </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(polycythemia_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                          &quot;polycythemia&quot;
+         ))</code></pre>
+</div>
+<div id="psoriasis" class="section level2" number="5.71">
+<h2><span class="header-section-number">5.71</span> Psoriasis</h2>
 <pre class="r"><code>psoriasis_terms &lt;- c(&quot;psoriasis vulgaris&quot;,
                       &quot;psoriasis area and severity index&quot;,
                       &quot;cutaneous psoriasis&quot;,
@@ -1528,8 +1897,17 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;psoriasis&quot;)
   )</code></pre>
 </div>
-<div id="rheumatoid-arthritis" class="section level2" number="5.55">
-<h2><span class="header-section-number">5.55</span> Rheumatoid
+<div id="psychosis" class="section level2" number="5.72">
+<h2><span class="header-section-number">5.72</span> Psychosis</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;psychosis predisposition&quot;,
+                          &quot;psychosis&quot;)
+         )</code></pre>
+</div>
+<div id="rheumatoid-arthritis" class="section level2" number="5.73">
+<h2><span class="header-section-number">5.73</span> Rheumatoid
 arthritis</h2>
 <pre class="r"><code>ra_terms &lt;- c(&quot;acpa-positive rheumatoid arthritis&quot;,
                &quot;acpa-negative rheumatoid arthritis&quot;)
@@ -1543,8 +1921,36 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="scoliosis" class="section level2" number="5.56">
-<h2><span class="header-section-number">5.56</span> Scoliosis</h2>
+<div id="schizoaffective-disorder" class="section level2" number="5.74">
+<h2><span class="header-section-number">5.74</span> Schizoaffective
+disorder</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;schizoaffective disorder-bipolar type&quot;,
+                          &quot;schizoaffective disorder&quot;)
+         )</code></pre>
+</div>
+<div id="schizophrenia" class="section level2" number="5.75">
+<h2><span class="header-section-number">5.75</span> Schizophrenia</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;treatment refractory schizophrenia&quot;,
+                          &quot;schizophrenia&quot;)
+         )</code></pre>
+</div>
+<div id="sciatica" class="section level2" number="5.76">
+<h2><span class="header-section-number">5.76</span> Sciatica</h2>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;^ldh-related sciatica, &quot;,
+                          &quot;sciatica, lumbar disc herniation&quot;)
+         )</code></pre>
+</div>
+<div id="scoliosis" class="section level2" number="5.77">
+<h2><span class="header-section-number">5.77</span> Scoliosis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1552,8 +1958,8 @@ gwas_study_info |&gt;
                           &quot;scoliosis&quot;)
          )</code></pre>
 </div>
-<div id="sickle-cell-disease" class="section level2" number="5.57">
-<h2><span class="header-section-number">5.57</span> Sickle cell
+<div id="sickle-cell-disease" class="section level2" number="5.78">
+<h2><span class="header-section-number">5.78</span> Sickle cell
 disease</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1562,8 +1968,8 @@ disease</h2>
                           &quot;sickle cell disease and related diseases&quot;)
          )</code></pre>
 </div>
-<div id="sleep-apnea" class="section level2" number="5.58">
-<h2><span class="header-section-number">5.58</span> Sleep apnea</h2>
+<div id="sleep-apnea" class="section level2" number="5.79">
+<h2><span class="header-section-number">5.79</span> Sleep apnea</h2>
 <pre class="r"><code>sleep_apnea_terms &lt;- c(&quot;sleep apnea measurement during non-rem sleep&quot;,
                       &quot;sleep apnea measurement during rem sleep&quot;,
                       &quot;obstructive sleep apnea&quot;)
@@ -1576,8 +1982,8 @@ gwas_study_info = gwas_study_info |&gt;
   )</code></pre>
 </div>
 <div id="staphylococcus-aureus-infection" class="section level2"
-number="5.59">
-<h2><span class="header-section-number">5.59</span> Staphylococcus
+number="5.80">
+<h2><span class="header-section-number">5.80</span> Staphylococcus
 aureus infection</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1586,8 +1992,8 @@ aureus infection</h2>
                           &quot;staphylococcus aureus infection&quot;
          ))</code></pre>
 </div>
-<div id="stroke" class="section level2" number="5.60">
-<h2><span class="header-section-number">5.60</span> Stroke</h2>
+<div id="stroke" class="section level2" number="5.81">
+<h2><span class="header-section-number">5.81</span> Stroke</h2>
 <p><a
 href="https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000712?lang=en"
 class="uri">https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000712?lang=en</a></p>
@@ -1602,10 +2008,21 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;hemorrhagic stroke&quot;)
   )
 
+stroke_terms &lt;- c(&quot;stroke outcome&quot;,
+                  &quot;large artery stroke&quot;,
+                  &quot;small vessel stroke&quot;,
+                  &quot;ischemic stroke&quot;,
+                  &quot;stroke disorder&quot;,
+                  &quot;cardioembolic stroke&quot;,
+                  &quot;hemorrhagic stroke&quot;,
+                  &quot;intracranial hemorrhage&quot;,
+                  &quot;subdural hemorrhage&quot;
+                  )
+
 gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          &quot;stroke outcome|large artery stroke|small vessel stroke|ischemic stroke|stroke disorder|cardioembolic stroke&quot;,
+                          paste0(stroke_terms, collapse = &quot;(?=,|$)|\\b&quot;),
                           &quot;stroke&quot;)
   )
 
@@ -1617,8 +2034,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;post-operative, stroke&quot;)
   )</code></pre>
 </div>
-<div id="tacycardia" class="section level2" number="5.61">
-<h2><span class="header-section-number">5.61</span> Tacycardia</h2>
+<div id="tacycardia" class="section level2" number="5.82">
+<h2><span class="header-section-number">5.82</span> Tacycardia</h2>
 <pre class="r"><code>tacycardia_terms &lt;- c(&quot;paroxysmal tachycardia&quot;,
                      &quot;ventricular tachycardia&quot;,
                      &quot;supraventricular tachycardia&quot;,
@@ -1635,8 +2052,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
   )</code></pre>
 </div>
-<div id="systemic-scleroderma" class="section level2" number="5.62">
-<h2><span class="header-section-number">5.62</span> Systemic
+<div id="systemic-scleroderma" class="section level2" number="5.83">
+<h2><span class="header-section-number">5.83</span> Systemic
 scleroderma</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000717/descendants&quot;
 
@@ -1644,11 +2061,11 @@ scleroderma_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 5
 [1] &quot;\n Some example terms&quot;
-[1] &quot;limited scleroderma&quot;                                        
-[2] &quot;anti-topoisomerase-i-antibody-positive systemic scleroderma&quot;
-[3] &quot;anti-centromere-antibody-positive systemic scleroderma&quot;     
-[4] &quot;diffuse scleroderma&quot;                                        
-[5] &quot;limited cutaneous systemic sclerosis&quot;                       </code></pre>
+[1] &quot;anti-topoisomerase-i-antibody-positive systemic scleroderma&quot;
+[2] &quot;anti-centromere-antibody-positive systemic scleroderma&quot;     
+[3] &quot;limited cutaneous systemic sclerosis&quot;                       
+[4] &quot;limited scleroderma&quot;                                        
+[5] &quot;diffuse scleroderma&quot;                                        </code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1656,8 +2073,8 @@ scleroderma_terms &lt;- get_descendants(url)</code></pre>
                           &quot;systemic scleroderma&quot;
          ))</code></pre>
 </div>
-<div id="tenosynovitis" class="section level2" number="5.63">
-<h2><span class="header-section-number">5.63</span> Tenosynovitis</h2>
+<div id="tenosynovitis" class="section level2" number="5.84">
+<h2><span class="header-section-number">5.84</span> Tenosynovitis</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
         stringr::str_replace_all(l1_all_disease_terms,
@@ -1665,8 +2082,8 @@ scleroderma_terms &lt;- get_descendants(url)</code></pre>
                          &quot;tenosynovitis&quot;)
         )</code></pre>
 </div>
-<div id="type-1-diabetes" class="section level2" number="5.64">
-<h2><span class="header-section-number">5.64</span> Type 1 diabetes</h2>
+<div id="type-1-diabetes" class="section level2" number="5.85">
+<h2><span class="header-section-number">5.85</span> Type 1 diabetes</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
@@ -1674,16 +2091,16 @@ scleroderma_terms &lt;- get_descendants(url)</code></pre>
                           &quot;type 1 diabetes mellitus&quot;
          ))</code></pre>
 </div>
-<div id="thrombocytopenia" class="section level2" number="5.65">
-<h2><span class="header-section-number">5.65</span>
+<div id="thrombocytopenia" class="section level2" number="5.86">
+<h2><span class="header-section-number">5.86</span>
 Thrombocytopenia</h2>
 <pre class="r"><code>thrombocytopenia_terms &lt;- c(&quot;thrombocytopenia 4&quot;,
                            &quot;acquired thrombocytopenia&quot;,
                            &quot;primary thrombocytopenia&quot;
                            )</code></pre>
 </div>
-<div id="tinea" class="section level2" number="5.66">
-<h2><span class="header-section-number">5.66</span> Tinea</h2>
+<div id="tinea" class="section level2" number="5.87">
+<h2><span class="header-section-number">5.87</span> Tinea</h2>
 <pre class="r"><code>tinea_terms &lt;- c(&quot;tinea pedis&quot;,
                  &quot;tinea unguium&quot;,
                  &quot;dermatophytosis&quot;
@@ -1697,8 +2114,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;tinea&quot;
          ))</code></pre>
 </div>
-<div id="vitamin-b-deficiency" class="section level2" number="5.67">
-<h2><span class="header-section-number">5.67</span> Vitamin b
+<div id="vitamin-b-deficiency" class="section level2" number="5.88">
+<h2><span class="header-section-number">5.88</span> Vitamin b
 deficiency</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -1740,9 +2157,9 @@ head(n_studies_trait)</code></pre>
 3 alzheimers disease              124
 4 breast cancer                   112
 5 major depressive disorder       108
-6 schizophrenia                   103</code></pre>
+6 schizophrenia                   108</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2847    2</code></pre>
+<pre><code>[1] 2784    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="6.1.1">
 <h3><span class="header-section-number">6.1.1</span> When separate
@@ -1756,7 +2173,7 @@ studies with multiple terms</h3>
 test &lt;- data.frame(trait = unique(diseases))
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2027</code></pre>
+<pre><code>[1] 1965</code></pre>
 <pre class="r"><code># make frequency table
 freq &lt;- table(as.factor(diseases))
 
@@ -1771,9 +2188,9 @@ head(freq_sorted, 10)</code></pre>
   coronary artery disease major depressive disorder        alzheimers disease 
                       501                       471                       422 
             schizophrenia                    asthma                  covid-19 
-                      356                       348                       305 
-            breast cancer 
-                      270 </code></pre>
+                      368                       348                       305 
+                   stroke 
+                      303 </code></pre>
 </div>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
 class="section level3" number="6.1.2">
