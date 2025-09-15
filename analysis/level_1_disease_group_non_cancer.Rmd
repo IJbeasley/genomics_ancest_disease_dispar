@@ -139,12 +139,21 @@ gwas_study_info = gwas_study_info |>
 
 ```{r pregnancy_loss}
 
+pregnancy_loss_terms <- c("habitual abortion",
+                          "incomplete abortion",
+                          "spontaneous abortion",
+                          "abortion",
+                          "spontaneous loss of pregnancy",
+                          "incomplete loss of pregnancy"
+                          )
+
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "habitual abortion|abortion|spontaneous loss of pregnancy|incomplete loss of pregnancy",
+                          paste0(pregnancy_loss_terms, collapse = "(?=,|$)|\\b"),
                           "loss of pregnancy"
          ))
+
 # exact synonyms (to avoid partial matches
 # https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001491?lang=en
 
@@ -163,6 +172,31 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Age-related macular degeneration
+
+```{r age_related_macular_degeneration}
+
+# from: http://purl.obolibrary.org/obo/HP_0011141
+age_related_macular_degeneration_terms <- c("age-related cortical cataract",
+                                             "age-related nuclear cataract",
+                                             "age-related posterior subcapsular cataract"
+                                         )
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001365/descendants"
+
+age_related_macular_degeneration_terms <- c(age_related_macular_degeneration_terms,
+                                             get_descendants(url)
+                                             )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(age_related_macular_degeneration_terms, collapse = "(?=,|$)|\\b"),
+                          "age-related macular degeneration"
+         ))
+
+
+```
 ## Alopecia
 
 ```{r alopecia, eval = F}
@@ -268,7 +302,22 @@ gwas_study_info = gwas_study_info |>
                           "allergic rhinitis"
          ))
 
+```
 
+## Aplastic anemia
+
+```{r aplastic_anemia}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0015909/descendants"
+
+aplastic_anemia_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(aplastic_anemia_terms, collapse = "(?=,|$)|\\b"),
+                          "aplastic anemia"
+         ))
 
 ```
 
@@ -317,19 +366,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Back pain 
-
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "low back pain",
-                          "back pain"
-         ))
-
-```
-
 ## Bipolar disorder
 
 ```{r bipolar_disorder}
@@ -362,6 +398,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Cardiomyopathy
+
+```{r cardiomyopathy}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/hp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0001638/descendants"
+
+cardiomyopathy_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cardiomyopathy_terms, collapse = "(?=,|$)|\\b"),
+                          "cardiomyopathy"
+         ))
+
+
+```
+
 ## Carotid artery disease
 
 ```{r carotid_artery_disease}
@@ -379,6 +433,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Cataract
+
+```{r cataract}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005129/descendants"
+
+cataract_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cataract_terms, collapse = "(?=,|$)|\\b"),
+                          "cataract"
+         ))
+
+
+```
+
 ## Celiac disease
 
 ```{r celiac_disease}
@@ -392,6 +464,23 @@ gwas_study_info |>
                           )  
         )
 
+
+```
+
+## Chronic pain
+
+```{r chronic_pain}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0012532/descendants"
+
+cchronic_pain_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cchronic_pain_terms, collapse = "(?=,|$)|\\b"),
+                          "chronic pain"
+         ))
 
 ```
 
@@ -436,6 +525,24 @@ gwas_study_info = gwas_study_info |>
                           pattern = paste0(coronary_artery_disease_terms, collapse = "(?=,|$)|\\b"),
                           "coronary artery disease"
          ))
+
+```
+
+## Communication disorder
+
+```{r communication_disorder}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002182/descendants"
+
+communication_disorder_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(communication_disorder_terms, collapse = "(?=,|$)|\\b"),
+                          "communication disorder"
+         ))
+
 
 ```
 
@@ -495,6 +602,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Dermatitis
+
+```{r dermatitis}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_2723/descendants"
+
+dermatitis_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(dermatitis_terms, collapse = "(?=,|$)|\\b"),
+                          "dermatitis"
+         ))
+
+
+```
+
 ## Drug allergy
 
 ```{r drug_allergy}
@@ -545,6 +670,32 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Deficiency anemia
+
+```{r deficiency_anemia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "iron deficiency anemia",
+                          "deficiency anemia"
+         ))
+
+```
+
+## Endocarditis
+
+```{r endocarditis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "bacterial endocarditis",
+                          "endocarditis"
+         ))
+
+```
+
 ## Food allergy
 
 ```{r food_allergy}
@@ -572,6 +723,20 @@ gwas_study_info = gwas_study_info |>
                           "glaucoma"
          ))
 
+
+```
+
+## Gout
+
+```{r gout}
+
+# from: http://www.ebi.ac.uk/efo/EFO_0004274
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "renal overload-type gout",
+                          "gout"
+         ))
 
 ```
 
@@ -609,6 +774,24 @@ gwas_study_info = gwas_study_info |>
                           pattern = paste0(hemolytic_anemia_terms, collapse = "(?=,|$)|\\b"),
                           "hemolytic anemia"
          ))
+
+```
+
+## Hernia of the abdominal wall 
+
+```{r hernia_abdominal_wall}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/hp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0004299/children"
+
+hernia_abdominal_wall_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hernia_abdominal_wall_terms, collapse = "(?=,|$)|\\b"),
+                          "hernia of the abdominal wall"
+         ))
+
 
 ```
 
@@ -685,6 +868,30 @@ gwas_study_info = gwas_study_info |>
   
 ```
 
+## Idiopathic generalized epilepsy
+
+```{r idiopathic_generalized_epilepsy}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F36803009/descendants"
+
+idiopathic_generalized_epilepsy_terms <- get_descendants(url)
+
+idiopathic_generalized_epilepsy_terms = stringr::str_remove_all(
+                                        idiopathic_generalized_epilepsy_terms, 
+                                        " \\(disorder\\)$"
+                                        )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(idiopathic_generalized_epilepsy_terms, collapse = "(?=,|$)|\\b"),
+                          "idiopathic generalized epilepsy"
+         ))
+
+
+```
+
 ## Inborn errors of metabolism
 
 ```{r}
@@ -727,7 +934,6 @@ gwas_study_info = gwas_study_info |>
 
 ## Infertility (female & male)
 
-
 ```{r}
 
 gwas_study_info = gwas_study_info |>
@@ -757,6 +963,29 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Intestinal obstruction
+
+```{r intestinal_obstruction}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0004565/descendants"
+
+intestinal_obstruction_terms <- get_descendants(url)
+
+# also add: http://purl.obolibrary.org/obo/DOID_8437
+
+intestinal_obstruction_terms = c(intestinal_obstruction_terms,
+                                 "intestinal impaction"
+                                 )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(intestinal_obstruction_terms, collapse = "(?=,|$)|\\b"),
+                          "intestinal obstruction"
+         ))
+
+
+```
 
 ## Juvenile idiopathic arthritis
 
@@ -972,6 +1201,59 @@ gwas_study_info |>
 ```
 
 
+## Obsessive-compulsive disorder
+
+```{r obsessive_compulsive_disorder}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "obsessive-compulsive trait",
+                          "obsessive-compulsive disorder"
+         ))
+
+```
+
+
+## Osteoarthritis
+
+```{r osteoarthritis}
+
+osteoarthritis_terms <- c("knee osteoarthritis",
+                         "hip osteoarthritis",
+                         "hand osteoarthritis",
+                         "spine osteoarthritis",
+                         "toe osteoarthritis"
+                         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(osteoarthritis_terms, collapse = "(?=,|$)|\\b"),
+                          "osteoarthritis"
+         )
+  )
+
+```
+
+## Pancreatitis 
+
+```{r pancreatitis}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000278/descendants"
+
+pancreatitis_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(pancreatitis_terms, collapse = "(?=,|$)|\\b"),
+                          "pancreatitis"
+         ))
+
+
+```
+
 ## Pericardium disorder
 
 ```{r pericardium_disorder}
@@ -979,6 +1261,36 @@ gwas_study_info |>
 pericardium_disorder_terms <- c("pericarditis",
                                "pericardial effusion"
                                )
+
+```
+
+## Poisoning
+
+```{r poisoning}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "carbon monoxide poisoning",
+                          "poisoning"
+         ))
+
+```
+
+## Polycythemia
+
+```{r polycythemia}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005804/descendants"
+
+polycythemia_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(polycythemia_terms, collapse = "(?=,|$)|\\b"),
+                          "polycythemia"
+         ))
 
 ```
 
@@ -1003,6 +1315,20 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
+## Psychosis
+
+```{r psychosis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "psychosis predisposition",
+                          "psychosis")
+         )
+
+```
+
+
 ## Rheumatoid arthritis
 
 ```{r}
@@ -1018,6 +1344,45 @@ gwas_study_info |>
                                    "rheumatoid arthritis"
                           )  
         )
+
+```
+
+## Schizoaffective disorder
+
+```{r schizoaffective_disorder}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "schizoaffective disorder-bipolar type",
+                          "schizoaffective disorder")
+         )
+
+```
+
+## Schizophrenia
+
+```{r schizophrenia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "treatment refractory schizophrenia",
+                          "schizophrenia")
+         )
+
+```
+
+## Sciatica
+
+```{r sciatica}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "^ldh-related sciatica, ",
+                          "sciatica, lumbar disc herniation")
+         )
 
 ```
 
@@ -1096,10 +1461,21 @@ gwas_study_info = gwas_study_info |>
                           "hemorrhagic stroke")
   )
 
+stroke_terms <- c("stroke outcome",
+                  "large artery stroke",
+                  "small vessel stroke",
+                  "ischemic stroke",
+                  "stroke disorder",
+                  "cardioembolic stroke",
+                  "hemorrhagic stroke",
+                  "intracranial hemorrhage",
+                  "subdural hemorrhage"
+                  )
+
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "stroke outcome|large artery stroke|small vessel stroke|ischemic stroke|stroke disorder|cardioembolic stroke",
+                          paste0(stroke_terms, collapse = "(?=,|$)|\\b"),
                           "stroke")
   )
 
