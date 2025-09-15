@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r setup_packages}
+```{r setup_packages, message=FALSE}
 
 library(data.table)
 library(dplyr)
@@ -23,7 +23,9 @@ library(stringr)
 
 ```{r load_data}
 
-gbd_data <- data.table::fread(here::here("data/gbd/IHME-GBD_2021_DATA-aa22a7fd-1.csv"))
+gbd_data <- data.table::fread(here::here("data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv"))
+
+gbd_data[1:5, 1:5]
 
 ```
 
@@ -80,13 +82,24 @@ gbd_data |>
 
 # Population Attributable Fraction (PAF) for risk factors for non-communicable diseases (2021)
 
-## Load PAF data + intergrate with DALY data
+## Load PAF data 
 
 ```{r}
 
-gbd_paf_data <- data.table::fread(here::here(paste0("data/gbd/IHME-GBD_2021_DATA-923822a5-1.csv")))
+gbd_paf_sep <- data.table::fread(here::here("data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv"))
 
-gbd_paf_data |> head()
+gbd_paf_data <-
+  gbd_paf_sep |>
+  filter(metric == "Percent") |>
+  filter(rei == "All risk factors")
+
+gbd_paf_sep[1:5, 1:5]
+
+```
+
+## Integrate with DALY data
+
+```{r}
 
 gbd_paf_data =
 left_join(gbd_paf_data,
@@ -98,10 +111,10 @@ left_join(gbd_paf_data,
 
 ```
 
-
 ### Top 25 non-communicable diseases by % DALYs explained by all risk factors (2019)
 
 ```{r}
+
 gbd_paf_data |>
   slice_max(n = 25, order_by = val) |>
   ggplot(aes(y = val, x = reorder(cause, val))) + 
@@ -113,9 +126,7 @@ gbd_paf_data |>
        x = "Disease"
        )
 
-
 ```
-
 
 ### Top 15 non-communicable diseases by DALYs not explained by measured environmental risk factors (2019)
 
@@ -133,10 +144,10 @@ gbd_paf_data |>
        x = "Disease",
        title = "Non-communicable diseases with the greatest global disease durden (DALYs - 2019)")
 
-
 ```
 
 ### Distribution of DALYs not explained by measured environmental risk factors (2019)
+
 ```{r}
 
 gbd_paf_data |>
@@ -150,7 +161,6 @@ gbd_paf_data |>
   theme_minimal(base_size = 14)
 
 ```
-
 
 ### Dalys not explained by measured environmental risk factors for top non-communicable diseases by DALYs (2019)
 
@@ -166,4 +176,41 @@ gbd_paf_data |>
        x = "Disease",
        title = "DALYs (rate per 100,000) for top non-communicable diseases (2019)")
  
+```
+
+# PAF separated by risk factor type
+
+```{r}
+
+gbd_paf_sep <-
+  gbd_paf_sep |>
+  filter(metric == "Percent") |>
+  filter(rei != "All risk factors")
+
+gbd_paf_sep[1:5, 1:5]
+
+```
+
+```{r top_paf}
+
+# check does this match the total PAF data?
+gbd_paf_sep_top = 
+gbd_paf_sep |>
+  filter(rei != "Drug use") |>
+  group_by(cause) |>
+  summarise(val = 1 - prod(1 - val)) |>
+  arrange(desc(val), cause) 
+
+gbd_paf_sep_top |> head()
+
+causes = gbd_paf_sep_top$cause
+
+dplyr::all_equal(
+        gbd_paf_sep_top,
+         gbd_paf_data |> 
+          dplyr::filter(cause %in% causes) |> 
+          dplyr::select(cause, val) |> 
+          dplyr::arrange(desc(val), cause)
+         )
+
 ```
