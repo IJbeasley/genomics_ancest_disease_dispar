@@ -49,7 +49,7 @@ Level 1 disease grouping:
 -   collapse disease subtypes, e.g. bipolar I and bipolar II to bipolar disorder
 -   collapse disease onset times, e.g. early-onset alzheimers disease and late-onset alzheimers disease to alzheimers disease
 -   collapse disease stages
-
+-   collapse disease complications, e.g. device complication, trauma complication to complication
 
 ## Grouping - level 1 set up 
 
@@ -88,6 +88,17 @@ diseases <- stringr::str_split(pattern = ", ",
             stringr::str_trim()
 
 length(unique(diseases))
+
+```
+
+
+# Disturbances to senses 
+
+```{r disturbances_to_senses}
+
+disturb_senses_terms <- c("disturbances of sensation of smell and taste",
+                          "abnormality of the sense of smell",
+                          "ageusia")
 
 ```
 
@@ -256,7 +267,7 @@ gwas_study_info = gwas_study_info |>
 
 ## Alcohol-use disorders
 
-```{r alchol_use_disorders}
+```{r alcohol_use_disorders}
 
 alchol_use_disorder_terms <- c("alcohol dependence",
                              "alcohol withdrawal",
@@ -306,7 +317,7 @@ gwas_study_info = gwas_study_info |>
 
 ## Alzheimer's disease
 
-```{r alzheimers_disease}}
+```{r alzheimers_disease}
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
@@ -339,6 +350,23 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           "seasonal allergic rhinitis",
                           "allergic rhinitis"
+         ))
+
+```
+
+## Aortic aneurysm
+
+```{r aortic_aneurysm}
+
+aortic_aneurysm_terms <- c("thoracic aortic aneurysm",
+                          "abdominal aortic aneurysm"
+                          )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(aortic_aneurysm_terms, collapse = "(?=,|$)|\\b"),
+                          "aortic aneurysm"
          ))
 
 ```
@@ -414,6 +442,23 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           "bipolar ii disorder|bipolar i disorder",
                           "bipolar disorder"
+         ))
+
+```
+
+## Bone fracture
+
+```{r bone_fracture}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0003931/descendants"
+
+bone_fracture_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(bone_fracture_terms, collapse = "(?=,|$)|\\b"),
+                          "bone fracture"
          ))
 
 ```
@@ -542,12 +587,12 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0012532/descendants"
 
-cchronic_pain_terms <- get_descendants(url)
+chronic_pain_terms <- get_descendants(url)
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(cchronic_pain_terms, collapse = "(?=,|$)|\\b"),
+                          pattern = paste0(chronic_pain_terms, collapse = "(?=,|$)|\\b"),
                           "chronic pain"
          ))
 
@@ -575,6 +620,19 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           "chronic rhinosinusitis with nasal polyps",
                           "chronic rhinosinusitis"
+         ))
+
+```
+
+## Cholecystitis
+
+```{r cholecystitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "acute cholecystitis",
+                          "cholecystitis"
          ))
 
 ```
@@ -686,6 +744,19 @@ gwas_study_info = gwas_study_info |>
                           "dermatitis"
          ))
 
+# see: http://www.ebi.ac.uk/efo/EFO_0000274
+eczema_terms <- c("atopic eczema",
+                 "hand eczema",
+                 "eczematoid dermatitis", # see: http://purl.obolibrary.org/obo/HP_0000964
+                 "recalcitrant dermatitis" # assuming same as recalcitrant atopic dermatitis http://www.ebi.ac.uk/efo/EFO_1000651
+                 )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(eczema_terms, collapse = "(?=,|$)|\\b"),
+                          "dermatitis"
+         ))
 
 ```
 
@@ -1305,6 +1376,20 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+
+## Osteonecrosis
+
+```{r osteonecrosis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "idiopathic osteonecrosis of the femoral head",
+                          "osteonecrosis"
+         ))
+
+```
+
 ## Pancreatitis 
 
 ```{r pancreatitis}
@@ -1330,6 +1415,23 @@ gwas_study_info = gwas_study_info |>
 pericardium_disorder_terms <- c("pericarditis",
                                "pericardial effusion"
                                )
+
+```
+
+## Peridontal disease
+
+```{r periodontal}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_3388/descendants"
+
+periodontal_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(periodontal_terms, collapse = "(?=,|$)|\\b"),
+                          "periodontal disease"
+         ))
 
 ```
 
@@ -1359,6 +1461,33 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           pattern = paste0(polycythemia_terms, collapse = "(?=,|$)|\\b"),
                           "polycythemia"
+         ))
+
+```
+
+
+## Pulmonary embolism
+
+```{r pulmonary_embolism}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "pulmonary embolism, pulmonary infarction",
+                          "pulmonary embolism"
+         ))
+
+```
+
+## Pulmonary fibrosis
+
+```{r pulmonary_fibrosis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "idiopathic pulmonary fibrosis",
+                          "pulmonary fibrosis"
          ))
 
 ```
@@ -1449,10 +1578,10 @@ gwas_study_info = gwas_study_info |>
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "^ldh-related sciatica, ",
-                          "sciatica, lumbar disc herniation")
+         stringr::str_remove_all(l1_all_disease_terms,
+                          "^ldh-related sciatica, |, ldh-related sciatica$"
          )
+  )
 
 ```
 
@@ -1611,6 +1740,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Tuberculosis
+
+```{r tuberculosis}
+
+tb_terms <- c("mycobacterium tuberculosis infection",
+              "\\bpulmonary tuberculosis",
+              "extrapulmonary tuberculosis",
+              "meningeal tuberculosis")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(tb_terms, collapse = "(?=,|$)|\\b"),
+                          "tuberculosis"
+         ))
+
+```
+
 ## Type 1 diabetes
 
 ```{r}
@@ -1686,6 +1833,24 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
+# Further grouping of terms
+
+## Abnormal refraction
+
+```{r abnormal_refraction}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/upheno/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0000539/descendants"
+
+abnormal_refraction_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(abnormal_refraction_terms, collapse = "(?=,|$)|\\b"),
+                          "abnormality of refraction"
+         ))
+
+```
 
 # Final summary - number of unique study terns
 
@@ -1698,7 +1863,8 @@ gwas_study_info =
   rowwise() |>
   mutate(l1_all_disease_terms = paste0(sort(unique(unlist(strsplit(l1_all_disease_terms, ", ")))),
                                       collapse = ", ")
-         )
+         ) |>
+  ungroup()
 
 
 ```
