@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-09-15
+<strong>Last updated:</strong> 2025-09-16
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebf45a695d011e5adf921d602aa238bbb56eafff0targetblankbf45a69a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree66cff1cdf7340f4895407ca678b9cb50eefd1195targetblank66cff1ca">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/bf45a695d011e5adf921d602aa238bbb56eafff0" target="_blank">bf45a69</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/66cff1cdf7340f4895407ca678b9cb50eefd1195" target="_blank">66cff1c</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebf45a695d011e5adf921d602aa238bbb56eafff0targetblankbf45a69a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree66cff1cdf7340f4895407ca678b9cb50eefd1195targetblank66cff1ca"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/bf45a695d011e5adf921d602aa238bbb56eafff0" target="_blank">bf45a69</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/66cff1cdf7340f4895407ca678b9cb50eefd1195" target="_blank">66cff1c</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -561,7 +561,6 @@ Ignored files:
     Ignored:    renv/
 
 Unstaged changes:
-    Modified:   analysis/disease_trait_terms_simplify.Rmd
     Modified:   code/get_term_descendants.R
 
 </code></pre>
@@ -607,6 +606,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/66cff1cdf7340f4895407ca678b9cb50eefd1195/analysis/level_2_disease_group.Rmd" target="_blank">66cff1c</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-16
+</td>
+<td>
+Even more disease term grouping
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/21b6c022bf20fd6f601b018635550be1f603ed4a/docs/level_2_disease_group.html" target="_blank">21b6c02</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-15
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -1080,10 +1113,24 @@ disorders</h2>
 number="3.11">
 <h2><span class="header-section-number">3.11</span> Blindness and vision
 loss</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+<pre class="r"><code>vision_loss_terms &lt;- c(&quot;blindness&quot;,
+                       &quot;color vision disorder&quot;,
+                       &quot;vision disorder&quot;,
+                       &quot;myopia&quot;,
+                       &quot;refractive error&quot;,
+                       &quot;hyperopia&quot;,
+                       &quot;astigmatism&quot;,
+                       &quot;corneal astigmatism&quot;,
+                       &quot;presbyopia&quot;,
+                       &quot;anisometropia&quot;,
+                       &quot;esotropia&quot;,
+                       &quot;non-accomodative esotropia&quot;,
+                       &quot;accommodative esotropia&quot;)
+
+gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = &quot;blindness|color vision disorder|vision disorder|myopia|refractive error|hyperopia|astigmatism|corneal astigmatism|presbyopia|anisometropia|esotropia|on-accomodative esotropia|ccommodative esotropia&quot;,
+                                  pattern = paste0(vision_loss_terms, collapse = &quot;(?=,|$)|\\b&quot;),
                                    &quot;blindness and vision loss&quot;
                           )  
         )</code></pre>
@@ -1674,7 +1721,7 @@ left_join(gwas_disease_traits,
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 1736</code></pre>
+<pre><code>[1] 1659</code></pre>
 <pre class="r"><code># make frequency table
 freq &lt;- table(as.factor(diseases))
 
@@ -1686,14 +1733,14 @@ head(freq_sorted, 10)</code></pre>
 <pre><code>
                  chronic kidney disease                            hypertension 
                                   10835                                    7089 
-               type 2 diabetes mellitus                    depressive disorders 
-                                    922                                     513 
-alzheimer&#39;s disease and other dementias                  ischemic heart disease 
-                                    509                                     501 
-                        benign neoplasm                           schizophrenia 
-                                    472                                     368 
-                          breast cancer                                  asthma 
-                                    355                                     348 </code></pre>
+               type 2 diabetes mellitus                         benign neoplasm 
+                                    922                                     527 
+                   depressive disorders alzheimer&#39;s disease and other dementias 
+                                    513                                     509 
+                 ischemic heart disease                           breast cancer 
+                                    501                                     379 
+                          schizophrenia                                  asthma 
+                                    368                                     348 </code></pre>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
 class="section level3" number="9.1.1">
 <h3><span class="header-section-number">9.1.1</span> Save the updated
