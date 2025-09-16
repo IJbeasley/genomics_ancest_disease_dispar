@@ -450,15 +450,15 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-### Gallbladder and bilary tract cancer
+### Gallbladder and biliary tract cancer
 
-```{r group_gallbladder_biliary_cancer}
+```{r group_gallbladder_biliaryy_cancer}
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                         "cancer of gallbladder and extrahepatic biliary tract",
-                         "gallbladder and bilary tract cancer"
+                         "cancer of gallbladder and extrahepatic biliaryy tract",
+                         "gallbladder and biliary tract cancer"
          )
          )
 
@@ -752,6 +752,33 @@ gwas_study_info = gwas_study_info |>
         )
 
 ```
+
+## Peripheral nervous system cancer
+
+```{r group_peripheral_nervous_system_cancer}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0021089/descendants"
+
+peripheral_nervous_system_cancer_terms <- get_descendants(url)
+
+peripheral_nervous_system_cancer_terms = stringr::str_replace_all(peripheral_nervous_system_cancer_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+```
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(peripheral_nervous_system_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                   "peripheral nervous system cancer"
+                          )  
+        )
+
+```
+
 ### Prostate cancer
 
 ```{r}
@@ -810,6 +837,14 @@ neuroendo_terms <- c("pulmonary neuroendocrine tumor",
                      "carcinoid tumor" #http://www.ebi.ac.uk/efo/EFO_0004243
 )
 
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(neuroendo_terms, collapse = "(?=,|$)|\\b"),
+                                   "neuroendocrine tumor"
+                          )  
+        )
+
 ```
 
 ### Non-Hodgkins lymphoma
@@ -824,12 +859,20 @@ nhl_terms = stringr::str_replace_all(leukemia_terms,
                             "\\bcarcinoma",
                             "cancer")
 
+
+
 nhl_terms = c("central nervous system non-hodgkin lymphoma",
               "lymphoblastic lymphoma",
               "extranodal nasal nk/t cell lymphoma", # https://www.ebi.ac.uk/ols4/ontologies/ordo/classes/http%253A%252F%252Fwww.orpha.net%252FORDO%252FOrphanet_86879
               "follicular lymphoma", # http://purl.obolibrary.org/obo/DOID_0050873
               "marginal zone b-cell lymphoma",
               "diffuse large b-cell lymphoma",
+              nhl_terms)
+
+# also likely that reticulum cell sarcoma is NHL
+# see; http://www.ebi.ac.uk/efo/EFO_0005287
+# https://pubmed.ncbi.nlm.nih.gov/6328875/
+nhl_terms = c("reticulum cell sarcoma",
               nhl_terms)
 
 ```
@@ -917,6 +960,22 @@ soft_tissue_sarcoma_terms <- get_descendants(url)
 soft_tissue_sarcoma_terms = stringr::str_replace_all(soft_tissue_sarcoma_terms,
                             "\\bcarcinoma",
                             "cancer")
+
+soft_tissue_sarcoma_terms = c("kaposis sarcoma",
+                              "iatrogenic kaposis sarcoma",
+                              soft_tissue_sarcoma_terms)
+```
+
+#### Ewing sarcoma
+
+```{r ewing_sarcoma}
+
+# can be either bone or soft tissue sarcoma
+# hard to tell from these studies: 
+gwas_study_info |> 
+  filter(grepl("ewing", l1_all_disease_terms))  |> 
+  select(PUBMED_ID, `DISEASE/TRAIT`, COHORT, STUDY)
+
 ```
 
 ```{r}
@@ -1262,7 +1321,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms =
          ifelse(l1_all_disease_terms == "gallbladder neoplasm" & 
                  grepl("cancer", `DISEASE/TRAIT`, ignore.case = T),
-                 "gallbladder and bilary tract cancer",
+                 "gallbladder and biliary tract cancer",
                  l1_all_disease_terms
          )
          )
@@ -1286,7 +1345,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(STUDY_ACCESSION == "GCST005857",
                 stringr::str_replace_all(l1_all_disease_terms,
                           "gallbladder neoplasm",
-                          "gallbladder and bilary tract cancer"),
+                          "gallbladder and biliary tract cancer"),
                 l1_all_disease_terms
          ))
 
@@ -1637,6 +1696,19 @@ gwas_study_info = gwas_study_info |>
          )
          )
 
+gwas_study_info |> 
+  filter(grepl("nasopharyngeal neoplasm", l1_all_disease_terms)) |> 
+  pull(`DISEASE/TRAIT`)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "nasopharyngeal neoplasm" & 
+                 grepl("nasopharyngeal carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "nasopharyngeal cancer",
+                 l1_all_disease_terms
+         )
+         )
+
 ```
 
 ### Pancreatic neoplasm
@@ -1787,6 +1859,37 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Urogenital neoplasm
+
+```{r urogenital neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "urogenital neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "urogenital neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "urogenital cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "urogenital neoplasm" & 
+                 grepl("benign", `DISEASE/TRAIT`, ignore.case = T),
+                 "benign neoplasm",
+                 l1_all_disease_terms
+         )
+         )
+
+
+```
+
 
 ### Vulvar neoplasm
 
@@ -1842,10 +1945,19 @@ gwas_study_info = gwas_study_info |>
 
 ```{r}
 
+ocular_melanoma_terms <- c("uveal melanoma",
+                           "uveal melanoma disease severity",
+                           "epithelioid cell uveal melanoma",
+                           "choroidal melanoma",
+                           "ocular melanoma disease severity"
+                           )
+
+ocular_melanoma_terms = str_length_sort(ocular_melanoma_terms)
+
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "uveal melanoma|uveal melanoma disease severity|epithelioid cell uveal melanoma|choroidal melanoma",
+                          paste0(ocular_melanoma_terms, collapse = "(?=,|$)|\\b"),
                           "ocular melanoma"
          ))
 
@@ -1861,7 +1973,7 @@ gwas_study_info = gwas_study_info |>
 
 # Other ... 
 
-### benign neoplasm, colorectal cancer
+### Benign neoplasm, colorectal cancer
 
 ```{r benign neoplasm, colorectal cancer}
 
@@ -1878,6 +1990,480 @@ gwas_study_info = gwas_study_info |>
                           "colorectal cancer"),
                 l1_all_disease_terms
          ))
+
+```
+
+### More other pharynx cancer
+
+```{r more other pharynx cancer}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "larynx cancer, pharynx cancer",
+                          "larynx cancer, other pharynx cancer"
+         ))
+
+```
+
+### Malignant melanoma of skin
+
+#### Cutaneous melanoma to malignant melanoma of skin
+
+```{r malignant melanoma of skin}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "cutaneous melanoma",
+                          "malignant melanoma of skin"
+         ))
+  
+
+```
+
+
+#### Dealing with studies just labelled as "melanoma"
+
+```{r}
+
+gwas_study_info |>
+ filter(l1_all_disease_terms == "melanoma") |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# checked UKB data field 40006 (ICD10 codes) 
+# https://biobank.ctsu.ox.ac.uk/ukb/field.cgi?id=40006
+# malignant melanoma of skin includes: 
+# Malignant melanoma of trunk 
+# Malignant melanoma of upper limb, including shoulder
+# Malignant melanoma of lower limb, including hip
+
+# checked UKB data field 20001 
+# https://biobank.ctsu.ox.ac.uk/ukb/field.cgi?id=20001
+# malignant melanoma is a subcategory of skin cancer
+
+
+malignant_skin_melanoma <- c("ICD10 C43",
+                             "survival in skin melanoma",
+                             "Skin melanoma specific survival",
+                              "malignant melanoma of skin",
+                             "malignant melanoma of trunk",
+                             "Malignant melanoma \\(UKB data field 20001\\)",
+                             "malignant melanoma \\(UKB data field 20001_1059\\)",
+                             "malignant melanoma of upper limb, including shoulder",
+                             "malignant melanoma of lower limb, including hip",
+                             "ICD10 D03", # skin melanoma in situ 
+                             "Melanoma in situ \\(UKB data field 40006\\)"
+)
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "melanoma" &
+                grepl(paste0(malignant_skin_melanoma, collapse = "|"),
+                      `DISEASE/TRAIT`, 
+                      ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bmelanoma",
+                          "malignant melanoma of skin"),
+                l1_all_disease_terms
+         ))
+
+# UKBB malignant melanoma of skin
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "melanoma" &
+                grepl("UKBB", COHORT, ignore.case = T) &
+                grepl("malignant melanoma", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bmelanoma",
+                          "malignant melanoma of skin"),
+                l1_all_disease_terms
+         ))
+
+# cutaneous melanoma in title
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "melanoma" & 
+                grepl("\\bcutaneous melanoma", STUDY, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bmelanoma", 
+                          "malignant melanoma of skin"),
+                l1_all_disease_terms
+         ))
+                  
+
+gwas_study_info |>
+ filter(l1_all_disease_terms == "\\bmelanoma") |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info |>
+ filter(l1_all_disease_terms == "\\bmelanoma") |>
+  pull(PUBMED_ID) |>
+  unique()
+
+# Checking the clinical trials that make up pubmed id 27023328
+# https://clinicaltrials.gov/study/NCT01153763 - cutaneous melanoma
+# https://clinicaltrials.gov/study/NCT01266967 - not specified, likely skin melanoma by MeSH terms
+# https://clinicaltrials.gov/study/NCT01227889 - not specified, likely skin melanoma by MeSH terms
+# https://clinicaltrials.gov/study/NCT01584648 - cutaneous melanoma
+# https://clinicaltrials.gov/study/NCT01597908 - cutaneous melanoma
+# thus, likely malignant melanoma of skin
+                             
+# for pubmed ID 21983785, 
+# seems likely malignant melanoma of skin
+# as test in situ vs invasive, and use non-skin cancer controls
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC3227560/#SM
+
+# for pubmed id: 23455637 - uses one of the same cohorts as 21983785 (genoMEL)
+# thus likely malignant melanoma of skin
+# https://pubmed.ncbi.nlm.nih.gov/23455637/
+
+# for pubmed id: 21706340
+# Cutaneous malignant melanoma
+# therefore, malignant melanoma of skin
+
+# pubmed id: 19578364 also uses GenoMEL consortium
+# therefore, malignant melanoma of skin
+
+# pubmed id: 18488026
+# cutaneous malignant melanoma
+# therefore, malignant melanoma of skin
+
+# pubmed id: 21983787
+# also uses GenoMEL consortium
+# therefore, malignant melanoma of skin
+
+# pubmed id: 28212542
+# cutaneous melanoma
+# therefore, malignant melanoma of skin
+
+# pubmed id: 24980573
+# skin cancer melanoma discussion 
+# therefore, malignant melanoma of skin
+
+# pubmed id: 35626014
+# not entirely clear, but likely malignant melanoma of skin
+
+# pubmed id: 34724200
+# "current study focused on melanomas of the skin"
+# hence, malignant melanoma of skin
+
+# pubmed id: 34290314
+# lists ICD10 codes as C43 (malignant melanoma of skin) 
+# for melanoma - thus malignant melanoma of skin
+
+# pubmed id: 36064556
+# lists cutaneous melanoma
+
+malignant_skin_melanoma_studies <- c(27023328,
+                                     21983785,
+                                     23455637,
+                                     21706340,
+                                     19578364,
+                                     18488026,
+                                     21983787,
+                                     28212542,
+                                     24980573,
+                                     35626014,
+                                     34724200,
+                                     34290314,
+                                     36064556)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(PUBMED_ID %in% malignant_skin_melanoma_studies &
+                grepl("\\bmelanoma", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bmelanoma",
+                          "malignant melanoma of skin"),
+                l1_all_disease_terms
+         ))
+
+
+# honestly not sure of pubmed id: 32887889
+# ? guess but likely malignant melanoma of skin
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(PUBMED_ID == 32887889 &
+                grepl("\\bmelanoma", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bmelanoma",
+                          "malignant melanoma of skin"),
+                l1_all_disease_terms
+         ))
+
+
+```
+
+
+### In situ cancer
+
+```{r in_situ_cancer}
+
+gwas_study_info |> 
+  filter(grepl("in situ", l1_all_disease_terms)) |> 
+  pull(l1_all_disease_terms) |>
+  unique()
+
+# cervical cancer
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "uterine cervix cancer in situ",
+                          "cervical cancer"
+         ))
+
+
+gwas_study_info |> 
+  filter(grepl("in situ", l1_all_disease_terms))  |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# strictly speaking is unspecified skin cancer
+# likely ICD10 DO4 is non-melanoma skin cancer
+# PheCode 172.3 - maps to D04.9
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(grepl("in situ", l1_all_disease_terms) & 
+                grepl("ICD10 D04|PheCode 172.3", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "skin cancer in situ",
+                          "non-melanoma skin cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+# in situ cancer -> to cancer
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "in situ cancer",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "in situ cancer",
+                          "cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+```
+
+### Non-specific cancer terms 
+
+```{r non-specific cancer terms}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms=="cancer")  |> 
+  select(`DISEASE/TRAIT`, l1_all_disease_terms) |>
+  head()
+
+# ICD10 Z85.4: Personal history of malignant neoplasm of genital organs
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "cancer" & 
+                grepl("ICD10 Z85.4", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "cancer",
+                          "urogenital cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+# ICD10 Z85.1: Personal history of malignant neoplasm of trachea, bronchus and lung 
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "cancer" & 
+                grepl("ICD10 Z85.1", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "cancer",
+                           "tracheal bronchus and lung cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+# ICD10 Z85.0: Personal history of malignant neoplasm of digestive organs
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "cancer" & 
+                grepl("ICD10 Z85.0", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "cancer",
+                          "digestive system cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+# Cancer of intrathoracic organs (PheCode 164)
+
+# Malignant neoplasm of retroperitoneum and peritoneum (PheCode 159.4)"
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "cancer" & 
+                grepl("PheCode 164|PheCode 159.4", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "cancer",
+                          "peritoneum cancer, retroperitoneal cancer"),
+                l1_all_disease_terms
+         )
+  )
+# Malignant neoplasm of other and ill-defined sites within the digestive organs and peritoneum (PheCode 159)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(l1_all_disease_terms == "cancer" & 
+                grepl("PheCode 159$", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "cancer",
+                          "digestive system cancer, peritoneum cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+```
+
+### peritoneum cancer -> peritoneal cancer
+
+```{r peritoneum cancer}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "peritoneum cancer",
+                          "peritoneal cancer"
+         ))
+
+
+```
+
+### Bladder tumor
+
+```{r bladder tumor}
+
+gwas_study_info |>
+  filter(l1_all_disease_terms == "bladder tumor") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+```
+
+### Squamous cell cancer
+
+```{r squamous cell cancer}
+
+gwas_study_info |>
+    filter(grepl("squamous cell cancer", l1_all_disease_terms)) |>
+    select(`DISEASE/TRAIT`, l1_all_disease_terms) |>
+    distinct()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "lung cancer, squamous cell cancer",
+                          "lung cancer"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "esophageal cancer, squamous cell cancer",
+                          "esophageal cancer"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "head and neck cancer, squamous cell cancer",
+                          "head and neck cancer"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "head and neck cancer, pain, squamous cell cancer",
+                          "head and neck cancer, cancer pain"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "non-melanoma skin cancer, squamous cell cancer",
+                          "non-melanoma skin cancer"
+         ))
+
+
+```
+
+### Female reproductive organ 
+
+```{r female_reproductive_organ}
+
+gwas_study_info |>
+    filter(grepl("female reproductive organ cancer", l1_all_disease_terms)) |>
+    select(`DISEASE/TRAIT`, l1_all_disease_terms) |>
+    distinct()
+
+
+gwas_study_info = gwas_study_info |>
+    mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "female reproductive organ cancer" & 
+                 grepl("benign", `DISEASE/TRAIT`, ignore.case = T),
+                 "benign neoplasm",
+                 l1_all_disease_terms
+         )
+         )
+
+
+gwas_study_info |>
+    filter(grepl("\\breproductive system cancer", l1_all_disease_terms)) |>
+    select(`DISEASE/TRAIT`, l1_all_disease_terms) |>
+    distinct()
+
+gwas_study_info = gwas_study_info |>
+    mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "reproductive system cancer" & 
+                 grepl("female reproductive cancer", `DISEASE/TRAIT`, ignore.case = T),
+                 "female reproductive organ cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+
+```
+
+### Male reproductive organ
+
+```{r male_repro_organ}
+
+gwas_study_info |>
+    filter(grepl("\\bmale reproductive organ cancer", l1_all_disease_terms)) |>
+    select(`DISEASE/TRAIT`, l1_all_disease_terms) |>
+    distinct()
+
+```
+
+### small cell cancer
+
+```{r small cell cancer}
+
+gwas_study_info |>
+    filter(grepl("\\bsmall cell cancer", l1_all_disease_terms)) |>
+    select(`DISEASE/TRAIT`, l1_all_disease_terms) |>
+    distinct()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(`DISEASE/TRAIT` == "Small-cell lung cancer",
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "small cell cancer",
+                          "lung cancer"),
+         l1_all_disease_terms
+         )
+)
 
 ```
 
@@ -1898,6 +2484,20 @@ gwas_study_info =
 
 ```
 
+## Deal with hanging commas and spaces
+
+```{r clean_hanging_commas}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = stringr::str_remove_all(l1_all_disease_terms, "^,|,$")
+         ) |>
+  mutate(l1_all_disease_terms = stringr::str_trim(l1_all_disease_terms)
+         ) 
+
+```
+
+
+## Final summary - number of unique study terms pairs 
 
 ```{r final_summary}
 
