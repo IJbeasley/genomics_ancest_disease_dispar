@@ -231,7 +231,8 @@ other_benign_neoplasms = c("adenomatous colon polyp",
                            "hepatic hemangioma",
                            "lobular capilliary hemangioma", 
                            "hemangioma of subcutaneous tissue",
-                           "hemangioma"
+                           "hemangioma",
+                           "lymphangioma"
                            )
 
 gwas_study_info = gwas_study_info |>
@@ -1012,9 +1013,33 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+
 # Reducing non-specific cancer terms
 
-## Glioma (can be benign or malignant)
+## Colonic neoplasm
+
+```{r colonic neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "colonic neoplasm") |> 
+  select(MAPPED_TRAIT, `DISEASE/TRAIT`, STUDY_ACCESSION) |> 
+  distinct() |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(grepl("malignant|canceer", `DISEASE/TRAIT`, ignore.case = T) &
+                l1_all_disease_terms == "colonic neoplasm",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "colonic neoplasm",
+                          "colorectal cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+```
+
+### Glioma (can be benign or malignant)
 
 ```{r glioma} 
 
@@ -1086,7 +1111,7 @@ gwas_study_info |>
 ```
 
 
-## Laryngeal neoplasm
+### Laryngeal neoplasm
 
 ```{r laryngeal neoplasm}
 
@@ -1109,7 +1134,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Sigmoid neoplasm
+### Sigmoid neoplasm
 
 ```{r sigmoid colon neoplasm}
 
@@ -1333,6 +1358,25 @@ gwas_study_info = gwas_study_info |>
          )
 
 ``` 
+
+
+## lymphoid neoplasm
+
+```{r lymphoid neoplasm}
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "lymphoid neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(ifelse(l1_all_disease_terms == "lymphoid neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "maglinant lymphoid tumor",
+                 l1_all_disease_terms
+         )
+         )
+
+```
 
 
 ## Brain neoplasm
