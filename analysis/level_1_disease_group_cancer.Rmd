@@ -225,6 +225,8 @@ other_benign_neoplasms = c("adenomatous colon polyp",
                            "colorectal adenoma",
                            "pituitary gland adenoma",
                            "aldosterone-producing adenoma",
+                           "metachronous colorectal adenoma",
+                           "adenomatous colon polyp",
                            "female genital tract polyp",
                            "polyp",
                            "uterine leiomyoma",
@@ -234,6 +236,8 @@ other_benign_neoplasms = c("adenomatous colon polyp",
                            "hemangioma",
                            "lymphangioma"
                            )
+
+other_benign_neoplasms = str_length_sort(other_benign_neoplasms)
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
@@ -1034,6 +1038,24 @@ gwas_study_info = gwas_study_info |>
          )
          )
 
+# still leaves one study (with Brain Tumor)
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "brain neoplasm") |> 
+  pull(PUBMED_ID) |>
+  unique() 
+
+# from paper sup tables, ICD-10 code of brain tumor term is C71 - malignant neoplasm of brain
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "brain neoplasm" & 
+                 PUBMED_ID == 34594039,
+                 "central nervous system cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+
 
 ```
 
@@ -1056,6 +1078,37 @@ gwas_study_info = gwas_study_info |>
          )
          )
 
+
+```
+
+
+### Bone neoplasm
+
+```{r bone neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "bone neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "bone neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "bone cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "bone neoplasm" & 
+                 grepl("benign", `DISEASE/TRAIT`, ignore.case = T),
+                 "benign neoplasm",
+                 l1_all_disease_terms
+         )
+         )
 
 ```
 
@@ -1103,6 +1156,46 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### Endometrial neoplasm
+
+```{r endometrial neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "endometrial neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "endometrial neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "endometrial cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+### Esophageal neoplasm
+
+```{r esophageal neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "neoplasm of esophagus") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "neoplasm of esophagus" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "esophageal cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
 ### Eye neoplasm
 
 ```{r eye neoplasm}
@@ -1147,6 +1240,20 @@ gwas_study_info = gwas_study_info |>
                  l1_all_disease_terms
          )
          )
+
+# also specific example where measuring sclerosing cholangitis & gallbladder cancer
+gwas_study_info |>
+  filter(grepl("gallbladder neoplasm", l1_all_disease_terms)) |>
+  select(STUDY_ACCESSION, `DISEASE/TRAIT`)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(STUDY_ACCESSION == "GCST005857",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "gallbladder neoplasm",
+                          "Gallbladder carcinoma in primary sclerosing cholangitis"),
+                l1_all_disease_terms
+         ))
 
 ```
 
@@ -1219,6 +1326,26 @@ gwas_study_info |>
                 l1_all_disease_terms
          ))
 
+
+```
+
+### Glottis neoplasm
+
+```{r glottis neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "glottis neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "glottis neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "larynx cancer",
+                 l1_all_disease_terms
+         )
+         )
 
 ```
 
@@ -1328,6 +1455,87 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### Meningeal neoplasm
+
+```{r meningeal neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "meningeal neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "meningeal neoplasm" & 
+                 grepl("benign", `DISEASE/TRAIT`, ignore.case = T),
+                 "benign neoplasm",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+### Mature b-cell neoplasm
+
+```{r mature b-cell neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "neoplasm of mature b-cells") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "neoplasm of mature b-cells" & 
+                 `DISEASE/TRAIT` == "Follicular lymphoma",
+                 "non-hodgkins lymphoma",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+### Mouth neoplasm
+
+```{r mouth neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "mouth neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "mouth neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "lip and oral cavity cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+
+### Neuroendocrine neoplasm
+
+```{r neuroendocrine neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "neuroendocrine neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "neuroendocrine neoplasm" & 
+                 grepl("PheCode 209", `DISEASE/TRAIT`, ignore.case = T),
+                 "benign neoplasm",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
 ### Ovarian neoplasm
 
 ```{r ovarian neoplasm}
@@ -1431,13 +1639,35 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### Stomach neoplasm
+
+```{r stomach neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "stomach neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "stomach neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "stomach cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
 ### Testicular neoplasm
 
 ```{r testicular neoplasm}
 
 gwas_study_info |> 
   filter(l1_all_disease_terms == "testicular neoplasm") |> 
-  pull(`DISEASE/TRAIT`)
+  pull(`DISEASE/TRAIT`) |>
+  unique()
 
 
 gwas_study_info = gwas_study_info |>
@@ -1445,6 +1675,68 @@ gwas_study_info = gwas_study_info |>
         ifelse(l1_all_disease_terms == "testicular neoplasm" &
                  grepl("malignant", `DISEASE/TRAIT`, ignore.case = T),
                  "testicular cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+### Tongue neoplasm
+
+```{r tongue neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "tongue neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "tongue neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "lip and oral cavity cancer",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+### Uterine neoplasm
+
+```{r uterine neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "uterine neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "uterine neoplasm" & 
+                 grepl("benign", `DISEASE/TRAIT`, ignore.case = T),
+                 "benign neoplasm",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
+
+### Vulvar neoplasm
+
+```{r vulvar neoplasm}
+
+gwas_study_info |> 
+  filter(l1_all_disease_terms == "vulvar neoplasm") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "vulvar neoplasm" & 
+                 grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
+                 "vulvar cancer",
                  l1_all_disease_terms
          )
          )
