@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree2702dc1df5ef879b9d14a5901a3e6b8f2c77700btargetblank2702dc1a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree445142184b40e7256e593707d6e985995d7e1121targetblank4451421a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/2702dc1df5ef879b9d14a5901a3e6b8f2c77700b" target="_blank">2702dc1</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/445142184b40e7256e593707d6e985995d7e1121" target="_blank">4451421</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree2702dc1df5ef879b9d14a5901a3e6b8f2c77700btargetblank2702dc1a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree445142184b40e7256e593707d6e985995d7e1121targetblank4451421a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/2702dc1df5ef879b9d14a5901a3e6b8f2c77700b" target="_blank">2702dc1</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/445142184b40e7256e593707d6e985995d7e1121" target="_blank">4451421</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -610,6 +610,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/445142184b40e7256e593707d6e985995d7e1121/analysis/level_1_disease_group_cancer.Rmd" target="_blank">4451421</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-15
+</td>
+<td>
+Grouping more neoplasms
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/2e145f8cf31a5e73f86cff6e7753ae9c1440512f/docs/level_1_disease_group_cancer.html" target="_blank">2e145f8</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-15
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1043,6 +1077,8 @@ other_benign_neoplasms = c(&quot;adenomatous colon polyp&quot;,
                            &quot;colorectal adenoma&quot;,
                            &quot;pituitary gland adenoma&quot;,
                            &quot;aldosterone-producing adenoma&quot;,
+                           &quot;metachronous colorectal adenoma&quot;,
+                           &quot;adenomatous colon polyp&quot;,
                            &quot;female genital tract polyp&quot;,
                            &quot;polyp&quot;,
                            &quot;uterine leiomyoma&quot;,
@@ -1052,6 +1088,8 @@ other_benign_neoplasms = c(&quot;adenomatous colon polyp&quot;,
                            &quot;hemangioma&quot;,
                            &quot;lymphangioma&quot;
                            )
+
+other_benign_neoplasms = str_length_sort(other_benign_neoplasms)
 
 gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms = 
@@ -1792,6 +1830,23 @@ cancer terms</h1>
                  &quot;central nervous system cancer&quot;,
                  l1_all_disease_terms
          )
+         )
+
+# still leaves one study (with Brain Tumor)
+
+gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;brain neoplasm&quot;) |&gt; 
+  pull(PUBMED_ID) |&gt;
+  unique() </code></pre>
+<pre><code>[1] 34594039</code></pre>
+<pre class="r"><code># from paper sup tables, ICD-10 code of brain tumor term is C71 - malignant neoplasm of brain
+gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;brain neoplasm&quot; &amp; 
+                 PUBMED_ID == 34594039,
+                 &quot;central nervous system cancer&quot;,
+                 l1_all_disease_terms
+         )
          )</code></pre>
 </div>
 <div id="breast-neoplasm" class="section level3" number="4.0.2">
@@ -1833,8 +1888,36 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="cecal-neoplasm" class="section level3" number="4.0.3">
-<h3><span class="header-section-number">4.0.3</span> Cecal neoplasm</h3>
+<div id="bone-neoplasm" class="section level3" number="4.0.3">
+<h3><span class="header-section-number">4.0.3</span> Bone neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;bone neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Benign neoplasm of bone and articular cartilage (PheCode 213)&quot;              
+[2] &quot;Cancer code, self-reported: primary bone cancer (UKB data field 20001_1063)&quot;
+[3] &quot;Bone cancer (PheCode 170.1)&quot;                                                </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;bone neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;bone cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )
+
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;bone neoplasm&quot; &amp; 
+                 grepl(&quot;benign&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;benign neoplasm&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="cecal-neoplasm" class="section level3" number="4.0.4">
+<h3><span class="header-section-number">4.0.4</span> Cecal neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;cecal neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`)</code></pre>
@@ -1849,8 +1932,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="colonic-neoplasm" class="section level3" number="4.0.4">
-<h3><span class="header-section-number">4.0.4</span> Colonic
+<div id="colonic-neoplasm" class="section level3" number="4.0.5">
+<h3><span class="header-section-number">4.0.5</span> Colonic
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;colonic neoplasm&quot;) |&gt; 
@@ -1907,8 +1990,50 @@ neoplasm</h3>
          )
   )</code></pre>
 </div>
-<div id="eye-neoplasm" class="section level3" number="4.0.5">
-<h3><span class="header-section-number">4.0.5</span> Eye neoplasm</h3>
+<div id="endometrial-neoplasm" class="section level3" number="4.0.6">
+<h3><span class="header-section-number">4.0.6</span> Endometrial
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;endometrial neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Endometrial cancer&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;endometrial neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;endometrial cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="esophageal-neoplasm" class="section level3" number="4.0.7">
+<h3><span class="header-section-number">4.0.7</span> Esophageal
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;neoplasm of esophagus&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;ICD10 C15: Malignant neoplasm of esophagus&quot;                                     
+[2] &quot;Cancer of esophagus (PheCode 150)&quot;                                              
+[3] &quot;ICD10 C15.5: Malignant neoplasm of lower third of esophagus&quot;                    
+[4] &quot;ICD10 C15.9: Malignant neoplasm of esophagus, unspecified&quot;                      
+[5] &quot;Malignant neoplasm of esophagus (UKB data field 40006) (Gene-based burden)&quot;     
+[6] &quot;Malignant neoplasm of esophagus (UKB data field 40006)&quot;                         
+[7] &quot;ICD10 C15.5: Malignant neoplasm of lower third of esophagus (Gene-based burden)&quot;
+[8] &quot;ICD10 C15.9: Malignant neoplasm of esophagus, unspecified (Gene-based burden)&quot;  
+[9] &quot;ICD10 C15: Malignant neoplasm of esophagus (Gene-based burden)&quot;                 </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;neoplasm of esophagus&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;esophageal cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="eye-neoplasm" class="section level3" number="4.0.8">
+<h3><span class="header-section-number">4.0.8</span> Eye neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;eye neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`)</code></pre>
@@ -1923,8 +2048,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="gallbladder-neoplasm" class="section level3" number="4.0.6">
-<h3><span class="header-section-number">4.0.6</span> Gallbladder
+<div id="gallbladder-neoplasm" class="section level3" number="4.0.9">
+<h3><span class="header-section-number">4.0.9</span> Gallbladder
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;gallbladder neoplasm&quot;) |&gt; 
@@ -1948,11 +2073,27 @@ gwas_study_info = gwas_study_info |&gt;
                  &quot;benign neoplasm&quot;,
                  l1_all_disease_terms
          )
-         )</code></pre>
+         )
+
+# also specific example where measuring sclerosing cholangitis &amp; gallbladder cancer
+gwas_study_info |&gt;
+  filter(grepl(&quot;gallbladder neoplasm&quot;, l1_all_disease_terms)) |&gt;
+  select(STUDY_ACCESSION, `DISEASE/TRAIT`)</code></pre>
+<pre><code>   STUDY_ACCESSION                                           DISEASE/TRAIT
+            &lt;char&gt;                                                  &lt;char&gt;
+1:      GCST005857 Gallbladder carcinoma in primary sclerosing cholangitis</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms  = 
+         ifelse(STUDY_ACCESSION == &quot;GCST005857&quot;,
+                stringr::str_replace_all(l1_all_disease_terms,
+                          &quot;gallbladder neoplasm&quot;,
+                          &quot;Gallbladder carcinoma in primary sclerosing cholangitis&quot;),
+                l1_all_disease_terms
+         ))</code></pre>
 </div>
 <div id="glioma-can-be-benign-or-malignant" class="section level3"
-number="4.0.7">
-<h3><span class="header-section-number">4.0.7</span> Glioma (can be
+number="4.0.10">
+<h3><span class="header-section-number">4.0.10</span> Glioma (can be
 benign or malignant)</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(l1_all_disease_terms  = 
@@ -2080,8 +2221,25 @@ gwas_study_info |&gt;
                 l1_all_disease_terms
          ))</code></pre>
 </div>
-<div id="kidney-neoplasm" class="section level3" number="4.0.8">
-<h3><span class="header-section-number">4.0.8</span> Kidney
+<div id="glottis-neoplasm" class="section level3" number="4.0.11">
+<h3><span class="header-section-number">4.0.11</span> Glottis
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;glottis neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;ICD10 C32.0: Malignant neoplasm of glottis&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;glottis neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;larynx cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="kidney-neoplasm" class="section level3" number="4.0.12">
+<h3><span class="header-section-number">4.0.12</span> Kidney
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;kidney neoplasm&quot;) |&gt; 
@@ -2104,8 +2262,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="laryngeal-neoplasm" class="section level3" number="4.0.9">
-<h3><span class="header-section-number">4.0.9</span> Laryngeal
+<div id="laryngeal-neoplasm" class="section level3" number="4.0.13">
+<h3><span class="header-section-number">4.0.13</span> Laryngeal
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;laryngeal neoplasm&quot;) |&gt; 
@@ -2131,8 +2289,8 @@ gwas_study_info = gwas_study_info |&gt;
                 l1_all_disease_terms
          ))</code></pre>
 </div>
-<div id="liver-neoplasm" class="section level3" number="4.0.10">
-<h3><span class="header-section-number">4.0.10</span> Liver
+<div id="liver-neoplasm" class="section level3" number="4.0.14">
+<h3><span class="header-section-number">4.0.14</span> Liver
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;liver neoplasm&quot;) |&gt; 
@@ -2151,8 +2309,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="lung-neoplasm" class="section level3" number="4.0.11">
-<h3><span class="header-section-number">4.0.11</span> Lung neoplasm</h3>
+<div id="lung-neoplasm" class="section level3" number="4.0.15">
+<h3><span class="header-section-number">4.0.15</span> Lung neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;lung neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -2172,8 +2330,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="lymphoid-neoplasm" class="section level3" number="4.0.12">
-<h3><span class="header-section-number">4.0.12</span> Lymphoid
+<div id="lymphoid-neoplasm" class="section level3" number="4.0.16">
+<h3><span class="header-section-number">4.0.16</span> Lymphoid
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;lymphoid neoplasm&quot;) |&gt; 
@@ -2189,8 +2347,79 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="ovarian-neoplasm" class="section level3" number="4.0.13">
-<h3><span class="header-section-number">4.0.13</span> Ovarian
+<div id="meningeal-neoplasm" class="section level3" number="4.0.17">
+<h3><span class="header-section-number">4.0.17</span> Meningeal
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;meningeal neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;ICD10 D32.0: Benign neoplasm of cerebral meninges&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;meningeal neoplasm&quot; &amp; 
+                 grepl(&quot;benign&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;benign neoplasm&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="mature-b-cell-neoplasm" class="section level3" number="4.0.18">
+<h3><span class="header-section-number">4.0.18</span> Mature b-cell
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;neoplasm of mature b-cells&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Follicular lymphoma&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;neoplasm of mature b-cells&quot; &amp; 
+                 `DISEASE/TRAIT` == &quot;Follicular lymphoma&quot;,
+                 &quot;non-hodgkins lymphoma&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="mouth-neoplasm" class="section level3" number="4.0.19">
+<h3><span class="header-section-number">4.0.19</span> Mouth
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;mouth neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Oral cancers (chewing tobacco related)&quot;
+[2] &quot;Cancer of mouth (PheCode 145)&quot;         
+[3] &quot;Oral cancer&quot;                           </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;mouth neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;lip and oral cavity cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="neuroendocrine-neoplasm" class="section level3"
+number="4.0.20">
+<h3><span class="header-section-number">4.0.20</span> Neuroendocrine
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;neuroendocrine neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Neuroendocrine tumor&quot;                &quot;Neuroendocrine tumors (PheCode 209)&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;neuroendocrine neoplasm&quot; &amp; 
+                 grepl(&quot;PheCode 209&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;benign neoplasm&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="ovarian-neoplasm" class="section level3" number="4.0.21">
+<h3><span class="header-section-number">4.0.21</span> Ovarian
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;ovarian neoplasm&quot;) |&gt; 
@@ -2212,8 +2441,8 @@ neoplasm</h3>
          )</code></pre>
 </div>
 <div id="nasopharyngeal-neoplasm" class="section level3"
-number="4.0.14">
-<h3><span class="header-section-number">4.0.14</span> Nasopharyngeal
+number="4.0.22">
+<h3><span class="header-section-number">4.0.22</span> Nasopharyngeal
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;nasopharyngeal neoplasm&quot;) |&gt; 
@@ -2242,8 +2471,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="pancreatic-neoplasm" class="section level3" number="4.0.15">
-<h3><span class="header-section-number">4.0.15</span> Pancreatic
+<div id="pancreatic-neoplasm" class="section level3" number="4.0.23">
+<h3><span class="header-section-number">4.0.23</span> Pancreatic
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;pancreatic neoplasm&quot;) |&gt; 
@@ -2260,8 +2489,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="sigmoid-neoplasm" class="section level3" number="4.0.16">
-<h3><span class="header-section-number">4.0.16</span> Sigmoid
+<div id="sigmoid-neoplasm" class="section level3" number="4.0.24">
+<h3><span class="header-section-number">4.0.24</span> Sigmoid
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;sigmoid neoplasm&quot;) |&gt; 
@@ -2280,8 +2509,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="skin-neoplasm" class="section level3" number="4.0.17">
-<h3><span class="header-section-number">4.0.17</span> Skin neoplasm</h3>
+<div id="skin-neoplasm" class="section level3" number="4.0.25">
+<h3><span class="header-section-number">4.0.25</span> Skin neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;skin neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -2342,12 +2571,33 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="testicular-neoplasm" class="section level3" number="4.0.18">
-<h3><span class="header-section-number">4.0.18</span> Testicular
+<div id="stomach-neoplasm" class="section level3" number="4.0.26">
+<h3><span class="header-section-number">4.0.26</span> Stomach
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;stomach neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;ICD10 C16: Malignant neoplasm of stomach&quot;                              
+[2] &quot;Cancer code, self-reported: stomach cancer (UKB data field 20001_1018)&quot;
+[3] &quot;Cancer of stomach (PheCode 151)&quot;                                       
+[4] &quot;ICD10 C16: Malignant neoplasm of stomach (Gene-based burden)&quot;          </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;stomach neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;stomach cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="testicular-neoplasm" class="section level3" number="4.0.27">
+<h3><span class="header-section-number">4.0.27</span> Testicular
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(l1_all_disease_terms == &quot;testicular neoplasm&quot;) |&gt; 
-  pull(`DISEASE/TRAIT`)</code></pre>
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
 <pre><code>[1] &quot;ICD10 C62.1: Malignant neoplasm of descended testis&quot;   
 [2] &quot;ICD10 C62.9: Malignant neoplasm of testis, unspecified&quot;</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
@@ -2355,6 +2605,60 @@ neoplasm</h3>
         ifelse(l1_all_disease_terms == &quot;testicular neoplasm&quot; &amp;
                  grepl(&quot;malignant&quot;, `DISEASE/TRAIT`, ignore.case = T),
                  &quot;testicular cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="tongue-neoplasm" class="section level3" number="4.0.28">
+<h3><span class="header-section-number">4.0.28</span> Tongue
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;tongue neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Cancer of tongue (PheCode 145.2)&quot;                                     
+[2] &quot;Cancer code, self-reported: tongue cancer (UKB data field 20001_1011)&quot;
+[3] &quot;ICD10 C01: Malignant neoplasm of base of tongue&quot;                      </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;tongue neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;lip and oral cavity cancer&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="uterine-neoplasm" class="section level3" number="4.0.29">
+<h3><span class="header-section-number">4.0.29</span> Uterine
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;uterine neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Other benign neoplasms of uterus (Union D26)&quot;   
+[2] &quot;Other benign neoplasm of uterus (PheCode 218.2)&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;uterine neoplasm&quot; &amp; 
+                 grepl(&quot;benign&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;benign neoplasm&quot;,
+                 l1_all_disease_terms
+         )
+         )</code></pre>
+</div>
+<div id="vulvar-neoplasm" class="section level3" number="4.0.30">
+<h3><span class="header-section-number">4.0.30</span> Vulvar
+neoplasm</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(l1_all_disease_terms == &quot;vulvar neoplasm&quot;) |&gt; 
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;ICD10 C51.9: Malignant neoplasm of vulva, unspecified&quot;</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == &quot;vulvar neoplasm&quot; &amp; 
+                 grepl(&quot;malignant|cancer|carcinoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                 &quot;vulvar cancer&quot;,
                  l1_all_disease_terms
          )
          )</code></pre>
@@ -2411,7 +2715,7 @@ head(n_studies_trait)</code></pre>
 5 major depressive disorder       108
 6 schizophrenia                   108</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2555    2</code></pre>
+<pre><code>[1] 2542    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="5.1.1">
 <h3><span class="header-section-number">5.1.1</span> When separate
@@ -2425,7 +2729,7 @@ studies with multiple terms</h3>
 test &lt;- data.frame(trait = unique(diseases))
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 1780</code></pre>
+<pre><code>[1] 1767</code></pre>
 <pre class="r"><code># make frequency table
 freq &lt;- table(as.factor(diseases))
 
@@ -2438,7 +2742,7 @@ head(freq_sorted, 10)</code></pre>
    chronic kidney disease              hypertension  type 2 diabetes mellitus 
                     10835                      7089                       922 
   coronary artery disease           benign neoplasm major depressive disorder 
-                      501                       474                       471 
+                      501                       484                       471 
        alzheimers disease             breast cancer             schizophrenia 
                       422                       379                       368 
                    asthma 
