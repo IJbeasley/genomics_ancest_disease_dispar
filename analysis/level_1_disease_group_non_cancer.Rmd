@@ -1641,6 +1641,23 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Retinopathy
+
+```{r retinopathy}
+
+retinopathy_terms <- c("chronic central serous retinopathy",
+                       "central serous retinopathy"
+                       )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = 
+           stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(retinopathy_terms, collapse = "(?=,|$)|\\b"),
+                          "retinopathy")
+  )
+
+```
+
 
 ## Rheumatoid arthritis
 
@@ -1899,7 +1916,7 @@ thrombocytopenia_terms <- c("thrombocytopenia 4",
 
 ## Tinea 
 
-```{r}
+```{r tinea}
 
 tinea_terms <- c("tinea pedis",
                  "tinea unguium",
@@ -1912,6 +1929,22 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           pattern = paste0(tinea_terms, collapse = "(?=,|$)|\\b"),
                           "tinea"
+         ))
+
+```
+
+## Uveitis
+
+```{r uveitis}
+
+uveitis_terms <- c("anterior uveitis"
+                   )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(uveitis_terms, collapse = "(?=,|$)|\\b"),
+                          "uveitis"
          ))
 
 ```
@@ -1967,11 +2000,11 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-# Final summary - number of unique study terns
+# Final summary - number of unique study terms
 
 ## Deal with duplicate terms created during grouping
 
-```{r}
+```{r duplicate_terms}
 
 gwas_study_info = 
  gwas_study_info |>
@@ -1983,6 +2016,20 @@ gwas_study_info =
 
 
 ```
+
+## Deal with hanging commas and spaces
+
+```{r clean_hanging_commas}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms = stringr::str_remove_all(l1_all_disease_terms, "^,|,$")
+         ) |>
+  mutate(l1_all_disease_terms = stringr::str_trim(l1_all_disease_terms)
+         ) 
+
+```
+
+## Final summary - number of unique study terms pairs 
 
 ```{r final_summary}
 
