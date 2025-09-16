@@ -228,11 +228,13 @@ other_benign_neoplasms = c("adenomatous colon polyp",
                            "metachronous colorectal adenoma",
                            "adenomatous colon polyp",
                            "female genital tract polyp",
-                           "polyp",
+                           "\\bpolyp\\b",
                            "uterine leiomyoma",
                            "hepatic hemangioma",
                            "lobular capilliary hemangioma", 
                            "hemangioma of subcutaneous tissue",
+                           "benign prostatic hyperplasia",
+                           "melanocytic nevus",
                            "hemangioma",
                            "lymphangioma"
                            )
@@ -798,6 +800,18 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### Neuroendocrine tumor
+
+```{r group_neuroendocrine_tumor}
+
+neuroendo_terms <- c("pulmonary neuroendocrine tumor",
+                     "small intestine neuroendocrine tumor",
+                     "pancreatic neuroendocrine tumor",
+                     "carcinoid tumor" #http://www.ebi.ac.uk/efo/EFO_0004243
+)
+
+```
+
 ### Non-Hodgkins lymphoma
 
 ```{r group_nhl}
@@ -932,6 +946,7 @@ stomach_cancer_terms = stringr::str_replace_all(stomach_cancer_terms,
 stomach_cancer_terms = c(
                           "diffuse stomach cancer",
                           "gastric cancer",
+                          "gastric intestinal type adenocarcinoma",
                           stomach_cancer_terms
                           )
 
@@ -1153,6 +1168,26 @@ gwas_study_info = gwas_study_info |>
                 l1_all_disease_terms
          )
   )
+
+# also specific example where measuring rectal cancer vs colon cancer
+
+gwas_study_info |> 
+  filter(grepl("colonic neoplasm", l1_all_disease_terms)) |> 
+  select(MAPPED_TRAIT, `DISEASE/TRAIT`, STUDY_ACCESSION) |> 
+  distinct() |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(STUDY_ACCESSION == "GCST90179122",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "colonic neoplasm",
+                          "colorectal cancer"),
+                l1_all_disease_terms
+         )
+  )
+
+
 
 ```
 
@@ -1448,7 +1483,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms =
          ifelse(l1_all_disease_terms == "lymphoid neoplasm" & 
                  grepl("malignant|cancer|carcinoma", `DISEASE/TRAIT`, ignore.case = T),
-                 "maglinant lymphoid tumor",
+                 "malignant lymphoid tumor",
                  l1_all_disease_terms
          )
          )
@@ -1516,6 +1551,26 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
+### Myeloid neoplasm
+
+```{r myleoid neoplasm}
+
+gwas_study_info |> 
+  filter(grepl("myeloid neoplasm", l1_all_disease_terms)) |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "myeloid neoplasm" & 
+                 grepl("Myeloid leukemia", `DISEASE/TRAIT`, ignore.case = T),
+                 "leukemia",
+                 l1_all_disease_terms
+         )
+         )
+
+```
+
 ### Neuroendocrine neoplasm
 
 ```{r neuroendocrine neoplasm}
@@ -1529,7 +1584,17 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms =
          ifelse(l1_all_disease_terms == "neuroendocrine neoplasm" & 
                  grepl("PheCode 209", `DISEASE/TRAIT`, ignore.case = T),
-                 "benign neoplasm",
+                 "neuroendocrine tumor",
+                 l1_all_disease_terms
+         )
+         )
+
+# ? to double check: neuroendocrine tumor is malignant
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(l1_all_disease_terms == "neuroendocrine neoplasm" & 
+                 grepl("neuroendocrine tumor", `DISEASE/TRAIT`, ignore.case = T),
+                 "neuroendocrine tumor",
                  l1_all_disease_terms
          )
          )
@@ -1566,7 +1631,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms =
          ifelse(l1_all_disease_terms == "nasopharyngeal neoplasm" & 
-                 grepl("carcinoma|cancer", `DISEASE/TRAIT`, ignore.case = T),
+                 grepl("carcinoma|cancer|malignant", `DISEASE/TRAIT`, ignore.case = T),
                  "nasopharyngeal cancer",
                  l1_all_disease_terms
          )
@@ -1791,6 +1856,28 @@ gwas_study_info = gwas_study_info |>
                           "ocular melanoma"
          ))
 
+
+```
+
+# Other ... 
+
+### benign neoplasm, colorectal cancer
+
+```{r benign neoplasm, colorectal cancer}
+
+gwas_study_info |>
+  filter(l1_all_disease_terms == "benign neoplasm, colorectal cancer") |> 
+  select(MAPPED_TRAIT, `DISEASE/TRAIT`, STUDY_ACCESSION) |> 
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(STUDY_ACCESSION == "GCST90093303",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "benign neoplasm, colorectal cancer",
+                          "colorectal cancer"),
+                l1_all_disease_terms
+         ))
 
 ```
 
