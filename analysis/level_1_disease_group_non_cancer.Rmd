@@ -338,6 +338,26 @@ gwas_study_info = gwas_study_info |>
          ))
 
 ```
+#### Fixing
+
+```{r fix_ischemic_heart_disease}
+
+
+to_fix <- c("non-st elevation ischemic heart disease",
+            "post-operative ischemic heart disease",
+            "st elevation ischemic heart disease",
+            "subsequent st elevation (stemi) and non-st elevation (nstemi) ischemic heart disease")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          paste0(to_fix, collapse = "(?=,|$)|\\b"),
+                          "ischemic heart disease"
+         ))
+
+
+```
+
 
 ### (Non-rheumatic) Heart valvular disease
 
@@ -527,6 +547,8 @@ url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fw
 hypertension_terms <- get_descendants(url)
 
 hypertension_terms = c("primary hypertension",
+                       "chronic venous hypertension",
+                       "portal hypertension",
                       hypertension_terms
                       )
 
@@ -562,7 +584,9 @@ heart_block_terms <- c("first degree atrioventricular block",
                       "second degree atrioventricular block",
                       "third-degree atrioventricular block",
                       "atrioventricular block",
-                      "bundle branch block"
+                      "bundle branch block",
+                      "complete right heart block",
+                      "left heart block"
                       )
 
 gwas_study_info = gwas_study_info |>
@@ -633,7 +657,168 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### Congenital heart disease/s
 
+```{r congenital_heart_disease}
+
+congenital_heart_disease_terms <- c(
+  "congenital anomaly of cardiovascular system",
+  "congenital anomaly of the great arteries",
+  "congenital heart malformation",
+  "congenital left-sided heart lesions",
+  "congenital right-sided heart lesions",
+  "heart septal defect",
+  "atrial heart septal defect",
+  "atrioventricular canal defect",
+  "conotruncal heart malformations",
+  "abnormal aortic morphology",
+  "abnormal cardiovascular system physiology",
+  "abnormal cardiovascular system morphology",
+  "abnormality of the vasculature",
+  "cerebral arteriovenous malformation"
+  )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(congenital_heart_disease_terms, collapse = "(?=,|$)|\\b"),
+                          "congenital heart disease"
+         )
+  )
+
+
+```
+
+### Thrombosis
+
+```{r thrombosis}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0000831/descendants"
+
+thrombosis_terms <- get_descendants(url)
+
+thrombosis_terms <- c("abnormal thrombosis",
+                      thrombosis_terms)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(thrombosis_terms, collapse = "(?=,|$)|\\b"),
+                          "thrombotic disease"
+         )
+  )
+
+```
+
+### Arterial occlusion
+
+```{r arterial_occlusion}
+
+arterial_occlusion_terms <- c("cerebral artery occlusion",
+                              "occlusion precerebral artery",
+                              "small artery occlusion"
+                              )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(arterial_occlusion_terms, collapse = "(?=,|$)|\\b"),
+                          "arterial occlusion"
+         )
+  )
+
+
+```
+
+### Other vascular disorders / diseases
+
+```{r other_vascular_disorders}
+
+other_vascular_disorder_terms <- c("skin vascular disease",
+                                   "peripheral vascular disease",
+                                   "vascular disease",
+                                   "vasculitis",
+                                   "arteritis")
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(other_vascular_disorder_terms, collapse = "(?=,|$)|\\b"),
+                          "other vascular disorders"
+         )
+  )
+
+
+```
+
+## Congestive heart failure
+
+```{r congestive_heart_failure}
+
+congestive_heart_failure_terms <- c("systolic heart failure",
+                                 "diastolic heart failure",
+                                 "cor pulmonale",
+                                 "congenital heart disease",
+                                 "chronic pulmonary heart disease"
+                                 )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(congestive_heart_failure_terms, collapse = "(?=,|$)|\\b"),
+                          "congestive heart failure"
+         ))
+
+```
+
+## Heart failure
+
+```{r heart_failure}
+
+
+
+
+```
+
+## Brain infarction
+
+```{r brain_infarction}
+
+brain_infarction_terms <- c("cerebral infarction",
+                          "mri defined brain infarct",
+                          "small cerebral infarction"
+                          )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(brain_infarction_terms, collapse = "(?=,|$)|\\b"),
+                          "brain infarction"
+         ))
+
+```
+
+## Vascular insufficiency
+
+```{r vascular_insufficiency}
+
+vascular_insufficiency_terms <- c("vascular insufficiency disorder",
+                                 "chronic venous insufficiency",
+                                  "chronic intestinal vascular insufficiency"
+                                 )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(vascular_insufficiency_terms, collapse = "(?=,|$)|\\b"),
+                          "vascular insufficiency"
+         )
+  )
+
+```
 
 # Disease subtype grouping (non-cancer)
 
@@ -1050,26 +1235,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Congestive heart failure
 
-```{r congestive_heart_failure}
-
-congestive_heart_failure_terms <- c("systolic heart failure",
-                                 "diastolic heart failure",
-                                 "cor pulmonale",
-                                 "congenital heart disease",
-                                 "chronic pulmonary heart disease"
-                                 )
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(congestive_heart_failure_terms, collapse = "(?=,|$)|\\b"),
-                          "congestive heart failure"
-         ))
-
-```
 
 ## Creutzfeldt jacob disease
 
