@@ -124,6 +124,9 @@ gwas_study_info = gwas_study_info |>
                           "chronic kidney disease"
          ))
 
+
+
+
 ```
 
 # Disease cause grouping
@@ -512,7 +515,7 @@ gwas_study_info =
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
                           "\\bperipheral artery disease|\\bperipheral arterial disease",
-                          "lower extremity peripheral artery disease"
+                          "lower extremity peripheral arterial disease"
          ))
 
 ```
@@ -664,6 +667,8 @@ gwas_study_info = gwas_study_info |>
 congenital_heart_disease_terms <- c(
   "congenital anomaly of cardiovascular system",
   "congenital anomaly of the great arteries",
+  "abnormal cardiac septum morphology",
+  "abdominal aortic artery calcification",
   "congenital heart malformation",
   "congenital left-sided heart lesions",
   "congenital right-sided heart lesions",
@@ -678,6 +683,9 @@ congenital_heart_disease_terms <- c(
   "cerebral arteriovenous malformation"
   )
 
+congenital_heart_disease_terms <- str_length_sort(congenital_heart_disease_terms)
+congenital_heart_disease_terms <- paste0("(?=, |^)", congenital_heart_disease_terms)
+congenital_heart_disease_terms <- paste0(congenital_heart_disease_terms, "(?=,|$)")
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
@@ -741,11 +749,14 @@ other_vascular_disorder_terms <- c("skin vascular disease",
                                    "vasculitis",
                                    "arteritis")
 
+other_vascular_disorder_terms <- str_length_sort(other_vascular_disorder_terms)
+other_vascular_disorder_terms <- paste0("(?=, |^)", other_vascular_disorder_terms)
+other_vascular_disorder_terms <- paste0(other_vascular_disorder_terms, "(?=,|$)")
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(other_vascular_disorder_terms, collapse = "(?=,|$)|\\b"),
+                          pattern = paste0(other_vascular_disorder_terms, collapse = "|"),
                           "other vascular disorders"
          )
   )
@@ -907,13 +918,13 @@ gwas_study_info = gwas_study_info |>
 
 ```{r alcohol_use_disorders}
 
-alcohol_use_disorder_terms <- c("alcohol dependence",
-                             "alcohol withdrawal",
-                             "alcohol withdrawal delirium",
-                             "alcohol abuse",
-                             "alcohol-related disorders delirium",
-                             "alcohol use disorder",
-                             "addictive alcohol use"
+alcohol_use_disorder_terms <- c("(?=, |^)alcohol dependence",
+                             "(?=, |^)alcohol withdrawal",
+                             "(?=, |^)alcohol withdrawal delirium",
+                             "(?=, |^)alcohol abuse",
+                             "(?=, |^)alcohol-related disorders delirium",
+                             "(?=, |^)alcohol use disorder",
+                             "(?=, |^)addictive alcohol use"
                              )
 
 gwas_study_info = gwas_study_info |>
@@ -938,9 +949,9 @@ gwas_study_info = gwas_study_info |>
 
 ```{r alcoholic_liver_disease}
 
-alcoholic_liver_disease_terms <- c("alcoholic liver cirrhosis",
-                                   "alcoholic fatty liver disease",
-                                   "alcoholic hepatitis"
+alcoholic_liver_disease_terms <- c("(?=, |^)alcoholic liver cirrhosis",
+                                   "(?=, |^)alcoholic fatty liver disease",
+                                   "(?=, |^)alcoholic hepatitis"
                                    )
 
 
@@ -1692,11 +1703,13 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Kidney disease 
+## Chronic kidney disease 
 
 ```{r kidney_disease}
 
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_1074/descendants"
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0003884/descendants"
+
 
 kidney_disease_terms <- get_descendants(url)
 
@@ -1704,7 +1717,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
                           pattern = paste0(kidney_disease_terms, collapse = "(?=,|$)|\\b"),
-                          "kidney disease"
+                          "chronic kidney disease"
          ))
 
 
@@ -1890,7 +1903,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "non-alcoholic steatohepatitis|non-alcoholic liver disease",
+                          "(?=, |^)non-alcoholic steatohepatitis|(?=, |^)non-alcoholic liver disease",
                           "non-alcoholic fatty liver disease"
          ))
 
