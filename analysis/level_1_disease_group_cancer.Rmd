@@ -519,7 +519,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                         "cancer of gallbladder and extrahepatic biliaryy tract",
+                         "cancer of gallbladder and extrahepatic biliary tract",
                          "gallbladder and biliary tract cancer"
          )
          )
@@ -920,7 +920,7 @@ url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fww
 
 nhl_terms <- get_descendants(url)
 
-nhl_terms = stringr::str_replace_all(leukemia_terms,
+nhl_terms = stringr::str_replace_all(nhl_terms,
                             "\\bcarcinoma",
                             "cancer")
 
@@ -1764,7 +1764,7 @@ gwas_study_info = gwas_study_info |>
 
 ### Myeloid neoplasm
 
-```{r myleoid neoplasm}
+```{r myeloid neoplasm}
 
 gwas_study_info |> 
   filter(grepl("myeloid neoplasm", l1_all_disease_terms)) |> 
@@ -2489,15 +2489,14 @@ gwas_study_info = gwas_study_info |>
 
 ### peritoneum cancer -> peritoneal cancer
 
-```{r peritoneum cancer}
+```{r peritoneum_cancer}
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "peritoneum cancer",
+                          "\\bperitoneum cancer\\b",
                           "peritoneal cancer"
          ))
-
 
 ```
 
@@ -2608,7 +2607,7 @@ gwas_study_info |>
 
 ```
 
-### small cell cancer
+### Small cell cancer
 
 ```{r small cell cancer}
 
@@ -2630,7 +2629,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-### central nervous system cancer, nervous system cancer
+### Central nervous system cancer, nervous system cancer
 
 ```{r cns cancer}
 
@@ -2641,21 +2640,6 @@ gwas_study_info |>
          case_when(l1_all_disease_terms == "central nervous system cancer, nervous system cancer" ~ "central nervous system cancer",
                    TRUE ~ l1_all_disease_terms)
          ) 
-
-```
-
-### breast cancer, cancer, colon and rectum cancer, tracheal bronchus and lung cancer, ovarian cancer, prostate cancer
-
-```{r multiple common cancers}
-
-gwas_study_info =
-gwas_study_info |>
-  mutate(l1_all_disease_terms =
-         case_when(l1_all_disease_terms == "breast cancer, cancer, colorectal cancer, lung cancer, ovarian cancer, prostate cancer" ~ 
-                     "breast cancer, colorectal cancer, lung cancer, ovarian cancer, prostate cancer",
-                   TRUE ~ l1_all_disease_terms)
-         )
-
 
 ```
 
@@ -2683,7 +2667,7 @@ gwas_study_info |>
 
 ```
 
-### Deal witt unspecified skin cancer
+### Unspecified skin cancer
 
 ```{r unspecified skin cancer}
 
@@ -2713,7 +2697,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Deal with unspecified lymphoma
+## Unspecified lymphoma
 
 ```{r unspecified lymphoma}
 
@@ -2749,7 +2733,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "lymphoma",
+                          "^lymphoma",
                           "non-hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2767,7 +2751,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "lymphoma",
+                          "^lymphoma",
                           "non-hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2784,7 +2768,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "lymphoma",
+                          "^lymphoma",
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2800,7 +2784,7 @@ gwas_study_info = gwas_study_info |>
                 !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
                 PUBMED_ID == 34594039,
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "lymphoma",
+                          "^lymphoma",
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2814,7 +2798,7 @@ gwas_study_info = gwas_study_info |>
                 !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
                 PUBMED_ID == 23349640,
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "lymphoma",
+                          "^lymphoma",
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2828,13 +2812,28 @@ gwas_study_info = gwas_study_info |>
                 !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
                 PUBMED_ID == 36344522,
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "lymphoma",
+                          "^lymphoma",
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
          )
 
 ```
+
+### breast cancer, cancer, colon and rectum cancer, tracheal bronchus and lung cancer, ovarian cancer, prostate cancer
+
+```{r multiple common cancers}
+
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         case_when(l1_all_disease_terms == "breast cancer, cancer, colorectal cancer, lung cancer, ovarian cancer, prostate cancer" ~ 
+                     "breast cancer, colorectal cancer, lung cancer, ovarian cancer, prostate cancer",
+                   TRUE ~ l1_all_disease_terms)
+         )
+
+```
+
 
 
 
