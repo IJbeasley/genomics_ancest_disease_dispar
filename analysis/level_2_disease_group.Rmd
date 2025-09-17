@@ -774,18 +774,6 @@ gwas_study_info |>
 
 ```{r non_rheumatic_heart_disease}
 
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009551/descendants"
-
-heart_valve_disease_terms <- get_descendants(url)
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(heart_valve_disease_terms, collapse = "(?=,|$)|\\b"),
-                                   "heart valve disease"
-                          )  
-        )
-
 gwas_study_info |>
  filter(grepl("heart valve disease", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
@@ -803,7 +791,7 @@ gwas_study_info = gwas_study_info |>
 
 
 gwas_study_info |>
- filter(grepl("non-rheumatic heart disease", l2_all_disease_terms)) |>
+ filter(grepl("non-rheumatic valvular heart disease", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
@@ -927,6 +915,37 @@ gwas_study_info |>
 
 ```{r other_cardiovascular_diseases}
 
+other_cardiovascular_terms <- c("tachycardia",
+                                "other cardiac arrhythmias",
+                                "heart block",
+                                "atrioventricular canal defect",
+                                "abnormality of the cardiovascular system",
+                                "abnormal cardiac septum morphology",
+                                "congenital anomaly of cardiovascular system",
+                                "carotid artery disease",
+                                "abnormal cardiovascular system physiology",
+                                "abnormal cardiovascular system morphology",
+                                "pericarditis",
+                                "congenital anomaly of the great arteries",
+                                "coronary artery calcification",
+                                "arterial embolism",
+                                "arterial thrombosis"
+                                 )
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(other_cardiovascular_terms, collapse = "(?=,|$)|\\b"),
+                                   "other cardiovascular and circulatory diseases"
+                          )
+ )
+
+gwas_study_info |>
+ filter(grepl("other cardiovascular and circulatory diseases", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
