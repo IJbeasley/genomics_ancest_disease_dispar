@@ -206,7 +206,32 @@ gwas_study_info |>
 
 ### Benign neoplasms
 
-```{r}
+#### Benign neoplasm of blood vessel
+
+```{r group_benign_blood_vessel}
+
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F92017000/descendants"
+
+benign_blood_vessel_terms <- get_descendants(url)
+
+benign_blood_vessel_terms <- stringr::str_replace_all(benign_blood_vessel_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms = 
+        stringr::str_replace_all(l1_all_disease_terms, 
+                    paste0(benign_blood_vessel_terms, collapse = "(?=,|$)|\\b"), 
+                    "benign neoplasm")
+         )
+
+```
+
+### Labelled benign neoplasms
+
+```{r group_benign_neoplasms}
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
@@ -244,6 +269,13 @@ gwas_study_info = gwas_study_info |>
                     "benign neoplasm")
          ) 
 
+
+```
+
+# Other benign neoplasms 
+
+```{r group_other_benign_neoplasms}
+
 # https://my.clevelandclinic.org/health/diseases/21477-adenomas - benign
 other_benign_neoplasms = c("adenomatous colon polyp",
                            "colorectal adenoma",
@@ -264,6 +296,7 @@ other_benign_neoplasms = c("adenomatous colon polyp",
                            "vestibular schwannoma",
                            "schwannoma",
                            "skin lipoma", # likely benign ... 
+                           "lipoma",
                            "hamartoma",
                            "meningioma" # most are benign (80%)
                            )
@@ -998,18 +1031,6 @@ soft_tissue_sarcoma_terms = c("kaposis sarcoma",
                               soft_tissue_sarcoma_terms)
 ```
 
-#### Ewing sarcoma
-
-```{r ewing_sarcoma}
-
-# can be either bone or soft tissue sarcoma
-# hard to tell from these studies: 
-gwas_study_info |> 
-  filter(grepl("ewing", l1_all_disease_terms))  |> 
-  select(PUBMED_ID, `DISEASE/TRAIT`, COHORT, STUDY)
-
-```
-
 ```{r}
 
 gwas_study_info = gwas_study_info |> 
@@ -1019,6 +1040,26 @@ gwas_study_info = gwas_study_info |>
                                    "soft tissue sarcoma"
                           )  
         )
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "sarcoma, soft tissue sarcoma",
+                                   "soft tissue sarcoma"
+                          )
+ )
+
+```
+
+#### Ewing sarcoma
+
+```{r ewing_sarcoma}
+
+# can be either bone or soft tissue sarcoma
+# hard to tell from these studies: 
+gwas_study_info |> 
+  filter(grepl("ewing", l1_all_disease_terms))  |> 
+  select(PUBMED_ID, `DISEASE/TRAIT`, COHORT, STUDY)
 
 ```
 
@@ -2649,7 +2690,6 @@ gwas_study_info |>
          case_when(l1_all_disease_terms == "non-malignant skin melanoma skin cancer" ~ "non-melanoma skin cancer",
                    TRUE ~ l1_all_disease_terms)
          ) 
-
 
 gwas_study_info =
 gwas_study_info |>
