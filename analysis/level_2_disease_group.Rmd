@@ -571,14 +571,33 @@ gwas_study_info =
          ifelse(PUBMED_ID == 27790247,
                 stringr::str_replace_all(l2_all_disease_terms,
                                         pattern = ", cancer,",
-                                        "other malignant neoplasms"
+                                        ", other malignant neoplasms,"
                                         ),
                 l2_all_disease_terms
                 
          )
   )
 
+
+### dealing with measuring cancer caused factor terms
+gwas_study_info |> 
+  filter(grepl("^cancer,", l2_all_disease_terms)) |> 
+  pull(l2_all_disease_terms) |> 
+  unique()
  
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+         ifelse(grepl("^cancer,", l2_all_disease_terms),
+                stringr::str_replace_all(l2_all_disease_terms,
+                                        pattern = "^cancer,",
+                                        "other malignant neoplasms,"
+                                        ),
+                l2_all_disease_terms
+                
+         )
+  )
 
 other_malignant_terms <- c(
                            "retroperitoneal cancer",
@@ -654,7 +673,8 @@ gwas_study_info |>
 gwas_study_info |>
  filter(grepl("other neoplasms", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
-  distinct()
+  distinct() |>
+  head()
 
 ```
 
@@ -673,11 +693,48 @@ gwas_study_info |>
 
 ## Ischemic heart disease
 
+```{r ischemic_heart_disease}
+
+gwas_study_info |>
+ filter(grepl("ischemic heart disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct()
+
+```
+
 ## Stroke 
+
+```{r stroke_terms}
+
+gwas_study_info |>
+ filter(grepl("stroke", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct()
+
+```
 
 ## Hypertensive heart disease
 
+```{r hypertensive_heart_disease}
+
+gwas_study_info |>
+ filter(grepl("hypertensive heart disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct()
+
+```
+
 ## Non-rheumatic heart disease
+
+```{r non_rheumatic_heart_disease}
+
+gwas_study_info |>
+ filter(grepl("non-rheumatic heart disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct()
+
+
+```
 
 
 
