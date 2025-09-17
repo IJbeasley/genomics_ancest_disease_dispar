@@ -164,6 +164,477 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+
+# Cardiovascular diseases
+
+## Hypertension
+
+### Pulmonary arterial hypertension
+
+```{r pulmonary_arterial_hypertension}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001361/descendants"
+
+pulmonary_arterial_hypertension_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(pulmonary_arterial_hypertension_terms, collapse = "(?=,|$)|\\b"),
+                          "pulmonary arterial hypertension"
+         ))
+
+```
+
+### Atrial fibrillation & flutter
+
+### Atrial fibrillation
+
+```{r atrial_fibrillation}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "post-operative atrial fibrillation",
+                          "atrial fibrillation, post-operative"
+         ))
+
+
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F49436004/descendants"
+
+atrial_fibrillation_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(atrial_fibrillation_terms, collapse = "(?=,|$)|\\b"),
+                          "atrial fibrillation"
+         ))
+
+```
+
+#### Atrial flutter
+
+```{r atrial_flutter}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F5370000/descendants"
+
+atrial_flutter_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(atrial_flutter_terms, collapse = "(?=,|$)|\\b"),
+                          "atrial flutter"
+         ))
+
+```
+
+## Heart disease
+
+### Hypertensive heart disease
+
+```{r hypertensive_heart_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F64715009/descendants"
+
+hypertensive_heart_disease_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hypertensive_heart_disease_terms, collapse = "(?=,|$)|\\b"),
+                          "hypertensive heart disease"
+         ))
+
+```
+
+### Ischemic heart disease
+
+```{r ischemic_heart_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/cvdo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_3394/descendants"
+
+ischemic_heart_disease_terms <- get_descendants(url)
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F414545008/descendants"
+
+ischemic_heart_disease_terms_snomed <- get_descendants(url)
+
+ischemic_heart_disease_terms = c(ischemic_heart_disease_terms,
+                                 ischemic_heart_disease_terms_snomed
+                                 ) |>
+                                str_length_sort()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(ischemic_heart_disease_terms, collapse = "(?=,|$)|\\b"),
+                          "ischemic heart disease"
+         ))
+
+```
+
+#### Coronary artery disease
+
+Likely also add, as ICD10 I25.1, seems to be coronary artery disease
+And gbd includes this in ischemic heart disease
+
+```{r coronary_artery_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001645/descendants"
+
+coronary_artery_disease_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(coronary_artery_disease_terms, collapse = "(?=,|$)|\\b"),
+                          "coronary artery disease"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "coronary artery disease",
+                          "ischemic heart disease"
+         ))
+
+```
+
+#### Myocardial infarction
+
+```{r myocardial_infarction}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000612/descendants"
+
+myocardial_infarction_terms <- get_descendants(url)
+
+myocardial_infarction_terms <- c("subsequent st elevation \\(stemi\\) and non-st elevation \\(nstemi\\) myocardial infarction",
+                              myocardial_infarction_terms
+                              )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(myocardial_infarction_terms, collapse = "(?=,|$)|\\b"),
+                          "myocardial infarction"
+         ))
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "post-operative myocardial infarction",
+                          "myocardial infarction, post-operative"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "myocardial infarction",
+                          "ischemic heart disease"
+         ))
+
+```
+
+### (Non-rheumatic) Heart valvular disease
+
+```{r heart_valvular_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009551/descendants"
+
+heart_valve_disease_terms <- get_descendants(url)
+
+# make non-rheumatic 
+rheumatic_terms <- c("rheumatic pulmonary valve disease",
+                     "rheumatic disease of mitral valve")
+
+heart_valve_disease_terms <- 
+  heart_valve_disease_terms[!heart_valve_disease_terms %in% rheumatic_terms]
+
+gwas_study_info = gwas_study_info |> 
+          mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = paste0(heart_valve_disease_terms, 
+                                                   collapse = "(?=,|$)|\\b"),
+                                   "heart valve disease"
+                                  )  
+          )
+
+```
+
+## Other cardiovascular diseases (GBD)
+
+### Aortic aneurysm
+
+```{r aortic_aneurysm}
+
+aortic_aneurysm_terms <- c("thoracic aortic aneurysm",
+                          "abdominal aortic aneurysm"
+                          )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(aortic_aneurysm_terms, collapse = "(?=,|$)|\\b"),
+                          "aortic aneurysm"
+         ))
+
+```
+
+
+### Endocarditis
+
+```{r endocarditis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "bacterial endocarditis",
+                          "endocarditis"
+         ))
+
+```
+
+### Cardiomyopathy
+
+```{r cardiomyopathy}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/hp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0001638/descendants"
+
+cardiomyopathy_terms <- get_descendants(url)
+
+cardiomyopathy_terms <- c("chagas cardiomyopathy",
+                          "ischemic cardiomyopathy",
+                          "idiopathic cardiomyopathy",
+                          "nonischemic cardiomyopathy",
+                          "peripartum cardiomyopathy", #? maybe include in pregnancy 
+                          cardiomyopathy_terms
+                          )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(cardiomyopathy_terms, collapse = "(?=,|$)|\\b"),
+                          "cardiomyopathy"
+         ))
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l1_all_disease_terms  = 
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "\\bidiopathic cardiomyopathy\\b",
+                                   "cardiomyopathy"
+                          )  
+        )
+
+
+```
+
+
+### Stroke
+
+https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000712?lang=en
+
+```{r}
+
+
+hemorrhage_terms <- c("intracerebral hemorrhage",
+                      "non-lobar intracerebral hemorrhage",
+                      "lobar intracerebral hemorrhage")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hemorrhage_terms, collapse = "(?=,|$)|\\b"),
+                          "hemorrhagic stroke")
+  )
+
+stroke_terms <- c("stroke outcome",
+                  "large artery stroke",
+                  "small vessel stroke",
+                  "ischemic stroke",
+                  "stroke disorder",
+                  "cardioembolic stroke",
+                  "hemorrhagic stroke",
+                  "intracranial hemorrhage",
+                  "subdural hemorrhage"
+                  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          paste0(stroke_terms, collapse = "(?=,|$)|\\b"),
+                          "stroke")
+  )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "post-operative stroke",
+                          "post-operative, stroke")
+  )
+
+```
+
+### Lower extremity peripheral artery disease
+
+```{r peripheral_artery_disease}
+
+# studies in gwas catalog don't specify lower or upper extremity
+# but most peripheral artery disease is in lower extremities
+
+gwas_study_info =
+ gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bperipheral artery disease|\\bperipheral arterial disease",
+                          "lower extremity peripheral artery disease"
+         ))
+
+```
+
+
+## Other (non-GBD)
+
+### Carotid artery disease
+
+```{r carotid_artery_disease}
+
+carotid_artery_disease_terms <- c("carotid artery thrombosis",
+                             "carotid atherosclerosis"
+                             )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(carotid_artery_disease_terms, collapse = "(?=,|$)|\\b"),
+                          "carotid artery disease"
+         ))
+
+```
+
+
+### Other hypertension
+
+```{r}
+
+url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000537/descendants"
+
+hypertension_terms <- get_descendants(url)
+
+hypertension_terms = c("primary hypertension",
+                      hypertension_terms
+                      )
+
+hypertension_terms = hypertension_terms[!hypertension_terms %in% 
+                                        c(pulmonary_arterial_hypertension_terms,
+                                          hypertensive_heart_disease_terms,
+                                          "pulmonary arterial hypertension",
+                                          "hypertensive heart disease"
+                                          )
+                                        ]
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hypertension_terms, collapse = "(?=,|$)|\\b"),
+                          "hypertension"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(hypertension_terms, collapse = "(?=,|$)|\\b"),
+                          "hypertension"
+         ))
+
+```
+
+### Heart block 
+
+```{r heart_block}
+
+heart_block_terms <- c("first degree atrioventricular block",
+                      "second degree atrioventricular block",
+                      "third-degree atrioventricular block",
+                      "atrioventricular block",
+                      "bundle branch block"
+                      )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(heart_block_terms, collapse = "(?=,|$)|\\b"),
+                          "heart block"
+         ))
+
+```
+
+### Tachycardia
+
+```{r tacycardia}
+
+tacycardia_terms <- c("paroxysmal tachycardia",
+                     "ventricular tachycardia",
+                     "supraventricular tachycardia",
+                     "paroxysmal supraventricular tachycardia",
+                     "paroxysmal ventricular tachycardia"
+                     )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(tacycardia_terms, collapse = "(?=,|$)|\\b"),
+                          "tachycardia"
+         )
+  )
+
+```
+
+### Cardiac arrest
+
+```{r cardiac_arrest}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "sudden cardiac arrest",
+                          "cardiac arrest"
+         )
+  )
+
+```
+
+### Other cardiac arrhythmias
+
+```{r other_cardiac_arrhythmias}
+
+other_cardiac_arrhythmia_terms <- c("ventricular fibrillation",
+                                   "ventricular arrhythmia",
+                                   "cardiac arrest",
+                                   "bradycardia",
+                                   "cardiac arrhythmia"
+                                   )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = paste0(other_cardiac_arrhythmia_terms, collapse = "(?=,|$)|\\b"),
+                          "other cardiac arrhythmias"
+         )
+  )
+
+
+```
+
+
+
 # Disease subtype grouping (non-cancer)
 
 ## Abornmal total eosinophil count
@@ -336,23 +807,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Aortic aneurysm
-
-```{r aortic_aneurysm}
-
-aortic_aneurysm_terms <- c("thoracic aortic aneurysm",
-                          "abdominal aortic aneurysm"
-                          )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(aortic_aneurysm_terms, collapse = "(?=,|$)|\\b"),
-                          "aortic aneurysm"
-         ))
-
-```
-
 ## Aplastic anemia
 
 ```{r aplastic_anemia}
@@ -405,18 +859,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Atrial fibrillation
 
-```{r atrial_fibrillation}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "post-operative atrial fibrillation",
-                          "atrial fibrillation, post-operative"
-         ))
-
-```
 
 ## Autoimmune pancreatitis
 
@@ -481,48 +924,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Cardiomyopathy
-
-```{r cardiomyopathy}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/hp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0001638/descendants"
-
-cardiomyopathy_terms <- get_descendants(url)
-
-cardiomyopathy_terms <- c("chagas cardiomyopathy",
-                          "ischemic cardiomyopathy",
-                          "idiopathic cardiomyopathy",
-                          "nonischemic cardiomyopathy",
-                          "peripartum cardiomyopathy", #? maybe include in pregnancy 
-                          cardiomyopathy_terms
-                          )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(cardiomyopathy_terms, collapse = "(?=,|$)|\\b"),
-                          "cardiomyopathy"
-         ))
-
-
-```
-
-## Carotid artery disease
-
-```{r carotid_artery_disease}
-
-carotid_artery_disease_terms <- c("carotid artery thrombosis",
-                             "carotid atherosclerosis"
-                             )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(carotid_artery_disease_terms, collapse = "(?=,|$)|\\b"),
-                          "carotid artery disease"
-         ))
-
-```
 
 ## Cataract
 
@@ -627,24 +1028,6 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           "acute cholecystitis",
                           "cholecystitis"
-         ))
-
-```
-
-
-## Coronary artery disease
-
-```{r coronary_artery_disease}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001645/descendants"
-
-coronary_artery_disease_terms <- get_descendants(url)
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(coronary_artery_disease_terms, collapse = "(?=,|$)|\\b"),
-                          "coronary artery disease"
          ))
 
 ```
@@ -851,18 +1234,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Endocarditis
-
-```{r endocarditis}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "bacterial endocarditis",
-                          "endocarditis"
-         ))
-
-```
+]
 
 ## Food allergy
 
@@ -928,24 +1300,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Heart block 
 
-```{r heart_block}
-
-heart_block_terms <- c("first degree atrioventricular block",
-                      "second degree atrioventricular block",
-                      "third-degree atrioventricular block",
-                      "bundle branch block"
-                      )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(heart_block_terms, collapse = "(?=,|$)|\\b"),
-                          "heart block"
-         ))
-
-```
 
 ## Hemolytic anemia
 
@@ -999,38 +1354,6 @@ gwas_study_info |>
 
 
 ```
-
-## Hypertension
-
-```{r}
-
-url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000537/descendants"
-
-hypertension_terms <- get_descendants(url)
-
-hypertension_terms = c("primary pulmonary hypertension",
-                       "primary hypertension",
-                      hypertension_terms
-                      )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hypertension_terms, collapse = "(?=,|$)|\\b"),
-                          "hypertension"
-         ))
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hypertension_terms, collapse = "(?=,|$)|\\b"),
-                          "hypertension"
-         ))
-
-```
-
-
-
 
 ## HIV 
 
@@ -1183,22 +1506,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Ischemic heart disease
 
-```{r ischemic_heart_disease}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/cvdo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_3394/descendants"
-
-ischemic_heart_disease_terms <- get_descendants(url)
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(ischemic_heart_disease_terms, collapse = "(?=,|$)|\\b"),
-                          "ischemic heart disease"
-         ))
-
-```
 
 ## Juvenile idiopathic arthritis
 
@@ -1319,34 +1627,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Myocardial infarction
 
-```{r myocardial_infarction}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000612/descendants"
-
-myocardial_infarction_terms <- get_descendants(url)
-
-myocardial_infarction_terms <- c("subsequent st elevation \\(stemi\\) and non-st elevation \\(nstemi\\) myocardial infarction",
-                              myocardial_infarction_terms
-                              )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(myocardial_infarction_terms, collapse = "(?=,|$)|\\b"),
-                          "myocardial infarction"
-         ))
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "post-operative myocardial infarction",
-                          "myocardial infarction, post-operative"
-         ))
-
-```
 
 ## Photosensitivity disease
 
@@ -1774,73 +2055,8 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Stroke
-
-https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000712?lang=en
-
-```{r}
 
 
-hemorrhage_terms <- c("intracerebral hemorrhage",
-                      "non-lobar intracerebral hemorrhage",
-                      "lobar intracerebral hemorrhage")
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hemorrhage_terms, collapse = "(?=,|$)|\\b"),
-                          "hemorrhagic stroke")
-  )
-
-stroke_terms <- c("stroke outcome",
-                  "large artery stroke",
-                  "small vessel stroke",
-                  "ischemic stroke",
-                  "stroke disorder",
-                  "cardioembolic stroke",
-                  "hemorrhagic stroke",
-                  "intracranial hemorrhage",
-                  "subdural hemorrhage"
-                  )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          paste0(stroke_terms, collapse = "(?=,|$)|\\b"),
-                          "stroke")
-  )
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "post-operative stroke",
-                          "post-operative, stroke")
-  )
-
-```
-
-## Tachycardia
-
-```{r tacycardia}
-
-tacycardia_terms <- c("paroxysmal tachycardia",
-                     "ventricular tachycardia",
-                     "supraventricular tachycardia",
-                     "paroxysmal supraventricular tachycardia",
-                     "paroxysmal ventricular tachycardia"
-                     )
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(tacycardia_terms, collapse = "(?=,|$)|\\b"),
-                          "tachycardia"
-         )
-  )
-
-```
 
 ## Systemic scleroderma
 
