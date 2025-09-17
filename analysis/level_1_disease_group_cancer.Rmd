@@ -92,6 +92,30 @@ gwas_study_info |>
 
 # Disease subtype grouping (cancer)
 
+### Astrocytoma
+
+```{r group_astrocytoma}
+
+gwas_study_info |>
+    filter(grepl("astrocytoma", l1_all_disease_terms)) |> 
+    pull(STUDY) |> 
+    unique()
+
+# all comes from one cancer study - so a central nervous system cancer
+
+gwas_study_info = gwas_study_info |>
+ mutate(l1_all_disease_terms  =
+          ifelse(PUBMED_ID == "36810956",
+          stringr::str_replace_all(l1_all_disease_terms ,
+                                  pattern = "astrocytoma",
+                                   "central nervous system cancer"
+                          ),
+          l1_all_disease_terms
+        )
+ )
+
+```
+
 ### Bone cancer
 
 ```{r group_bone_cancer}
@@ -236,7 +260,12 @@ other_benign_neoplasms = c("adenomatous colon polyp",
                            "benign prostatic hyperplasia",
                            "melanocytic nevus",
                            "hemangioma",
-                           "lymphangioma"
+                           "lymphangioma",
+                           "vestibular schwannoma",
+                           "schwannoma",
+                           "skin lipoma", # likely benign ... 
+                           "hamartoma",
+                           "meningioma" # most are benign (80%)
                            )
 
 other_benign_neoplasms = str_length_sort(other_benign_neoplasms)
@@ -566,6 +595,9 @@ gwas_study_info |>
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000565/descendants"
 
 leukemia_terms <- get_descendants(url)
+
+leukemia_terms <- c("b-cell acute lymphoblastic leukemia with t\\(1;19\\)\\(q23;p13.3\\); e2a-pbx1 \\(tcf3-pbx1\\)",
+                    leukemia_terms)
 
 leukemia_terms = stringr::str_replace_all(leukemia_terms,
                             "\\bcarcinoma",
@@ -1421,7 +1453,86 @@ gwas_study_info |>
          ))
 
 
+gwas_study_info = 
+gwas_study_info |>
+  mutate(l1_all_disease_terms  =
+         ifelse(`DISEASE/TRAIT` == "Glioblastoma" & l1_all_disease_terms == "glioma",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "glioma",
+                          "central nervous system cancer"),
+                l1_all_disease_terms
+         ))
+
+
+# for pubmed id: 22886559 
+# majority (~90%) graded glioma, gliobastoma and Oligodendroglioma
+# so assume malignant
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms  =
+         ifelse(PUBMED_ID == 22886559 & l1_all_disease_terms == "glioma",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "glioma",
+                          "central nervous system cancer"),
+                l1_all_disease_terms)
+  )
+
+
+# for pubmed id: 29743610
+# majority (~60%) are glioblastoma
+# so assume malignant
+
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms  =
+         ifelse(PUBMED_ID == 29743610 & l1_all_disease_terms == "glioma",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "glioma",
+                          "central nervous system cancer"),
+                l1_all_disease_terms)
+  )
+
+# for pubmed id: 36810956
+# seems to primarily include high grade glioma
+# so assume malignant
+gwas_study_info = 
+gwas_study_info |>
+  mutate(l1_all_disease_terms  =
+         ifelse(PUBMED_ID == 36810956 & l1_all_disease_terms == "glioma",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "glioma",
+                          "central nervous system cancer"),
+                l1_all_disease_terms)
+  )
+
+# pubmed id: 30714141 
+# considers glioma cancer
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms  =
+         ifelse(PUBMED_ID == 30714141 & l1_all_disease_terms == "glioma",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "glioma",
+                          "central nervous system cancer"),
+                l1_all_disease_terms)
+  )
+
+# pubmed id: 34319593
+# considers glioma a maglignant tumor
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms  =
+         ifelse(PUBMED_ID == 34319593 & l1_all_disease_terms == "glioma",
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "glioma",
+                          "central nervous system cancer"),
+                l1_all_disease_terms)
+  )
+
+
 ```
+
+
 
 ### Glottis neoplasm
 
@@ -2197,6 +2308,17 @@ gwas_study_info = gwas_study_info |>
          ))
 
 
+# also not of pubmed id: 33409738
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         ifelse(PUBMED_ID == 33409738 &
+                grepl("\\bmelanoma", `DISEASE/TRAIT`, ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "\\bmelanoma",
+                          "malignant melanoma of skin"),
+                l1_all_disease_terms
+         ))
+
 ```
 
 
@@ -2464,6 +2586,50 @@ gwas_study_info = gwas_study_info |>
          l1_all_disease_terms
          )
 )
+
+```
+
+### Fix non-melanoma skin cancer, woopsy
+
+```{r fix_non_melanoma_skin_cancer}
+
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         case_when(l1_all_disease_terms == "non-malignant skin melanoma skin cancer" ~ "non-melanoma skin cancer",
+                   TRUE ~ l1_all_disease_terms)
+         ) 
+
+
+```
+
+### central nervous system cancer, nervous system cancer
+
+```{r cns cancer}
+
+
+gwas_study_info = 
+gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         case_when(l1_all_disease_terms == "central nervous system cancer, nervous system cancer" ~ "central nervous system cancer",
+                   TRUE ~ l1_all_disease_terms)
+         ) 
+
+```
+
+### breast cancer, cancer, colon and rectum cancer, tracheal bronchus and lung cancer, ovarian cancer, prostate cancer
+
+```{r multiple common cancers}
+
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         case_when(l1_all_disease_terms == "breast cancer, cancer, colorectal cancer, lung cancer, ovarian cancer, prostate cancer" ~ 
+                     "breast cancer, colorectal cancer, lung cancer, ovarian cancer, prostate cancer",
+                   TRUE ~ l1_all_disease_terms)
+         )
+
+
 
 ```
 
