@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree02a0b9d6f649e6ec5215d8d27fe1600c25468a38targetblank02a0b9da">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree16ead66d25b831ad97e4d2028b5bf5982597fbd2targetblank16ead66a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/02a0b9d6f649e6ec5215d8d27fe1600c25468a38" target="_blank">02a0b9d</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/16ead66d25b831ad97e4d2028b5bf5982597fbd2" target="_blank">16ead66</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree02a0b9d6f649e6ec5215d8d27fe1600c25468a38targetblank02a0b9da"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree16ead66d25b831ad97e4d2028b5bf5982597fbd2targetblank16ead66a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/02a0b9d6f649e6ec5215d8d27fe1600c25468a38" target="_blank">02a0b9d</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/16ead66d25b831ad97e4d2028b5bf5982597fbd2" target="_blank">16ead66</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -606,6 +606,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/16ead66d25b831ad97e4d2028b5bf5982597fbd2/analysis/level_2_disease_group.Rmd" target="_blank">16ead66</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-16
+</td>
+<td>
+Correcting some cancer grouping
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/6018e42ac1a4b3073373f866fc26f6c4257521ec/docs/level_2_disease_group.html" target="_blank">6018e42</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-16
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1227,18 +1261,29 @@ gwas_study_info |&gt;
 number="3.8">
 <h2><span class="header-section-number">3.8</span> Gallbladder and
 biliary tract cancer</h2>
-<pre class="r"><code>gwas_study_info |&gt;
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt;
+ mutate(l2_all_disease_terms  = 
+        case_when(
+          l2_all_disease_terms == &quot;cancer of gallbladder and extrahepatic biliary tract&quot; ~ &quot;gallbladder and biliary tract cancer&quot;,
+          TRUE ~ l2_all_disease_terms
+                 )
+        )
+
+gwas_study_info |&gt;
  filter(grepl(&quot;gallbladder and biliary tract cancer&quot;, l2_all_disease_terms)) |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct()</code></pre>
-<pre><code>                              all_disease_terms
-                                         &lt;char&gt;
-1: sclerosing cholangitis, gallbladder neoplasm
-2:                         gallbladder neoplasm
+<pre><code>                                         all_disease_terms
+                                                    &lt;char&gt;
+1:            sclerosing cholangitis, gallbladder neoplasm
+2:                                    gallbladder neoplasm
+3: carcinoma of gallbladder and extrahepatic biliary tract
                                            l2_all_disease_terms
                                                          &lt;char&gt;
 1: gallbladder and biliary tract cancer, sclerosing cholangitis
-2:                         gallbladder and biliary tract cancer</code></pre>
+2:                         gallbladder and biliary tract cancer
+3:                         gallbladder and biliary tract cancer</code></pre>
 </div>
 <div id="pancreatic-cancer" class="section level2" number="3.9">
 <h2><span class="header-section-number">3.9</span> Pancreatic
@@ -1299,11 +1344,14 @@ and lung cancer</h2>
 
 gwas_study_info = 
 gwas_study_info |&gt; 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
+ mutate(l2_all_disease_terms  =
+          ifelse(l2_all_disease_terms != &quot;tracheal bronchus and lung cancer&quot;,
+          stringr::str_replace_all(l2_all_disease_terms,
                                   pattern = paste0(resp_cancer_terms, collapse = &quot;(?=,|$)|\\b&quot;),
                                    &quot;tracheal bronchus and lung cancer&quot;
-                          )  
+                          ),
+          l2_all_disease_terms
+          )
         )
 
 gwas_study_info |&gt;
@@ -1375,7 +1423,7 @@ gwas_study_info |&gt;
 27:                                                            tracheal bronchus and lung cancer, peptic ulcer disease
 28:                                                                                  tracheal bronchus and lung cancer
 29:                                                                                  tracheal bronchus and lung cancer
-30:                                                            tracheal bronchus and tracheal bronchus and lung cancer
+30:                                                                                  tracheal bronchus and lung cancer
 31:                                                      tracheal bronchus and lung cancer, radiation-induced disorder
                                                                                                   l2_all_disease_terms</code></pre>
 </div>
@@ -1395,12 +1443,20 @@ gwas_study_info |&gt;
  filter(grepl(&quot;malignant skin melanoma&quot;, l2_all_disease_terms)) |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct()</code></pre>
-<pre><code>                   all_disease_terms                    l2_all_disease_terms
-                              &lt;char&gt;                                  &lt;char&gt;
-1:                cutaneous melanoma                 malignant skin melanoma
-2:                          melanoma                 malignant skin melanoma
-3: neuroblastoma, cutaneous melanoma  malignant skin melanoma, neuroblastoma
-4:       non-melanoma skin carcinoma non-malignant skin melanoma skin cancer</code></pre>
+<pre><code>                   all_disease_terms
+                              &lt;char&gt;
+1:                cutaneous melanoma
+2:                          melanoma
+3: neuroblastoma, cutaneous melanoma
+4:  melanoma, immune system toxicity
+5:       non-melanoma skin carcinoma
+                              l2_all_disease_terms
+                                            &lt;char&gt;
+1:                         malignant skin melanoma
+2:                         malignant skin melanoma
+3:          malignant skin melanoma, neuroblastoma
+4: immune system toxicity, malignant skin melanoma
+5:         non-malignant skin melanoma skin cancer</code></pre>
 </div>
 <div id="non-melanoma-skin-cancer" class="section level2" number="3.13">
 <h2><span class="header-section-number">3.13</span> Non-melanoma skin
@@ -1860,28 +1916,30 @@ gwas_study_info |&gt;
                                                     &lt;char&gt;
  1:                                glioblastoma multiforme
  2:                          central nervous system cancer
- 3:                  central nervous system cancer, glioma
- 4: central nervous system cancer, glioblastoma multiforme
- 5:                                         brain neoplasm
- 6:                                                 glioma
- 7:                                      oligodendroglioma
- 8:                    nervous system cancer, brain cancer
- 9:                                           brain cancer
-10:                                       malignant glioma
-11:            central nervous system non-hodgkin lymphoma
-                                              l2_all_disease_terms
-                                                            &lt;char&gt;
- 1:                        brain and central nervous system cancer
- 2:                        brain and central nervous system cancer
- 3:                        brain and central nervous system cancer
- 4:                        brain and central nervous system cancer
- 5:                        brain and central nervous system cancer
- 6:                        brain and central nervous system cancer
- 7:                        brain and central nervous system cancer
- 8: brain and central nervous system cancer, nervous system cancer
- 9:                        brain and central nervous system cancer
-10:                        brain and central nervous system cancer
-11:                        brain and central nervous system cancer</code></pre>
+ 3:                                                 glioma
+ 4:                  central nervous system cancer, glioma
+ 5: central nervous system cancer, glioblastoma multiforme
+ 6:                                         brain neoplasm
+ 7:                                            astrocytoma
+ 8:                                      oligodendroglioma
+ 9:                    nervous system cancer, brain cancer
+10:                                           brain cancer
+11:                                       malignant glioma
+12:            central nervous system non-hodgkin lymphoma
+                       l2_all_disease_terms
+                                     &lt;char&gt;
+ 1: brain and central nervous system cancer
+ 2: brain and central nervous system cancer
+ 3: brain and central nervous system cancer
+ 4: brain and central nervous system cancer
+ 5: brain and central nervous system cancer
+ 6: brain and central nervous system cancer
+ 7: brain and central nervous system cancer
+ 8: brain and central nervous system cancer
+ 9: brain and central nervous system cancer
+10: brain and central nervous system cancer
+11: brain and central nervous system cancer
+12: brain and central nervous system cancer</code></pre>
 </div>
 <div id="eye-cancer" class="section level2" number="3.25">
 <h2><span class="header-section-number">3.25</span> Eye cancer</h2>
@@ -2167,48 +2225,48 @@ myeloma</h2>
 38:                                            acute lymphoblastic leukemia, acute myeloid leukemia, myelodysplastic syndrome
 39:                                                                                                          myeloid neoplasm
                                                                                                             all_disease_terms
-                                                                           l2_all_disease_terms
-                                                                                         &lt;char&gt;
- 1:                                                                                    leukemia
- 2:                                                                leukemia, multiple sclerosis
- 3:                                                              leukemia, rheumatoid arthritis
- 4:                                                      leukemia, systemic lupus erythematosus
- 5:                                                                      leukemia, pancreatitis
- 6:                                                                                    leukemia
- 7:                                                                                    leukemia
- 8:                                                                                    leukemia
- 9:                                                hodgkin lymphoma, leukemia, multiple myeloma
-10:                                                                                    leukemia
-11:                                                             leukemia, peripheral neuropathy
-12:                                                              leukemia, non-hodgkin lymphoma
-13:                                      leukemia, non-hodgkin lymphoma, venous thromboembolism
-14:                                                                                    leukemia
-15:                                                                            asthma, leukemia
-16:                                                                            asthma, leukemia
-17:                                                                    graves disease, leukemia
-18:                                                            hashimotos thyroiditis, leukemia
-19:                                                                    hypothyroidism, leukemia
-20:                                                         leukemia, primary biliary cirrhosis
-21:                                                            leukemia, sclerosing cholangitis
-22:                                                        inflammatory bowel disease, leukemia
-23:                                                                    crohns disease, leukemia
-24:                                                                leukemia, ulcerative colitis
-25:                                                              leukemia, rheumatoid arthritis
-26:                                                                leukemia, multiple sclerosis
-27:                                                              leukemia, systemic scleroderma
-28:                                                      leukemia, systemic lupus erythematosus
-29:                                                          leukemia, type 1 diabetes mellitus
-30:                                                                          leukemia, vitiligo
-31:                                                                                    leukemia
-32:                                                                hyperbilirubinemia, leukemia
-33:           b-cell acute lymphoblastic leukemia with t(1;19)(q23;p13.3); e2a-pbx1 (tcf3-pbx1)
-34: b-cell acute lymphoblastic leukemia with t(1;19)(q23;p13.3); e2a-pbx1 (tcf3-pbx1), leukemia
-35:                                                                                    leukemia
-36:                                                                                    leukemia
-37:                                                                     leukemia, neurotoxicity
-38:      malignant neoplasm of bone and articular cartilage, leukemia, myelodysplastic syndrome
-39:                                                                                    leukemia
-                                                                           l2_all_disease_terms</code></pre>
+                                                                      l2_all_disease_terms
+                                                                                    &lt;char&gt;
+ 1:                                                                               leukemia
+ 2:                                                           leukemia, multiple sclerosis
+ 3:                                                         leukemia, rheumatoid arthritis
+ 4:                                                 leukemia, systemic lupus erythematosus
+ 5:                                                                 leukemia, pancreatitis
+ 6:                                                                               leukemia
+ 7:                                                                               leukemia
+ 8:                                                                               leukemia
+ 9:                                           hodgkin lymphoma, leukemia, multiple myeloma
+10:                                                                               leukemia
+11:                                                        leukemia, peripheral neuropathy
+12:                                                         leukemia, non-hodgkin lymphoma
+13:                                 leukemia, non-hodgkin lymphoma, venous thromboembolism
+14:                                                                               leukemia
+15:                                                                       asthma, leukemia
+16:                                                                       asthma, leukemia
+17:                                                               graves disease, leukemia
+18:                                                       hashimotos thyroiditis, leukemia
+19:                                                               hypothyroidism, leukemia
+20:                                                    leukemia, primary biliary cirrhosis
+21:                                                       leukemia, sclerosing cholangitis
+22:                                                   inflammatory bowel disease, leukemia
+23:                                                               crohns disease, leukemia
+24:                                                           leukemia, ulcerative colitis
+25:                                                         leukemia, rheumatoid arthritis
+26:                                                           leukemia, multiple sclerosis
+27:                                                         leukemia, systemic scleroderma
+28:                                                 leukemia, systemic lupus erythematosus
+29:                                                     leukemia, type 1 diabetes mellitus
+30:                                                                     leukemia, vitiligo
+31:                                                                               leukemia
+32:                                                           hyperbilirubinemia, leukemia
+33:                                                                               leukemia
+34:                                                                               leukemia
+35:                                                                               leukemia
+36:                                                                               leukemia
+37:                                                                leukemia, neurotoxicity
+38: malignant neoplasm of bone and articular cartilage, leukemia, myelodysplastic syndrome
+39:                                                                               leukemia
+                                                                      l2_all_disease_terms</code></pre>
 </div>
 <div id="other-malignant-neoplasms" class="section level2"
 number="3.33">
@@ -2223,21 +2281,48 @@ neoplasms</h2>
                  )
          )
 
-other_malignant_terms &lt;- c(&quot;digestive system cancer&quot;,
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(l2_all_disease_terms = 
+         ifelse(PUBMED_ID == 27790247,
+                stringr::str_replace_all(l2_all_disease_terms,
+                                        pattern = &quot;, cancer,&quot;,
+                                        &quot;other malignant neoplasms&quot;
+                                        ),
+                l2_all_disease_terms
+                
+         )
+  )
+
+ 
+
+other_malignant_terms &lt;- c(
                            &quot;retroperitoneal cancer&quot;,
                            &quot;peritoneal cancer&quot;,
                            &quot;ewing sarcoma&quot;,
+                           
                            &quot;digestive system cancer&quot;,
-                           &quot;female reproductive organ cancer&quot;,
                            &quot;intestinal cancer&quot;,
-                           &quot;squamous cell cancer&quot;,
-                           &quot;vulvar cancer&quot;,
-                           &quot;head and neck cancer&quot;,
+                           &quot;small intestine cancer&quot;,
+                           
+                           &quot;female reproductive organ cancer&quot;,
+                           &quot;male reproductive organ cancer&quot;,
+                           &quot;vulvar cancer&quot;,                           
                            &quot;testicular germ cell tumor&quot;,
+                           &quot;urogenital cancer&quot;,
+                           
+                           &quot;squamous cell cancer&quot;,
+
+                           &quot;head and neck cancer&quot;,
                            &quot;malignant tumor of floor of mouth&quot;, 
+                           &quot;nasal cavity cancer&quot;, #? not sure if should be somewhere else .. 
+                           
                            &quot;malignant lymphoid tumor&quot;,
                            &quot;neuroendocrine tumor&quot;,
-                           &quot;nasal cavity cancer&quot; #? not sure if should be somewhere else .. 
+                           &quot;lymphatic system cancer&quot;,
+                           
+                           &quot;childhood cancer&quot; #? maybe sort furtrher
+
                            )
 
 gwas_study_info = 
@@ -2254,88 +2339,120 @@ gwas_study_info |&gt;
  filter(grepl(&quot;other malignant neoplasms&quot;, l2_all_disease_terms)) |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct()</code></pre>
-<pre><code>                                                      all_disease_terms
-                                                                 &lt;char&gt;
- 1:                                             squamous cell carcinoma
- 2:                                                              cancer
- 3:                                             neuroendocrine neoplasm
- 4:                                small intestine neuroendocrine tumor
- 5:                                     pancreatic neuroendocrine tumor
- 6:                                      pulmonary neuroendocrine tumor
- 7:                                          testicular germ cell tumor
- 8:                                   cutaneous squamous cell carcinoma
- 9:                                   head and neck malignant neoplasia
-10:                                                       ewing sarcoma
-11:                                                     carcinoid tumor
-12:                         head and neck squamous cell carcinoma, pain
-13:   digestive system carcinoma, chronic obstructive pulmonary disease
-14:                                          digestive system carcinoma
-15:                               head and neck squamous cell carcinoma
-16:               head and neck malignant neoplasia, osteoradionecrosis
-17:                                             head and neck carcinoma
-18:                                             digestive system cancer
-19:                                          reproductive system cancer
-20:                                   malignant tumor of floor of mouth
-21:                                                 nasal cavity cancer
-22:                           retroperitoneal cancer, peritoneum cancer
-23:                                                              cancer
-24:                                    female reproductive organ cancer
-25:                                                   intestinal cancer
-26:                                                     vulvar neoplasm
-27:                                                    vulvar carcinoma
-28:                                                   in situ carcinoma
-29:                                                           carcinoma
-30:                                                   lymphoid neoplasm
-31:                                head and neck carcinoma, lung cancer
-32:       head and neck malignant neoplasia, radiation-induced disorder
-33:                 head and neck malignant neoplasia, neuropathic pain
-34:                                  head and neck carcinoma, mucositis
-35:                                   head and neck carcinoma, fibrosis
-36:                       head and neck carcinoma, mucositis, dysphagia
-37:            head and neck carcinoma, fibrosis, dysphagia, xerostomia
-38: head and neck carcinoma, fibrosis, mucositis, dysphagia, xerostomia
-                                                      all_disease_terms
-                                                     l2_all_disease_terms
-                                                                   &lt;char&gt;
- 1:                                             other malignant neoplasms
- 2:                                             other malignant neoplasms
- 3:                                             other malignant neoplasms
- 4:                                             other malignant neoplasms
- 5:                                             other malignant neoplasms
- 6:                                             other malignant neoplasms
- 7:                                             other malignant neoplasms
- 8:                                             other malignant neoplasms
- 9:                                             other malignant neoplasms
-10:                                             other malignant neoplasms
-11:                                             other malignant neoplasms
-12:                                       other malignant neoplasms, pain
-13:      chronic obstructive pulmonary disease, other malignant neoplasms
-14:                                             other malignant neoplasms
-15:                                             other malignant neoplasms
-16:                         other malignant neoplasms, osteoradionecrosis
-17:                                             other malignant neoplasms
-18:                                             other malignant neoplasms
-19:                                             other malignant neoplasms
-20:                                             other malignant neoplasms
-21:                                             other malignant neoplasms
-22:                  other malignant neoplasms, other malignant neoplasms
-23:                  other malignant neoplasms, other malignant neoplasms
-24:                                             other malignant neoplasms
-25:                                             other malignant neoplasms
-26:                                             other malignant neoplasms
-27:                                             other malignant neoplasms
-28:                                             other malignant neoplasms
-29:                                             other malignant neoplasms
-30:                                             other malignant neoplasms
-31:          other malignant neoplasms, tracheal bronchus and lung cancer
-32:                 other malignant neoplasms, radiation-induced disorder
-33:                           other malignant neoplasms, neuropathic pain
-34:                                  other malignant neoplasms, mucositis
-35:                                   fibrosis, other malignant neoplasms
-36:                       dysphagia, other malignant neoplasms, mucositis
-37:            dysphagia, fibrosis, other malignant neoplasms, xerostomia
-38: dysphagia, fibrosis, other malignant neoplasms, mucositis, xerostomia
-                                                     l2_all_disease_terms</code></pre>
+<pre><code>                                                                                 all_disease_terms
+                                                                                            &lt;char&gt;
+ 1:                                                                        squamous cell carcinoma
+ 2:                                                                                         cancer
+ 3:                                                               childhood cancer, cardiomyopathy
+ 4:                                                                        neuroendocrine neoplasm
+ 5:                                                           small intestine neuroendocrine tumor
+ 6:                                                                pancreatic neuroendocrine tumor
+ 7:                                                                 pulmonary neuroendocrine tumor
+ 8:                                                               childhood cancer, cardiotoxicity
+ 9:                                                                      childhood cancer, obesity
+10:                                                                     testicular germ cell tumor
+11:                                                              cutaneous squamous cell carcinoma
+12:                                                              head and neck malignant neoplasia
+13:                                                                                  ewing sarcoma
+14:                                                                                carcinoid tumor
+15:                                                    head and neck squamous cell carcinoma, pain
+16:                              digestive system carcinoma, chronic obstructive pulmonary disease
+17:                                                                     digestive system carcinoma
+18: heart failure, diabetes mellitus, stroke, atrial fibrillation, coronary artery disease, cancer
+19: stroke, atrial fibrillation, coronary artery disease, heart failure, diabetes mellitus, cancer
+20:                                                          head and neck squamous cell carcinoma
+21:                                                             childhood cancer, breast carcinoma
+22:                                                                               childhood cancer
+23:                                                                childhood cancer, bone fracture
+24:                                          head and neck malignant neoplasia, osteoradionecrosis
+25:                                                                        head and neck carcinoma
+26:                                                                        digestive system cancer
+27:                                                                     reproductive system cancer
+28:                                                                 male reproductive organ cancer
+29:                                                     childhood cancer, type 2 diabetes mellitus
+30:                                                                        lymphatic system cancer
+31:                                                              malignant tumor of floor of mouth
+32:                                                                            nasal cavity cancer
+33:                                                                         small intestine cancer
+34:                                                      retroperitoneal cancer, peritoneum cancer
+35:                                                                                         cancer
+36:                                                               female reproductive organ cancer
+37:                                                                      small intestine carcinoma
+38:                                                    childhood cancer, hearing loss, ototoxicity
+39:                                                                 childhood cancer, hearing loss
+40:                                                                              intestinal cancer
+41:                                                                                vulvar neoplasm
+42:                                                                               vulvar carcinoma
+43:                                                                              in situ carcinoma
+44:                                                                                      carcinoma
+45:                                                                              lymphoid neoplasm
+46:                                                           head and neck carcinoma, lung cancer
+47:                                                                            urogenital neoplasm
+48:                                  head and neck malignant neoplasia, radiation-induced disorder
+49:                                            head and neck malignant neoplasia, neuropathic pain
+50:                                                             head and neck carcinoma, mucositis
+51:                                                              head and neck carcinoma, fibrosis
+52:                                                  head and neck carcinoma, mucositis, dysphagia
+53:                                       head and neck carcinoma, fibrosis, dysphagia, xerostomia
+54:                            head and neck carcinoma, fibrosis, mucositis, dysphagia, xerostomia
+                                                                                 all_disease_terms
+                                                                                              l2_all_disease_terms
+                                                                                                            &lt;char&gt;
+ 1:                                                                                      other malignant neoplasms
+ 2:                                                                                      other malignant neoplasms
+ 3:                                                                      cardiomyopathy, other malignant neoplasms
+ 4:                                                                                      other malignant neoplasms
+ 5:                                                                                      other malignant neoplasms
+ 6:                                                                                      other malignant neoplasms
+ 7:                                                                                      other malignant neoplasms
+ 8:                                                                      cardiotoxicity, other malignant neoplasms
+ 9:                                                                             other malignant neoplasms, obesity
+10:                                                                                      other malignant neoplasms
+11:                                                                                      other malignant neoplasms
+12:                                                                                      other malignant neoplasms
+13:                                                                                      other malignant neoplasms
+14:                                                                                      other malignant neoplasms
+15:                                                                                other malignant neoplasms, pain
+16:                                               chronic obstructive pulmonary disease, other malignant neoplasms
+17:                                                                                      other malignant neoplasms
+18: atrial fibrillationother malignant neoplasms coronary artery disease, diabetes mellitus, heart failure, stroke
+19: atrial fibrillationother malignant neoplasms coronary artery disease, diabetes mellitus, heart failure, stroke
+20:                                                                                      other malignant neoplasms
+21:                                                                       breast cancer, other malignant neoplasms
+22:                                                                                      other malignant neoplasms
+23:                                                                       bone fracture, other malignant neoplasms
+24:                                                                  other malignant neoplasms, osteoradionecrosis
+25:                                                                                      other malignant neoplasms
+26:                                                                                      other malignant neoplasms
+27:                                                                                      other malignant neoplasms
+28:                                                                                      other malignant neoplasms
+29:                                                            other malignant neoplasms, type 2 diabetes mellitus
+30:                                                                                      other malignant neoplasms
+31:                                                                                      other malignant neoplasms
+32:                                                                                      other malignant neoplasms
+33:                                                                                      other malignant neoplasms
+34:                                                           other malignant neoplasms, other malignant neoplasms
+35:                                                           other malignant neoplasms, other malignant neoplasms
+36:                                                                                      other malignant neoplasms
+37:                                                                                      other malignant neoplasms
+38:                                                           other malignant neoplasms, hearing loss, ototoxicity
+39:                                                                        other malignant neoplasms, hearing loss
+40:                                                                                      other malignant neoplasms
+41:                                                                                      other malignant neoplasms
+42:                                                                                      other malignant neoplasms
+43:                                                                                      other malignant neoplasms
+44:                                                                                      other malignant neoplasms
+45:                                                                                      other malignant neoplasms
+46:                                                   other malignant neoplasms, tracheal bronchus and lung cancer
+47:                                                                                      other malignant neoplasms
+48:                                                          other malignant neoplasms, radiation-induced disorder
+49:                                                                    other malignant neoplasms, neuropathic pain
+50:                                                                           other malignant neoplasms, mucositis
+51:                                                                            fibrosis, other malignant neoplasms
+52:                                                                dysphagia, other malignant neoplasms, mucositis
+53:                                                     dysphagia, fibrosis, other malignant neoplasms, xerostomia
+54:                                          dysphagia, fibrosis, other malignant neoplasms, mucositis, xerostomia
+                                                                                              l2_all_disease_terms</code></pre>
 </div>
 <div id="other-neoplasms" class="section level2" number="3.34">
 <h2><span class="header-section-number">3.34</span> Other neoplasms</h2>
@@ -2348,6 +2465,18 @@ gwas_study_info |&gt;
                  )
          )
 
+unknown_sig_terms &lt;- c(&quot;intracranial germ cell tumor&quot;,
+                       &quot;bladder tumor&quot;)
+
+gwas_study_info =
+gwas_study_info |&gt; 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(unknown_sig_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                                   &quot;other neoplasms&quot;
+                          )
+ )
+
 gwas_study_info |&gt;
  filter(grepl(&quot;other neoplasms&quot;, l2_all_disease_terms)) |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
@@ -2358,76 +2487,82 @@ gwas_study_info |&gt;
  2:                                 colorectal adenoma      other neoplasms
  3:            colorectal cancer, endometrial neoplasm      other neoplasms
  4:                 upper aerodigestive tract neoplasm      other neoplasms
- 5:                            pituitary gland adenoma      other neoplasms
- 6:                                 nasal cavity polyp      other neoplasms
- 7:              nasopharyngeal neoplasm, hearing loss      other neoplasms
- 8:                    metachronous colorectal adenoma      other neoplasms
- 9:                  testicular neoplasm, hearing loss      other neoplasms
-10:         hematopoietic and lymphoid system neoplasm      other neoplasms
-11:                         benign lipomatous neoplasm      other neoplasms
-12:                                    benign neoplasm      other neoplasms
-13:                                   uterine neoplasm      other neoplasms
-14:                             benign neoplasm of eye      other neoplasms
-15:                        respiratory system neoplasm      other neoplasms
-16:                       secondary malignant neoplasm      other neoplasms
-17:                                  uterine leiomyoma      other neoplasms
-18:                              benign colon neoplasm      other neoplasms
-19:                   benign digestive system neoplasm      other neoplasms
-20:                       benign chondrogenic neoplasm      other neoplasms
-21:                        benign soft tissue neoplasm      other neoplasms
-22:                            benign neoplasm of skin      other neoplasms
-23:                            uterine benign neoplasm      other neoplasms
-24:                            benign ovarian neoplasm      other neoplasms
-25:                   female reproductive organ cancer      other neoplasms
-26:                     benign urinary system neoplasm      other neoplasms
-27:                     nervous system benign neoplasm      other neoplasms
-28:                     benign neoplasm of spinal cord      other neoplasms
-29:                      benign thyroid gland neoplasm      other neoplasms
-30:                          benign endocrine neoplasm      other neoplasms
-31:                   benign neoplasm of adrenal gland      other neoplasms
-32:               benign neoplasm of parathyroid gland      other neoplasms
-33:                 benign neoplasm of pituitary gland      other neoplasms
-34:                           lymphangioma, hemangioma      other neoplasms
-35:                    malignant renal pelvis neoplasm      other neoplasms
-36:                  malignant urinary system neoplasm      other neoplasms
-37:                     rectosigmoid junction neoplasm      other neoplasms
-38:                          digestive system neoplasm      other neoplasms
-39:          connective tissue neoplasm, bone neoplasm      other neoplasms
-40:                         connective tissue neoplasm      other neoplasms
-41:                                              polyp      other neoplasms
-42:                                      stomach polyp      other neoplasms
-43:                           polyp of large intestine      other neoplasms
-44:                         female genital tract polyp      other neoplasms
-45:                                      uterine polyp      other neoplasms
-46:                                     cervical polyp      other neoplasms
-47:                             breast benign neoplasm      other neoplasms
-48: pancreatic intraductal papillary-mucinous neoplasm      other neoplasms
-49:                       malignant laryngeal neoplasm      other neoplasms
-50:                                      bone neoplasm      other neoplasms
-51:                                  melanocytic nevus      other neoplasms
-52:                                urogenital neoplasm      other neoplasms
-53:                        intraductal breast neoplasm      other neoplasms
-54:                connective and soft tissue neoplasm      other neoplasms
-55:                            uterine cervix neoplasm      other neoplasms
-56:                           malignant colon neoplasm      other neoplasms
-57:                                 meningeal neoplasm      other neoplasms
-58:                              benign brain neoplasm      other neoplasms
-59:                      metastatic malignant neoplasm      other neoplasms
-60:                      lobular capilliary hemangioma      other neoplasms
-61:                                lymph node neoplasm      other neoplasms
-62:                      aldosterone-producing adenoma      other neoplasms
-63:                                     polyp of colon      other neoplasms
-64:                  hemangioma of subcutaneous tissue      other neoplasms
-65:                            adenomatous colon polyp      other neoplasms
-66:                                         anal polyp      other neoplasms
-67:                            urinary system neoplasm      other neoplasms
-68:                         benign neoplasm of stomach      other neoplasms
-69:                               polyp of gallbladder      other neoplasms
-70:                               gallbladder neoplasm      other neoplasms
-71:                                pancreatic neoplasm      other neoplasms
-72:                                 hepatic hemangioma      other neoplasms
-73:                                         hemangioma      other neoplasms
-74:                                    polyp of rectum      other neoplasms
+ 5:                                         meningioma      other neoplasms
+ 6:                            pituitary gland adenoma      other neoplasms
+ 7:                                 nasal cavity polyp      other neoplasms
+ 8:              nasopharyngeal neoplasm, hearing loss      other neoplasms
+ 9:                    metachronous colorectal adenoma      other neoplasms
+10:                  testicular neoplasm, hearing loss      other neoplasms
+11:         hematopoietic and lymphoid system neoplasm      other neoplasms
+12:                         benign lipomatous neoplasm      other neoplasms
+13:                                    benign neoplasm      other neoplasms
+14:                                   uterine neoplasm      other neoplasms
+15:                             benign neoplasm of eye      other neoplasms
+16:                        respiratory system neoplasm      other neoplasms
+17:                       secondary malignant neoplasm      other neoplasms
+18:                                  uterine leiomyoma      other neoplasms
+19:                              benign colon neoplasm      other neoplasms
+20:                   benign digestive system neoplasm      other neoplasms
+21:                       benign chondrogenic neoplasm      other neoplasms
+22:                                        skin lipoma      other neoplasms
+23:                        benign soft tissue neoplasm      other neoplasms
+24:                            benign neoplasm of skin      other neoplasms
+25:                            uterine benign neoplasm      other neoplasms
+26:                            benign ovarian neoplasm      other neoplasms
+27:                   female reproductive organ cancer      other neoplasms
+28:                     benign urinary system neoplasm      other neoplasms
+29:                     nervous system benign neoplasm      other neoplasms
+30:                     benign neoplasm of spinal cord      other neoplasms
+31:                      benign thyroid gland neoplasm      other neoplasms
+32:                          benign endocrine neoplasm      other neoplasms
+33:                   benign neoplasm of adrenal gland      other neoplasms
+34:               benign neoplasm of parathyroid gland      other neoplasms
+35:                 benign neoplasm of pituitary gland      other neoplasms
+36:                           lymphangioma, hemangioma      other neoplasms
+37:                    malignant renal pelvis neoplasm      other neoplasms
+38:                  malignant urinary system neoplasm      other neoplasms
+39:                     rectosigmoid junction neoplasm      other neoplasms
+40:                          digestive system neoplasm      other neoplasms
+41:          connective tissue neoplasm, bone neoplasm      other neoplasms
+42:                         connective tissue neoplasm      other neoplasms
+43:                                              polyp      other neoplasms
+44:                                      stomach polyp      other neoplasms
+45:                           polyp of large intestine      other neoplasms
+46:                         female genital tract polyp      other neoplasms
+47:                                      uterine polyp      other neoplasms
+48:                                     cervical polyp      other neoplasms
+49:                             breast benign neoplasm      other neoplasms
+50: pancreatic intraductal papillary-mucinous neoplasm      other neoplasms
+51:                       malignant laryngeal neoplasm      other neoplasms
+52:                                      bone neoplasm      other neoplasms
+53:                                  melanocytic nevus      other neoplasms
+54:                                urogenital neoplasm      other neoplasms
+55:                        intraductal breast neoplasm      other neoplasms
+56:                connective and soft tissue neoplasm      other neoplasms
+57:                            uterine cervix neoplasm      other neoplasms
+58:                           malignant colon neoplasm      other neoplasms
+59:                                 meningeal neoplasm      other neoplasms
+60:                              benign brain neoplasm      other neoplasms
+61:                      metastatic malignant neoplasm      other neoplasms
+62:                      lobular capilliary hemangioma      other neoplasms
+63:                                lymph node neoplasm      other neoplasms
+64:                      aldosterone-producing adenoma      other neoplasms
+65:                                         schwannoma      other neoplasms
+66:                                     polyp of colon      other neoplasms
+67:                  hemangioma of subcutaneous tissue      other neoplasms
+68:                            adenomatous colon polyp      other neoplasms
+69:                                         anal polyp      other neoplasms
+70:                                      bladder tumor      other neoplasms
+71:                            urinary system neoplasm      other neoplasms
+72:                         benign neoplasm of stomach      other neoplasms
+73:                               polyp of gallbladder      other neoplasms
+74:                               gallbladder neoplasm      other neoplasms
+75:                                pancreatic neoplasm      other neoplasms
+76:                                 hepatic hemangioma      other neoplasms
+77:                       intracranial germ cell tumor      other neoplasms
+78:                              vestibular schwannoma      other neoplasms
+79:                                         hemangioma      other neoplasms
+80:                                    polyp of rectum      other neoplasms
                                      all_disease_terms l2_all_disease_terms</code></pre>
 </div>
 </div>
@@ -2448,6 +2583,135 @@ disease</h2>
 <div id="ischemic-heart-disease" class="section level2" number="4.2">
 <h2><span class="header-section-number">4.2</span> Ischemic heart
 disease</h2>
+</div>
+<div id="stroke" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Stroke</h2>
+</div>
+<div id="hypertensive-heart-disease" class="section level2"
+number="4.4">
+<h2><span class="header-section-number">4.4</span> Hypertensive heart
+disease</h2>
+</div>
+<div id="non-rheumatic-heart-disease" class="section level2"
+number="4.5">
+<h2><span class="header-section-number">4.5</span> Non-rheumatic heart
+disease</h2>
+</div>
+<div id="cardiomyopathy-and-myocarditis" class="section level2"
+number="4.6">
+<h2><span class="header-section-number">4.6</span> Cardiomyopathy and
+myocarditis</h2>
+<pre class="r"><code>gwas_study_info =
+gwas_study_info |&gt; 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = &quot;\\bcardiomyopathy\\b|\\bmyocarditis\\b&quot;,
+                                   &quot;cardiomyopathy and myocarditis&quot;
+                          )  
+        )
+
+gwas_study_info |&gt;
+ filter(grepl(&quot;cardiomyopathy and myocarditis&quot;, l2_all_disease_terms)) |&gt;
+  select(all_disease_terms, l2_all_disease_terms) |&gt;
+  distinct()</code></pre>
+<pre><code>                                all_disease_terms
+                                           &lt;char&gt;
+ 1:             idiopathic dilated cardiomyopathy
+ 2:              childhood cancer, cardiomyopathy
+ 3:                   hypertrophic cardiomyopathy
+ 4:                        dilated cardiomyopathy
+ 5:                         chagas cardiomyopathy
+ 6:                     peripartum cardiomyopathy
+ 7:                      takotsubo cardiomyopathy
+ 8:                    nonischemic cardiomyopathy
+ 9:                    schizophrenia, myocarditis
+10:                                cardiomyopathy
+11:                                   myocarditis
+12:         chagas disease, chagas cardiomyopathy
+13: rheumatoid arthritis, ischemic cardiomyopathy
+                                         l2_all_disease_terms
+                                                       &lt;char&gt;
+ 1:                 idiopathic cardiomyopathy and myocarditis
+ 2: cardiomyopathy and myocarditis, other malignant neoplasms
+ 3:                            cardiomyopathy and myocarditis
+ 4:                            cardiomyopathy and myocarditis
+ 5:                            cardiomyopathy and myocarditis
+ 6:                            cardiomyopathy and myocarditis
+ 7:                            cardiomyopathy and myocarditis
+ 8:                            cardiomyopathy and myocarditis
+ 9:             cardiomyopathy and myocarditis, schizophrenia
+10:                            cardiomyopathy and myocarditis
+11:                            cardiomyopathy and myocarditis
+12:            cardiomyopathy and myocarditis, chagas disease
+13:      cardiomyopathy and myocarditis, rheumatoid arthritis</code></pre>
+</div>
+<div id="pulmonary-arterial-hypertension" class="section level2"
+number="4.7">
+<h2><span class="header-section-number">4.7</span> Pulmonary arterial
+hypertension</h2>
+</div>
+<div id="atrial-fibrillation-flutter" class="section level2"
+number="4.8">
+<h2><span class="header-section-number">4.8</span> Atrial fibrillation
+&amp; flutter</h2>
+<pre class="r"><code>afib_terms &lt;- c(&quot;atrial fibrillation&quot;,
+                &quot;atrial flutter&quot;,
+                &quot;post-operative atrial fibrillation&quot;)
+
+gwas_study_info = 
+gwas_study_info |&gt; 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(afib_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                                   &quot;atrial fibrillation and flutter&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="aortic-aneurysm" class="section level2" number="4.9">
+<h2><span class="header-section-number">4.9</span> Aortic aneurysm</h2>
+<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/cvdo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_3627/descendants&quot;
+
+aortic_aneurysm_terms &lt;- get_descendants(url)</code></pre>
+<pre><code>[1] &quot;Number of terms collected:&quot;
+[1] 6
+[1] &quot;\n Some example terms&quot;
+[1] &quot;ruptured thoracoabdominal aortic aneurysm&quot;
+[2] &quot;ruptured abdominal aortic aneurysm&quot;       
+[3] &quot;ruptured thoracic aortic aneurysm&quot;        
+[4] &quot;abdominal aortic aneurysm&quot;                
+[5] &quot;ruptured aortic aneurysm&quot;                 </code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(aortic_aneurysm_terms, collapse = &quot;(?=,|$)|\\b&quot;),
+                                   &quot;aortic aneurysm&quot;
+                          )  
+        )</code></pre>
+</div>
+<div id="lower-extremity-peripheral-arterial-disease"
+class="section level2" number="4.10">
+<h2><span class="header-section-number">4.10</span> Lower extremity
+peripheral arterial disease</h2>
+</div>
+<div id="endocarditis" class="section level2" number="4.11">
+<h2><span class="header-section-number">4.11</span> Endocarditis</h2>
+<pre class="r"><code>gwas_study_info |&gt; 
+ filter(grepl(&quot;endocarditis&quot;, l2_all_disease_terms)) |&gt;
+  select(all_disease_terms, l2_all_disease_terms) |&gt;
+  distinct()</code></pre>
+<pre><code>                                         all_disease_terms
+                                                    &lt;char&gt;
+1: staphylococcus aureus infection, bacterial endocarditis
+2:                                            endocarditis
+                            l2_all_disease_terms
+                                          &lt;char&gt;
+1: endocarditis, staphylococcus aureus infection
+2:                                  endocarditis</code></pre>
+</div>
+<div id="other-cardiovascular-and-circulatory-diseases"
+class="section level2" number="4.12">
+<h2><span class="header-section-number">4.12</span> Other cardiovascular
+and circulatory diseases</h2>
 </div>
 </div>
 <div id="rename-disease-terms-to-match-gbd-categories-more-closely"
@@ -2585,25 +2849,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="atrial-fibrillation-flutter" class="section level2"
-number="5.7">
-<h2><span class="header-section-number">5.7</span> Atrial fibrillation
-&amp; flutter</h2>
-<pre class="r"><code>afib_terms &lt;- c(&quot;atrial fibrillation&quot;,
-                &quot;atrial flutter&quot;,
-                &quot;post-operative atrial fibrillation&quot;)
-
-gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(afib_terms, collapse = &quot;(?=,|$)|\\b&quot;),
-                                   &quot;atrial fibrillation and flutter&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="amphetamine-use-disorders" class="section level2" number="5.8">
-<h2><span class="header-section-number">5.8</span> Amphetamine use
+<div id="amphetamine-use-disorders" class="section level2" number="5.7">
+<h2><span class="header-section-number">5.7</span> Amphetamine use
 disorders</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -2614,30 +2861,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="aortic-aneurysm" class="section level2" number="5.9">
-<h2><span class="header-section-number">5.9</span> Aortic aneurysm</h2>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/cvdo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_3627/descendants&quot;
-
-aortic_aneurysm_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 6
-[1] &quot;\n Some example terms&quot;
-[1] &quot;ruptured thoracoabdominal aortic aneurysm&quot;
-[2] &quot;ruptured abdominal aortic aneurysm&quot;       
-[3] &quot;ruptured thoracic aortic aneurysm&quot;        
-[4] &quot;abdominal aortic aneurysm&quot;                
-[5] &quot;ruptured aortic aneurysm&quot;                 </code></pre>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(aortic_aneurysm_terms, collapse = &quot;(?=,|$)|\\b&quot;),
-                                   &quot;aortic aneurysm&quot;
-                          )  
-        )</code></pre>
-</div>
-<div id="autism-spectrum-disorders" class="section level2"
-number="5.10">
-<h2><span class="header-section-number">5.10</span> Autism spectrum
+<div id="autism-spectrum-disorders" class="section level2" number="5.8">
+<h2><span class="header-section-number">5.8</span> Autism spectrum
 disorders</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
@@ -2647,9 +2872,8 @@ disorders</h2>
                           )  
         )</code></pre>
 </div>
-<div id="blindness-and-vision-loss" class="section level2"
-number="5.11">
-<h2><span class="header-section-number">5.11</span> Blindness and vision
+<div id="blindness-and-vision-loss" class="section level2" number="5.9">
+<h2><span class="header-section-number">5.9</span> Blindness and vision
 loss</h2>
 <pre class="r"><code>vision_loss_terms &lt;- c(&quot;blindness&quot;,
                        &quot;color vision disorder&quot;,
@@ -2673,8 +2897,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="cannabis-use-disorders" class="section level2" number="5.12">
-<h2><span class="header-section-number">5.12</span> Cannabis use
+<div id="cannabis-use-disorders" class="section level2" number="5.10">
+<h2><span class="header-section-number">5.10</span> Cannabis use
 disorders</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -2686,8 +2910,8 @@ gwas_study_info |&gt;
         )</code></pre>
 </div>
 <div id="cirrhosis-other-chronic-liver-diseases" class="section level2"
-number="5.13">
-<h2><span class="header-section-number">5.13</span> Cirrhosis &amp;
+number="5.11">
+<h2><span class="header-section-number">5.11</span> Cirrhosis &amp;
 other chronic liver diseases</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F328383001/descendants&quot;
 
@@ -2722,8 +2946,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="cocaine-use-disorders" class="section level2" number="5.14">
-<h2><span class="header-section-number">5.14</span> Cocaine use
+<div id="cocaine-use-disorders" class="section level2" number="5.12">
+<h2><span class="header-section-number">5.12</span> Cocaine use
 disorders</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
@@ -2733,8 +2957,8 @@ disorders</h2>
                           )  
         )</code></pre>
 </div>
-<div id="depressive-disorders" class="section level2" number="5.15">
-<h2><span class="header-section-number">5.15</span> Depressive
+<div id="depressive-disorders" class="section level2" number="5.13">
+<h2><span class="header-section-number">5.13</span> Depressive
 disorders</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
@@ -2751,8 +2975,8 @@ disorders</h2>
         )</code></pre>
 </div>
 <div id="gallbladder-and-biliary-diseases" class="section level2"
-number="5.16">
-<h2><span class="header-section-number">5.16</span> Gallbladder and
+number="5.14">
+<h2><span class="header-section-number">5.14</span> Gallbladder and
 biliary diseases</h2>
 <pre class="r"><code>gal_bile_terms = c(&quot;gallbladder disease&quot;,
                    &quot;bile duct disorder&quot;,
@@ -2767,8 +2991,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="gynecological-diseases" class="section level2" number="5.17">
-<h2><span class="header-section-number">5.17</span> Gynecological
+<div id="gynecological-diseases" class="section level2" number="5.15">
+<h2><span class="header-section-number">5.15</span> Gynecological
 diseases</h2>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
                                gwas_study_info$l2_all_disease_terms)  |&gt; 
@@ -2789,8 +3013,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="eating-disorders" class="section level2" number="5.18">
-<h2><span class="header-section-number">5.18</span> Eating
+<div id="eating-disorders" class="section level2" number="5.16">
+<h2><span class="header-section-number">5.16</span> Eating
 disorders</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
@@ -2806,8 +3030,8 @@ disorders</h2>
                           )  
         )</code></pre>
 </div>
-<div id="headache-disorders" class="section level2" number="5.19">
-<h2><span class="header-section-number">5.19</span> Headache
+<div id="headache-disorders" class="section level2" number="5.17">
+<h2><span class="header-section-number">5.17</span> Headache
 disorders</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
@@ -2817,8 +3041,8 @@ disorders</h2>
                           )  
         )</code></pre>
 </div>
-<div id="ischemic-heart-disease-1" class="section level2" number="5.20">
-<h2><span class="header-section-number">5.20</span> Ischemic heart
+<div id="ischemic-heart-disease-1" class="section level2" number="5.18">
+<h2><span class="header-section-number">5.18</span> Ischemic heart
 disease</h2>
 <p>== coronary artery disease (<a
 href="https://www.ncbi.nlm.nih.gov/books/NBK209964/"
@@ -2831,8 +3055,8 @@ class="uri">https://www.ncbi.nlm.nih.gov/books/NBK209964/</a>)</p>
                           )  
         )</code></pre>
 </div>
-<div id="opioid-use-disorders" class="section level2" number="5.21">
-<h2><span class="header-section-number">5.21</span> Opioid use
+<div id="opioid-use-disorders" class="section level2" number="5.19">
+<h2><span class="header-section-number">5.19</span> Opioid use
 disorders</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -2843,8 +3067,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="parkinsons-disease" class="section level2" number="5.22">
-<h2><span class="header-section-number">5.22</span> Parkinsons
+<div id="parkinsons-disease" class="section level2" number="5.20">
+<h2><span class="header-section-number">5.20</span> Parkinsons
 disease</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -2855,8 +3079,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="personality-disorders" class="section level2" number="5.23">
-<h2><span class="header-section-number">5.23</span> Personality
+<div id="personality-disorders" class="section level2" number="5.21">
+<h2><span class="header-section-number">5.21</span> Personality
 disorders</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002028/descendants&quot;
 
@@ -2877,8 +3101,8 @@ personality_disorders &lt;- get_descendants(url)</code></pre>
                           )  
         )</code></pre>
 </div>
-<div id="other-drug-use-disorders" class="section level2" number="5.24">
-<h2><span class="header-section-number">5.24</span> Other drug use
+<div id="other-drug-use-disorders" class="section level2" number="5.22">
+<h2><span class="header-section-number">5.22</span> Other drug use
 disorders</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -2889,8 +3113,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="sleep-disorders" class="section level2" number="5.25">
-<h2><span class="header-section-number">5.25</span> Sleep disorders</h2>
+<div id="sleep-disorders" class="section level2" number="5.23">
+<h2><span class="header-section-number">5.23</span> Sleep disorders</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_535/descendants&quot;
 
 sleep_disorders &lt;- get_descendants(url)</code></pre>
@@ -2996,99 +3220,96 @@ gbd_data$cause[!tolower(gbd_data$cause) %in% unique(diseases)] |&gt; sort()</cod
  [4] &quot;Bacterial skin diseases&quot;                                          
  [5] &quot;Bacterial skin diseases&quot;                                          
  [6] &quot;Bacterial skin diseases&quot;                                          
- [7] &quot;Cardiomyopathy and myocarditis&quot;                                   
- [8] &quot;Cardiomyopathy and myocarditis&quot;                                   
- [9] &quot;Cardiomyopathy and myocarditis&quot;                                   
-[10] &quot;Chronic kidney disease&quot;                                           
-[11] &quot;Chronic kidney disease&quot;                                           
-[12] &quot;Chronic kidney disease&quot;                                           
-[13] &quot;Congenital birth defects&quot;                                         
-[14] &quot;Congenital birth defects&quot;                                         
-[15] &quot;Congenital birth defects&quot;                                         
-[16] &quot;Diabetes mellitus type 1&quot;                                         
-[17] &quot;Diabetes mellitus type 1&quot;                                         
-[18] &quot;Diabetes mellitus type 1&quot;                                         
-[19] &quot;Diabetes mellitus type 2&quot;                                         
-[20] &quot;Diabetes mellitus type 2&quot;                                         
-[21] &quot;Diabetes mellitus type 2&quot;                                         
-[22] &quot;Drug use disorders&quot;                                               
-[23] &quot;Drug use disorders&quot;                                               
-[24] &quot;Drug use disorders&quot;                                               
-[25] &quot;Endocrine metabolic blood and immune disorders&quot;                   
-[26] &quot;Endocrine metabolic blood and immune disorders&quot;                   
-[27] &quot;Endocrine metabolic blood and immune disorders&quot;                   
-[28] &quot;Fungal skin diseases&quot;                                             
-[29] &quot;Fungal skin diseases&quot;                                             
-[30] &quot;Fungal skin diseases&quot;                                             
-[31] &quot;Hemoglobinopathies and hemolytic anemias&quot;                         
-[32] &quot;Hemoglobinopathies and hemolytic anemias&quot;                         
-[33] &quot;Hemoglobinopathies and hemolytic anemias&quot;                         
-[34] &quot;Idiopathic developmental intellectual disability&quot;                 
-[35] &quot;Idiopathic developmental intellectual disability&quot;                 
-[36] &quot;Idiopathic epilepsy&quot;                                              
-[37] &quot;Idiopathic epilepsy&quot;                                              
-[38] &quot;Idiopathic epilepsy&quot;                                              
-[39] &quot;Inguinal femoral and abdominal hernia&quot;                            
-[40] &quot;Inguinal femoral and abdominal hernia&quot;                            
-[41] &quot;Inguinal femoral and abdominal hernia&quot;                            
-[42] &quot;Interstitial lung disease and pulmonary sarcoidosis&quot;              
-[43] &quot;Interstitial lung disease and pulmonary sarcoidosis&quot;              
-[44] &quot;Interstitial lung disease and pulmonary sarcoidosis&quot;              
-[45] &quot;Lower extremity peripheral arterial disease&quot;                      
-[46] &quot;Lower extremity peripheral arterial disease&quot;                      
-[47] &quot;Lower extremity peripheral arterial disease&quot;                      
-[48] &quot;Neuroblastoma and other peripheral nervous cell tumors&quot;           
-[49] &quot;Neuroblastoma and other peripheral nervous cell tumors&quot;           
-[50] &quot;Neuroblastoma and other peripheral nervous cell tumors&quot;           
-[51] &quot;Non-rheumatic valvular heart disease&quot;                             
-[52] &quot;Non-rheumatic valvular heart disease&quot;                             
-[53] &quot;Non-rheumatic valvular heart disease&quot;                             
-[54] &quot;Oral disorders&quot;                                                   
-[55] &quot;Oral disorders&quot;                                                   
-[56] &quot;Oral disorders&quot;                                                   
-[57] &quot;Other cardiovascular and circulatory diseases&quot;                    
-[58] &quot;Other cardiovascular and circulatory diseases&quot;                    
-[59] &quot;Other chronic respiratory diseases&quot;                               
-[60] &quot;Other digestive diseases&quot;                                         
-[61] &quot;Other mental disorders&quot;                                           
-[62] &quot;Other mental disorders&quot;                                           
-[63] &quot;Other mental disorders&quot;                                           
-[64] &quot;Other musculoskeletal disorders&quot;                                  
-[65] &quot;Other musculoskeletal disorders&quot;                                  
-[66] &quot;Other neurological disorders&quot;                                     
-[67] &quot;Other neurological disorders&quot;                                     
-[68] &quot;Other neurological disorders&quot;                                     
-[69] &quot;Other sense organ diseases&quot;                                       
-[70] &quot;Other sense organ diseases&quot;                                       
-[71] &quot;Other sense organ diseases&quot;                                       
-[72] &quot;Other skin and subcutaneous diseases&quot;                             
-[73] &quot;Other skin and subcutaneous diseases&quot;                             
-[74] &quot;Other skin and subcutaneous diseases&quot;                             
-[75] &quot;Paralytic ileus and intestinal obstruction&quot;                       
-[76] &quot;Paralytic ileus and intestinal obstruction&quot;                       
-[77] &quot;Paralytic ileus and intestinal obstruction&quot;                       
-[78] &quot;Pulmonary Arterial Hypertension&quot;                                  
-[79] &quot;Pulmonary Arterial Hypertension&quot;                                  
-[80] &quot;Pulmonary Arterial Hypertension&quot;                                  
-[81] &quot;Scabies&quot;                                                          
-[82] &quot;Scabies&quot;                                                          
-[83] &quot;Scabies&quot;                                                          
-[84] &quot;Sudden infant death syndrome&quot;                                     
-[85] &quot;Total burden related to Non-alcoholic fatty liver disease (NAFLD)&quot;
-[86] &quot;Total burden related to Non-alcoholic fatty liver disease (NAFLD)&quot;
-[87] &quot;Total burden related to Non-alcoholic fatty liver disease (NAFLD)&quot;
-[88] &quot;Upper digestive system diseases&quot;                                  
-[89] &quot;Upper digestive system diseases&quot;                                  
-[90] &quot;Upper digestive system diseases&quot;                                  
-[91] &quot;Urinary diseases and male infertility&quot;                            
-[92] &quot;Urinary diseases and male infertility&quot;                            
-[93] &quot;Urinary diseases and male infertility&quot;                            
-[94] &quot;Vascular intestinal disorders&quot;                                    
-[95] &quot;Vascular intestinal disorders&quot;                                    
-[96] &quot;Vascular intestinal disorders&quot;                                    
-[97] &quot;Viral skin diseases&quot;                                              
-[98] &quot;Viral skin diseases&quot;                                              
-[99] &quot;Viral skin diseases&quot;                                              </code></pre>
+ [7] &quot;Chronic kidney disease&quot;                                           
+ [8] &quot;Chronic kidney disease&quot;                                           
+ [9] &quot;Chronic kidney disease&quot;                                           
+[10] &quot;Congenital birth defects&quot;                                         
+[11] &quot;Congenital birth defects&quot;                                         
+[12] &quot;Congenital birth defects&quot;                                         
+[13] &quot;Diabetes mellitus type 1&quot;                                         
+[14] &quot;Diabetes mellitus type 1&quot;                                         
+[15] &quot;Diabetes mellitus type 1&quot;                                         
+[16] &quot;Diabetes mellitus type 2&quot;                                         
+[17] &quot;Diabetes mellitus type 2&quot;                                         
+[18] &quot;Diabetes mellitus type 2&quot;                                         
+[19] &quot;Drug use disorders&quot;                                               
+[20] &quot;Drug use disorders&quot;                                               
+[21] &quot;Drug use disorders&quot;                                               
+[22] &quot;Endocrine metabolic blood and immune disorders&quot;                   
+[23] &quot;Endocrine metabolic blood and immune disorders&quot;                   
+[24] &quot;Endocrine metabolic blood and immune disorders&quot;                   
+[25] &quot;Fungal skin diseases&quot;                                             
+[26] &quot;Fungal skin diseases&quot;                                             
+[27] &quot;Fungal skin diseases&quot;                                             
+[28] &quot;Hemoglobinopathies and hemolytic anemias&quot;                         
+[29] &quot;Hemoglobinopathies and hemolytic anemias&quot;                         
+[30] &quot;Hemoglobinopathies and hemolytic anemias&quot;                         
+[31] &quot;Idiopathic developmental intellectual disability&quot;                 
+[32] &quot;Idiopathic developmental intellectual disability&quot;                 
+[33] &quot;Idiopathic epilepsy&quot;                                              
+[34] &quot;Idiopathic epilepsy&quot;                                              
+[35] &quot;Idiopathic epilepsy&quot;                                              
+[36] &quot;Inguinal femoral and abdominal hernia&quot;                            
+[37] &quot;Inguinal femoral and abdominal hernia&quot;                            
+[38] &quot;Inguinal femoral and abdominal hernia&quot;                            
+[39] &quot;Interstitial lung disease and pulmonary sarcoidosis&quot;              
+[40] &quot;Interstitial lung disease and pulmonary sarcoidosis&quot;              
+[41] &quot;Interstitial lung disease and pulmonary sarcoidosis&quot;              
+[42] &quot;Lower extremity peripheral arterial disease&quot;                      
+[43] &quot;Lower extremity peripheral arterial disease&quot;                      
+[44] &quot;Lower extremity peripheral arterial disease&quot;                      
+[45] &quot;Neuroblastoma and other peripheral nervous cell tumors&quot;           
+[46] &quot;Neuroblastoma and other peripheral nervous cell tumors&quot;           
+[47] &quot;Neuroblastoma and other peripheral nervous cell tumors&quot;           
+[48] &quot;Non-rheumatic valvular heart disease&quot;                             
+[49] &quot;Non-rheumatic valvular heart disease&quot;                             
+[50] &quot;Non-rheumatic valvular heart disease&quot;                             
+[51] &quot;Oral disorders&quot;                                                   
+[52] &quot;Oral disorders&quot;                                                   
+[53] &quot;Oral disorders&quot;                                                   
+[54] &quot;Other cardiovascular and circulatory diseases&quot;                    
+[55] &quot;Other cardiovascular and circulatory diseases&quot;                    
+[56] &quot;Other chronic respiratory diseases&quot;                               
+[57] &quot;Other digestive diseases&quot;                                         
+[58] &quot;Other mental disorders&quot;                                           
+[59] &quot;Other mental disorders&quot;                                           
+[60] &quot;Other mental disorders&quot;                                           
+[61] &quot;Other musculoskeletal disorders&quot;                                  
+[62] &quot;Other musculoskeletal disorders&quot;                                  
+[63] &quot;Other neurological disorders&quot;                                     
+[64] &quot;Other neurological disorders&quot;                                     
+[65] &quot;Other neurological disorders&quot;                                     
+[66] &quot;Other sense organ diseases&quot;                                       
+[67] &quot;Other sense organ diseases&quot;                                       
+[68] &quot;Other sense organ diseases&quot;                                       
+[69] &quot;Other skin and subcutaneous diseases&quot;                             
+[70] &quot;Other skin and subcutaneous diseases&quot;                             
+[71] &quot;Other skin and subcutaneous diseases&quot;                             
+[72] &quot;Paralytic ileus and intestinal obstruction&quot;                       
+[73] &quot;Paralytic ileus and intestinal obstruction&quot;                       
+[74] &quot;Paralytic ileus and intestinal obstruction&quot;                       
+[75] &quot;Pulmonary Arterial Hypertension&quot;                                  
+[76] &quot;Pulmonary Arterial Hypertension&quot;                                  
+[77] &quot;Pulmonary Arterial Hypertension&quot;                                  
+[78] &quot;Scabies&quot;                                                          
+[79] &quot;Scabies&quot;                                                          
+[80] &quot;Scabies&quot;                                                          
+[81] &quot;Sudden infant death syndrome&quot;                                     
+[82] &quot;Total burden related to Non-alcoholic fatty liver disease (NAFLD)&quot;
+[83] &quot;Total burden related to Non-alcoholic fatty liver disease (NAFLD)&quot;
+[84] &quot;Total burden related to Non-alcoholic fatty liver disease (NAFLD)&quot;
+[85] &quot;Upper digestive system diseases&quot;                                  
+[86] &quot;Upper digestive system diseases&quot;                                  
+[87] &quot;Upper digestive system diseases&quot;                                  
+[88] &quot;Urinary diseases and male infertility&quot;                            
+[89] &quot;Urinary diseases and male infertility&quot;                            
+[90] &quot;Urinary diseases and male infertility&quot;                            
+[91] &quot;Vascular intestinal disorders&quot;                                    
+[92] &quot;Vascular intestinal disorders&quot;                                    
+[93] &quot;Vascular intestinal disorders&quot;                                    
+[94] &quot;Viral skin diseases&quot;                                              
+[95] &quot;Viral skin diseases&quot;                                              
+[96] &quot;Viral skin diseases&quot;                                              </code></pre>
 <pre class="r"><code>gbd_data =
   gbd_data |&gt;
   mutate(cause = tolower(cause))
@@ -3108,48 +3329,63 @@ left_join(gwas_disease_traits,
 ℹ Row 19 of `y` matches multiple rows in `x`.
 ℹ If a many-to-many relationship is expected, set `relationship =
   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>                              cause                                measure
-1         idiopathic cardiomyopathy                                   &lt;NA&gt;
-2                         cleft lip                                   &lt;NA&gt;
-3 tracheal bronchus and lung cancer DALYs (Disability-Adjusted Life Years)
-4 tracheal bronchus and lung cancer                             Prevalence
-5 tracheal bronchus and lung cancer                              Incidence
-6 tracheal bronchus and lung cancer DALYs (Disability-Adjusted Life Years)
-  location  sex      age metric year       val     upper     lower
-1     &lt;NA&gt; &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;   NA        NA        NA        NA
-2     &lt;NA&gt; &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;   NA        NA        NA        NA
-3   Global Both All ages   Rate 2019 580.36100 627.79984 532.74652
-4   Global Both All ages   Rate 2019  40.27440  43.51721  37.12978
-5   Global Both All ages   Rate 2019  28.16826  30.49575  25.77712
-6   Global Both All ages   Rate 2019 580.36100 627.79984 532.74652</code></pre>
+<pre><code>                                      cause
+1 idiopathic cardiomyopathy and myocarditis
+2                                 cleft lip
+3         tracheal bronchus and lung cancer
+4         tracheal bronchus and lung cancer
+5         tracheal bronchus and lung cancer
+6         tracheal bronchus and lung cancer
+                                 measure location  sex      age metric year
+1                                   &lt;NA&gt;     &lt;NA&gt; &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;   NA
+2                                   &lt;NA&gt;     &lt;NA&gt; &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;   NA
+3 DALYs (Disability-Adjusted Life Years)   Global Both All ages   Rate 2019
+4                             Prevalence   Global Both All ages   Rate 2019
+5                              Incidence   Global Both All ages   Rate 2019
+6 DALYs (Disability-Adjusted Life Years)   Global Both All ages   Rate 2019
+        val     upper     lower
+1        NA        NA        NA
+2        NA        NA        NA
+3 580.36100 627.79984 532.74652
+4  40.27440  43.51721  37.12978
+5  28.16826  30.49575  25.77712
+6 580.36100 627.79984 532.74652</code></pre>
 <pre class="r"><code>gwas_study_info |&gt; select(cause = l2_all_disease_terms) |&gt;
   distinct() |&gt;
   left_join(gbd_data) |&gt;
   head()</code></pre>
 <pre><code>Joining with `by = join_by(cause)`</code></pre>
-<pre><code>                               cause                                measure
-                              &lt;char&gt;                                 &lt;char&gt;
-1:                                                                     &lt;NA&gt;
-2:         idiopathic cardiomyopathy                                   &lt;NA&gt;
-3:                         cleft lip                                   &lt;NA&gt;
-4: tracheal bronchus and lung cancer DALYs (Disability-Adjusted Life Years)
-5: tracheal bronchus and lung cancer                             Prevalence
-6: tracheal bronchus and lung cancer                              Incidence
-   location    sex      age metric  year       val     upper     lower
-     &lt;char&gt; &lt;char&gt;   &lt;char&gt; &lt;char&gt; &lt;int&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;
-1:     &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;    NA        NA        NA        NA
-2:     &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;    NA        NA        NA        NA
-3:     &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;    NA        NA        NA        NA
-4:   Global   Both All ages   Rate  2019 580.36100 627.79984 532.74652
-5:   Global   Both All ages   Rate  2019  40.27440  43.51721  37.12978
-6:   Global   Both All ages   Rate  2019  28.16826  30.49575  25.77712</code></pre>
+<pre><code>                                       cause
+                                      &lt;char&gt;
+1:                                          
+2: idiopathic cardiomyopathy and myocarditis
+3:                                 cleft lip
+4:         tracheal bronchus and lung cancer
+5:         tracheal bronchus and lung cancer
+6:         tracheal bronchus and lung cancer
+                                  measure location    sex      age metric  year
+                                   &lt;char&gt;   &lt;char&gt; &lt;char&gt;   &lt;char&gt; &lt;char&gt; &lt;int&gt;
+1:                                   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;    NA
+2:                                   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;    NA
+3:                                   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;   &lt;NA&gt;    NA
+4: DALYs (Disability-Adjusted Life Years)   Global   Both All ages   Rate  2019
+5:                             Prevalence   Global   Both All ages   Rate  2019
+6:                              Incidence   Global   Both All ages   Rate  2019
+         val     upper     lower
+       &lt;num&gt;     &lt;num&gt;     &lt;num&gt;
+1:        NA        NA        NA
+2:        NA        NA        NA
+3:        NA        NA        NA
+4: 580.36100 627.79984 532.74652
+5:  40.27440  43.51721  37.12978
+6:  28.16826  30.49575  25.77712</code></pre>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
                                gwas_study_info$l2_all_disease_terms[gwas_study_info$l2_all_disease_terms != &quot;&quot;])  |&gt; 
             unlist() |&gt;
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 1617</code></pre>
+<pre><code>[1] 1598</code></pre>
 <pre class="r"><code># make frequency table
 freq &lt;- table(as.factor(diseases))
 
@@ -3162,11 +3398,11 @@ head(freq_sorted, 10)</code></pre>
                          kidney disease                            hypertension 
                                   10915                                    7096 
                type 2 diabetes mellitus                         other neoplasms 
-                                    922                                     521 
+                                    922                                     537 
                    depressive disorders alzheimer&#39;s disease and other dementias 
                                     513                                     509 
                  ischemic heart disease                           breast cancer 
-                                    501                                     379 
+                                    499                                     379 
                           schizophrenia                                  asthma 
                                     368                                     348 </code></pre>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
