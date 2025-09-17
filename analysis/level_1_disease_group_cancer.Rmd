@@ -2011,7 +2011,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Urogenital neoplasm
+### Urogenital neoplasm
 
 ```{r urogenital neoplasm}
 
@@ -2043,7 +2043,7 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
-### Vulvar neoplasm
+#### Vulvar neoplasm
 
 ```{r vulvar neoplasm}
 
@@ -2093,9 +2093,9 @@ gwas_study_info = gwas_study_info |>
 
 
 
-## Ocular Melanoma
+### Ocular Melanoma
 
-```{r}
+```{r occular melanoma}
 
 ocular_melanoma_terms <- c("uveal melanoma",
                            "uveal melanoma disease severity",
@@ -2200,7 +2200,7 @@ gwas_study_info |>
 malignant_skin_melanoma <- c("ICD10 C43",
                              "survival in skin melanoma",
                              "Skin melanoma specific survival",
-                              "malignant melanoma of skin",
+                             "malignant melanoma of skin",
                              "malignant melanoma of trunk",
                              "Malignant melanoma \\(UKB data field 20001\\)",
                              "malignant melanoma \\(UKB data field 20001_1059\\)",
@@ -2214,7 +2214,7 @@ malignant_skin_melanoma <- c("ICD10 C43",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(l1_all_disease_terms == "melanoma" &
-                grepl(paste0(malignant_skin_melanoma, collapse = "|"),
+                grepl(paste0(malignant_skin_melanoma, collapse = "|\\b"),
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
@@ -2630,8 +2630,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-
-
 ### central nervous system cancer, nervous system cancer
 
 ```{r cns cancer}
@@ -2643,25 +2641,6 @@ gwas_study_info |>
          case_when(l1_all_disease_terms == "central nervous system cancer, nervous system cancer" ~ "central nervous system cancer",
                    TRUE ~ l1_all_disease_terms)
          ) 
-
-```
-
-
-
-# Final summary - number of unique study terns
-
-## Deal with duplicate terms created during grouping
-
-```{r}
-
-gwas_study_info = 
-  gwas_study_info |>
-  rowwise() |>
-  mutate(l1_all_disease_terms = paste0(sort(unique(unlist(strsplit(l1_all_disease_terms, ", ")))),
-                                      collapse = ", ")
-         ) |>
-  ungroup()
-
 
 ```
 
@@ -2688,19 +2667,195 @@ gwas_study_info =
 gwas_study_info |>
   mutate(l1_all_disease_terms =
          case_when(l1_all_disease_terms == "non-malignant skin melanoma skin cancer" ~ "non-melanoma skin cancer",
+                   l1_all_disease_terms == "non-malignant melanoma of skin skin cancer" ~ "non-melanoma skin cancer",
                    TRUE ~ l1_all_disease_terms)
          ) 
 
-gwas_study_info =
-gwas_study_info |>
-  mutate(l1_all_disease_terms =
-         stringr::str_replace_all(l1_all_disease_terms,
-                           "non-malignant skin melanoma skin cancer",
-                          "non-melanoma skin cancer"
-         )
-         ) 
+# 
+# gwas_study_info =
+# gwas_study_info |>
+#   mutate(l1_all_disease_terms =
+#          stringr::str_replace_all(l1_all_disease_terms,
+#                            "non-malignant skin melanoma skin cancer",
+#                           "non-melanoma skin cancer"
+#          )
+#          ) 
 
 ```
+
+### Deal witt unspecified skin cancer
+
+```{r unspecified skin cancer}
+
+gwas_study_info |> 
+  filter(grepl("skin cancer", l1_all_disease_terms) & 
+         !grepl("non-melanoma", l1_all_disease_terms)
+         )  |> 
+  select(STUDY, 
+         `DISEASE/TRAIT`, 
+         all_disease_terms, 
+         l1_all_disease_terms) |> 
+  distinct()
+
+# make them listed under both malignant melanoma of skin and non-melanoma skin cancer
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("skin cancer", l1_all_disease_terms) & 
+                !grepl("melanoma", l1_all_disease_terms),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "skin cancer",
+                          "malignant melanoma of skin, non-melanoma skin cancer"),
+                l1_all_disease_terms
+         )
+         )
+
+
+```
+
+## Deal with unspecified lymphoma
+
+```{r unspecified lymphoma}
+
+
+gwas_study_info |> 
+  filter(grepl("lymphoma", l1_all_disease_terms) & 
+          !grepl("hodgkin", l1_all_disease_terms)) |> 
+  pull(`DISEASE/TRAIT`) |> 
+  unique()
+
+# PheCode 202.23 maps to ICD-9	200.1	Lymphosarcoma
+# which as from: http://snomed.info/id/188498009, is a form of non-Hodgkin's lymphoma
+
+# PheCode 202.24 code maps to ICD-9	200.6, 	Anaplastic large cell lymphoma a form of non-Hodgkin's lymphoma
+
+# all ICD10 C83 codes are non-Hodgkin's lymphoma
+
+# ICD10 C85.1 maps to PheCode 202.2	Non-Hodgkins lymphoma
+
+nhl_terms <- c("B cell non-Hodgkin lymphoma",
+               "PheCode 202.23",
+               "PheCode 202.24",
+               "ICD10 C83",
+               "ICD10 C85.1"
+               )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("lymphoma", l1_all_disease_terms, ignore.case = T) & 
+                !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
+                grepl(paste0(nhl_terms, collapse = "|"), 
+                      `DISEASE/TRAIT`, 
+                      ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "lymphoma",
+                          "non-hodgkin lymphoma"),
+                l1_all_disease_terms
+         )
+         )
+
+
+# Non-follicular lymphoma (UKB data field 40006) likely non-hodgkin lymphoma
+# as ICD10 C83: Non-follicular lymphoma is non-hodgkin lymphoma
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("lymphoma", l1_all_disease_terms, ignore.case = T) & 
+                !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
+                grepl("Non-follicular lymphoma \\(UKB data field 40006\\)", 
+                      `DISEASE/TRAIT`, 
+                      ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "lymphoma",
+                          "non-hodgkin lymphoma"),
+                l1_all_disease_terms
+         )
+         )
+
+
+# Cancer code, self-reported: lymphoma (UKB data field 20001_1047)
+# includes both hodgkin and non-hodgkin lymphoma
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("lymphoma", l1_all_disease_terms, ignore.case = T) & 
+                !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
+                grepl("Cancer code, self-reported: lymphoma \\(UKB data field 20001_1047\\)", 
+                      `DISEASE/TRAIT`, 
+                      ignore.case = T),
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "lymphoma",
+                          "non-hodgkin lymphoma, hodgkin lymphoma"),
+                l1_all_disease_terms
+         )
+         )
+
+# for pubmed id: 34594039
+# from sup table 1; 
+# Malignant lymphoma	Malignant_Lymphoma	is defined PheCodes	201/202	CD2_NONFOLLICULAR_LYMPHOMA
+# thus includes both hodgkin and non-hodgkin lymphoma
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("lymphoma", l1_all_disease_terms, ignore.case = T) & 
+                !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
+                PUBMED_ID == 34594039,
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "lymphoma",
+                          "non-hodgkin lymphoma, hodgkin lymphoma"),
+                l1_all_disease_terms
+         )
+         )
+
+# pubmed id: 23349640
+# includes both hodgkin and non-hodgkin lymphoma
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("lymphoma", l1_all_disease_terms, ignore.case = T) & 
+                !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
+                PUBMED_ID == 23349640,
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "lymphoma",
+                          "non-hodgkin lymphoma, hodgkin lymphoma"),
+                l1_all_disease_terms
+         )
+         )
+
+# not entirely sure for pubmed id: 36344522
+# perhaps need to read further in, but seems like it is both hodgkin and non-hodgkin lymphoma
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         ifelse(grepl("lymphoma", l1_all_disease_terms, ignore.case = T) & 
+                !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
+                PUBMED_ID == 36344522,
+                stringr::str_replace_all(l1_all_disease_terms,
+                          "lymphoma",
+                          "non-hodgkin lymphoma, hodgkin lymphoma"),
+                l1_all_disease_terms
+         )
+         )
+
+```
+
+
+
+# Final summary - number of unique study terns
+
+## Deal with duplicate terms created during grouping
+
+```{r}
+
+gwas_study_info = 
+  gwas_study_info |>
+  rowwise() |>
+  mutate(l1_all_disease_terms = paste0(sort(unique(unlist(strsplit(l1_all_disease_terms, ", ")))),
+                                      collapse = ", ")
+         ) |>
+  ungroup()
+
+
+```
+
+
 
 ## Deal with hanging commas and spaces
 
