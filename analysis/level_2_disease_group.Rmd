@@ -359,7 +359,8 @@ gwas_study_info |>
 gwas_study_info |>
  filter(grepl("ovarian cancer", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
-  distinct()
+  distinct() |>
+  head()
 
 ```
 
@@ -463,7 +464,7 @@ gwas_study_info |>
 
 ```
 
-## Neuroblastoma and other peripheral nervous system cancers
+## Neuroblastoma and other peripheral nervous cell tumors
 
 ```{r neuroblastoma}
 
@@ -472,12 +473,12 @@ gwas_study_info |>
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
                                   pattern = "\\bneuroblastoma\\b|\\bperipheral nervous system cancer\\b",
-                                   "neuroblastoma and other peripheral nervous system cancers"
+                                   "neuroblastoma and other peripheral nervous cell tumors"
                           )  
         )
 
 gwas_study_info |>
- filter(grepl("neuroblastoma and other peripheral nervous system cancers", l2_all_disease_terms)) |>
+ filter(grepl("neuroblastoma and other peripheral nervous cell tumors", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
@@ -666,7 +667,8 @@ gwas_study_info |>
 gwas_study_info |>
  filter(grepl("other malignant neoplasms", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
-  distinct()
+  distinct() |> 
+  head()
 
 ```
 
@@ -768,9 +770,37 @@ gwas_study_info |>
 
 ```
 
-## Non-rheumatic heart disease
+## Non-rheumatic valvular heart disease
 
 ```{r non_rheumatic_heart_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009551/descendants"
+
+heart_valve_disease_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(heart_valve_disease_terms, collapse = "(?=,|$)|\\b"),
+                                   "heart valve disease"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("heart valve disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "heart valve disease",
+                                   "non-rheumatic valvular heart disease"
+                          )  
+        )
+
+
 
 gwas_study_info |>
  filter(grepl("non-rheumatic heart disease", l2_all_disease_terms)) |>
@@ -871,6 +901,11 @@ gwas_study_info |>
 
 ```{r peripheral_arterial_disease}
 
+gwas_study_info |>
+ filter(grepl("lower extremity peripheral arterial disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
@@ -1006,6 +1041,105 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Upper digestive system diseases
+
+```{r upper_digestive_disease_terms}
+
+upper_dig_terms <- c("peptic ulcer diseases",
+                     "duodenitis",
+                     "gastritis",
+                     "gastroesophageal reflux disease")
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(upper_dig_terms, collapse = "(?=,|$)|\\b"),
+                                   "upper digestive system diseases"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("upper digestive system diseases", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+
+```
+
+## Appendicitis
+
+```{r appendicitis_terms}
+
+gwas_study_info |>
+ filter(grepl("appendicitis", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+
+## Paralytic ileus and intestinal obstruction
+
+```{r paralytic_ileus_terms}
+
+gwas_study_info |>
+ filter(grepl("paralytic ileus and intestinal obstruction", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Inguinal femoral and abdominal hernia
+
+```{r hernia_terms}
+
+hernia_terms <- c("inguinal hernia",
+                  "femoral hernia",
+                  "abdominal hernia")
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(hernia_terms, collapse = "(?=,|$)|\\b"),
+                                   "inguinal femoral and abdominal hernia"
+                          )  
+        )
+
+```
+
+## Inflammatory bowel disease
+
+```{r ibd_terms}
+
+ibd_terms <- c("crohns disease",
+               "ulcerative colitis",
+               "inflammatory bowel disease")
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(ibd_terms, collapse = "(?=,|$)|\\b"),
+                                   "inflammatory bowel disease"
+                          )  
+        )
+
+```
+
+## Vascular intestinal disorders
+
+```{r vascular_intestinal_disorders_terms}
+
+gwas_study_info |>
+ filter(grepl("vascular intestinal disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
 ## Gallbladder and biliary diseases
 
 ```{r}
@@ -1031,47 +1165,280 @@ gwas_study_info |>
 
 ```
 
-## Appendicitis
+## Pancreatitis
 
-```{r appendicitis_terms}
+```{r pancreatitis_terms}
 
 gwas_study_info |>
- filter(grepl("appendicitis", l2_all_disease_terms)) |>
+ filter(grepl("pancreatitis", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
 
 ```
 
-## Paralytic ileus and intestinal obstruction
+## Other digestive diseases
 
-```{r paralytic_ileus_terms}
+```{r other_digestive_diseases_terms}
 
 gwas_study_info |>
- filter(grepl("paralytic ileus and intestinal obstruction", l2_all_disease_terms)) |>
+ filter(grepl("other digestive diseases", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
 
+```
+
+
+# Neurological disorders
+
+## Alzheimer's disease and other dementias 
+
+```{r dementia}
+
+dementia <- c("alzheimers disease biomarker measurement",
+              "alzheimers disease neuropathologic change",
+              "aids dementia",
+              "dementia",
+              "frontotemporal dementia",
+              "lewy body dementia",
+              "vascular dementia",
+              "alzheimers disease"
+)
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(dementia, collapse = "(?=,|$)|\\b"),
+                                   "alzheimer's disease and other dementias"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("alzheimer's disease and other dementias", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Parkinsons disease
+
+```{r pd}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "parkinsons disease",
+                                   "parkinson's disease"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("parkinson's disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Idiopathic epilepsy
+
+```{r epilepsy}
+
+gwas_study_info |>
+ filter(grepl("idiopathic epilepsy", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Multiple sclerosis
+
+```{r ms}
+
+gwas_study_info |>
+ filter(grepl("multiple sclerosis", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Motor neuron disease
+
+```{r mnd}
+
+gwas_study_info |>
+ filter(grepl("motor neuron disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Headache disorders
+
+```{r headache}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = "\\bheadache disorder\\b|cluster headache\\b|migraine\\b",
+                                   "headache disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("headache disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Other neurological disorders
+
+```{r other_neurological_disorders}
+
+gwas_study_info |>
+ filter(grepl("other neurological disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
 
+# Mental disorders
 
+## Schizophrenia
 
-# Rename disease terms to match GBD categories more closely
+```{r schizophrenia}
 
-## Acne -> acne vulgaris
+gwas_study_info |>
+ filter(grepl("schizophrenia", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
-```{r acne}
+```
+
+## Depressive disorders
+
+```{r depressive_disorders}
 
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "acne",
-                                   "acne vulgaris"
+                                  pattern = "depressive symptom measurement|major depressive disorder",
+                                   "depressive disorders"
+                          )  
+        ) |>
+   mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "depressive disorder",
+                                   "depressive disorders"
                           )  
         )
+
+
+gwas_study_info |>
+ filter(grepl("depressive disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Anxiety disorders 
+
+```{r anxiety_disordders}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mesh/terms/http%253A%252F%252Fid.nlm.nih.gov%252Fmesh%252FD001008/descendants"
+
+anxiety_terms <- get_descendants(url)
+
+anxiety_terms <- c(anxiety_terms, "obsessive-compulsive symptom measurement")
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(anxiety_terms, collapse = "(?=,|$)|\\b"),
+                                   "anxiety disorders"
+                          )  
+        ) |>
+   mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "anxiety disorder|anxiety measurement",
+                                   "anxiety disorders"
+                          )  
+        ) |>
+     mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "anxiety",
+                                   "anxiety disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("anxiety disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Eating disorders 
+
+```{r}
+
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "bulimia nervosa|anorexia nervosa|binge eating|eating disorder",
+                                  "eating disorders"
+                          )  
+        ) |>
+   mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "anorexia",
+                                  "eating disorders"
+                          )  
+        )
+
+
+gwas_study_info |>
+ filter(grepl("eating disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Autism spectrum disorders
+
+```{r autism}
+
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = "autism",
+                                   "autism spectrum disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("autism spectrum disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
@@ -1088,6 +1455,320 @@ gwas_study_info = gwas_study_info |>
                           )  
         )
 
+gwas_study_info |>
+ filter(grepl("attention-deficit/hyperactivity disorder", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Conduct disorder
+
+```{r conduct_disorder}
+
+gwas_study_info |>
+ filter(grepl("conduct disorder", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Idiopathic developmental intellectual disability
+
+```{r idiopathic_developmental_intellectual_disability}
+
+gwas_study_info |>
+ filter(grepl("idiopathic developmental intellectual disability", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Other mental disorders
+
+```{r other_mental_disorders}
+
+other_mental_disorders <- c("manic or hypomanic episode",
+                            "mental or behavioural disorder",
+                            "mental disorder"
+)
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(other_mental_disorders, collapse = "(?=,|$)|\\b"),
+                                   "other mental disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("other mental disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+# Substance use disorders
+
+## Alcohol use disorders
+
+```{r alcohol_use_disorder}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "alcohol-related disorders|alcohol and nicotine codependence",
+                                   "alcohol use disorders"
+                          )  
+        )
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "alcohol use disorder",
+                                   "alcohol use disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("alcohol use disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Opioid use disorders
+
+```{r opioid_use_terms}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "opioid dependence|opioid use disorder",
+                                   "opioid use disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("opioid use disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Cocaine use disorders
+
+```{r cocaine_use_terms}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "cocaine-related disorders",
+                                   "cocaine use disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("cocaine use disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Amphetamine use disorders
+
+```{r amphetamine_use_disorders}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "methamphetamine",
+                                   "amphetamine"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("amphetamine", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Cannabis use disorders
+ 
+```{r cannabis_use}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "cannabis dependence",
+                                   "cannabis use disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("cannabis use disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Other drug use disorders
+
+```{r}
+
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "heroin dependence|drug dependence|nictone dependence|substance abuse|drug misuse|alcohol use disorders delirium",
+                                   "other drug use disorders"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("other drug use disorders", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+
+```
+
+# Diabetes and kidney diseases
+
+## Diabetes mellitus type 1
+
+```{r diabetes_type_1}
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "type 1 diabetes mellitus",
+                                   "diabetes mellitus type 1"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("diabetes mellitus type 1", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Diabetes mellitus type 2
+
+```{r diabetes_type_2}
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "type 2 diabetes mellitus",
+                                   "diabetes mellitus type 2"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("diabetes mellitus type 2", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Chronic kidney disease
+
+```{r chronic_kidney_disease}
+
+gwas_study_info |>
+ filter(grepl("chronic kidney disease", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Acute glomerulonephritis
+
+```{r acute_glomerulonephritis}
+
+gwas_study_info |>
+ filter(grepl("acute glomerulonephritis", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+# Skin and subcutaneous diseases
+
+## Acne -> acne vulgaris
+
+```{r acne}
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "acne",
+                                   "acne vulgaris"
+                          )  
+        )
+
+```
+
+
+# Sense organ diseases
+
+## Blindness and vision loss 
+
+```{r blindness}
+
+vision_loss_terms <- c("blindness",
+                       "color vision disorder",
+                       "vision disorder",
+                       "myopia",
+                       "refractive error",
+                       "hyperopia",
+                       "astigmatism",
+                       "corneal astigmatism",
+                       "presbyopia",
+                       "anisometropia",
+                       "esotropia",
+                       "non-accomodative esotropia",
+                       "accommodative esotropia")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(vision_loss_terms, collapse = "(?=,|$)|\\b"),
+                                   "blindness and vision loss"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl("blindness and vision loss", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
@@ -1123,213 +1804,55 @@ gwas_study_info |>
                           )  
         )
 
-```
 
-## Alcohol use disorders
-
-```{r alcohol_use_disorder}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "alcohol-related disorders|alcohol and nicotine codependence",
-                                   "alcohol use disorders"
-                          )  
-        )
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "alcohol use disorder",
-                                   "alcohol use disorders"
-                          )  
-        )
+gwas_study_info |>
+ filter(grepl("age-related and other hearing loss", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
+## Other sense organ diseases
 
-## Alzheimer's disease and other dementias 
+```{r other_sense_organ_diseases}
 
-```{r dementia}
-
-dementia <- c("alzheimers disease biomarker measurement",
-              "alzheimers disease neuropathologic change",
-              "aids dementia",
-              "dementia",
-              "frontotemporal dementia",
-              "lewy body dementia",
-              "vascular dementia",
-              "alzheimers disease"
-)
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(dementia, collapse = "(?=,|$)|\\b"),
-                                   "alzheimer's disease and other dementias"
-                          )  
-        )
-
-
-
-
-```
-
-
-## Anxiety disorders 
-
-```{r anxiety_disordders}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mesh/terms/http%253A%252F%252Fid.nlm.nih.gov%252Fmesh%252FD001008/descendants"
-
-anxiety_terms <- get_descendants(url)
-
-anxiety_terms <- c(anxiety_terms, "obsessive-compulsive symptom measurement")
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(anxiety_terms, collapse = "(?=,|$)|\\b"),
-                                   "anxiety disorders"
-                          )  
-        ) |>
-   mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "anxiety disorder|anxiety measurement",
-                                   "anxiety disorders"
-                          )  
-        ) |>
-     mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "anxiety",
-                                   "anxiety disorders"
-                          )  
-        )
-
-
-
-```
-
-
-
-## Amphetamine use disorders
-
-```{r amphetamine_use_disorders}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "methamphetamine",
-                                   "amphetamine"
-                          )  
-        )
-
-
-```
-
-
-
-## Autism spectrum disorders
-
-```{r autism}
-
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = "autism",
-                                   "autism spectrum disorders"
-                          )  
-        )
-
-
-```
-
-## Blindness and vision loss 
-
-```{r blindness}
-
-vision_loss_terms <- c("blindness",
-                       "color vision disorder",
-                       "vision disorder",
-                       "myopia",
-                       "refractive error",
-                       "hyperopia",
-                       "astigmatism",
-                       "corneal astigmatism",
-                       "presbyopia",
-                       "anisometropia",
-                       "esotropia",
-                       "non-accomodative esotropia",
-                       "accommodative esotropia")
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(vision_loss_terms, collapse = "(?=,|$)|\\b"),
-                                   "blindness and vision loss"
-                          )  
-        )
-
-```
-
-## Cannabis use disorders
- 
-```{r cannabis_use}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "cannabis dependence",
-                                   "cannabis use disorders"
-                          )  
-        )
+gwas_study_info |>
+ filter(grepl("other sense organ diseases", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
 
 ```
 
 
 
 
-## Cocaine use disorders
-
-```{r cocaine_use_terms}
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "cocaine-related disorders",
-                                   "cocaine use disorders"
-                          )  
-        )
-
-```
 
 
-## Depressive disorders
 
-```{r depressive_disorders}
 
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "depressive symptom measurement|major depressive disorder",
-                                   "depressive disorders"
-                          )  
-        ) |>
-   mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "depressive disorder",
-                                   "depressive disorders"
-                          )  
-        )
 
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1360,75 +1883,14 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Eating disorders 
-
-```{r}
 
 
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "bulimia nervosa|anorexia nervosa|binge eating|eating disorder",
-                                  "eating disorders"
-                          )  
-        ) |>
-   mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "anorexia",
-                                  "eating disorders"
-                          )  
-        )
-
-```
-
-## Headache disorders
-
-```{r headache}
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = "headache disorder|cluster headache|migraine",
-                                   "headache disorders"
-                          )  
-        )
 
 
-```
 
 
-## Opioid use disorders
-
-```{r opioid_use_terms}
 
 
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "opioid dependence|opioid use disorder",
-                                   "opioid use disorders"
-                          )  
-        )
-
-
-```
-
-## Parkinsons disease
-
-```{r pd}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "parkinsons disease",
-                                   "parkinson's disease"
-                          )  
-        )
-
-
-```
 
 ## Personality disorders
 
@@ -1449,22 +1911,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Other drug use disorders
 
-```{r}
-
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "heroin dependence|drug dependence|nictone dependence|substance abuse|drug misuse|alcohol use disorders delirium",
-                                   "other drug use disorders"
-                          )  
-        )
-
-
-```
 
 ## Sleep disorders
 
@@ -1496,22 +1943,6 @@ gwas_study_info = gwas_study_info |>
 
 take url: "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F52522001/descendants"
 
-# Malignant skin melanoma
-
-and remove alz, parks, dementia 
-
-# Other mental disorders
-
-```{r}
-
-other_mental_disorders <- c("schizophrenia",
-                            "manic or hypomanic episode",
-                            "mental or behavioural disorder",
-                            "mental disorder"
-)
-
-```
-
 # Other neurological disorders
 
 ```{r}
@@ -1521,9 +1952,7 @@ other_neuro <- c("mild neurocognitive disorder",
 
 ```
 
-# Other sensory 
 
-disturbances of sensation of smell and taste
 
 # Check compatibility with gbd data 
 
