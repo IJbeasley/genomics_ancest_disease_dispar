@@ -2589,19 +2589,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-### Fix non-melanoma skin cancer, woopsy
 
-```{r fix_non_melanoma_skin_cancer}
-
-gwas_study_info =
-gwas_study_info |>
-  mutate(l1_all_disease_terms =
-         case_when(l1_all_disease_terms == "non-malignant skin melanoma skin cancer" ~ "non-melanoma skin cancer",
-                   TRUE ~ l1_all_disease_terms)
-         ) 
-
-
-```
 
 ### central nervous system cancer, nervous system cancer
 
@@ -2614,6 +2602,25 @@ gwas_study_info |>
          case_when(l1_all_disease_terms == "central nervous system cancer, nervous system cancer" ~ "central nervous system cancer",
                    TRUE ~ l1_all_disease_terms)
          ) 
+
+```
+
+
+
+# Final summary - number of unique study terns
+
+## Deal with duplicate terms created during grouping
+
+```{r}
+
+gwas_study_info = 
+  gwas_study_info |>
+  rowwise() |>
+  mutate(l1_all_disease_terms = paste0(sort(unique(unlist(strsplit(l1_all_disease_terms, ", ")))),
+                                      collapse = ", ")
+         ) |>
+  ungroup()
+
 
 ```
 
@@ -2630,23 +2637,28 @@ gwas_study_info |>
          )
 
 
-
 ```
 
-# Final summary - number of unique study terns
+### Fix non-melanoma skin cancer, woopsy
 
-## Deal with duplicate terms created during grouping
+```{r fix_non_melanoma_skin_cancer}
 
-```{r}
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         case_when(l1_all_disease_terms == "non-malignant skin melanoma skin cancer" ~ "non-melanoma skin cancer",
+                   TRUE ~ l1_all_disease_terms)
+         ) 
 
-gwas_study_info = 
-  gwas_study_info |>
-  rowwise() |>
-  mutate(l1_all_disease_terms = paste0(sort(unique(unlist(strsplit(l1_all_disease_terms, ", ")))),
-                                      collapse = ", ")
-         ) |>
-  ungroup()
 
+gwas_study_info =
+gwas_study_info |>
+  mutate(l1_all_disease_terms =
+         stringr::str_replace_all(l1_all_disease_terms,
+                           "non-malignant skin melanoma skin cancer",
+                          "non-melanoma skin cancer"
+         )
+         ) 
 
 ```
 
