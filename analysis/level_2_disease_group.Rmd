@@ -925,8 +925,8 @@ other_cardiovascular_terms <- c("tachycardia",
                                 "arterial occlusion",
                                 "congenital heart disease",
                                 "other vascular disorders",
-                                "(?=,|^)congestive heart failure",
-                                "(?=,|^)heart failure",
+                                "congestive heart failure",
+                                "heart failure",
                                 "thrombotic diseas",
                                 "arterial embolism",
                                 "cardiac embolism",
@@ -936,14 +936,28 @@ other_cardiovascular_terms <- c("tachycardia",
                                 "arterial thrombosis",
                                 "thromboembolism",
                                 "vascular insufficiency",
-                                "brain infarction"
+                                "brain infarction",
+                                "heart murmur"
                                  )
+
+other_cardiovascular_terms <- str_length_sort(other_cardiovascular_terms)
+other_cardiovascular_terms <- paste0("(?=, |^)", other_cardiovascular_terms)
+other_cardiovascular_terms <- paste0(other_cardiovascular_terms, "(?=,|$)")
 
 gwas_study_info =
 gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(other_cardiovascular_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = paste0(other_cardiovascular_terms, collapse = "|"),
+                                   "other cardiovascular and circulatory diseases"
+                          )
+ )
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "(?=, |^)other vascular disorders(?=,|$)",
                                    "other cardiovascular and circulatory diseases"
                           )
  )
@@ -1047,12 +1061,24 @@ chronic_liver_disease_terms <- c("primary biliary cirrhosis",
                                  "alcoholic liver cirrhosis",
                                  "chronic hepatitis B virus infection", 
                                  "acute-on-chronic liver failure",
+                                 "non-alcoholic fatty liver disease",
+                                 "cirrhosis of liver",
+                                 "primary biliary cirrhosis",
+                                 "chronic hepatitis",
+                                 "liver disease",
                                  chronic_liver_disease_terms)
+
+chronic_liver_disease_terms <- str_length_sort(chronic_liver_disease_terms)
+
+chronic_liver_disease_terms <- paste0("(?=, |^)", chronic_liver_disease_terms)
+chronic_liver_disease_terms <- paste0(chronic_liver_disease_terms, "(?=,|$)")
+
+pattern = paste0(chronic_liver_disease_terms, collapse = "|")
 
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = paste0(chronic_liver_disease_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = pattern,
                                    "cirrhosis and other chronic liver diseases"
                           )  
         )
@@ -1060,7 +1086,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = "liver disease",
+                                  pattern = "(?=, |^)liver disease(?=,|$)",
                                    "cirrhosis and other chronic liver diseases"
                           )  
         )
@@ -1388,19 +1414,39 @@ gwas_study_info |>
 
 ```{r depressive_disorders}
 
+depressive_terms <- c("depressive disorder",
+                      "depressive symptom",
+                      "depressive episode",
+                      "major depressive disorders",
+                      "major depressive disorder",
+                      "major depressive episode"
+)
+
+depressive_terms <- str_length_sort(depressive_terms)
+depressive_terms <- paste0("(?=, |^)", depressive_terms)
+depressive_terms <- paste0(depressive_terms, "(?=,|$)")
+
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "depressive symptom measurement|major depressive disorder",
+                                  pattern = paste0(depressive_terms, collapse = "|"),
                                    "depressive disorders"
                           )  
         ) |>
    mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "depressive disorder",
+                                  pattern = "(?=, |^)depressive disorder(?=,|$)",
+                                   "depressive disorders"
+                          )  
+        ) |>
+     mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "(?=, |^)major depressive episode(?=,|$)",
                                    "depressive disorders"
                           )  
         )
+  
+  
 
 
 gwas_study_info |>
@@ -1419,25 +1465,32 @@ url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mesh/terms/http%253A%252F%252Fi
 
 anxiety_terms <- get_descendants(url)
 
-anxiety_terms <- c(anxiety_terms, "obsessive-compulsive symptom measurement")
+anxiety_terms <- c(anxiety_terms, 
+                   "obsessive-compulsive symptom measurement",
+                   "obsessive-compulsive disorder"
+                   )
+
+anxiety_terms <- str_length_sort(anxiety_terms)
+anxiety_terms <- paste0("(?=, |^)", anxiety_terms)
+anxiety_terms <- paste0(anxiety_terms, "(?=,|$)")
 
 gwas_study_info = 
 gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(anxiety_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = paste0(anxiety_terms, collapse = "|"),
                                    "anxiety disorders"
                           )  
         ) |>
    mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "anxiety disorder|anxiety measurement",
+                                  pattern = "(?=, |^)anxiety disorder(?=,|$)|(?=, |^)anxiety measurement(?=,|$)",
                                    "anxiety disorders"
                           )  
         ) |>
      mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "anxiety",
+                                  pattern = "(?=, |^)anxiety(?=,|$)",
                                    "anxiety disorders"
                           )  
         )
@@ -1536,6 +1589,16 @@ gwas_study_info |>
 
 ```{r idiopathic_developmental_intellectual_disability}
 
+terms <- c("developmental disability")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(terms, collapse = "(?=,|$)|\\b"),
+                                   "idiopathic developmental intellectual disability"
+                          )  
+        )
+
 gwas_study_info |>
  filter(grepl("idiopathic developmental intellectual disability", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
@@ -1546,18 +1609,114 @@ gwas_study_info |>
 
 ## Other mental disorders
 
+### Personality disorders
+
+```{r}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002028/descendants"
+
+personality_disorders <- get_descendants(url)
+
+personality_disorders <- paste0("(?=, |^)", personality_disorders)
+personality_disorders <- paste0(personality_disorders, "(?=,|$)")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(personality_disorders, collapse = "|"),
+                                   "personality disorders"
+                          )  
+        )
+
+
+```
+
+
+### Mood disorders
+
+```{r mood_disorders}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004247/descendants"
+
+mood_disorders <- get_descendants(url)
+
+mood_disorders <- str_length_sort(mood_disorders)
+mood_disorders <- paste0("(?=, |^)", mood_disorders)
+mood_disorders <- paste0(mood_disorders, "(?=,|$)")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(mood_disorders, collapse = "|"),
+                                   "mood disorder"
+                          )  
+        )
+
+
+```
+
+### Sleep disorders
+
+```{r sleep disorders}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_535/descendants"
+
+sleep_disorders <- get_descendants(url)
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0008568/descendants"
+
+other_sleep_disorders <- get_descendants(url)
+
+sleep_disorders <- c(sleep_disorders,
+                    other_sleep_disorders)
+sleep_disorders <- str_length_sort(sleep_disorders)
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(sleep_disorders, collapse = "(?=,|$)|\\b"),
+                                   "sleep disorders"
+                          )  
+        )
+
+
+```
+
 ```{r other_mental_disorders}
 
 other_mental_disorders <- c("manic or hypomanic episode",
                             "mental or behavioural disorder",
-                            "mental disorder"
+                            "mental disorder",
+                            "post-traumatic stress disorder",
+                            "stress-related disorder",
+                            "acute stress reaction",
+                            "occupation-related stress disorder",
+                            "psychotic symptom",
+                            "psychosis",
+                            "psychiatric disorder",
+                             "personality disorders",
+                            "personality disorder",
+                            "mood disorder",
+                            "sleep disorders",
+                            "sleep disorder",
+                            "mixed anxiety disorders and depressive disorders",
+                            "emotional symptom",
+                            "dissociative disorder",
+                            "hallucinations",
+                            "somatoform disorder",
+                            "schizoaffective disorder"
+                            
 )
+
+other_mental_disorders <- str_length_sort(other_mental_disorders)
+other_mental_disorders <- paste0("(?=, |^)", other_mental_disorders)
+other_mental_disorders <- paste0(other_mental_disorders, "(?=,|$)")
 
 gwas_study_info =
 gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = paste0(other_mental_disorders, collapse = "(?=,|$)|\\b"),
+                                  pattern = paste0(other_mental_disorders, collapse = "|"),
                                    "other mental disorders"
                           )  
         )
@@ -1689,12 +1848,23 @@ gwas_study_info |>
 
 ```{r}
 
+other_drug_use_terms <- c("heroin dependence",
+                          "drug dependence",
+                          "nictone dependence",
+                          "substance abuse",
+                          "drug misuse",
+                          "alcohol use disorders delirium"
+                          )
+
+other_drug_use_terms <- str_length_sort(other_drug_use_terms)
+other_drug_use_terms <- paste0("(?=, |^)", other_drug_use_terms)
+other_drug_use_terms <- paste0(other_drug_use_terms, "(?=,|$)")
 
 gwas_study_info = 
 gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "heroin dependence|drug dependence|nictone dependence|substance abuse|drug misuse|alcohol use disorders delirium",
+                                  pattern = paste0(other_drug_use_terms, collapse = "|"),
                                    "other drug use disorders"
                           )  
         )
@@ -1768,6 +1938,20 @@ gwas_study_info |>
 
 ```{r acute_glomerulonephritis}
 
+glomerulonephritis_terms <- c("(?=, |^)chronic glomerulonephritis",
+                              "(?=, |^)membranous glomerulonephritis",
+                              "(?=, |^)proliferative glomerulonephritis")
+
+gwas_study_info |>
+  mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(glomerulonephritis_terms, collapse = "(?=,|$)|\\b"),
+                                   "glomerulonephritis"
+                          )  
+        )
+  
+
+
 gwas_study_info |>
  filter(grepl("acute glomerulonephritis", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
@@ -1807,6 +1991,21 @@ gwas_study_info |>
 
 ```{r bacterial_skin_diseases}
 
+bacterial_skin_disease_terms <- c("staphylococcal skin infections",
+                                  "skin and soft tissue staphylococcus aureus infection")
+
+bacterial_skin_disease_terms <- str_length_sort(bacterial_skin_disease_terms)
+bacterial_skin_disease_terms <- paste0("(?=, |^)", bacterial_skin_disease_terms)
+bacterial_skin_disease_terms <- paste0(bacterial_skin_disease_terms, "(?=,|$)")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(bacterial_skin_disease_terms, collapse = "|"),
+                                   "bacterial skin diseases"
+                          )  
+        )
+
 gwas_study_info |>
  filter(grepl("bacterial skin diseases", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
@@ -1831,6 +2030,21 @@ gwas_study_info |>
 ## Fungal skin diseases
 
 ```{r fungal_skin_diseases}
+
+fungal_skin_disease_terms <- c("tinea",
+                               "dermatomycosis")
+
+fungal_skin_disease_terms <- str_length_sort(fungal_skin_disease_terms)
+fungal_skin_disease_terms <- paste0("(?=, |^)", fungal_skin_disease_terms)
+fungal_skin_disease_terms <- paste0(fungal_skin_disease_terms, "(?=,|$)")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(fungal_skin_disease_terms, collapse = "|"),
+                                   "fungal skin diseases"
+                          )  
+        )
 
 gwas_study_info |>
  filter(grepl("fungal skin diseases", l2_all_disease_terms)) |>
@@ -1912,6 +2126,32 @@ gwas_study_info |>
 
 ```{r other_skin_diseases}
 
+other_skin_disease_terms <- c("sebaceous gland disease",
+                              "rosacea",
+                              "erythematosquamous dermatosis",
+                              "dry skin",
+                              "skin tags",
+                              "dermatochalasis",
+                              "epidermal thickening",
+                              "epidermal inclusion cyst",
+                              "cutaneous lupus erythematosus",
+                              "androgenetic alopecia",
+                              "chemotherapy-induced alopecia",
+                              "cutaneous leishmaniasis")
+
+other_skin_disease_terms <- str_length_sort(other_skin_disease_terms)
+other_skin_disease_terms <- paste0("(?=, |^)", other_skin_disease_terms)
+other_skin_disease_terms <- paste0(other_skin_disease_terms, "(?=,|$)")
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(other_skin_disease_terms, collapse = "|"),
+                                   "other skin and subcutaneous diseases"
+                          )
+ )
+                                   
+
 gwas_study_info |>
  filter(grepl("other skin and subcutaneous diseases", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
@@ -1932,6 +2172,9 @@ gwas_study_info |>
 vision_loss_terms <- c("blindness",
                        "color vision disorder",
                        "vision disorder",
+                       "visuospatial impairment",
+                       "pathological blindness and vision loss",
+                       "visual impairment",
                        "myopia",
                        "refractive error",
                        "hyperopia",
@@ -1941,7 +2184,13 @@ vision_loss_terms <- c("blindness",
                        "anisometropia",
                        "esotropia",
                        "non-accomodative esotropia",
-                       "accommodative esotropia")
+                       "accommodative esotropia",
+                       "abnormality of refraction",
+                       "abnormality of vision",
+                       "age-related macular degeneration",
+                       "degeneration of macula and posterior pole",
+                       "age-related cataract",
+                       "cataract")
 
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
@@ -1965,10 +2214,18 @@ gwas_study_info |>
 
 
 hearing_loss_terms <- c("sensorineural hearing loss",
+                        "sensorineural hearing impairment",
                         "age-related hearing impairment",
-                        "noise-induced hearing loss")
+                        "conductive hearing impairment",
+                        "noise-induced hearing loss",
+                        "deafness")
 
-pattern = paste0(hearing_loss_terms, collapse = "(?=,|$)|\\b")
+hearing_loss_terms <- str_length_sort(hearing_loss_terms)
+
+hearing_loss_terms <- paste0("(?=, |^)", hearing_loss_terms)
+hearing_loss_terms <- paste0(hearing_loss_terms, "(?=,|$)")
+
+pattern = paste0("(?=, |^)", hearing_loss_terms, collapse = "(?=,|$)|\\b")
 
 
 gwas_study_info = 
@@ -1986,7 +2243,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "hearing loss",
+                                  pattern = "(?=, |^)hearing loss(?=,|$)",
                                    "age-related and other hearing loss"
                           )  
         )
@@ -2003,6 +2260,22 @@ gwas_study_info |>
 ## Other sense organ diseases
 
 ```{r other_sense_organ_diseases}
+
+other_sense_terms <- c("abnormality of the sense of smell",
+                       "disturbances of sensation of smell and taste")
+
+other_sense_terms <- str_length_sort(other_sense_terms)
+other_sense_terms <- paste0("(?=, |^)", other_sense_terms)
+other_sense_terms <- paste0(other_sense_terms, "(?=,|$)")
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = paste0(other_sense_terms, collapse = "|"),
+                                   "other sense organ diseases"
+                          )  
+        )
 
 gwas_study_info |>
  filter(grepl("other sense organ diseases", l2_all_disease_terms)) |>
@@ -2043,32 +2316,6 @@ gwas_study_info |>
 
 
 
-## Gynecological diseases
-
-```{r}
-
-
-diseases <- stringr::str_split(pattern = ", ", 
-                               gwas_study_info$l2_all_disease_terms)  |> 
-            unlist() |>
-            stringr::str_trim()
-
-
-pregnancy_terms <- grep("pregnancy", diseases, value = T)
-
-gyno_terms <- c("endometriosis","placenta disease", pregnancy_terms)
-
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = paste0(gyno_terms, collapse = "(?=,|$)|\\b"),
-                                   "gynecological diseases"
-                          )  
-        )
-
-
-```
 
 
 
@@ -2079,52 +2326,9 @@ gwas_study_info = gwas_study_info |>
 
 
 
-## Personality disorders
-
-```{r}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002028/descendants"
-
-personality_disorders <- get_descendants(url)
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = paste0(personality_disorders, collapse = "(?=,|$)|\\b"),
-                                   "personality disorders"
-                          )  
-        )
-
-
-```
 
 
 
-## Sleep disorders
-
-```{r sleep disorders}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_535/descendants"
-
-sleep_disorders <- get_descendants(url)
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0008568/descendants"
-
-other_sleep_disorders <- get_descendants(url)
-
-sleep_disorders <- c(sleep_disorders,
-                    other_sleep_disorders)
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = paste0(sleep_disorders, collapse = "(?=,|$)|\\b"),
-                                   "sleep disorders"
-                          )  
-        )
-
-
-```
 
 # Other neurodegenerative disorder (to do)
 
@@ -2138,6 +2342,128 @@ other_neuro <- c("mild neurocognitive disorder",
                  "hiv-associated neurocognitive disorder")
 
 ```
+
+
+# Other non-communicable diseases
+
+## Urinary diseases and male infertility
+
+```{r urinary_diseases}
+
+urinary_diseases_terms <- c("urinary incontinence",
+                            "stress urinary incontinence",
+                            "urgency urinary incontinence",
+                            "urinary system disease",
+                            "urinary tract obstruction",
+                            "bladder neck obstruction",
+                            "bladder calculus",
+                            "urethral disease",
+                            "uterine disorder",
+                            "urethral syndrome",
+                            "uterine inflammatory disease",
+                            "lower urinary tract calculus",
+                            "enuresis"
+                            )
+
+urinary_diseases_terms <- str_length_sort(urinary_diseases_terms)
+
+urin_male_infert <- c(urinary_diseases_terms, "male infertility")
+
+urin_male_infert <- paste0("(?=, |^)", urin_male_infert)
+urin_male_infert <- paste0(urin_male_infert, "(?=,|$)")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+           stringr::str_replace_all(
+             l2_all_disease_terms,
+             paste0("(?=, |^)", urin_male_infert, collapse = "|"),
+             "urinary diseases and male infertility"
+           )
+  )
+         
+```
+
+## Gynocological diseases
+
+```{r gynocological_diseases}
+
+diseases <- stringr::str_split(pattern = ", ", 
+                               gwas_study_info$l2_all_disease_terms)  |> 
+            unlist() |>
+            stringr::str_trim()
+
+
+pregnancy_terms <- grep("pregnancy", diseases, value = T)
+
+gyno_terms <- c("endometriosis",
+                "female reproductive system disease",
+                "female genital tract fistula",
+                "placenta disease", 
+                "female infertility",
+                "polycystic ovary syndrome",
+                "ovarian dysfunction",
+                "ovarian gynecological diseases",
+                "ovarian cyst",
+                "ovarian disease",
+                "primary ovarian insufficiency",
+                "premature ovarian insufficiency",
+                "vaginal inflammation",
+                "vaginal disorder",
+                "postmenopausal atrophic vaginitis",
+                "uterine prolapse",
+                "atrophic vaginitis",
+                "vaginitis",
+                "vulvovaginitis",
+                "abnormal delivery",
+                pregnancy_terms)
+
+gyno_terms <- str_length_sort(gyno_terms)
+gyno_terms <- paste0("(?=, |^)", gyno_terms)
+gyno_terms <- paste0(gyno_terms, "(?=,|$)")
+
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = paste0(gyno_terms, collapse = "(?=,|$)|\\b"),
+                                   "gynecological diseases"
+                          )  
+        )
+
+```
+
+
+## Hemoglobinopathies and hemolytic anemias
+
+```{r hemoglobinopathies}
+
+
+hemoglobinopathies_terms <- c("sickle cell disease and related diseases",
+                              "thalassemia",
+                              "inherited hemoglobinopathy",
+                              "hemoglobin e disease"
+)
+
+hemopath_hemo_anemias <- c(hemoglobinopathies_terms, "hemolytic anemia")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+           stringr::str_replace_all(
+             l2_all_disease_terms,
+             paste0("(?=, |^)", hemopath_hemo_anemias, collapse = "|"),
+             "hemoglobinopathies and hemolytic anemias"
+           )
+  )
+
+gwas_study_info |>
+ filter(grepl("hemoglobinopathies and hemolytic anemias", l2_all_disease_terms)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+
+```
+
 
 
 
