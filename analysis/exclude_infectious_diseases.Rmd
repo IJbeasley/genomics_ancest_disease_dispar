@@ -1,0 +1,943 @@
+---
+title: "Infectious Disease"
+author: "Isobel Beasley"
+date: "2025-09-18"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Set up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r required_fns, message = F, warning= F}
+
+library(dplyr)
+library(data.table)
+library(stringr)
+
+```
+
+## Ontology help - for getting disease subtypes
+
+```{r ontology_fns}
+
+source(here::here("code/get_term_descendants.R"))
+
+```
+
+```{r setup_2, message = FALSE, warning= FALSE}
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_simplified.csv"))
+
+```
+
+## Initial summary - number of unique study terms
+
+```{r}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(collected_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+### When separate studies with multiple terms 
+
+```{r}
+
+diseases <- stringr::str_split(pattern = ", ", 
+ gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+length(unique(diseases))
+
+```
+
+# HIV/AIDS and sexually transmitted infections
+
+## HIV/AIDS
+
+### HIV subgrouping
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "hiv-1 infection",
+                          "hiv infection"
+         ))
+
+
+```
+
+```{r hiv_aids}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )hiv infection(,|$)"
+         )
+         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "^hiv infection$"
+         )
+         )
+
+```
+
+## Sexually transmitted infections (other than HIV)
+
+### Syphilis
+
+```{r syphilis}
+
+gwas_study_info |>
+  filter(grepl("syphi", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+### Clamydial infections
+
+```{r clamydial_infections}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )chlamydophila infectious disease(,|$)"
+         )
+         )
+
+```
+
+### Gonorrhea
+
+```{r gonorrhea}
+
+gwas_study_info |>
+  filter(grepl("gonorrhea", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+### Trichomoniasis
+
+```{r trichomoniasis}
+
+gwas_study_info |>
+  filter(grepl("trichomoniasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+### Genital herpes
+
+```{r genital_herpes}
+
+gwas_study_info |>
+  filter(grepl("herpes", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+
+### Other sexually transmitted infections
+
+```{r other_stis}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mesh/terms/http%253A%252F%252Fid.nlm.nih.gov%252Fmesh%252FD012749/descendants"
+
+sti_terms <- get_descendants(url)
+
+for(term in sti_terms){
+  
+  if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) > 0) {
+    
+  print(paste0("Term removed:", term))
+    
+  gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms  = 
+           stringr::str_remove_all(collected_all_disease_terms,
+                            pattern = paste0("(^|, )", term, "(,|$)")
+           )
+    )
+  
+  }
+}
+
+```
+
+
+
+# Respiratory infections and tuberculosis
+
+## Tuberculosis
+
+```{r tuberculosis}
+
+tb_terms <- c("mycobacterium tuberculosis infection",
+              "pulmonary tuberculosis",
+              "extrapulmonary tuberculosis",
+              "meningeal tuberculosis")
+
+
+tb_terms <- paste0("(^|, )", tb_terms, "(,|$)")
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = paste0(tb_terms, collapse = "|"),
+                          "tuberculosis"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )tuberculosis(,|$)"
+         ))
+
+```
+
+## Lower respiratory infections
+
+```{r lower_respiratory_infections}
+
+# acute lower respiratory infections
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F195742007/descendants"
+
+lri_terms <- get_descendants(url)
+
+for(term in lri_terms){
+  
+  if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) > 0) {
+    
+  print(paste0("Term removed:", term))
+    
+  gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms  = 
+           stringr::str_remove_all(collected_all_disease_terms,
+                            pattern = paste0("(^|, )", term, "(,|$)")
+           )
+    )
+  
+  }
+}
+
+```
+
+## Upper respiratory infections
+
+```{r upper_respiratory_infections}
+
+# acute upper respiratory infections
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F54398005/descendants"
+
+uri_terms <- get_descendants(url)
+
+for(term in uri_terms){
+  
+  if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) > 0) {
+    
+  print(paste0("Term removed:", term))
+    
+  gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms  = 
+           stringr::str_remove_all(collected_all_disease_terms,
+                            pattern = paste0("(^|, )", term, "(,|$)")
+           )
+    )
+  
+  }
+}
+
+```
+
+## Otitis media
+
+```{r otitis_media}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10754/descendants"
+
+otitis_media_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = paste0("(^|, )", otitis_media_terms, "(,|$)", collapse = "|"),
+                          "otitis media"
+         ))
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )otitis media(,|$)"
+         )
+         )
+
+
+```
+
+## covid-19
+
+```{r covid19}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )covid-19(,|$)"
+         )
+         )
+
+```
+
+# Enteric infections
+
+## Diarrheal diseases
+
+```{r diarrheal_diseases}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )astroviridae infectious disease, infantile diarrhea(,|$)"
+         )
+         )
+
+# if diarrhea is caused by IBS, add ibs to collected_all_disease_terms
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+        ifelse(grepl("IBS", `DISEASE/TRAIT`, ignore.case = T) &
+               grepl("diarrhea", collected_all_disease_terms, ignore.case = T),
+               paste0(collected_all_disease_terms, ", irritable bowel syndrome"),
+               collected_all_disease_terms
+               )
+         )
+
+```
+
+
+## Typhoid and paratyphoid fevers
+
+### Typhoid fever
+
+```{r typhoid_fever}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )typhoid fever(,|$)"
+         )
+         )
+
+```
+
+## Invasive Non-typhoidal salmonella
+
+```{r invasive_non_typhoidal_salmonella}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )non-typhoidal salmonella bacteremia(,|$)"
+         )
+         )
+
+```
+
+## Other intestinal infectious diseases
+
+### Gastroenteritis
+
+```{r gastroenteritis}
+
+# remove bacterial and viral gastroenteritis
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("gastroenteritis", collected_all_disease_terms, ignore.case = T) &
+                grepl("bacterial gastroenteritis|viral gastroenteritis", 
+                       collected_all_disease_terms, 
+                       ignore.case = T),
+          stringr::str_remove_all(collected_all_disease_terms,
+          pattern = "(^|, )gastroenteritis(,|$)"),
+          collected_all_disease_terms
+         )
+         )
+
+
+```
+
+### Enteritis 
+
+```{r enteritis}
+
+# remove viral and bacterial enteritis
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("enteritis", collected_all_disease_terms, ignore.case = T) &
+                grepl("bacterial enteritis|viral enteritis", 
+                       collected_all_disease_terms, 
+                       ignore.case = T),
+          stringr::str_remove_all(collected_all_disease_terms,
+          pattern = "(^|, )enteritis(,|$)"),
+          collected_all_disease_terms
+         )
+         )
+
+
+```
+
+
+
+# Neglected tropical diseases and malaria
+
+## Malaria
+
+```{r malaria}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )malaria(,|$)"
+         )
+         )
+
+```
+
+## Chagas disease
+
+```{r chagas_disease}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )chagas disease(,|$)"
+         )
+         )
+
+```
+
+## Leishmaniasis
+
+```{r leishmaniasis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )visceral leishmaniasis(,|$)"
+         )
+         )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )cutaneous leishmaniasis(,|$)"
+         )
+         )
+
+
+```
+
+## African trypanosomiasis
+
+```{r african_trypanosomiasis}
+
+gwas_study_info |>
+  filter(grepl("trypanosomiasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Schistosomiasis
+
+```{r schistosomiasis}
+
+gwas_study_info |>
+  filter(grepl("schistosomiasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Cysticercosis
+
+```{r cysticercosis}
+
+gwas_study_info |>
+  filter(grepl("cysticercosis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Cystic echinococcosis
+
+```{r cystic_echinococcosis}
+
+gwas_study_info |>
+  filter(grepl("echinococcosis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Lymphatic filariasis
+
+```{r lymphatic_filariasis}
+
+gwas_study_info |>
+  filter(grepl("filariasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Onchocerciasis
+
+```{r onchocerciasis}
+
+gwas_study_info |>
+  filter(grepl("onchocerciasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Trachoma
+
+```{r trachoma}
+
+gwas_study_info |>
+  filter(grepl("trachoma", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+
+```
+
+## Dengue
+
+```{r dengue}
+
+
+```
+
+## Yellow fever
+
+```{r yellow_fever}
+
+gwas_study_info |>
+  filter(grepl("yellow fever", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Rabies
+
+```{r rabies}
+
+gwas_study_info |>
+  filter(grepl("rabies", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Intestinal nematode infections
+
+```{r intestinal_nematode_infections}
+
+# ascariasis
+gwas_study_info |>
+  filter(grepl("ascariasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+# trichuriasis
+gwas_study_info |>
+  filter(grepl("trichuriasis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+# hookworm
+gwas_study_info |>
+  filter(grepl("hookworm", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+
+```
+
+## Food borne trematode infections
+
+```{r food_borne_trematode_infections}
+
+gwas_study_info |>
+  filter(grepl("trema", collected_all_disease_terms, ignore.case = T) 
+         ) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+
+```
+
+
+## Leprosy
+
+```{r leprosy}
+
+gwas_study_info |>
+  filter(grepl("leprosy", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )leprosy(,|$)"
+         )
+         )
+
+```
+
+## Ebola
+
+```{r ebola}
+
+gwas_study_info |>
+  filter(grepl("ebola", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Zika virus
+
+```{r zika_virus}
+
+gwas_study_info |>
+  filter(grepl("zika", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+
+## Guinea worm disease
+
+```{r guinea_worm_disease}
+
+gwas_study_info |>
+  filter(grepl("worm", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+```
+
+## Other neglected tropical diseases
+
+# Other infectious diseases
+
+## Meningitis
+
+```{r meningitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )infectious meningitis(,|$)"
+         )
+         )
+
+```
+
+## Encephalitis
+
+```{r encephalitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )viral encephalitis(,|$)"
+         )
+         )
+
+
+```
+
+
+```{r tesrt}
+
+# ? also remove if DISEASE/TRAIT == Encephalitis (PheCode 323)
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(`DISEASE/TRAIT` == "Encephalitis (PheCode 323)",
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )encephalitis(,|$)"),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+## Diptheria
+
+```{r diptheria}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )diphtheria(,|$)"
+         )
+         )
+
+```
+
+## Pertussis
+
+```{r pertussis}
+
+gwas_study_info |>
+  filter(grepl("pertussis", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+
+```
+
+## Tetanus
+
+```{r tetanus}
+
+gwas_study_info |>
+  filter(grepl("tetanus", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms) 
+
+
+```
+
+## Measles
+
+```{r measles}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )measles(,|$)"
+         )
+         )
+
+```
+
+## Varcella and herpes zoster
+
+```{r varicella_herpes_zoster}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(`DISEASE/TRAIT` == "Herpes zoster (PheCode 53)" |
+                `DISEASE/TRAIT` == "Herpes zoster" |
+                `DISEASE/TRAIT` == "Zoster infection" |
+                grepl("ICD10 B02: Zoster \\[herpes zoster\\]", `DISEASE/TRAIT`),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )herpes zoster(,|$)"),
+         collected_all_disease_terms
+         )
+  )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "(^|, )complication, herpes zoster, nervous system disease(,|$)",
+                          "herpes zoster, nervous system disease"
+                          
+         )
+         )
+
+```
+
+## Acute hepatitis
+
+```{r acute_hepatitis}
+
+# if acute hepatitis in DISEASE/TRAIT remove from collected_all_disease_terms
+gwas_study_info |> 
+  filter(grepl("acute hepat", 
+                 `DISEASE/TRAIT`, 
+                  ignore.case = T)) |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(`DISEASE/TRAIT` == "Acute hepatitis A infection",
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )hepatitis a infection(,|$)"),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+
+## Other unspecified infectious diseases
+
+```{r other_unspecified_infectious_diseases_2}
+
+gwas_study_info |>
+  filter(grepl("epstein", collected_all_disease_terms, ignore.case = T)) |>
+  pull(collected_all_disease_terms) |> unique()
+
+```
+
+### Infectious mononucleosis
+
+```{r infectious_mononucleosis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )infectious mononucleosis(,|$)"
+         )
+         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )epstein-barr virus infection(,|$)"
+         )
+         )
+
+```
+
+### Protozoa infectious disease
+
+```{r protozoa_infectious_disease}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "(^|, )protozoa infectious disease(,|$)"
+         )
+         )
+
+```
+
+### Herpes
+
+```{r}
+
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(collected_all_disease_terms  = 
+        ifelse(grepl("herpes simplex", `DISEASE/TRAIT`, ignore.case = T) &
+               grepl("herpesviridae infectious disease", collected_all_disease_terms, ignore.case = T),
+          stringr::str_replace_all(collected_all_disease_terms,
+                                  pattern = "herpesviridae infectious disease",
+                                  "herpes simplex infection"),
+          collected_all_disease_terms
+               )
+          ) 
+
+
+gwas_study_info |>
+  filter(grepl("herpes", collected_all_disease_terms, ignore.case = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+```
+
+
+```{r other_unspecified_infectious_diseases}
+
+
+# parasitic infection
+
+
+
+```
+
+
+# Update and save output 
+
+## Deal with duplicate terms created during grouping
+
+```{r duplicate_terms}
+
+gwas_study_info = 
+ gwas_study_info |>
+  rowwise() |>
+  mutate(collected_all_disease_terms = paste0(sort(unique(unlist(strsplit(collected_all_disease_terms, ", ")))),
+                                      collapse = ", ")
+         ) |>
+  ungroup()
+
+
+```
+
+## Deal with hanging commas and spaces
+
+```{r clean_hanging_commas}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = stringr::str_remove_all(collected_all_disease_terms, "^,|,$")
+         ) |>
+  mutate(collected_all_disease_terms = stringr::str_trim(collected_all_disease_terms)
+         ) 
+
+```
+
+## Final summary - number of unique study terms
+
+```{r}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(collected_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+### When separate studies with multiple terms 
+
+```{r}
+
+diseases <- stringr::str_split(pattern = ", ", 
+ gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+length(unique(diseases))
+
+```
+
+
+## Save output
+
+```{r save_output}
+
+fwrite(gwas_study_info,
+here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered.csv"))
+
+```
