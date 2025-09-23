@@ -42,22 +42,6 @@ gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_disease_tra
 
 ## Initial summary - number of unique study terms
 
-```{r}
-
-n_studies_trait = gwas_study_info |>
-  dplyr::filter(DISEASE_STUDY == T) |>
-  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
-  dplyr::distinct() |>
-  dplyr::group_by(collected_all_disease_terms) |>
-  dplyr::summarise(n_studies = dplyr::n()) |>
-  dplyr::arrange(desc(n_studies))
-
-head(n_studies_trait)
-
-dim(n_studies_trait)
-
-```
-
 ### When separate studies with multiple terms 
 
 ```{r}
@@ -77,15 +61,14 @@ length(unique(diseases))
 
 ### HIV subgrouping
 
-```{r}
+```{r hiv_subgrouping}
 
 gwas_study_info = gwas_study_info |>
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          "hiv-1 infection",
+                          vec_to_grep_pattern("hiv-1 infection"),
                           "hiv infection"
          ))
-
 
 ```
 
@@ -94,14 +77,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )hiv infection(?=,|$)"
-         )
-         )
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "^hiv infection$"
+                          pattern = vec_to_grep_pattern("hiv infection")
          )
          )
 
@@ -126,7 +102,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )chlamydophila infectious disease(?=,|$)"
+                          pattern = vec_to_grep_pattern("chlamydophila infectious disease")
          )
          )
 
@@ -180,7 +156,7 @@ for(term in sti_terms){
   gwas_study_info = gwas_study_info |>
     mutate(collected_all_disease_terms  = 
            stringr::str_remove_all(collected_all_disease_terms,
-                            pattern = paste0("(?<=^|, )", term, "(?=,|$)")
+                            pattern = vec_to_grep_pattern(term)
            )
     )
   
@@ -203,19 +179,11 @@ tb_terms <- c("mycobacterium tuberculosis infection",
               "meningeal tuberculosis")
 
 
-tb_terms <- paste0("(?<=^|, )", tb_terms, "(?=,|$)")
-
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = paste0(tb_terms, collapse = "|"),
+                          pattern = vec_to_grep_pattern(tb_terms),
                           "tuberculosis"
-         ))
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )tuberculosis(?=,|$)"
          ))
 
 ```
@@ -238,7 +206,7 @@ for(term in lri_terms){
   gwas_study_info = gwas_study_info |>
     mutate(collected_all_disease_terms  = 
            stringr::str_remove_all(collected_all_disease_terms,
-                            pattern = paste0("(?<=^|, )", term, "(?=,|$)")
+                            pattern = vec_to_grep_pattern(term)
            )
     )
   
@@ -265,7 +233,7 @@ for(term in uri_terms){
   gwas_study_info = gwas_study_info |>
     mutate(collected_all_disease_terms  = 
            stringr::str_remove_all(collected_all_disease_terms,
-                            pattern = paste0("(?<=^|, )", term, "(?=,|$)")
+                            pattern = vec_to_grep_pattern(term)
            )
     )
   
@@ -285,7 +253,7 @@ otitis_media_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = paste0("(?<=^|, )", otitis_media_terms, "(?=,|$)", collapse = "|"),
+                          pattern = vec_to_grep_pattern(otitis_media_terms),
                           "otitis media"
          ))
 
@@ -293,7 +261,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )otitis media(?=,|$)"
+                          pattern = vec_to_grep_pattern("otitis media")
          )
          )
 
@@ -307,7 +275,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )covid-19(?=,|$)"
+                          pattern = vec_to_grep_pattern("covid-19")
          )
          )
 
@@ -322,9 +290,17 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
     mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          "(?<=^|,)influenza a \\(h1n1\\)(?=,|$)",
+                          vec_to_grep_pattern("influenza a \\(h1n1\\)"),
                           "influenza"
          ))
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("influenza")
+         )
+         )
 
 ```
 
@@ -337,7 +313,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )astroviridae infectious disease, infantile diarrhea(?=,|$)"
+                          pattern = vec_to_grep_pattern("astroviridae infectious disease, infantile diarrhea")
          )
          )
 
@@ -364,7 +340,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )typhoid fever(?=,|$)"
+                          pattern = vec_to_grep_pattern("typhoid fever")
          )
          )
 
@@ -377,7 +353,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )non-typhoidal salmonella bacteremia(?=,|$)"
+                          pattern = vec_to_grep_pattern("non-typhoidal salmonella bacteremia")
          )
          )
 
@@ -398,7 +374,8 @@ gwas_study_info = gwas_study_info |>
                        collected_all_disease_terms, 
                        ignore.case = T),
           stringr::str_remove_all(collected_all_disease_terms,
-          pattern = "(?<=^|, )gastroenteritis(?=,|$)"),
+          pattern = vec_to_grep_pattern("gastroenteritis")
+          ),
           collected_all_disease_terms
          )
          )
@@ -418,7 +395,8 @@ gwas_study_info = gwas_study_info |>
                        collected_all_disease_terms, 
                        ignore.case = T),
           stringr::str_remove_all(collected_all_disease_terms,
-          pattern = "(?<=^|, )enteritis(?=,|$)"),
+          pattern = vec_to_grep_pattern("enteritis")
+          ),
           collected_all_disease_terms
          )
          )
@@ -434,7 +412,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )intestinal infectious disease(?=,|$)"
+                          pattern = vec_to_grep_pattern("intestinal infectious disease")
          )
          )
 
@@ -451,7 +429,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )malaria(?=,|$)"
+                          pattern = vec_to_grep_pattern("malaria")
          )
          )
 
@@ -464,7 +442,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )chagas disease(?=,|$)"
+                          pattern = vec_to_grep_pattern("chagas disease")
          )
          )
 
@@ -477,7 +455,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )visceral leishmaniasis(?=,|$)"
+                          pattern = vec_to_grep_pattern("visceral leishmaniasis")
          )
          )
 
@@ -485,7 +463,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )cutaneous leishmaniasis(?=,|$)"
+                          pattern = vec_to_grep_pattern("cutaneous leishmaniasis")
          )
          )
 
@@ -567,6 +545,9 @@ gwas_study_info |>
 
 ```{r dengue}
 
+gwas_study_info |>
+  filter(grepl("dengue", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
 
 ```
 
@@ -637,7 +618,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )leprosy(?=,|$)"
+                          pattern = vec_to_grep_pattern("leprosy")
          )
          )
 
@@ -685,7 +666,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )infectious meningitis(?=,|$)"
+                          pattern = vec_to_grep_pattern("infectious meningitis")
          )
          )
 
@@ -698,7 +679,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )viral encephalitis(?=,|$)"
+                          pattern = vec_to_grep_pattern("viral encephalitis")
          )
          )
 
@@ -714,7 +695,8 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == "Encephalitis (PheCode 323)",
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )encephalitis(?=,|$)"),
+                          pattern = vec_to_grep_pattern("encephalitis")
+                          ),
          collected_all_disease_terms
          )
   )
@@ -728,7 +710,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )diphtheria(?=,|$)"
+                          pattern = vec_to_grep_pattern("diphtheria")
          )
          )
 
@@ -763,7 +745,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )measles(?=,|$)"
+                          pattern = vec_to_grep_pattern("measles(?=,|$)")
          )
          )
 
@@ -780,7 +762,8 @@ gwas_study_info = gwas_study_info |>
                 `DISEASE/TRAIT` == "Zoster infection" |
                 grepl("ICD10 B02: Zoster \\[herpes zoster\\]", `DISEASE/TRAIT`),
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )herpes zoster(?=,|$)"),
+                          pattern = vec_to_grep_pattern("herpes zoster")
+                          ),
          collected_all_disease_terms
          )
   )
@@ -789,7 +772,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )complication, herpes zoster, nervous system disease(?=,|$)",
+                          pattern = vec_to_grep_pattern("complication, herpes zoster, nervous system disease"),
                           "herpes zoster, nervous system disease"
                           
          )
@@ -813,7 +796,8 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == "Acute hepatitis A infection",
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )hepatitis a infection(?=,|$)"),
+                          pattern = vec_to_grep_pattern("hepatitis a infection")
+                          ),
          collected_all_disease_terms
          )
   )
@@ -823,13 +807,19 @@ gwas_study_info = gwas_study_info |>
 
 ## Other unspecified infectious diseases
 
-```{r other_unspecified_infectious_diseases_2}
+### Bacterial pneumonia
 
-gwas_study_info |>
-  filter(grepl("epstein", collected_all_disease_terms, ignore.case = T)) |>
-  pull(collected_all_disease_terms) |> unique()
+```{r bacterial_pneumonia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("bacterial pneumonia")
+         )
+         )
 
 ```
+
 
 ### Infectious mononucleosis
 
@@ -838,14 +828,14 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )infectious mononucleosis(?=,|$)"
+                          pattern = vec_to_grep_pattern("infectious mononucleosis")
          )
          )
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )epstein-barr virus infection(?=,|$)"
+                          pattern = vec_to_grep_pattern("epstein-barr virus infection")
          )
          )
 
@@ -858,7 +848,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )protozoa infectious disease(?=,|$)"
+                          pattern = vec_to_grep_pattern("protozoa infectious disease")
          )
          )
 
@@ -875,11 +865,21 @@ gwas_study_info |>
         ifelse(grepl("herpes simplex", `DISEASE/TRAIT`, ignore.case = T) &
                grepl("herpesviridae infectious disease", collected_all_disease_terms, ignore.case = T),
           stringr::str_replace_all(collected_all_disease_terms,
-                                  pattern = "herpesviridae infectious disease",
+                                  pattern = vec_to_grep_pattern("herpesviridae infectious disease"),
                                   "herpes simplex infection"),
           collected_all_disease_terms
                )
           ) 
+
+
+# cold sores
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("cold sores"),
+                          "herpes simplex infection"
+         )
+         )
 
 
 gwas_study_info |>
@@ -890,41 +890,54 @@ gwas_study_info |>
 
 ```
 
-## Mumps 
+### Mumps 
 
 ```{r mumps}
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )mumps(?=,|$)"
+                          pattern = vec_to_grep_pattern("mumps")
          )
          )
 
 ```
 
-## Parasitic infection
+### Parasitic infection
 
 ```{r parasitic_infection}
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )parasitic infection(?=,|$)"
+                          pattern = vec_to_grep_pattern("parasitic infection")
          )
          )
 
 
 ```
 
-## Helicobacter pylori infection
+### Helicobacter pylori infection
 
 ```{r helicobacter_pylori_infection}
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "(?<=^|, )helicobacter pylori infectious disease(?=,|$)"
+                          pattern = vec_to_grep_pattern("helicobacter pylori infectious disease")
+         )
+         )
+
+```
+
+### Common cold
+
+```{r common_cold}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("common cold")
          )
          )
 
