@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeec5636b9820c74b30ab9fb593c0c6b8f5e172ea7targetblankec5636ba">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree8a0be875cd7f03a3c2db236d795d26ed56673974targetblank8a0be87a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ec5636b9820c74b30ab9fb593c0c6b8f5e172ea7" target="_blank">ec5636b</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/8a0be875cd7f03a3c2db236d795d26ed56673974" target="_blank">8a0be87</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeec5636b9820c74b30ab9fb593c0c6b8f5e172ea7targetblankec5636ba"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree8a0be875cd7f03a3c2db236d795d26ed56673974targetblank8a0be87a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ec5636b9820c74b30ab9fb593c0c6b8f5e172ea7" target="_blank">ec5636b</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/8a0be875cd7f03a3c2db236d795d26ed56673974" target="_blank">8a0be87</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -563,6 +563,7 @@ Ignored files:
 
 Unstaged changes:
     Modified:   analysis/index.Rmd
+    Modified:   analysis/level_1_disease_group_cancer.Rmd
     Modified:   analysis/level_1_disease_group_non_cancer.Rmd
     Modified:   analysis/level_2_disease_group.Rmd
     Modified:   code/get_term_descendants.R
@@ -611,6 +612,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/8a0be875cd7f03a3c2db236d795d26ed56673974/analysis/exclude_infectious_diseases.Rmd" target="_blank">8a0be87</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-22
+</td>
+<td>
+More typo correcting
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/b2845216d8233b0468af49171e7b11269267d195/docs/exclude_infectious_diseases.html" target="_blank">b284521</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-22
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -719,26 +754,6 @@ getting disease subtypes</h2>
 class="section level2" number="1.2">
 <h2><span class="header-section-number">1.2</span> Initial summary -
 number of unique study terms</h2>
-<pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
-  dplyr::filter(DISEASE_STUDY == T) |&gt;
-  dplyr::select(collected_all_disease_terms, PUBMED_ID) |&gt;
-  dplyr::distinct() |&gt;
-  dplyr::group_by(collected_all_disease_terms) |&gt;
-  dplyr::summarise(n_studies = dplyr::n()) |&gt;
-  dplyr::arrange(desc(n_studies))
-
-head(n_studies_trait)</code></pre>
-<pre><code># A tibble: 6 × 2
-  collected_all_disease_terms n_studies
-  &lt;chr&gt;                           &lt;int&gt;
-1 type 2 diabetes mellitus          145
-2 alzheimers disease                116
-3 breast cancer                     112
-4 asthma                            110
-5 major depressive disorder         108
-6 schizophrenia                     103</code></pre>
-<pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 3050    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms"
 class="section level3" number="1.2.1">
 <h3><span class="header-section-number">1.2.1</span> When separate
@@ -749,7 +764,7 @@ studies with multiple terms</h3>
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2196</code></pre>
+<pre><code>[1] 2188</code></pre>
 </div>
 </div>
 </div>
@@ -765,20 +780,13 @@ subgrouping</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;hiv-1 infection&quot;,
+                          vec_to_grep_pattern(&quot;hiv-1 infection&quot;),
                           &quot;hiv infection&quot;
          ))</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )hiv infection(?=,|$)&quot;
-         )
-         )
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;^hiv infection$&quot;
+                          pattern = vec_to_grep_pattern(&quot;hiv infection&quot;)
          )
          )</code></pre>
 </div>
@@ -800,7 +808,7 @@ infections</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )chlamydophila infectious disease(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;chlamydophila infectious disease&quot;)
          )
          )</code></pre>
 </div>
@@ -866,30 +874,30 @@ infections</h3>
  2:                                       herpes zoster
  3:                                       herpes zoster
  4:                                       herpes zoster
- 5: complication, herpes zoster, nervous system disease
+ 5: herpes zoster, nervous system disease, complication
  6:                            herpes simplex infection
  7:                                       herpes zoster
  8:                            herpes simplex infection
- 9: complication, herpes zoster, nervous system disease
-10: complication, herpes zoster, nervous system disease
-11: complication, herpes zoster, nervous system disease
+ 9: herpes zoster, nervous system disease, complication
+10: herpes zoster, nervous system disease, complication
+11: herpes zoster, nervous system disease, complication
 12:                                       herpes zoster
 13:                                       herpes zoster
 14:                                       herpes zoster
 15:                                       herpes zoster
-16: complication, herpes zoster, nervous system disease
+16: herpes zoster, nervous system disease, complication
 17:                            herpes simplex infection
 18:                            herpes simplex infection
 19:                            herpes simplex infection
 20:                                       herpes zoster
 21:                    herpesviridae infectious disease
 22:                                       herpes zoster
-23:                 herpes zoster, rheumatoid arthritis
-24:                            herpes zoster, psoriasis
-25:                 herpes zoster, rheumatoid arthritis
-26:                            herpes zoster, psoriasis
-27:      herpes zoster, psoriasis, rheumatoid arthritis
-28:      herpes zoster, psoriasis, rheumatoid arthritis
+23:                 rheumatoid arthritis, herpes zoster
+24:                            psoriasis, herpes zoster
+25:                 rheumatoid arthritis, herpes zoster
+26:                            psoriasis, herpes zoster
+27:      psoriasis, rheumatoid arthritis, herpes zoster
+28:      psoriasis, rheumatoid arthritis, herpes zoster
 29:                    herpesviridae infectious disease
 30:                                       herpes zoster
 31:                                       herpes zoster
@@ -922,7 +930,7 @@ sti_terms &lt;- get_descendants(url)</code></pre>
   gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms  = 
            stringr::str_remove_all(collected_all_disease_terms,
-                            pattern = paste0(&quot;(?&lt;=^|, )&quot;, term, &quot;(?=,|$)&quot;)
+                            pattern = vec_to_grep_pattern(term)
            )
     )
   
@@ -944,19 +952,11 @@ and tuberculosis</h1>
               &quot;meningeal tuberculosis&quot;)
 
 
-tb_terms &lt;- paste0(&quot;(?&lt;=^|, )&quot;, tb_terms, &quot;(?=,|$)&quot;)
-
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = paste0(tb_terms, collapse = &quot;|&quot;),
+                          pattern = vec_to_grep_pattern(tb_terms),
                           &quot;tuberculosis&quot;
-         ))
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )tuberculosis(?=,|$)&quot;
          ))</code></pre>
 </div>
 <div id="lower-respiratory-infections" class="section level2"
@@ -984,7 +984,7 @@ lri_terms &lt;- get_descendants(url)</code></pre>
   gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms  = 
            stringr::str_remove_all(collected_all_disease_terms,
-                            pattern = paste0(&quot;(?&lt;=^|, )&quot;, term, &quot;(?=,|$)&quot;)
+                            pattern = vec_to_grep_pattern(term)
            )
     )
   
@@ -1016,7 +1016,7 @@ uri_terms &lt;- get_descendants(url)</code></pre>
   gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms  = 
            stringr::str_remove_all(collected_all_disease_terms,
-                            pattern = paste0(&quot;(?&lt;=^|, )&quot;, term, &quot;(?=,|$)&quot;)
+                            pattern = vec_to_grep_pattern(term)
            )
     )
   
@@ -1039,7 +1039,7 @@ otitis_media_terms &lt;- get_descendants(url)</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = paste0(&quot;(?&lt;=^|, )&quot;, otitis_media_terms, &quot;(?=,|$)&quot;, collapse = &quot;|&quot;),
+                          pattern = vec_to_grep_pattern(otitis_media_terms),
                           &quot;otitis media&quot;
          ))
 
@@ -1047,7 +1047,7 @@ otitis_media_terms &lt;- get_descendants(url)</code></pre>
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )otitis media(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;otitis media&quot;)
          )
          )</code></pre>
 </div>
@@ -1056,7 +1056,7 @@ gwas_study_info = gwas_study_info |&gt;
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )covid-19(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;covid-19&quot;)
          )
          )</code></pre>
 </div>
@@ -1069,9 +1069,17 @@ number="3.6.1">
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          &quot;(?&lt;=^|,)influenza a \\(h1n1\\)(?=,|$)&quot;,
+                          vec_to_grep_pattern(&quot;influenza a \\(h1n1\\)&quot;),
                           &quot;influenza&quot;
-         ))</code></pre>
+         ))
+
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;influenza&quot;)
+         )
+         )</code></pre>
 </div>
 </div>
 </div>
@@ -1083,7 +1091,7 @@ diseases</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )astroviridae infectious disease, infantile diarrhea(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;astroviridae infectious disease, infantile diarrhea&quot;)
          )
          )
 
@@ -1107,7 +1115,7 @@ paratyphoid fevers</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )typhoid fever(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;typhoid fever&quot;)
          )
          )</code></pre>
 </div>
@@ -1119,7 +1127,7 @@ Non-typhoidal salmonella</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )non-typhoidal salmonella bacteremia(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;non-typhoidal salmonella bacteremia&quot;)
          )
          )</code></pre>
 </div>
@@ -1139,7 +1147,8 @@ gwas_study_info = gwas_study_info |&gt;
                        collected_all_disease_terms, 
                        ignore.case = T),
           stringr::str_remove_all(collected_all_disease_terms,
-          pattern = &quot;(?&lt;=^|, )gastroenteritis(?=,|$)&quot;),
+          pattern = vec_to_grep_pattern(&quot;gastroenteritis&quot;)
+          ),
           collected_all_disease_terms
          )
          )</code></pre>
@@ -1154,7 +1163,8 @@ gwas_study_info = gwas_study_info |&gt;
                        collected_all_disease_terms, 
                        ignore.case = T),
           stringr::str_remove_all(collected_all_disease_terms,
-          pattern = &quot;(?&lt;=^|, )enteritis(?=,|$)&quot;),
+          pattern = vec_to_grep_pattern(&quot;enteritis&quot;)
+          ),
           collected_all_disease_terms
          )
          )</code></pre>
@@ -1166,7 +1176,7 @@ infectious disease</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )intestinal infectious disease(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;intestinal infectious disease&quot;)
          )
          )</code></pre>
 </div>
@@ -1181,7 +1191,7 @@ diseases and malaria</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )malaria(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;malaria&quot;)
          )
          )</code></pre>
 </div>
@@ -1190,7 +1200,7 @@ diseases and malaria</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )chagas disease(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;chagas disease&quot;)
          )
          )</code></pre>
 </div>
@@ -1199,7 +1209,7 @@ diseases and malaria</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )visceral leishmaniasis(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;visceral leishmaniasis&quot;)
          )
          )
 
@@ -1207,7 +1217,7 @@ diseases and malaria</h1>
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )cutaneous leishmaniasis(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;cutaneous leishmaniasis&quot;)
          )
          )</code></pre>
 </div>
@@ -1265,6 +1275,12 @@ filariasis</h2>
 </div>
 <div id="dengue" class="section level2" number="5.11">
 <h2><span class="header-section-number">5.11</span> Dengue</h2>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;dengue&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)</code></pre>
+<pre><code>           DISEASE/TRAIT collected_all_disease_terms
+                  &lt;char&gt;                      &lt;char&gt;
+1: Dengue shock syndrome    dengue hemorrhagic fever</code></pre>
 </div>
 <div id="yellow-fever" class="section level2" number="5.12">
 <h2><span class="header-section-number">5.12</span> Yellow fever</h2>
@@ -1319,12 +1335,12 @@ infections</h2>
 <pre><code>                                  DISEASE/TRAIT collected_all_disease_terms
                                          &lt;char&gt;                      &lt;char&gt;
 1:                                      Leprosy                     leprosy
-2:                   Crohn&#39;s disease or Leprosy     crohns disease, leprosy
-3: Crohn&#39;s disease or Leprosy (opposite effect)     crohns disease, leprosy</code></pre>
+2:                   Crohn&#39;s disease or Leprosy     leprosy, crohns disease
+3: Crohn&#39;s disease or Leprosy (opposite effect)     leprosy, crohns disease</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )leprosy(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;leprosy&quot;)
          )
          )</code></pre>
 </div>
@@ -1366,7 +1382,7 @@ diseases</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )infectious meningitis(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;infectious meningitis&quot;)
          )
          )</code></pre>
 </div>
@@ -1375,7 +1391,7 @@ diseases</h1>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )viral encephalitis(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;viral encephalitis&quot;)
          )
          )</code></pre>
 <pre class="r"><code># ? also remove if DISEASE/TRAIT == Encephalitis (PheCode 323)
@@ -1384,7 +1400,8 @@ gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == &quot;Encephalitis (PheCode 323)&quot;,
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )encephalitis(?=,|$)&quot;),
+                          pattern = vec_to_grep_pattern(&quot;encephalitis&quot;)
+                          ),
          collected_all_disease_terms
          )
   )</code></pre>
@@ -1394,7 +1411,7 @@ gwas_study_info = gwas_study_info |&gt;
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )diphtheria(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;diphtheria&quot;)
          )
          )</code></pre>
 </div>
@@ -1417,7 +1434,7 @@ gwas_study_info = gwas_study_info |&gt;
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )measles(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;measles(?=,|$)&quot;)
          )
          )</code></pre>
 </div>
@@ -1432,7 +1449,8 @@ zoster</h2>
                 `DISEASE/TRAIT` == &quot;Zoster infection&quot; |
                 grepl(&quot;ICD10 B02: Zoster \\[herpes zoster\\]&quot;, `DISEASE/TRAIT`),
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )herpes zoster(?=,|$)&quot;),
+                          pattern = vec_to_grep_pattern(&quot;herpes zoster&quot;)
+                          ),
          collected_all_disease_terms
          )
   )
@@ -1441,7 +1459,7 @@ zoster</h2>
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )complication, herpes zoster, nervous system disease(?=,|$)&quot;,
+                          pattern = vec_to_grep_pattern(&quot;complication, herpes zoster, nervous system disease&quot;),
                           &quot;herpes zoster, nervous system disease&quot;
                           
          )
@@ -1461,7 +1479,8 @@ gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == &quot;Acute hepatitis A infection&quot;,
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )hepatitis a infection(?=,|$)&quot;),
+                          pattern = vec_to_grep_pattern(&quot;hepatitis a infection&quot;)
+                          ),
          collected_all_disease_terms
          )
   )</code></pre>
@@ -1470,103 +1489,129 @@ gwas_study_info |&gt;
 number="6.9">
 <h2><span class="header-section-number">6.9</span> Other unspecified
 infectious diseases</h2>
-<pre class="r"><code>gwas_study_info |&gt;
-  filter(grepl(&quot;epstein&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
-  pull(collected_all_disease_terms) |&gt; unique()</code></pre>
-<pre><code>[1] &quot;epstein-barr virus infection&quot;</code></pre>
+<div id="bacterial-pneumonia" class="section level3" number="6.9.1">
+<h3><span class="header-section-number">6.9.1</span> Bacterial
+pneumonia</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;bacterial pneumonia&quot;)
+         )
+         )</code></pre>
+</div>
 <div id="infectious-mononucleosis" class="section level3"
-number="6.9.1">
-<h3><span class="header-section-number">6.9.1</span> Infectious
+number="6.9.2">
+<h3><span class="header-section-number">6.9.2</span> Infectious
 mononucleosis</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )infectious mononucleosis(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;infectious mononucleosis&quot;)
          )
          )
 
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )epstein-barr virus infection(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;epstein-barr virus infection&quot;)
          )
          )</code></pre>
 </div>
 <div id="protozoa-infectious-disease" class="section level3"
-number="6.9.2">
-<h3><span class="header-section-number">6.9.2</span> Protozoa infectious
+number="6.9.3">
+<h3><span class="header-section-number">6.9.3</span> Protozoa infectious
 disease</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )protozoa infectious disease(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;protozoa infectious disease&quot;)
          )
          )</code></pre>
 </div>
-<div id="herpes" class="section level3" number="6.9.3">
-<h3><span class="header-section-number">6.9.3</span> Herpes</h3>
+<div id="herpes" class="section level3" number="6.9.4">
+<h3><span class="header-section-number">6.9.4</span> Herpes</h3>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
         ifelse(grepl(&quot;herpes simplex&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp;
                grepl(&quot;herpesviridae infectious disease&quot;, collected_all_disease_terms, ignore.case = T),
           stringr::str_replace_all(collected_all_disease_terms,
-                                  pattern = &quot;herpesviridae infectious disease&quot;,
+                                  pattern = vec_to_grep_pattern(&quot;herpesviridae infectious disease&quot;),
                                   &quot;herpes simplex infection&quot;),
           collected_all_disease_terms
                )
           ) 
 
 
+# cold sores
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;cold sores&quot;),
+                          &quot;herpes simplex infection&quot;
+         )
+         )
+
+
 gwas_study_info |&gt;
   filter(grepl(&quot;herpes&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
   pull(`DISEASE/TRAIT`) |&gt;
   unique()</code></pre>
-<pre><code> [1] &quot;Shingles&quot;                                                                                
- [2] &quot;Source of report of B02 (zoster [herpes zoster]) (UKB data field 130179)&quot;                
- [3] &quot;Herpes zoster with nervous system complications (PheCode 53.1)&quot;                          
- [4] &quot;Herpes simplex (PheCode 54)&quot;                                                             
- [5] &quot;ICD10 B00: Herpesviral [herpes simplex] infections&quot;                                      
- [6] &quot;Response to tofacitinib treatment in rheumatoid arthritis (herpes zoster)(time to event)&quot;
- [7] &quot;Response to tofacitinib treatment in psoriasis (herpes zoster)(time to event)&quot;           
- [8] &quot;Response to tofacitinib treatment in rheumatoid arthritis (herpes zoster)&quot;               
- [9] &quot;Response to tofacitinib treatment in psoriasis (herpes zoster)&quot;                          
-[10] &quot;Response to tofacitinib treatment (herpes zoster)(time to event)&quot;                        
-[11] &quot;Response to tofacitinib treatment (herpes zoster)&quot;                                       
-[12] &quot;ICD10 B00: Herpesviral [herpes simplex] infections (Gene-based burden)&quot;                  
-[13] &quot;Herpes infection&quot;                                                                        </code></pre>
+<pre><code> [1] &quot;Cold sores&quot;                                                                              
+ [2] &quot;Shingles&quot;                                                                                
+ [3] &quot;Source of report of B02 (zoster [herpes zoster]) (UKB data field 130179)&quot;                
+ [4] &quot;Herpes zoster with nervous system complications (PheCode 53.1)&quot;                          
+ [5] &quot;Herpes simplex (PheCode 54)&quot;                                                             
+ [6] &quot;ICD10 B00: Herpesviral [herpes simplex] infections&quot;                                      
+ [7] &quot;Response to tofacitinib treatment in rheumatoid arthritis (herpes zoster)(time to event)&quot;
+ [8] &quot;Response to tofacitinib treatment in psoriasis (herpes zoster)(time to event)&quot;           
+ [9] &quot;Response to tofacitinib treatment in rheumatoid arthritis (herpes zoster)&quot;               
+[10] &quot;Response to tofacitinib treatment in psoriasis (herpes zoster)&quot;                          
+[11] &quot;Response to tofacitinib treatment (herpes zoster)(time to event)&quot;                        
+[12] &quot;Response to tofacitinib treatment (herpes zoster)&quot;                                       
+[13] &quot;ICD10 B00: Herpesviral [herpes simplex] infections (Gene-based burden)&quot;                  
+[14] &quot;Herpes infection&quot;                                                                        </code></pre>
 </div>
-</div>
-<div id="mumps" class="section level2" number="6.10">
-<h2><span class="header-section-number">6.10</span> Mumps</h2>
+<div id="mumps" class="section level3" number="6.9.5">
+<h3><span class="header-section-number">6.9.5</span> Mumps</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )mumps(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;mumps&quot;)
          )
          )</code></pre>
 </div>
-<div id="parasitic-infection" class="section level2" number="6.11">
-<h2><span class="header-section-number">6.11</span> Parasitic
-infection</h2>
+<div id="parasitic-infection" class="section level3" number="6.9.6">
+<h3><span class="header-section-number">6.9.6</span> Parasitic
+infection</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )parasitic infection(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;parasitic infection&quot;)
          )
          )</code></pre>
 </div>
-<div id="helicobacter-pylori-infection" class="section level2"
-number="6.12">
-<h2><span class="header-section-number">6.12</span> Helicobacter pylori
-infection</h2>
+<div id="helicobacter-pylori-infection" class="section level3"
+number="6.9.7">
+<h3><span class="header-section-number">6.9.7</span> Helicobacter pylori
+infection</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = &quot;(?&lt;=^|, )helicobacter pylori infectious disease(?=,|$)&quot;
+                          pattern = vec_to_grep_pattern(&quot;helicobacter pylori infectious disease&quot;)
+         )
+         )</code></pre>
+</div>
+<div id="common-cold" class="section level3" number="6.9.8">
+<h3><span class="header-section-number">6.9.8</span> Common cold</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;common cold&quot;)
          )
          )</code></pre>
 <pre class="r"><code># parasitic infection</code></pre>
+</div>
 </div>
 </div>
 <div id="update-and-save-output" class="section level1" number="7">
@@ -1611,13 +1656,13 @@ head(n_studies_trait)</code></pre>
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
 1 &quot;type 2 diabetes mellitus&quot;        146
-2 &quot;&quot;                                133
-3 &quot;alzheimers disease&quot;              116
+2 &quot;alzheimers disease&quot;              116
+3 &quot;&quot;                                114
 4 &quot;breast cancer&quot;                   113
 5 &quot;asthma&quot;                          111
 6 &quot;major depressive disorder&quot;       109</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2984    2</code></pre>
+<pre><code>[1] 2956    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="7.3.1">
 <h3><span class="header-section-number">7.3.1</span> When separate
@@ -1628,7 +1673,7 @@ studies with multiple terms</h3>
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2162</code></pre>
+<pre><code>[1] 2143</code></pre>
 </div>
 </div>
 <div id="save-output" class="section level2" number="7.4">
