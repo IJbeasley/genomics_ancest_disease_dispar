@@ -34,25 +34,6 @@ source(here::here("code/get_term_descendants.R"))
 
 ```
 
-## Convert vec to grep search patttern
-
-```{r vec_to_grep_pattern}
-
-vec_to_grep_pattern <- function(vec){
-  
-  vec <- paste0("(?<=^|, )", vec)
-  vec <- paste0(vec, "(?=,|$)")
-  
-  if(length(vec) > 1){
-  vec <- paste0(vec, collapse = "|")
-  }
-  
-  return(vec)
-  
-}
-
-
-```
 
 ```{r setup_2, message = FALSE, warning= FALSE}
 
@@ -82,22 +63,6 @@ gwas_study_info = gwas_study_info |>
 
 ## Initial summary - number of unique study terms
 
-```{r}
-
-n_studies_trait = gwas_study_info |>
-  dplyr::filter(DISEASE_STUDY == T) |>
-  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
-  dplyr::distinct() |>
-  dplyr::group_by(collected_all_disease_terms) |>
-  dplyr::summarise(n_studies = dplyr::n()) |>
-  dplyr::arrange(desc(n_studies))
-
-head(n_studies_trait)
-
-dim(n_studies_trait)
-
-```
-
 ### When separate studies with multiple terms 
 
 ```{r}
@@ -121,10 +86,9 @@ length(unique(diseases))
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = "(?<=^|, )herpes zoster, nervous system disease(?=,|$)",
+                          pattern = vec_to_grep_pattern("herpes zoster, nervous system disease"),
                           "nervous system disease"
-                          
-         )
+                          )
          )
 
 ```
@@ -136,9 +100,8 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = "(?<=^|, )herpes zoster, psoriasis(?=,|$)",
+                          pattern = vec_to_grep_pattern("herpes zoster, psoriasis"),
                           "psoriasis"
-                          
          )
          )
 
@@ -152,7 +115,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = "(?<=^|, )herpes zoster, rheumatoid arthritis(?=,|$)",
+                          pattern = vec_to_grep_pattern("herpes zoster, rheumatoid arthritis"),
                           "rheumatoid arthritis"
                           
          )
@@ -169,6 +132,14 @@ disturb_senses_terms <- c("disturbances of sensation of smell and taste",
                           "abnormality of the sense of smell",
                           "ageusia")
 
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(disturb_senses_terms),
+                          "disturbances to senses"
+         )
+         )
+
 ```
 
 
@@ -181,7 +152,7 @@ disturb_senses_terms <- c("disturbances of sensation of smell and taste",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "chronic kidney disease stage 5|chronic kidney disease stage 4",
+                          vec_to_grep_pattern("chronic kidney disease stage 5"),
                           "chronic kidney disease"
          ))
 
@@ -189,12 +160,9 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "stage 5 chronic kidney disease",
+                          vec_to_grep_pattern("stage 5 chronic kidney disease"),
                           "chronic kidney disease"
          ))
-
-
-
 
 ```
 
@@ -348,7 +316,7 @@ ischemic_heart_disease_terms = c(ischemic_heart_disease_terms,
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(ischemic_heart_disease_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(ischemic_heart_disease_terms),
                           "ischemic heart disease"
          ))
 
@@ -368,14 +336,16 @@ coronary_artery_disease_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(coronary_artery_disease_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(coronary_artery_disease_terms),
+                          #pattern = paste0(coronary_artery_disease_terms, collapse = "(?=,|$) |\\b"),
                           "coronary artery disease"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "coronary artery disease",
+                          pattern = vec_to_grep_pattern("coronary artery disease"),
+                          # "coronary artery disease",
                           "ischemic heart disease"
          ))
 
@@ -396,26 +366,29 @@ myocardial_infarction_terms <- c("subsequent st elevation \\(stemi\\) and non-st
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(myocardial_infarction_terms, collapse = "(?=,|$) |\\b"),
-                          "myocardial infarction"
-         ))
+                                  pattern = vec_to_grep_pattern(myocardial_infarction_terms), 
+                          #pattern = paste0(myocardial_infarction_terms, collapse = "(?=,|$) |\\b"),
+                                  "myocardial infarction"
+                          )
+         )
 
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "post-operative myocardial infarction",
+                          pattern = vec_to_grep_pattern("post-operative myocardial infarction"),
                           "myocardial infarction, post-operative"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "myocardial infarction",
+                          pattern = vec_to_grep_pattern("myocardial infarction"),
                           "ischemic heart disease"
          ))
 
 ```
+
 #### Fixing
 
 ```{r fix_ischemic_heart_disease}
@@ -424,12 +397,13 @@ gwas_study_info = gwas_study_info |>
 to_fix <- c("non-st elevation ischemic heart disease",
             "post-operative ischemic heart disease",
             "st elevation ischemic heart disease",
-            "subsequent st elevation (stemi) and non-st elevation (nstemi) ischemic heart disease")
+            "subsequent st elevation \\(stemi\\) and non-st elevation \\(nstemi\\) ischemic heart disease")
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          paste0(to_fix, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(to_fix),
+                          #paste0(to_fix, collapse = "(?=,|$) |\\b"),
                           "ischemic heart disease"
          ))
 
@@ -454,9 +428,10 @@ heart_valve_disease_terms <-
 
 gwas_study_info = gwas_study_info |> 
           mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(heart_valve_disease_terms, 
-                                                   collapse = "(?=,|$) |\\b"),
+          stringr::str_replace_all(l1_all_disease_terms,
+                                   pattern = vec_to_grep_pattern(heart_valve_disease_terms),
+                                  # pattern = paste0(heart_valve_disease_terms, 
+                                  #                  collapse = "(?=,|$) |\\b"),
                                    "heart valve disease"
                                   )  
           )
@@ -476,7 +451,8 @@ aortic_aneurysm_terms <- c("thoracic aortic aneurysm",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(aortic_aneurysm_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(aortic_aneurysm_terms),
+                          # pattern = paste0(aortic_aneurysm_terms, collapse = "(?=,|$) |\\b"),
                           "aortic aneurysm"
          ))
 
@@ -490,7 +466,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "bacterial endocarditis",
+                          vec_to_grep_pattern("bacterial endocarditis"),
                           "endocarditis"
          ))
 
@@ -515,7 +491,8 @@ cardiomyopathy_terms <- c("chagas cardiomyopathy",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(cardiomyopathy_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(cardiomyopathy_terms),
+                          # pattern = paste0(cardiomyopathy_terms, collapse = "(?=,|$) |\\b"),
                           "cardiomyopathy"
          ))
 
@@ -523,7 +500,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "\\bidiopathic cardiomyopathy\\b",
+                                  pattern = vec_to_grep_pattern("\\bidiopathic cardiomyopathy\\b"),
                                    "cardiomyopathy"
                           )  
         )
@@ -546,7 +523,8 @@ hemorrhage_terms <- c("intracerebral hemorrhage",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hemorrhage_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(hemorrhage_terms),
+                          # pattern = paste0(hemorrhage_terms, collapse = "(?=,|$) |\\b"),
                           "hemorrhagic stroke")
   )
 
@@ -564,7 +542,8 @@ stroke_terms <- c("stroke outcome",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          paste0(stroke_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(stroke_terms),
+                          # paste0(stroke_terms, collapse = "(?=,|$) |\\b"),
                           "stroke")
   )
 
@@ -572,7 +551,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "post-operative stroke",
+                          vec_to_grep_pattern("post-operative stroke"),
                           "post-operative, stroke")
   )
 
@@ -589,7 +568,7 @@ gwas_study_info =
  gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bperipheral artery disease|\\bperipheral arterial disease",
+                          vec_to_grep_pattern("\\bperipheral artery disease|\\bperipheral arterial disease"),
                           "lower extremity peripheral arterial disease"
          ))
 
@@ -609,7 +588,8 @@ carotid_artery_disease_terms <- c("carotid artery thrombosis",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(carotid_artery_disease_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(carotid_artery_disease_terms),
+                          # pattern = paste0(carotid_artery_disease_terms, collapse = "(?=,|$) |\\b"),
                           "carotid artery disease"
          ))
 
@@ -641,20 +621,41 @@ hypertension_terms = hypertension_terms[!hypertension_terms %in%
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hypertension_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(hypertension_terms),
+                          # pattern = paste0(hypertension_terms, collapse = "(?=,|$) |\\b"),
                           "hypertension"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hypertension_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(hypertension_terms),
+                          # pattern = paste0(hypertension_terms, collapse = "(?=,|$) |\\b"),
                           "hypertension"
          ))
 
 ```
 
 ### Heart block 
+
+### Bundle branch block 
+
+```{r bundle_branch_block}
+
+bundle_branch_block_terms <- c("left bundle branch block",
+                             "right bundle branch block",
+                             "complete right bundle branch block"
+                             )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(bundle_branch_block_terms),
+                          "bundle branch block"
+         )
+  )
+
+```
 
 ```{r heart_block}
 
@@ -670,7 +671,8 @@ heart_block_terms <- c("first degree atrioventricular block",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(heart_block_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(heart_block_terms),
+                          # pattern = paste0(heart_block_terms, collapse = "(?=,|$) |\\b"),
                           "heart block"
          ))
 
@@ -691,7 +693,8 @@ tacycardia_terms <- c("paroxysmal tachycardia",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(tacycardia_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(tacycardia_terms),
+                          # pattern = paste0(tacycardia_terms, collapse = "(?=,|$) |\\b"),
                           "tachycardia"
          )
   )
@@ -705,7 +708,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "sudden cardiac arrest",
+                         vec_to_grep_pattern("sudden cardiac arrest"),
                           "cardiac arrest"
          )
   )
@@ -727,7 +730,8 @@ other_cardiac_arrhythmia_terms <- c("ventricular fibrillation",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(other_cardiac_arrhythmia_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(other_cardiac_arrhythmia_terms),
+                          # pattern = paste0(other_cardiac_arrhythmia_terms, collapse = "(?=,|$) |\\b"),
                           "other cardiac arrhythmias"
          )
   )
@@ -758,14 +762,10 @@ congenital_heart_disease_terms <- c(
   "cerebral arteriovenous malformation"
   )
 
-congenital_heart_disease_terms <- str_length_sort(congenital_heart_disease_terms)
-congenital_heart_disease_terms <- paste0("(?<=^|, )", congenital_heart_disease_terms)
-congenital_heart_disease_terms <- paste0(congenital_heart_disease_terms, "(?=,|$)")
-
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(congenital_heart_disease_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(congenital_heart_disease_terms),
                           "congenital heart disease"
          )
   )
@@ -787,7 +787,8 @@ thrombosis_terms <- c("abnormal thrombosis",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(thrombosis_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(thrombosis_terms),
+                          # pattern = paste0(thrombosis_terms, collapse = "(?=,|$) |\\b"),
                           "thrombotic disease"
          )
   )
@@ -806,7 +807,8 @@ arterial_occlusion_terms <- c("cerebral artery occlusion",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(arterial_occlusion_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(arterial_occlusion_terms),
+                          # pattern = paste0(arterial_occlusion_terms, collapse = "(?=,|$) |\\b"),
                           "arterial occlusion"
          )
   )
@@ -824,14 +826,10 @@ other_vascular_disorder_terms <- c("skin vascular disease",
                                    "vasculitis",
                                    "arteritis")
 
-other_vascular_disorder_terms <- str_length_sort(other_vascular_disorder_terms)
-other_vascular_disorder_terms <- paste0("(?<=^|, )", other_vascular_disorder_terms)
-other_vascular_disorder_terms <- paste0(other_vascular_disorder_terms, "(?=,|$)")
-
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(other_vascular_disorder_terms, collapse = "|"),
+                          pattern = vec_to_grep_pattern(other_vascular_disorder_terms),
                           "other vascular disorders"
          )
   )
@@ -854,18 +852,10 @@ congestive_heart_failure_terms <- c("systolic heart failure",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(congestive_heart_failure_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(congestive_heart_failure_terms),
+                          # pattern = paste0(congestive_heart_failure_terms, collapse = "(?=,|$) |\\b"),
                           "congestive heart failure"
          ))
-
-```
-
-## Heart failure
-
-```{r heart_failure}
-
-
-
 
 ```
 
@@ -881,7 +871,8 @@ brain_infarction_terms <- c("cerebral infarction",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(brain_infarction_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(brain_infarction_terms),
+                          # pattern = paste0(brain_infarction_terms, collapse = "(?=,|$) |\\b"),
                           "brain infarction"
          ))
 
@@ -899,7 +890,8 @@ vascular_insufficiency_terms <- c("vascular insufficiency disorder",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(vascular_insufficiency_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(vascular_insufficiency_terms),
+                          # pattern = paste0(vascular_insufficiency_terms, collapse = "(?=,|$) |\\b"),
                           "vascular insufficiency"
          )
   )
@@ -919,7 +911,8 @@ abnormal_total_eosinophil_count_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(abnormal_total_eosinophil_count_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(abnormal_total_eosinophil_count_terms),
+                          # pattern = paste0(abnormal_total_eosinophil_count_terms, collapse = "(?=,|$) |\\b"),
                           "abnormal total eosinophil count"
          ))
 
@@ -941,7 +934,8 @@ pregnancy_loss_terms <- c("habitual abortion",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          paste0(pregnancy_loss_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(pregnancy_loss_terms),
+                          # paste0(pregnancy_loss_terms, collapse = "(?=,|$) |\\b"),
                           "loss of pregnancy"
          ))
 
@@ -957,7 +951,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "asparaginase-induced acute pancreatitis",
+                          vec_to_grep_pattern("asparaginase-induced acute pancreatitis"),
                           "acute pancreatitis"
          ))
 
@@ -982,7 +976,8 @@ age_related_macular_degeneration_terms <- c(age_related_macular_degeneration_ter
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(age_related_macular_degeneration_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(age_related_macular_degeneration_terms),
+                          # pattern = paste0(age_related_macular_degeneration_terms, collapse = "(?=,|$) |\\b"),
                           "age-related macular degeneration"
          ))
 
@@ -991,49 +986,20 @@ gwas_study_info = gwas_study_info |>
 
 ## Alcohol-use disorders
 
-```{r alcohol_use_disorders}
-
-alcohol_use_disorder_terms <- c("(?<=^|, )alcohol dependence",
-                             "(?<=^|, )alcohol withdrawal",
-                             "(?<=^|, )alcohol withdrawal delirium",
-                             "(?<=^|, )alcohol abuse",
-                             "(?<=^|, )alcohol-related disorders delirium",
-                             "(?<=^|, )alcohol use disorder",
-                             "(?<=^|, )addictive alcohol use"
-                             )
-
-gwas_study_info = gwas_study_info |>
-      mutate(l1_all_disease_terms = 
-           stringr::str_replace_all(l1_all_disease_terms,
-                            paste0(alcohol_use_disorder_terms, collapse = "(?=,|$) |\\b"),
-                            "alcohol-related disorders"
-           ))
-
-gwas_study_info = gwas_study_info |>
-      mutate(l1_all_disease_terms = 
-           stringr::str_replace_all(l1_all_disease_terms,
-                            paste0(alcohol_use_disorder_terms, collapse = "(?=,|$) |\\b"),
-                            "alcohol-related disorders"
-           ))
-
-
-```
-
-
 ## Alcoholic liver disease
 
 ```{r alcoholic_liver_disease}
 
-alcoholic_liver_disease_terms <- c("(?<=^|, )alcoholic liver cirrhosis",
-                                   "(?<=^|, )alcoholic fatty liver disease",
-                                   "(?<=^|, )alcoholic hepatitis"
+alcoholic_liver_disease_terms <- c("alcoholic liver cirrhosis",
+                                   "alcoholic fatty liver disease",
+                                   "alcoholic hepatitis"
                                    )
 
 
 gwas_study_info = gwas_study_info |>
       mutate(l1_all_disease_terms = 
            stringr::str_replace_all(l1_all_disease_terms,
-                             paste0(alcoholic_liver_disease_terms, collapse = "(?=,|$) |\\b"),
+                            pattern = vec_to_grep_pattern(alcoholic_liver_disease_terms),
                             "alcoholic liver disease"
            ))
 
@@ -1046,7 +1012,9 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "early-onset alzheimers disease|late-onset alzheimers disease",
+                                  pattern = vec_to_grep_pattern(
+                                    c("early-onset alzheimers disease",
+                                  "late-onset alzheimers disease")),
                           "alzheimers disease"
          ))
 
@@ -1059,7 +1027,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "allergic contact dermatitis of eyelid",
+                          vec_to_grep_pattern("allergic contact dermatitis of eyelid"),
                           "allergic contact dermatitis"
          ))
 
@@ -1072,7 +1040,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "seasonal allergic rhinitis",
+                          vec_to_grep_pattern("seasonal allergic rhinitis"),
                           "allergic rhinitis"
          ))
 
@@ -1093,7 +1061,7 @@ aplastic_anemia_terms <- c("severe aplastic anemia",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(aplastic_anemia_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(aplastic_anemia_terms),
                           "aplastic anemia"
          ))
 
@@ -1106,7 +1074,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "corneal astigmatism",
+                          vec_to_grep_pattern("corneal astigmatism"),
                           "astigmatism"
          ))
 
@@ -1119,12 +1087,16 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
       mutate(l1_all_disease_terms  = 
            stringr::str_replace_all(l1_all_disease_terms,
-                            "atopic asthma|chronic obstructive asthma",
+                            vec_to_grep_pattern(c("atopic asthma", "chronic obstructive asthma")),
                             "asthma"
            )) |>
     mutate(l1_all_disease_terms  = 
            stringr::str_replace_all(l1_all_disease_terms,
-                            "childhood onset asthma|adult onset asthma|aspirin-induced asthma",
+                            vec_to_grep_pattern(c("childhood onset asthma",
+                                                    "adult onset asthma",
+                                                    "aspirin-induced asthma"
+                                                  )
+                            ),
                             "asthma"
            ))
 
@@ -1139,7 +1111,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
       mutate(l1_all_disease_terms  = 
            stringr::str_replace_all(l1_all_disease_terms,
-                            "autoimmune pancreatitis type 1",
+                            vec_to_grep_pattern("autoimmune pancreatitis type 1"),
                             "autoimmune pancreatitis"
            )) 
 
@@ -1153,7 +1125,11 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |> 
     mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "bipolar ii disorder|bipolar i disorder",
+                          vec_to_grep_pattern(
+                            c("bipolar ii disorder",
+                              "bipolar i disorder"
+                              )
+                            ),
                           "bipolar disorder"
          ))
 
@@ -1170,31 +1146,11 @@ bone_fracture_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(bone_fracture_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(bone_fracture_terms),
                           "bone fracture"
          ))
 
 ```
-
-## Bundle branch block 
-
-```{r bundle_branch_block}
-
-bundle_branch_block_terms <- c("left bundle branch block",
-                             "right bundle branch block",
-                             "complete right bundle branch block"
-                             )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(bundle_branch_block_terms, collapse = "(?=,|$) |\\b"),
-                          "bundle branch block"
-         )
-  )
-
-```
-
 
 ## Cataract
 
@@ -1207,7 +1163,7 @@ cataract_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(cataract_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(cataract_terms),
                           "cataract"
          ))
 
@@ -1222,7 +1178,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "refractory celiac disease",
+                                  pattern = vec_to_grep_pattern("refractory celiac disease"),
                                    "celiac disease"
                           )  
         )
@@ -1237,7 +1193,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "charcot-marie-tooth disease type 1a, decreased fine motor function",
+                          vec_to_grep_pattern("charcot-marie-tooth disease type 1a, decreased fine motor function"),
                           "charcot-marie-tooth disease type 1a"
          ))
 
@@ -1245,14 +1201,14 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "charcot-marie-tooth disease type 1a, decreased walking ability",
+                          vec_to_grep_pattern("charcot-marie-tooth disease type 1a, decreased walking ability"),
                           "charcot-marie-tooth disease type 1a"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "charcot-marie-tooth disease type 1a, gait imbalance",
+                          vec_to_grep_pattern("charcot-marie-tooth disease type 1a, gait imbalance"),
                           "charcot-marie-tooth disease type 1a, gait disturbance"
          ))
 
@@ -1271,7 +1227,7 @@ chronic_pain_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(chronic_pain_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(chronic_pain_terms),
                           "chronic pain"
          ))
 
@@ -1284,7 +1240,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "chronic rhinosinusitis with nasal polyps",
+                          vec_to_grep_pattern("chronic rhinosinusitis with nasal polyps"),
                           "chronic rhinosinusitis"
          ))
 
@@ -1297,7 +1253,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "acute cholecystitis",
+                          vec_to_grep_pattern("acute cholecystitis"),
                           "cholecystitis"
          ))
 
@@ -1314,7 +1270,7 @@ communication_disorder_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(communication_disorder_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(communication_disorder_terms),
                           "communication disorder"
          ))
 
@@ -1330,7 +1286,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "sporadic creutzfeld jacob disease",
+                          vec_to_grep_pattern("sporadic creutzfeld jacob disease"),
                           "creutzfeldt jacob disease"
          ))
 
@@ -1343,7 +1299,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "post-operative delirium",
+                          vec_to_grep_pattern("post-operative delirium"),
                           "delirium, post-operative"
          ))
 
@@ -1364,7 +1320,7 @@ dental_caries_terms <- c("pit and fissure surface dental caries",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(dental_caries_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(dental_caries_terms),
                           "dental caries"
          )
 )
@@ -1382,7 +1338,7 @@ dermatitis_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(dermatitis_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(dermatitis_terms),
                           "dermatitis"
          ))
 
@@ -1396,7 +1352,7 @@ eczema_terms <- c("atopic eczema",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(eczema_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(eczema_terms),
                           "dermatitis"
          ))
 
@@ -1409,7 +1365,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "beta-lactam allergy",
+                          vec_to_grep_pattern("beta-lactam allergy"),
                           "drug allergy"
          ))
 
@@ -1430,8 +1386,8 @@ diabetic_eye_terms <- c("diabetic maculopathy",
 gwas_study_info = 
   gwas_study_info |> 
   mutate(l1_all_disease_terms  = 
-           stringr::str_replace_all(l1_all_disease_terms ,
-                                    pattern = paste0(diabetic_eye_terms, collapse = "(?=,|$) |\\b"),
+           stringr::str_replace_all(l1_all_disease_terms,
+                                    pattern = vec_to_grep_pattern(diabetic_eye_terms),
                                     "diabetic eye disease"
            )  
   )
@@ -1446,7 +1402,7 @@ gwas_study_info =
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "diabetic polyneuropathy",
+                          vec_to_grep_pattern("diabetic polyneuropathy"),
                           "diabetic neuropathy"
          ))
 
@@ -1459,7 +1415,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "iron deficiency anemia",
+                          vec_to_grep_pattern("iron deficiency anemia"),
                           "deficiency anemia"
          ))
 
@@ -1472,7 +1428,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "delayed encephalopathy after acute poisoning",
+                          vec_to_grep_pattern("delayed encephalopathy after acute poisoning"),
                           "encephalopathy, poisoning"
          ))
 
@@ -1480,13 +1436,11 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "encephalopathy acute infection-induced",
+                          vec_to_grep_pattern("encephalopathy acute infection-induced"),
                           "encephalopathy"
          ))
 
 ```
-
-]
 
 ## Food allergy
 
@@ -1495,7 +1449,12 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "peanut allergy|milk allergy|egg allergy|wheat allergic reaction",
+                                  vec_to_grep_pattern(
+                                    c("peanut allergy",
+                                      "milk allergy",
+                                      "egg allergy",
+                                      "wheat allergic reaction"
+                                     )),
                           "food allergy"
          ))
 ```
@@ -1511,7 +1470,7 @@ glaucoma_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(glaucoma_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(glaucoma_terms),
                           "glaucoma"
          ))
 
@@ -1526,7 +1485,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "renal overload-type gout",
+                          vec_to_grep_pattern("renal overload-type gout"),
                           "gout"
          ))
 
@@ -1546,7 +1505,7 @@ graft_vs_host_terms <- c("chronic graft versus host disease",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          paste0(graft_vs_host_terms, collapse = "(?=,|$) |\\b"),
+                          vec_to_grep_pattern(graft_vs_host_terms),
                           "graft versus host disease"
          ))
 
@@ -1566,7 +1525,7 @@ hemolytic_anemia_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hemolytic_anemia_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(hemolytic_anemia_terms),
                           "hemolytic anemia"
          ))
 
@@ -1583,7 +1542,7 @@ hernia_abdominal_wall_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hernia_abdominal_wall_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(hernia_abdominal_wall_terms),
                           "hernia of the abdominal wall"
          ))
 
@@ -1604,7 +1563,7 @@ hyperlipidemia_terms <- c("hypercholesterolemia",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(hyperlipidemia_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(hyperlipidemia_terms),
                           "hyperlipidemia"
          ))
   
@@ -1627,7 +1586,7 @@ idiopathic_generalized_epilepsy_terms = stringr::str_remove_all(
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(idiopathic_generalized_epilepsy_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(idiopathic_generalized_epilepsy_terms),
                           "idiopathic generalized epilepsy"
          ))
 
@@ -1654,23 +1613,10 @@ inborn_error_metab <- c("inborn disorder of amino acid metabolism",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(inborn_error_metab, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(inborn_error_metab),
                           "inborn errors of metabolism"
          ))
 
-
-```
-
-## Infectious meningitis
-
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "bacterial meningitis|pneumococcal meningitis|viral meningitis",
-                          "infectious meningitis"
-         ))
 
 ```
 
@@ -1681,12 +1627,12 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "tubal factor infertility",
+                          vec_to_grep_pattern("tubal factor infertility"),
                           "female infertility"
                           )) |>
   mutate(l1_all_disease_terms  = 
                   stringr::str_replace_all(l1_all_disease_terms,
-                          "azoospermia",
+                          vec_to_grep_pattern("azoospermia"),
                           "male infertility"
                           )  )
 
@@ -1711,7 +1657,7 @@ intestinal_obstruction_terms = c(intestinal_obstruction_terms,
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(intestinal_obstruction_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(intestinal_obstruction_terms),
                           "intestinal obstruction"
          ))
 
@@ -1732,7 +1678,7 @@ jia_terms <- c("systemic juvenile idiopathic arthritis",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
         stringr::str_replace_all(l1_all_disease_terms,
-                         paste0(jia_terms, collapse = "(?=,|$) |\\b"),
+                         vec_to_grep_pattern(jia_terms),
                          "juvenile idiopathic arthritis")
         )
 
@@ -1751,7 +1697,7 @@ kidney_disease_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(kidney_disease_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(kidney_disease_terms),
                           "chronic kidney disease"
          ))
 
@@ -1769,7 +1715,7 @@ laryngitis_terms <- c("acute laryngitis",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(laryngitis_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(laryngitis_terms),
                           "laryngitis"
          ))
 
@@ -1783,35 +1729,10 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "lewy body attribute",
+                          vec_to_grep_pattern("lewy body attribute"),
                           "lewy body dementia"
          ))
 
-
-```
-## Malaria
-
-```{r malaria}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "plasmodium falciparum malaria|plasmodium vivax malaria",
-                          "malaria"
-         ))
-
-```
-
-## Methamphetamine use disorders 
-
-```{r methamphetamine_use_disorders}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          "methamphetamine dependence|methamphetamine-induced psychosis",
-                          "methamphetamine use disorders"
-         ))
 
 ```
 
@@ -1822,7 +1743,12 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "migraine disorder|migraine with aura|migraine without aura",
+                          vec_to_grep_pattern(
+                            c("migraine with aura",
+                              "migraine without aura",
+                              "migraine disorder"
+                              )
+                            ),
                           "migraine"
          ))
 
@@ -1835,7 +1761,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "relapsing-remitting multiple sclerosis",
+                          vec_to_grep_pattern("relapsing-remitting multiple sclerosis"),
                           "multiple sclerosis"
          ))
 
@@ -1850,7 +1776,10 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
         stringr::str_replace_all(l1_all_disease_terms,
-                         "phototoxic dermatitis|skin sensitivity to sun",
+                         vec_to_grep_pattern(
+                           c("phototoxic dermatitis",
+                           "skin sensitivity to sun"
+                           )),
                          "photosensitivity disease")
         )
 
@@ -1867,7 +1796,7 @@ phobic_disorder_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(phobic_disorder_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(phobic_disorder_terms),
                           "phobic disorder"
          ))
 
@@ -1880,14 +1809,11 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "hereditary hemochromatosis type 1",
+                          vec_to_grep_pattern("hereditary hemochromatosis type 1"),
                           "hereditary hemochromatosis"
          ))
 
 ```
-
-
-
 
 ## Myasthenia gravis
 
@@ -1896,14 +1822,12 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "late-onset myasthenia gravis",
+                          vec_to_grep_pattern("late-onset myasthenia gravis"),
                           "myasthenia gravis"
          ))
 
 
 ```
-
-
 
 ## Neuromyelitis optica 
 
@@ -1912,7 +1836,13 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "aqp4-igg-negative neuromyelitis optica|aqp4-igg-positive neuromyelitis optica",
+                          vec_to_grep_pattern(
+                            c("aquaporin-4 antibody positive neuromyelitis optica",
+                              "aquaporin-4 antibody negative neuromyelitis optica",
+                              "aqp4-igg-positive neuromyelitis optica",
+                              "aqp4-igg-negative neuromyelitis optica"
+                            )
+                          ),
                           "neuromyelitis optica"
          ))
 
@@ -1925,7 +1855,10 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "neurofibromatosis type 1|neurofibromatosis type 2",
+                          vec_to_grep_pattern(
+                            c("neurofibromatosis type 1",
+                              "neurofibromatosis type 2")
+                          ),
                           "neurofibromatosis"
          ))
 
@@ -1938,7 +1871,11 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "(?<=^|, )non-alcoholic steatohepatitis|(?<=^|, )non-alcoholic liver disease",
+                                  vec_to_grep_pattern(
+                                    c("non-alcoholic steatohepatitis",
+                                      "non-alcoholic liver disease"
+                                     )
+                                   ),
                           "non-alcoholic fatty liver disease"
          ))
 
@@ -1947,13 +1884,18 @@ gwas_study_info = gwas_study_info |>
 
 ## Obesity
 
-```{r}
+```{r obesity}
 
 gwas_study_info = 
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "morbid obesity|metabolically healthy obesity",
+                                  pattern = 
+                                    vec_to_grep_pattern(
+                                      c("morbid obesity",
+                                         "metabolically healthy obesity"
+                                        )
+                                      ),
                                    "obesity"
                           )  
         )
@@ -1968,7 +1910,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "obsessive-compulsive trait",
+                          vec_to_grep_pattern("obsessive-compulsive trait"),
                           "obsessive-compulsive disorder"
          ))
 
@@ -1989,7 +1931,7 @@ osteoarthritis_terms <- c("knee osteoarthritis",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(osteoarthritis_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(osteoarthritis_terms),
                           "osteoarthritis"
          )
   )
@@ -2004,7 +1946,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "idiopathic osteonecrosis of the femoral head",
+                          vec_to_grep_pattern("idiopathic osteonecrosis of the femoral head"),
                           "osteonecrosis"
          ))
 
@@ -2021,7 +1963,7 @@ pancreatitis_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(pancreatitis_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(pancreatitis_terms),
                           "pancreatitis"
          ))
 
@@ -2039,7 +1981,7 @@ periodontal_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(periodontal_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(periodontal_terms),
                           "periodontal disease"
          ))
 
@@ -2052,7 +1994,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "carbon monoxide poisoning",
+                          vec_to_grep_pattern("carbon monoxide poisoning"),
                           "poisoning"
          ))
 
@@ -2069,7 +2011,7 @@ polycythemia_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(polycythemia_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(polycythemia_terms),
                           "polycythemia"
          ))
 
@@ -2083,7 +2025,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "pulmonary embolism, pulmonary infarction",
+                          vec_to_grep_pattern("pulmonary embolism, pulmonary infarction"),
                           "pulmonary embolism"
          ))
 
@@ -2096,7 +2038,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "idiopathic pulmonary fibrosis",
+                          vec_to_grep_pattern("idiopathic pulmonary fibrosis"),
                           "pulmonary fibrosis"
          ))
 
@@ -2116,7 +2058,7 @@ psoriasis_terms <- c("psoriasis vulgaris",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(psoriasis_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(psoriasis_terms),
                           "psoriasis")
   )
 
@@ -2130,7 +2072,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "psychosis predisposition",
+                          vec_to_grep_pattern("psychosis predisposition"),
                           "psychosis")
          )
 
@@ -2147,7 +2089,7 @@ retinopathy_terms <- c("chronic central serous retinopathy",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
            stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(retinopathy_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(retinopathy_terms),
                           "retinopathy")
   )
 
@@ -2166,7 +2108,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = paste0(ra_terms, collapse = "(?=,|$) |\\b"),
+                                  pattern = vec_to_grep_pattern(ra_terms),
                                    "rheumatoid arthritis"
                           )  
         )
@@ -2180,7 +2122,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "schizoaffective disorder-bipolar type",
+                          vec_to_grep_pattern("schizoaffective disorder-bipolar type"),
                           "schizoaffective disorder")
          )
 
@@ -2193,7 +2135,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "treatment refractory schizophrenia",
+                          vec_to_grep_pattern("treatment refractory schizophrenia"),
                           "schizophrenia")
          )
 
@@ -2219,7 +2161,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "adolescent idiopathic scoliosis",
+                          vec_to_grep_pattern("adolescent idiopathic scoliosis"),
                           "scoliosis")
          )
 
@@ -2232,7 +2174,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "sickle cell anemia",
+                          vec_to_grep_pattern("sickle cell anemia"),
                           "sickle cell disease and related diseases")
          )
 
@@ -2242,14 +2184,14 @@ gwas_study_info = gwas_study_info |>
 
 ```{r}
 
-sleep_apnea_terms <- c("sleep apnea measurement during non-rem sleep",
-                      "sleep apnea measurement during rem sleep",
+sleep_apnea_terms <- c("sleep apnea during non-rem sleep",
+                      "sleep apnea during rem sleep",
                       "obstructive sleep apnea")
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(sleep_apnea_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(sleep_apnea_terms),
                           "sleep apnea")
   )
 
@@ -2263,7 +2205,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "methicillin-resistant staphylococcus aureus infection",
+                          vec_to_grep_pattern("methicillin-resistant staphylococcus aureus infection"),
                           "staphylococcus aureus infection"
          ))
 
@@ -2283,7 +2225,7 @@ scleroderma_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(scleroderma_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(scleroderma_terms),
                           "systemic scleroderma"
          ))
 
@@ -2296,7 +2238,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
         stringr::str_replace_all(l1_all_disease_terms,
-                         "stenosing tenosynovitis",
+                         vec_to_grep_pattern("stenosing tenosynovitis"),
                          "tenosynovitis")
         )
 
@@ -2309,7 +2251,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "latent autoimmune diabetes in adults",
+                          vec_to_grep_pattern("latent autoimmune diabetes in adults"),
                           "type 1 diabetes mellitus"
          ))
 
@@ -2323,6 +2265,13 @@ thrombocytopenia_terms <- c("thrombocytopenia 4",
                            "acquired thrombocytopenia",
                            "primary thrombocytopenia"
                            )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(thrombocytopenia_terms),
+                          "thrombocytopenia"
+         ))
 
 ```
 
@@ -2339,7 +2288,7 @@ tinea_terms <- c("tinea pedis",
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(tinea_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(tinea_terms),
                           "tinea"
          ))
 
@@ -2355,7 +2304,7 @@ uveitis_terms <- c("anterior uveitis"
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(uveitis_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(uveitis_terms),
                           "uveitis"
          ))
 
@@ -2368,7 +2317,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "vitamin b12 deficiency",
+                          vec_to_grep_pattern("vitamin b12 deficiency"),
                           "vitamin b deficiency"
          ))
 
@@ -2386,7 +2335,7 @@ visual_impairment_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(visual_impairment_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(visual_impairment_terms),
                           "visual impairment"
          ))
 
@@ -2406,7 +2355,7 @@ abnormal_refraction_terms <- get_descendants(url)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = paste0(abnormal_refraction_terms, collapse = "(?=,|$) |\\b"),
+                          pattern = vec_to_grep_pattern(abnormal_refraction_terms),
                           "abnormality of refraction"
          ))
 
@@ -2425,7 +2374,6 @@ gwas_study_info =
                                       collapse = ", ")
          ) |>
   ungroup()
-
 
 ```
 
