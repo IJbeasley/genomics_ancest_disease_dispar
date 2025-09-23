@@ -824,21 +824,6 @@ gwas_study_info |>
 
 ```
 
-== coronary artery disease (https://www.ncbi.nlm.nih.gov/books/NBK209964/)
-
-```{r}
-
-gwas_study_info = gwas_study_info |> 
- mutate(l2_all_disease_terms  = 
-          stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = vec_to_grep_pattern("coronary artery disease"),
-                                   "ischemic heart disease"
-                          )  
-        )
-
-
-```
-
 ## Stroke 
 
 ```{r stroke_terms}
@@ -2696,11 +2681,12 @@ url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252F
 
 chromosomal_disorders <- get_descendants(url)
 
-other_chrom_abn <- c(other_chrom_abn, chromosomal_disorders)
+other_chrom_abn <- c(other_chrom_abn, 
+                     chromosomal_disorders)
 
 gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
+  mutate(l2_all_disease_terms  = 
+         stringr::str_replace_all(l2_all_disease_terms,
                           vec_to_grep_pattern(c(other_chrom_abn_terms, other_chrom_abn)),
                           "other chromosomal abnormalities"
          )
@@ -2725,8 +2711,8 @@ congen_terms <-
   unique()
 
 gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
+  mutate(l2_all_disease_terms  = 
+         stringr::str_replace_all(l2_all_disease_terms,
                           "congenital anomaly of cardiovascular system",
                           "congenital heart abnormalities"
          )
@@ -2763,8 +2749,8 @@ congen_muscle <- c("osteochondrodysplasia",
 
 
 gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
+  mutate(l2_all_disease_terms  = 
+         stringr::str_replace_all(l2_all_disease_terms,
                           vec_to_grep_pattern(c(congen_musculo_terms, congen_muscle)),
                           "congenital musculoskeletal and limb anomalies"
          )
@@ -2772,9 +2758,9 @@ gwas_study_info = gwas_study_info |>
 
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("congenital musculoskeletal and limb anomalies"), 
-              l1_all_disease_terms,
+              l2_all_disease_terms,
               perl = T)) |>
-  select(all_disease_terms, l1_all_disease_terms) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
 
@@ -2808,8 +2794,8 @@ urogenital_terms <-
     tolower(urogenital_terms))
 
 gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
+  mutate(l2_all_disease_terms  = 
+         stringr::str_replace_all(l2_all_disease_terms,
                           vec_to_grep_pattern(urogenital_terms),
                           "urogenital congenital anomalies"
          )
@@ -2818,9 +2804,9 @@ gwas_study_info = gwas_study_info |>
 
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("urogenital congenital anomalies"), 
-              l1_all_disease_terms,
+              l2_all_disease_terms,
               perl = T)) |>
-  select(all_disease_terms, l1_all_disease_terms) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
 
@@ -2847,8 +2833,8 @@ digestive_terms <- tolower(digestive_terms)
 digestive_terms <- stringr::str_remove_all(digestive_terms, ", unspecified$")
 
 gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
+  mutate(l2_all_disease_terms  = 
+         stringr::str_replace_all(l2_all_disease_terms,
                           vec_to_grep_pattern(tolower(digestive_terms)),
                           "digestive congenital anomalies"
          )
@@ -2857,9 +2843,9 @@ gwas_study_info = gwas_study_info |>
 
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("digestive congenital anomalies"), 
-              l1_all_disease_terms,
+              l2_all_disease_terms,
               perl = T)) |>
-  select(all_disease_terms, l1_all_disease_terms) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
 
@@ -3403,7 +3389,7 @@ gbd_data =
 gwas_disease_traits = data.frame(cause = diseases)
   # gwas_study_info |>
   # filter(DISEASE_STUDY == T) |>
-  # select(all_disease_terms, l1_all_disease_terms, cause = l2_all_disease_terms) |>
+  # select(all_disease_terms, l2_all_disease_terms, cause = l2_all_disease_terms) |>
   # distinct()
 
 left_join(gwas_disease_traits, 
