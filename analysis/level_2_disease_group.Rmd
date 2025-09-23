@@ -54,6 +54,19 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+
+# Maternal and neonatal disorders
+
+## Maternal disorders
+
+### 
+
+```{r maternal_neonatal_disorders}
+
+
+
+```
+
 # Neoplasms 
 
 ## Lip and oral cavity cancer
@@ -987,6 +1000,9 @@ gwas_study_info |>
 
 ```{r peripheral_arterial_disease}
 
+lower_extremity_peripheral_arterial_disease_terms <- c("raynaud disease"
+                                                        )
+
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("lower extremity peripheral arterial disease"), 
               l2_all_disease_terms,
@@ -1021,11 +1037,10 @@ other_cardiovascular_terms <- c("tachycardia",
                                 "other cardiac arrhythmias",
                                 "heart block",
                                 "carotid artery disease",
-                                "(?=,|^)hypertension",
+                                "hypertension",
                                 "pericarditis",
                                 "coronary artery calcification",
                                 "arterial occlusion",
-                                "congenital heart disease",
                                 "other vascular disorders",
                                 "congestive heart failure",
                                 "heart failure",
@@ -1631,7 +1646,8 @@ depressive_terms <- c("depressive disorder",
                       "depressive episode",
                       "major depressive disorders",
                       "major depressive disorder",
-                      "major depressive episode"
+                      "major depressive episode",
+                      "depressive"
 )
 
 
@@ -1670,7 +1686,8 @@ anxiety_terms <- get_descendants(url)
 
 anxiety_terms <- c(anxiety_terms, 
                    "obsessive-compulsive symptom measurement",
-                   "obsessive-compulsive disorder"
+                   "obsessive-compulsive disorder",
+                   "obsessive-compulsive"
                    )
 
 
@@ -1917,7 +1934,9 @@ other_mental_disorders <- c("manic or hypomanic episode",
                             "dissociative disorder",
                             "hallucinations",
                             "somatoform disorder",
-                            "schizoaffective disorder"
+                            "schizoaffective disorder",
+                            "phobic disorder",
+                            "psychotic"
                             
 )
 
@@ -2076,7 +2095,7 @@ other_drug_use_terms <- c("heroin dependence",
                           "nictone dependence",
                           "substance abuse",
                           "drug misuse",
-                          "alcohol use disorders delirium"
+                          "nicotine-related disorders"
                           )
 
 gwas_study_info = 
@@ -2459,6 +2478,8 @@ hearing_loss_terms <- c("sensorineural hearing loss",
                         "age-related hearing impairment",
                         "conductive hearing impairment",
                         "noise-induced hearing loss",
+                        "hearing loss",
+                        "meniere disease",
                         "deafness")
 
 
@@ -2576,44 +2597,563 @@ other_neuro <- c("mild neurocognitive disorder",
 
 ```
 
-
 # Other non-communicable diseases
 
-## Urinary diseases and male infertility
+## Congenital birth defects 
 
-```{r urinary_diseases}
+### Neural tube defects
 
-urinary_diseases_terms <- c("urinary incontinence",
-                            "stress urinary incontinence",
-                            "urgency urinary incontinence",
-                            "urinary system disease",
-                            "urinary tract obstruction",
-                            "bladder neck obstruction",
-                            "bladder calculus",
-                            "urethral disease",
-                            "uterine disorder",
-                            "urethral syndrome",
-                            "uterine inflammatory disease",
-                            "lower urinary tract calculus",
-                            "enuresis"
-                            )
+### Congenital heart defects
 
-urinary_diseases_terms <- str_length_sort(urinary_diseases_terms)
+### Orofacial clefts
 
-urin_male_infert <- c(urinary_diseases_terms, "male infertility")
+```{r orofacial_clefts}
 
 gwas_study_info = gwas_study_info |>
   mutate(l2_all_disease_terms = 
            stringr::str_replace_all(
              l2_all_disease_terms,
-             vec_to_grep_pattern(urin_male_infert),
-             "urinary diseases and male infertility"
+             vec_to_grep_pattern("orofacial cleft"),
+             "orofacial clefts"
+           )
+  )
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("orofacial clefts"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Down syndrome
+
+```{r down_syndrome}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("down syndrome"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Klinefelter syndrome
+
+```{r klinefelter_syndrome}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("klinefelter syndrome"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+```{r icd_load}
+
+icd10 <- readxl::read_xlsx(here::here("data/icd/cdc_valid_icd10_Sep_23_2025.xlsx"))
+
+icd10 <- icd10 |>
+  rename_with(~ tolower(gsub(" ", "_", .x))) 
+
+
+```
+
+
+### Other chromosomal abnormalities
+
+```{r other_chromosomal_abnormalities}
+
+# Q87-Q87.8, Q91-Q93.9, Q95-Q95.9, Q97-Q97.9, Q99-Q99.8
+
+other_chrom_abn_icd10 <-
+  c(paste0("Q", seq(87, 87.8, by = 0.1) * 10),
+    paste0("Q", seq(91, 93.9, by = 0.1) * 10),
+    paste0("Q", seq(95, 95.9, by = 0.1) * 10),
+    paste0("Q", seq(97, 97.9, by = 0.1) * 10),
+    paste0("Q", seq(99, 99.8, by = 0.1) * 10)
+    )
+
+other_chrom_abn_terms <-
+  icd10 |>
+  filter(grepl(paste0(other_chrom_abn_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+other_chrom_abn <- c("marfran syndrome",
+                     "fragile x syndrome",
+                     "22q11.2 deletion syndrome",
+                     "chromosomal disorder")
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0019040/descendants"
+
+chromosomal_disorders <- get_descendants(url)
+
+other_chrom_abn <- c(other_chrom_abn, chromosomal_disorders)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          vec_to_grep_pattern(c(other_chrom_abn_terms, other_chrom_abn)),
+                          "other chromosomal abnormalities"
+         )
+  )
+
+
+```
+
+### Congenital heart abnormalities
+
+```{r congenital_heart_abnormalities}
+
+# Q20-Q28.9
+congen_heart_icd10 <-
+  paste0("Q", seq(20, 28.9, by = 0.1) * 10) 
+
+
+congen_terms <-
+  icd10 |>
+  filter(grepl(paste0(congen_heart_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          "congenital anomaly of cardiovascular system",
+                          "congenital heart abnormalities"
+         )
+  )
+
+
+```
+
+### Congenital musculoskeletal and limb anomalies
+
+```{r congenital_musculoskeletal_and_limb_anomalies}
+
+# Q65-Q79, Q79.6-Q79.9
+congen_musculo_icd10 <-
+  c(paste0("Q", seq(65, 79, by = 0.1) * 10),
+    paste0("Q", seq(79.6, 79.9, by = 0.1) * 10)
+    )
+
+congen_musculo_terms <-
+  icd10 |>
+  filter(grepl(paste0(congen_musculo_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+
+congen_muscle <- c("osteochondrodysplasia",
+                   "congenital deformities of limbs",
+                   "lower limb asymmetry",
+                   "familial clubfoot with or without associated lower limb anomalies",
+                   "abnormality of limbs",
+                   "abnormal foot morphology",
+                   congen_musculo_terms
+                   )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          vec_to_grep_pattern(c(congen_musculo_terms, congen_muscle)),
+                          "congenital musculoskeletal and limb anomalies"
+         )
+  )
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("congenital musculoskeletal and limb anomalies"), 
+              l1_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l1_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Urogenital congenital anomalies
+
+```{r urogenital_birth_defects}
+
+# P96.0, Q50-Q60.6, Q63-Q64.9
+
+urogenital_icd10 <-
+  c("P960",
+    paste0("Q", seq(50, 60.6, by = 0.1) * 10),
+    paste0("Q", seq(63, 64.9, by = 0.1) * 10)
+    )
+
+urogenital_terms <-
+  icd10 |>
+  filter(grepl(paste0(urogenital_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+
+urogenital_terms <- 
+  c("abnormal morphology of female internal genitalia",
+    "abnormality of the genital system",
+    "functional abnormality of the bladder",
+    "congenital anomaly of kidney and urinary tract",
+    "bladder exstrophy", # ICD9:753.5
+    tolower(urogenital_terms))
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          vec_to_grep_pattern(urogenital_terms),
+                          "urogenital congenital anomalies"
+         )
+  )
+
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("urogenital congenital anomalies"), 
+              l1_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l1_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Digestive congenital anomalies
+
+```{r digestive_congenital_anomalies}
+
+# Q38-Q45.9, Q79.0-Q79.5
+
+digestive_icd10 <-
+  c(paste0("Q", seq(38, 45.9, by = 0.1) * 10),
+    paste0("Q", seq(79, 79.5, by = 0.1) * 10)
+    )
+
+digestive_terms <-
+  icd10 |>
+  filter(grepl(paste0(digestive_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+digestive_terms <- tolower(digestive_terms)
+digestive_terms <- stringr::str_remove_all(digestive_terms, ", unspecified$")
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          vec_to_grep_pattern(tolower(digestive_terms)),
+                          "digestive congenital anomalies"
+         )
+  )
+
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("digestive congenital anomalies"), 
+              l1_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l1_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+## Urinary diseases and male infertility
+
+### Urinary tract infections and interstitial nephritis
+
+```{r urinary_tract_infections}
+
+# N10-N12.9, N13.6, N15, N15.1-N16.8, N30-N30.3, N30.8-N30.9, N34-N34.3, N39.0-N39.2
+
+uti_icd10 <-
+  c(paste0("N", seq(10, 12.9, by = 0.1) * 10),
+    "N136",
+    paste0("N", seq(151, 168, by = 0.1) * 10),
+    paste0("N", seq(30, 30.3, by = 0.1) * 10),
+    paste0("N", seq(308, 309, by = 0.1) * 10),
+    paste0("N", seq(34, 34.3, by = 0.1) * 10),
+    paste0("N", seq(390, 392, by = 0.1) * 10)
+    )
+
+
+uti_terms <-
+  icd10 |>
+  filter(grepl(paste0(uti_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+uti_terms <-
+  c("acute cystitis",
+    "chronic cystitis",
+    "chronic interstitial cystitis",
+    "urinary tract infection",
+    "interstitial nephritis",
+    "pyelonephritis",
+    "urethritis",
+    uti_terms
+    )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+           stringr::str_replace_all(
+             l2_all_disease_terms,
+             vec_to_grep_pattern(uti_terms),
+             "urinary tract infections and interstitial nephritis"
+           )
+  )
+
+```
+
+### Urolithiasis
+
+```{r urolithiasis_terms}
+
+# N20-N23.0
+
+urolithiasis_icd10 <-
+  paste0("N", seq(20, 23.0, by = 0.1) * 10)
+
+urolithiasis_terms <-
+  icd10 |>
+  filter(grepl(paste0(urolithiasis_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+urolithiasis_terms <-
+  c("lower urinary tract calculus",
+    "bladder calculus",
+    "calcium oxalate nephrolithiasis",
+    "nephrolithiasis",
+    "renal colic", #icd-9 788.0
+    urolithiasis_terms
+    )
+
+```
+
+### Benign prostatic hyperplasia
+
+```{r benign_prostatic_hyperplasia}
+
+
+
+
+```
+
+
+### Male infertility
+
+```{r male_infert}
+
+gwas_study_info |>
+  filter(grepl(vec_to_grep_pattern("male infertility"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct()
+
+```
+
+
+### Other urinary diseases
+
+```{r urinary_diseases}
+
+
+# N25-N28.1, N29-N29.8, N31-N32.0, N32.3-N32.4, N36-N36.9, N39, N41-N41.9, N44-N44.0, N45-N45.9, N49-N49.9
+
+urine_icd10 <- 
+  c(paste0("N", seq(25, 28.1, by = 0.1) * 10),
+    paste0("N", seq(29, 29.8, by = 0.1) * 10),
+    paste0("N", seq(31, 32.0, by = 0.1) * 10),
+    paste0("N", seq(32.3, 32.4, by = 0.1) * 10),
+    paste0("N", seq(36, 36.9, by = 0.1) * 10),
+    "N39",
+    paste0("N", seq(41, 41.9, by = 0.1) * 10),
+    paste0("N", seq(44, 44.0, by = 0.1) * 10),
+    paste0("N", seq(45, 45.9, by = 0.1) * 10),
+    paste0("N", seq(49, 49.9, by = 0.1) * 10)
+    )
+
+urine_terms <-
+  icd10 |>
+  filter(grepl(paste0(urine_icd10, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique() |>
+  tolower()
+
+urine_terms <- stringr::str_remove_all(urine_terms, ", unspecified$")
+urine_terms <- stringr::str_remove_all(urine_terms, ", site not specified$")
+
+
+urinary_diseases_terms <- c("urinary incontinence",
+                            "stress urinary incontinence",
+                            "urgency urinary incontinence",
+                            "urinary system disease",
+                            "bladder neck obstruction",
+                            "urethral disease",
+                            "urethral syndrome",
+                            "uterine inflammatory disease",
+                            "enuresis",
+                            "neurogenic bladder", # icd9 596.54
+                            "bladder diverticulum", # icd9 596.3
+                            urine_terms
+                            )
+
+urinary_diseases_terms <- str_length_sort(urinary_diseases_terms)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+           stringr::str_replace_all(
+             l2_all_disease_terms,
+             vec_to_grep_pattern(urinary_diseases_terms),
+             "other urinary diseases"
            )
   )
 
 ```
 
 ## Gynocological diseases
+
+### Uterine fibroids
+
+```{r uterine_fibroids}
+
+
+# D25-D26, D28.2
+icd10_uterine_fibroids <-
+  c(paste0("D", seq(25, 26, by = 0.1) * 10),
+    "D282"
+    )
+
+icd10_uterine_fibroids_terms <-
+  icd10 |>
+  filter(grepl(paste0(icd10_uterine_fibroids, collapse = "|"), code)) |>
+  pull(`short_description_(valid_icd-10_fy2025)`) |>
+  unique()
+
+uterine_fibroid_terms <- 
+  c("uterine leiomyoma",
+    "uterine fibroid")
+
+
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(uterine_fibroid_terms),
+                                   "uterine fibroids"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("uterine fibroids"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Polycystic ovary syndrome
+
+```{r pcos}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("polycystic ovary syndrome"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Female infertility
+
+```{r female_infert}
+
+gwas_study_info |>
+  filter(grepl(
+         vec_to_grep_pattern("female infertility"),
+         l2_all_disease_terms,
+         perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() 
+
+```
+
+### Endometriosis
+
+```{r endometriosis}
+
+endo_terms <- c("ovarian endometriosis",
+                "endometriosis of pelvic peritoneum"
+                )
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(endo_terms),
+                                   "endometriosis"
+                          )  
+        )
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("endometriosis"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+
+```
+
+### Genital prolapse
+
+```{r genital_prolapse}
+
+fem_genital_prolapse_terms <- c("uterine prolapse",
+                              "cystocele",
+                              "rectocele"
+)
+
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(fem_genital_prolapse_terms),
+                                   "genital prolapse"
+                          )
+ )
+        
+        
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("genital prolapse"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
+### Premenstrual syndrome
+
+```{r premenstrual_syndrome}
+
+
+```
+
+### Other gynocological diseases
 
 ```{r gynocological_diseases}
 
@@ -2622,37 +3162,40 @@ diseases <- stringr::str_split(pattern = ", ",
             unlist() |>
             stringr::str_trim()
 
+# N72-N72.0, N75-N77.8, N83-N83.9
 
-pregnancy_terms <- grep("pregnancy", diseases, value = T)
+other_gyno_terms <- c("cervicitis", #N72
+                      "bartholin gland disease", # N75
+                      "bartholin duct cyst",
+                      "vaginitis", # N76
+                      "vaginal inflammation",
+                      "postmenopausal atrophic vaginitis",                      
+                      "atrophic vaginitis",
+                      "vulvovaginitis",
+                      "ulceration of vulva", # N77
+                      "ovarian cyst", # N83
+                      "follicular cyst"
+                      )
 
-gyno_terms <- c("endometriosis",
-                "female reproductive system disease",
-                "female genital tract fistula",
-                "placenta disease", 
-                "female infertility",
-                "polycystic ovary syndrome",
-                "ovarian dysfunction",
-                "ovarian gynecological diseases",
-                "ovarian cyst",
-                "ovarian disease",
-                "primary ovarian insufficiency",
-                "premature ovarian insufficiency",
-                "vaginal inflammation",
-                "vaginal disorder",
-                "postmenopausal atrophic vaginitis",
-                "uterine prolapse",
-                "atrophic vaginitis",
-                "vaginitis",
-                "vulvovaginitis",
-                "abnormal delivery",
-                pregnancy_terms)
+# pregnancy_terms <- grep("pregnancy", diseases, value = T)
+
+# gyno_terms <- c(
+#                 "female reproductive system disease",
+#                 "female genital tract fistula",
+#                 "placenta disease", 
+#                 "ovarian gynecological diseases",
+#                 "vaginal disorder",
+# 
+# 
+#                 "abnormal delivery",
+#                 pregnancy_terms)
 
 
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms,
-                                  pattern = vec_to_grep_pattern(gyno_terms),
-                                   "gynecological diseases"
+                                  pattern = vec_to_grep_pattern(other_gyno_terms),
+                                   "other gynecological diseases"
                           )  
         )
 
@@ -2691,6 +3234,120 @@ gwas_study_info |>
 
 
 ```
+
+### Endocrine, metabolic, blood, and immune disorders
+
+```{r endo_metab_immune_disorders}
+
+endo_terms <- c("ovarian dysfunction",
+                "ovarian disease",
+                "menstrual disorder",
+            #    "premenstral tension" #icd9 625.4, icd10 N94.3,
+                "adrenocortical insufficiency", # ICD9:255.4, ICD10:E27.1 / ICD10:E27.4
+                "cushing syndrome", # ICD9:255.0, ICD10:E24
+                "hyperaldosteronism", # ICD10CM:E26, ICD9:255.1
+                "delayed puberty", #ICD10:E30.1, ICD9:259.1
+                "central precocious puberty",  #?ICD10: E30.1
+            "endocrine system disease" # ????
+                )
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(endo_terms),
+                                   "other endocrine disorders"
+                          )  
+        )
+
+thyroid_terms <- c("congenital hypothyroidism due to developmental anomaly", #ICD-10:E03.1
+                   "hypothyroidism",
+                   "nontoxic goiter",#ICD-10: E04
+                   "thyrotoxicosis", #ICD-10: E05
+                   "toxic nodular goiter", # ICD9:242.3)
+                   "thyroiditis", #ICD-10: E06, IDC9:245
+                   "hashimotos thyroiditis", #ICD9:245.2
+                   "graves disease", #ICD9:242.0,
+                   "autoimmune thyroid disease" #ICD10:E06.3,
+                   )
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(thyroid_terms),
+                                   "thyroid disorders"
+                          )  
+        )
+
+
+other_blood_disorders <- c("neutropenia",
+                           "cryoglobulinemia")
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(other_blood_disorders),
+                                   "other blood disorders"
+                          )  
+        )
+
+metabolism_disorders <- c("hypoglycemia",
+                          "hypoparathyroidism",
+                          "parathyroid disease", # ICD9: 252
+                          "primary hyperparathyroidism", # ICD10 E21.0
+                          "hyperparathyroidism", #ID20 E20
+                          # "secondary hyperparathyroidism of renal origin" not incl, as otherwise specified in ICD10CM:N25.81
+                          "obesity",
+                          "metabolic syndrome",
+                          "metabolic syndrome x",
+                          "inborn errors of metabolism",
+                          "metabolic disease",
+                          "mineral metabolism disease", # ICD9:275.8, ICD9:275.9, ICD10:E83
+                          "acidosis", # ICD9:276.2
+                          "disorder of acid-base balance", # ? ICD10-cm E87.8
+                          "bilirubin metabolism disease"
+                          )
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(metabolism_disorders),
+                                   "other metabolic disorders"
+                          )  
+        )
+
+```
+
+## Oral disorders
+
+```{r oral_disorders}
+
+oral_disorders_terms <- c("dental caries",
+                           "tooth disease",
+                          "toothache",
+                           "periodontal disease"
+)
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+           stringr::str_replace_all(
+             l2_all_disease_terms,
+             vec_to_grep_pattern(oral_disorders_terms),
+             "oral disorders"
+           )
+  )
+
+
+gwas_study_info |> 
+ filter(grepl(vec_to_grep_pattern("oral disorders"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
 
 
 
