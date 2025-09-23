@@ -32,25 +32,6 @@ source(here::here("code/get_term_descendants.R"))
 
 ```
 
-## Convert vec to grep search patttern
-
-```{r vec_to_grep_pattern}
-
-vec_to_grep_pattern <- function(vec){
-  
-  vec <- paste0("(?<=^|, )", vec)
-  vec <- paste0(vec, "(?=,|$)")
-  
-  if(length(vec) > 1){
-  vec <- paste0(vec, collapse = "|")
-  }
-  
-  return(vec)
-  
-}
-
-```
-
 
 ```{r setup_2, message = FALSE, warning= FALSE}
 
@@ -96,19 +77,7 @@ test <- data.frame(trait = unique(diseases))
 
 ```
 
-# Cancer aggressiveness measurement
 
-```{r cancer_aggression}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l1_all_disease_terms  = 
-          stringr::str_remove_all(l1_all_disease_terms,
-                                  pattern = "^cancer aggressiveness"
-                          )
- ) 
-
-```
 
 # Disease subtype grouping (cancer)
 
@@ -127,7 +96,7 @@ gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  =
           ifelse(PUBMED_ID == "36810956",
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "astrocytoma",
+                                  pattern = vec_to_grep_pattern("astrocytoma"),
                                    "central nervous system cancer"
                           ),
           l1_all_disease_terms
@@ -159,7 +128,7 @@ bone_cancer_terms = c("malignant bone neoplasm",
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = paste0(bone_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(bone_cancer_terms),
                                    "bone cancer"
                           )  
         )
@@ -187,7 +156,7 @@ bladder_cancer_terms = stringr::str_replace_all(bladder_cancer_terms,
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(bladder_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(bladder_cancer_terms),
                                    "bladder cancer"
                           )  
         )
@@ -205,19 +174,19 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(breast_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(breast_cancer_terms),
                                    "breast cancer"
                           )  
         ) |>
    mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "breast cancer in situ",
+                                  pattern = vec_to_grep_pattern("breast cancer in situ"),
                                    "breast cancer"
                           )  
         ) |>
      mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "invasive lobular cancer",
+                                  pattern = vec_to_grep_pattern("invasive lobular cancer"),
                                    "breast cancer"
                           )  
         )
@@ -243,7 +212,7 @@ benign_blood_vessel_terms <- stringr::str_replace_all(benign_blood_vessel_terms,
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms = 
         stringr::str_replace_all(l1_all_disease_terms, 
-                    paste0(benign_blood_vessel_terms, collapse = "(?=,|$)|\\b"), 
+                    vec_to_grep_pattern(benign_blood_vessel_terms),
                     "benign neoplasm")
          )
 
@@ -256,14 +225,14 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
         str_replace_all(l1_all_disease_terms, 
-                    "benign neoplasm of (.*?)(?=,|$)|benign neoplasm of (.*?) (.*?)(?=,|$)", 
+                    "(?<=^|, )benign neoplasm of (.*?)(?=,|$)|(?<=^|, )benign neoplasm of (.*?) (.*?)(?=,|$)", 
                     "benign neoplasm")
          ) 
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
         str_replace_all(l1_all_disease_terms, 
-                    "benign (.*?) neoplasm(?=,|$)|benign (.*?) (.*?) neoplasm(?=,|$)", 
+                    "(?<=^|, )benign (.*?) neoplasm(?=,|$)|(?<=^|, )benign (.*?) (.*?) neoplasm(?=,|$)", 
                     "benign neoplasm")
          ) 
 
@@ -271,21 +240,21 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
         str_replace_all(l1_all_disease_terms, 
-                    "(.*?) benign neoplasm(?=,|$)|(.*?) (.*?) neoplasm(?=,|$)", 
+                    "(?<=^|, )(.*?) benign neoplasm(?=,|$)|(.*?) (.*?) neoplasm(?=,|$)", 
                     "benign neoplasm")
          ) 
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
         str_replace_all(l1_all_disease_terms, 
-                    "polyp of (.*?)(?=,|$)|polyp of (.*?) (.*?)(?=,|$)", 
+                    "(?<=^|, )polyp of (.*?)(?=,|$)|(?<=^|, )polyp of (.*?) (.*?)(?=,|$)", 
                     "benign neoplasm")
          ) 
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
         str_replace_all(l1_all_disease_terms, 
-                    "(?=,|^)(.*?) polyp(?=,|$)|(?=,|^)(.*?) (.*?) polyp (?=,|$)", 
+                    "(?<=^|, ) (.*?) polyp(?=,|$)|(?<=^|, )(.*?) (.*?) polyp (?=,|$)", 
                     "benign neoplasm")
          ) 
 
@@ -327,7 +296,7 @@ other_benign_neoplasms = str_length_sort(other_benign_neoplasms)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms = 
         str_replace_all(l1_all_disease_terms, 
-                    paste0(other_benign_neoplasms, collapse = "(?=,|$)|\\b"), 
+                    vec_to_grep_pattern(other_benign_neoplasms),
                     "benign neoplasm")
          )
 
@@ -350,7 +319,7 @@ cns_cancer_terms = stringr::str_replace_all(cns_cancer_terms,
 
 ```{r}
 
-pattern = paste0(cns_cancer_terms, collapse = "(?=,|$)|\\b")
+pattern = vec_to_grep_pattern(cns_cancer_terms)
 
 gwas_study_info = gwas_study_info |>
    mutate(l1_all_disease_terms  = 
@@ -381,31 +350,20 @@ cervical_cancer_terms = c("cervical intraepithelial neoplasia grade 2/3",
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "uterine cervical cancer in situ",
+                                  pattern = vec_to_grep_pattern("uterine cervical cancer in situ"),
                                    "cervical cancer"
                           )  
         )
 
-
-```
-
-```{r}
 
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = paste0(cervical_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(cervical_cancer_terms),
                                    "cervical cancer"
                           )  
         )
 
-gwas_study_info = gwas_study_info |>
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "uterine cervical cancer in situ",
-                                   "cervical cancer"
-                          )  
-        )
 
 ```
 
@@ -434,19 +392,19 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = paste0(colorectal_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(colorectal_cancer_terms),
                                    "colorectal cancer"
                           )  
         ) |>
    mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "colorectal mucinous adenocarcinoma",
+                                  pattern = vec_to_grep_pattern("colorectal mucinous adenocarcinoma"),
                                    "colorectal cancer"
                           )  
         ) |>
    mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "metachronous colorectal adenoma",
+                                  pattern = vec_to_grep_pattern("metachronous colorectal adenoma"),
                                    "colorectal cancer"
                           )  
         )
@@ -470,8 +428,6 @@ endometrial_cancer_terms = stringr::str_replace_all(endometrial_cancer_terms,
                             "\\bcarcinoma",
                             "cancer")
 
-
-
 ```
 
 ```{r}
@@ -479,7 +435,7 @@ endometrial_cancer_terms = stringr::str_replace_all(endometrial_cancer_terms,
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(endometrial_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(endometrial_cancer_terms),
                                    "endometrial cancer"
                           )  
         )
@@ -498,7 +454,7 @@ esophageal_cancer_terms <- c("esophageal adenocarcinoma",
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(esophageal_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(esophageal_cancer_terms),
                                    "esophageal cancer"
                           )  
         )
@@ -525,7 +481,7 @@ ocular_cancer_terms = stringr::str_replace_all(ocular_cancer_terms,
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(ocular_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(ocular_cancer_terms),
                                    "ocular cancer"
                           )  
         )
@@ -540,7 +496,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                         "cancer of gallbladder and extrahepatic biliary tract",
+                         vec_to_grep_pattern("cancer of gallbladder and extrahepatic biliary tract"),
                          "gallbladder and biliary tract cancer"
          )
          )
@@ -554,7 +510,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms ,
-                          "nodular sclerosis hodgkin lymphoma",
+                          vec_to_grep_pattern("nodular sclerosis hodgkin lymphoma"),
                           "hodgkins lymphoma"
          ))
 
@@ -567,7 +523,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms ,
-                          "head and neck squamous cell cancer",
+                          vec_to_grep_pattern("head and neck squamous cell cancer"),
                           "head and neck cancer, squamous cell cancer"
          ))
 
@@ -605,7 +561,7 @@ kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
                             "cancer")
 
 kidney_cancer_terms =  stringr::str_replace_all(kidney_cancer_terms,
-                          "renal cancer",
+                          vec_to_grep_pattern("renal cancer"),
                           "kidney cancer")
 
 
@@ -618,7 +574,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(kidney_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(kidney_cancer_terms),
                                    "kidney cancer"
                           )  
         )
@@ -634,7 +590,11 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "laryngeal squamous cell cancer|laryngeal cancer",
+                                  pattern = 
+                                    vec_to_grep_pattern(
+                                      c("laryngeal squamous cell cancer",
+                                      "laryngeal cancer")
+                                      ),
                                    "larynx cancer"
                           )  
         )
@@ -666,7 +626,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(leukemia_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(leukemia_terms),
                                    "leukemia"
                           )  
         )
@@ -693,7 +653,7 @@ lip_oral_cavity_cancer_terms = stringr::str_replace_all(lip_oral_cavity_cancer_t
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(lip_oral_cavity_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(lip_oral_cavity_cancer_terms),
                                    "lip and oral cavity cancer"
                           )  
         )
@@ -724,7 +684,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(liver_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(liver_cancer_terms),
                                    "liver cancer"
                           )  
         )
@@ -733,7 +693,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "hepatitis virus-related liver cancer",
+                                  pattern = vec_to_grep_pattern("hepatitis virus-related liver cancer"),
                                    "liver cancer"
                           )  
         )
@@ -761,7 +721,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(lung_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(lung_cancer_terms),
                                    "lung cancer"
                           )  
         )
@@ -797,7 +757,7 @@ ovarian_cancer_terms = c("high grade serous ovarian cancer",
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = paste0(ovarian_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(ovarian_cancer_terms),
                                    "ovarian cancer"
                   
         )
@@ -806,7 +766,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = "high grade ovarian cancer",
+                                  pattern = vec_to_grep_pattern("high grade ovarian cancer"),
                                    "ovarian cancer"
                           )  
         )
@@ -832,7 +792,7 @@ pancreatic_cancer_terms = stringr::str_replace_all(pancreatic_cancer_terms,
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(pancreatic_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(pancreatic_cancer_terms),
                                    "pancreatic cancer"
                           )  
         )
@@ -858,7 +818,7 @@ peripheral_nervous_system_cancer_terms = stringr::str_replace_all(peripheral_ner
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(peripheral_nervous_system_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(peripheral_nervous_system_cancer_terms),
                                    "peripheral nervous system cancer"
                           )  
         )
@@ -888,7 +848,7 @@ prostate_cancer_terms = c("grade iii prostatic intraepithelial neoplasia",
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = paste0(prostate_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(prostate_cancer_terms),
                                    "prostate cancer"
                           )  
         )
@@ -906,7 +866,7 @@ mesothelioma_terms = c("pleural mesothelioma",
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(mesothelioma_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(mesothelioma_terms),
                                    "mesothelioma"
                           )  
         )
@@ -926,7 +886,7 @@ neuroendo_terms <- c("pulmonary neuroendocrine tumor",
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(neuroendo_terms, collapse = "(?=,|$)|\\b"),
+                                    pattern = vec_to_grep_pattern(neuroendo_terms),
                                    "neuroendocrine tumor"
                           )  
         )
@@ -969,7 +929,7 @@ gwas_study_info =
 gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(nhl_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(nhl_terms),
                                    "non-hodgkins lymphoma"
                           )  
         )
@@ -996,11 +956,10 @@ non_melanoma_skin_cancer_terms = stringr::str_replace_all(non_melanoma_skin_canc
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(non_melanoma_skin_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(non_melanoma_skin_cancer_terms),
                                    "non-melanoma skin cancer"
                           )  
         )
-
 
 ```
 
@@ -1027,7 +986,7 @@ other_pharynx_cancer_terms = c("hypopharyngeal cancer",
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(other_pharynx_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(other_pharynx_cancer_terms),
                                    "other pharynx cancer"
                           )  
         )
@@ -1057,7 +1016,7 @@ soft_tissue_sarcoma_terms = c("kaposis sarcoma",
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(soft_tissue_sarcoma_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(soft_tissue_sarcoma_terms),
                                    "soft tissue sarcoma"
                           )  
         )
@@ -1065,7 +1024,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "sarcoma, soft tissue sarcoma",
+                                  pattern = vec_to_grep_pattern("sarcoma, soft tissue sarcoma"),
                                    "soft tissue sarcoma"
                           )
  )
@@ -1112,13 +1071,13 @@ stomach_cancer_terms = c(
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(stomach_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(stomach_cancer_terms),
                                    "stomach cancer"
                           )  
         ) |>
    mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "diffuse stomach cancer",
+                                  pattern = vec_to_grep_pattern("diffuse stomach cancer"),
                                    "stomach cancer"
                           )  
         )
@@ -1132,8 +1091,8 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = "cutaneous squamous cell cancer",
-                                   "squamous cell cancer"
+                                  pattern = vec_to_grep_pattern("cutaneous squamous cell cancer"),
+                                   "non-melanoma skin cancer"
                           )  
         )
 
@@ -1163,7 +1122,7 @@ thyroid_cancer_terms = c("differentiated thyroid cancer",
 gwas_study_info = gwas_study_info |> 
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(thyroid_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(thyroid_cancer_terms),
                                    "thyroid cancer"
                           )  
         )
@@ -1180,7 +1139,7 @@ uterine_cancer_terms <- c("uterine corpus cancer",
 gwas_study_info = gwas_study_info |>
  mutate(l1_all_disease_terms  = 
           stringr::str_replace_all(l1_all_disease_terms ,
-                                  pattern = paste0(uterine_cancer_terms, collapse = "(?=,|$)|\\b"),
+                                  pattern = vec_to_grep_pattern(uterine_cancer_terms),
                                    "uterine cancer"
                           )  
         )
@@ -1318,7 +1277,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(grepl("malignant|cancer", `DISEASE/TRAIT`, ignore.case = T) &
                 l1_all_disease_terms == "colonic neoplasm",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "colonic neoplasm",
+                          vec_to_grep_pattern("colonic neoplasm"),
                           "colorectal cancer"),
                 l1_all_disease_terms
          )
@@ -1336,7 +1295,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(STUDY_ACCESSION == "GCST90179122",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "colonic neoplasm",
+                          vec_to_grep_pattern("colonic neoplasm"),
                           "colorectal cancer"),
                 l1_all_disease_terms
          )
@@ -1440,7 +1399,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(STUDY_ACCESSION == "GCST005857",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "gallbladder neoplasm",
+                          vec_to_grep_pattern("gallbladder neoplasm"),
                           "gallbladder and biliary tract cancer"),
                 l1_all_disease_terms
          ))
@@ -1511,7 +1470,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(STUDY_ACCESSION == "GCST008912",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms
          ))
@@ -1522,7 +1481,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(`DISEASE/TRAIT` == "Glioblastoma" & l1_all_disease_terms == "glioma",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms
          ))
@@ -1536,7 +1495,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(PUBMED_ID == 22886559 & l1_all_disease_terms == "glioma",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms)
   )
@@ -1551,7 +1510,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(PUBMED_ID == 29743610 & l1_all_disease_terms == "glioma",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms)
   )
@@ -1564,7 +1523,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(PUBMED_ID == 36810956 & l1_all_disease_terms == "glioma",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms)
   )
@@ -1576,7 +1535,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(PUBMED_ID == 30714141 & l1_all_disease_terms == "glioma",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms)
   )
@@ -1588,7 +1547,7 @@ gwas_study_info |>
   mutate(l1_all_disease_terms  =
          ifelse(PUBMED_ID == 34319593 & l1_all_disease_terms == "glioma",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
                 l1_all_disease_terms)
   )
@@ -1654,7 +1613,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(STUDY_ACCESSION == "GCST90041889",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "laryngeal neoplasm",
+                          vec_to_grep_pattern("laryngeal neoplasm"),
                           "larynx cancer"),
                 l1_all_disease_terms
          ))
@@ -2132,14 +2091,14 @@ ocular_melanoma_terms = str_length_sort(ocular_melanoma_terms)
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          paste0(ocular_melanoma_terms, collapse = "(?=,|$)|\\b"),
+                          vec_to_grep_pattern(ocular_melanoma_terms),
                           "ocular melanoma"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "ocular melanoma disease severity",
+                          vec_to_grep_pattern("ocular melanoma disease severity"),
                           "ocular melanoma"
          ))
 
@@ -2161,7 +2120,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(STUDY_ACCESSION == "GCST90093303",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "benign neoplasm, colorectal cancer",
+                          vec_to_grep_pattern("benign neoplasm, colorectal cancer"),
                           "colorectal cancer"),
                 l1_all_disease_terms
          ))
@@ -2175,7 +2134,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "larynx cancer, pharynx cancer",
+                          vec_to_grep_pattern("larynx cancer, pharynx cancer"),
                           "larynx cancer, other pharynx cancer"
          ))
 
@@ -2191,7 +2150,7 @@ gwas_study_info =
   gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "cutaneous melanoma",
+                          vec_to_grep_pattern("cutaneous melanoma"),
                           "malignant melanoma of skin"
          ))
   
@@ -2241,7 +2200,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bmelanoma",
+                          vec_to_grep_pattern("melanoma"),
                           "malignant melanoma of skin"),
                 l1_all_disease_terms
          ))
@@ -2253,7 +2212,7 @@ gwas_study_info = gwas_study_info |>
                 grepl("UKBB", COHORT, ignore.case = T) &
                 grepl("malignant melanoma", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bmelanoma",
+                          vec_to_grep_pattern("melanoma"),
                           "malignant melanoma of skin"),
                 l1_all_disease_terms
          ))
@@ -2264,7 +2223,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(l1_all_disease_terms == "melanoma" & 
                 grepl("\\bcutaneous melanoma", STUDY, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bmelanoma", 
+                          vec_to_grep_pattern("melanoma"), 
                           "malignant melanoma of skin"),
                 l1_all_disease_terms
          ))
@@ -2353,7 +2312,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(PUBMED_ID %in% malignant_skin_melanoma_studies &
                 grepl("\\bmelanoma", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bmelanoma",
+                          vec_to_grep_pattern("melanoma"),
                           "malignant melanoma of skin"),
                 l1_all_disease_terms
          ))
@@ -2366,7 +2325,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(PUBMED_ID == 32887889 &
                 grepl("\\bmelanoma", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bmelanoma",
+                          vec_to_grep_pattern("melanoma"),
                           "malignant melanoma of skin"),
                 l1_all_disease_terms
          ))
@@ -2378,7 +2337,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(PUBMED_ID == 33409738 &
                 grepl("\\bmelanoma", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bmelanoma",
+                          vec_to_grep_pattern("melanoma"),
                           "malignant melanoma of skin"),
                 l1_all_disease_terms
          ))
@@ -2399,7 +2358,7 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "uterine cervix cancer in situ",
+                          vec_to_grep_pattern("uterine cervix cancer in situ"),
                           "cervical cancer"
          ))
 
@@ -2417,7 +2376,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(grepl("in situ", l1_all_disease_terms) & 
                 grepl("ICD10 D04|PheCode 172.3", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "skin cancer in situ",
+                          vec_to_grep_pattern("skin cancer in situ"),
                           "non-melanoma skin cancer"),
                 l1_all_disease_terms
          )
@@ -2429,7 +2388,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(l1_all_disease_terms == "in situ cancer",
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "in situ cancer",
+                          vec_to_grep_pattern("in situ cancer"),
                           "cancer"),
                 l1_all_disease_terms
          )
@@ -2452,7 +2411,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(l1_all_disease_terms == "cancer" & 
                 grepl("ICD10 Z85.4", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "cancer",
+                          vec_to_grep_pattern("cancer"),
                           "urogenital cancer"),
                 l1_all_disease_terms
          )
@@ -2464,7 +2423,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(l1_all_disease_terms == "cancer" & 
                 grepl("ICD10 Z85.1", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "cancer",
+                          vec_to_grep_pattern("cancer"),
                            "tracheal bronchus and lung cancer"),
                 l1_all_disease_terms
          )
@@ -2476,7 +2435,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(l1_all_disease_terms == "cancer" & 
                 grepl("ICD10 Z85.0", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "cancer",
+                          vec_to_grep_pattern("cancer"),
                           "digestive system cancer"),
                 l1_all_disease_terms
          )
@@ -2490,7 +2449,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(l1_all_disease_terms == "cancer" & 
                 grepl("PheCode 164|PheCode 159.4", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "cancer",
+                          vec_to_grep_pattern("cancer"),
                           "peritoneum cancer, retroperitoneal cancer"),
                 l1_all_disease_terms
          )
@@ -2502,7 +2461,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(l1_all_disease_terms == "cancer" & 
                 grepl("PheCode 159$", `DISEASE/TRAIT`, ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "cancer",
+                          vec_to_grep_pattern("cancer"),
                           "digestive system cancer, peritoneum cancer"),
                 l1_all_disease_terms
          )
@@ -2517,7 +2476,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "\\bperitoneum cancer\\b",
+                          vec_to_grep_pattern("peritoneum cancer"),
                           "peritoneal cancer"
          ))
 
@@ -2547,35 +2506,35 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "lung cancer, squamous cell cancer",
+                          vec_to_grep_pattern("lung cancer, squamous cell cancer"),
                           "lung cancer"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "esophageal cancer, squamous cell cancer",
+                          vec_to_grep_pattern("esophageal cancer, squamous cell cancer"),
                           "esophageal cancer"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "head and neck cancer, squamous cell cancer",
+                          vec_to_grep_pattern("head and neck cancer, squamous cell cancer"),
                           "head and neck cancer"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "head and neck cancer, pain, squamous cell cancer",
+                          vec_to_grep_pattern("head and neck cancer, pain, squamous cell cancer"),
                           "head and neck cancer, cancer pain"
          ))
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          stringr::str_replace_all(l1_all_disease_terms,
-                          "non-melanoma skin cancer, squamous cell cancer",
+                          vec_to_grep_pattern("non-melanoma skin cancer, squamous cell cancer"),
                           "non-melanoma skin cancer"
          ))
 
@@ -2644,7 +2603,7 @@ gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == "Small-cell lung cancer",
          stringr::str_replace_all(l1_all_disease_terms,
-                          "small cell cancer",
+                          vec_to_grep_pattern("small cell cancer"),
                           "lung cancer"),
          l1_all_disease_terms
          )
@@ -2711,7 +2670,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(grepl("skin cancer", l1_all_disease_terms) & 
                 !grepl("melanoma", l1_all_disease_terms),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "skin cancer",
+                          vec_to_grep_pattern("skin cancer"),
                           "malignant melanoma of skin, non-melanoma skin cancer"),
                 l1_all_disease_terms
          )
@@ -2756,7 +2715,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "^lymphoma",
+                          vec_to_grep_pattern("lymphoma"),
                           "non-hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2774,7 +2733,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "^lymphoma",
+                          vec_to_grep_pattern("lymphoma"),
                           "non-hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2791,7 +2750,7 @@ gwas_study_info = gwas_study_info |>
                       `DISEASE/TRAIT`, 
                       ignore.case = T),
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "^lymphoma",
+                          vec_to_grep_pattern("lymphoma"),
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2807,7 +2766,7 @@ gwas_study_info = gwas_study_info |>
                 !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
                 PUBMED_ID == 34594039,
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "^lymphoma",
+                          vec_to_grep_pattern("lymphoma"),
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2821,7 +2780,7 @@ gwas_study_info = gwas_study_info |>
                 !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
                 PUBMED_ID == 23349640,
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "^lymphoma",
+                          vec_to_grep_pattern("lymphoma"),
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
@@ -2835,7 +2794,7 @@ gwas_study_info = gwas_study_info |>
                 !grepl("hodgkin", l1_all_disease_terms, ignore.case = T) & 
                 PUBMED_ID == 36344522,
                 stringr::str_replace_all(l1_all_disease_terms,
-                          "^lymphoma",
+                          vec_to_grep_pattern("lymphoma"),
                           "non-hodgkin lymphoma, hodgkin lymphoma"),
                 l1_all_disease_terms
          )
