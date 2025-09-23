@@ -744,23 +744,26 @@ gwas_study_info = gwas_study_info |>
 ```{r congenital_heart_disease}
 
 congenital_heart_disease_terms <- c(
-  "congenital anomaly of cardiovascular system",
-  "congenital anomaly of the great arteries",
-  "abnormal cardiac septum morphology",
-  "abdominal aortic artery calcification",
-  "congenital heart malformation",
+  "heart septal defect",  
+  "atrial heart septal defect",
+  
   "congenital left-sided heart lesions",
   "congenital right-sided heart lesions",
-  "heart septal defect",
-  "atrial heart septal defect",
-  "atrioventricular canal defect",
-  "conotruncal heart malformations",
-  "abnormal aortic morphology",
-  "abnormal cardiovascular system physiology",
-  "abnormal cardiovascular system morphology",
-  "abnormality of the vasculature",
-  "cerebral arteriovenous malformation"
-  )
+  
+  "congenital anomaly of the great arteries", # equiv = "Congenital malformation of great arteries, unspecified"
+  
+  # malformation of cardiac septum, 
+    "abnormal cardiac septum morphology",
+    "atrioventricular canal defect"
+)
+  
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005207/descendants"
+
+congenital_heart_disease_terms <- c(congenital_heart_disease_terms,
+                                  get_descendants(url)
+                                  ) |>
+  unique()
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
@@ -770,6 +773,44 @@ gwas_study_info = gwas_study_info |>
          )
   )
 
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0024239/descendants"
+
+more_congenital_heart_disease_terms <- get_descendants(url)
+
+congenital_heart_disease_terms <- c(congenital_heart_disease_terms,
+                                  more_congenital_heart_disease_terms
+                                  ) |>
+  unique() |>
+  str_length_sort()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(congenital_heart_disease_terms),
+                          "congenital anomaly of cardiovascular system"
+         )
+  )
+
+```
+
+
+### Abnormal cardiovascular system morphology
+
+```{r abnormal_cardiovascular_system_morphology}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mp/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMP_0002127/descendants"
+
+mp_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(mp_terms),
+                          "abnormal cardiovascular system morphology"
+         )
+  )
 
 ```
 
@@ -1549,7 +1590,18 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Hyperaldosteronism
 
+```{r hyperaldosteronism}
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          vec_to_grep_pattern("primary hyperaldosteronism"),
+                          "hyperaldosteronism"
+         ))
+
+```
 
 ## Hyperlipidemia
 
@@ -1597,18 +1649,19 @@ gwas_study_info = gwas_study_info |>
 
 ```{r}
 
-inborn_error_metab <- c("inborn disorder of amino acid metabolism",
-                        "inborn disorder of amino acid transport",
-                        "inborn disorder of porphyrin metabolism",
-                        "inborn carbohydrate metabolic disorder",
-                        "familial lipoprotein lipase deficiency",
-                        "lactose intolerance",
-                        "hereditary hemochromatosis",
-                        "alpha 1-antitrypsin deficiency",
-                        "urea cycle disorder",
-                        "gaucher disease",
-                        "plasma protein metabolism disease",
-                        "disorder of metabolite absorption and transport")
+inborn_error_metab <- c("inborn disorder of amino acid metabolism", # ICD9:270, ICD9:270.9
+                        "inborn disorder of amino acid transport", # ICD9:270.0
+                        "inborn disorder of porphyrin metabolism", # ? ebi suggests ... ICD10CM:E80.4 - doesn't seem right match, but close - E80 range likely captures it
+                        "inborn carbohydrate metabolic disorder", # ICD9:271.8
+                        "familial lipoprotein lipase deficiency", # ICD9:272.3
+                        "lactose intolerance", # ICD10: E73
+                        "hereditary hemochromatosis", # ICD10CM:E83.110, ICD9: 275.01
+                        "alpha 1-antitrypsin deficiency", # ICD9:273.4
+                        "urea cycle disorder", # ICD9CM:270.6
+                        "gaucher disease", # ICD10CM:E75.22, ICD9:272.7
+                        "plasma protein metabolism disease", # ? ICD9:273.8
+                        "disorder of metabolite absorption and transport"
+                        )
 
 gwas_study_info = gwas_study_info |>
   mutate(l1_all_disease_terms  = 
@@ -1815,6 +1868,23 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Mineral metabolism disease
+
+```{r mineral_metabolism_disorder}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009556/descendants"
+
+mineral_metabolism_disorder_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(mineral_metabolism_disorder_terms),
+                          "mineral metabolism disease"
+         ))
+
+```
+
 ## Myasthenia gravis
 
 ```{r}
@@ -1916,6 +1986,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Orofacial cleft
+
+```{r orofacial_cleft}
+
+orofacial_cleft_terms <- c("cleft lip",
+                            "cleft palate"
+                            )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(orofacial_cleft_terms),
+                          "orofacial cleft"
+         ))
+
+```
+
 
 ## Osteoarthritis
 
@@ -1952,6 +2040,28 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Ovarian dysfunction
+
+```{r ovarian_dysfunction}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009003/descendants"
+
+ovarian_dysfunction_terms <- get_descendants(url)
+
+ovarian_dysfunction_terms <- c(ovarian_dysfunction_terms,
+                              "premature ovarian failure",
+                              "premature ovarian insufficiency"
+                              )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(ovarian_dysfunction_terms),
+                          "ovarian dysfunction"
+         ))
+
+```
+
 ## Pancreatitis 
 
 ```{r pancreatitis}
@@ -1983,6 +2093,23 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(l1_all_disease_terms,
                           pattern = vec_to_grep_pattern(periodontal_terms),
                           "periodontal disease"
+         ))
+
+```
+
+## Pituitary gland disease
+
+```{r pituitary_gland_disease}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009607/descendants"
+
+pituitary_gland_disease_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(l1_all_disease_terms  = 
+         stringr::str_replace_all(l1_all_disease_terms,
+                          pattern = vec_to_grep_pattern(pituitary_gland_disease_terms),
+                          "pituitary gland disease"
          ))
 
 ```
