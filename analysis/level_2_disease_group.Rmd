@@ -74,7 +74,13 @@ maternal_disorder_terms <- c("galactorrhea", #other direct maternal disorders
                              "early pregnancy hemorrhage", # maternal hemorrhage
                              "preterm premature rupture of the membranes", # Other direct maternal disorders
                              "stillbirth", # maternal abortion and miscarriage
-                             "miscarriage" # maternal abortion and miscarriage
+                             "miscarriage", # maternal abortion and miscarriage
+                             "abnormal delivery",
+                             "abruptio placentae", # maternal hemorrhage
+                             "failed induction",
+                             "gestational diabetes", # indirect maternal deaths
+                             "chorioamnionitis"
+                             
                              )
 
 
@@ -97,7 +103,8 @@ gwas_study_info |>
 neonatal_disorders <- c("neonatal jaundice", # Hemolytic disease and other neonatal jaundice)
                         "neonatal sepsis", # Neonatal sepsis and other neonatal infections
                         "neonatal abstinence syndrome", # Other neonatal disorders
-                        "perinatal disease" # Neonatal sepsis and other neonatal infections
+                        "perinatal disease", # Neonatal sepsis and other neonatal infections
+                        "asphyxia neonatorum" # Neonatal encephalopathy due to birth asphyxia and trauma
 )
 
 
@@ -808,6 +815,8 @@ gwas_study_info |>
 
 ```{r other_neoplasms}
 
+other_neoplasm_terms <- c("clonal hematopoiesis")
+
 gwas_study_info =
   gwas_study_info |>
   mutate(l2_all_disease_terms = 
@@ -858,6 +867,17 @@ gwas_study_info |>
 ## Ischemic heart disease
 
 ```{r ischemic_heart_disease}
+
+# add chronic ischemic heart disease
+gwas_study_info = 
+  gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern("chronic ischemic heart disease"),
+                                   "ischemic heart disease"
+                          )  
+        )
+
 
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("ischemic heart disease"), 
@@ -1166,7 +1186,8 @@ gwas_study_info |>
 ```{r interstitial_lung_disease_terms}
 
 interstitial_lung_disease_terms <- c("pulmonary sarcoidosis",
-                                   "interstitial lung disease"
+                                   "interstitial lung disease",
+                                   "löfgren syndrome"
                                    )
 
 gwas_study_info = 
@@ -1221,6 +1242,8 @@ chronic_liver_disease_terms <- c("primary biliary cirrhosis",
                                  "primary biliary cirrhosis",
                                  "chronic hepatitis",
                                  "liver disease",
+                                 "alcoholic liver disease",
+                                 "hepatitis c induced liver cirrhosis",
                                  chronic_liver_disease_terms)
 
 gwas_study_info = gwas_study_info |> 
@@ -1554,6 +1577,16 @@ gwas_study_info |>
                           )  
         )
 
+# 
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = "rolandic epilepsy",
+                                   "idiopathic epilepsy"
+                          )  
+        )
+
 gwas_study_info |>
  filter(grepl("idiopathic epilepsy", l2_all_disease_terms)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
@@ -1579,6 +1612,7 @@ gwas_study_info |>
 ```{r mnd}
 
 motor_neuron_disease_terms <- c("anterior horn cell disease",
+                                "anterior horn disorder",
                               "motor neuron disease"
 )
 
@@ -1641,6 +1675,7 @@ other_neuro_terms <- c("huntington disease",
                        "x-linked dystonia-parkinsonism",
                        "isolated dystonia",
                        "limb dystonia",
+                       "cervical dystonia",
                        "myoclonus",
                        "restless legs syndrome",
                         "chronic inflammatory demyelinating polyneuropathy",
@@ -1649,7 +1684,9 @@ other_neuro_terms <- c("huntington disease",
                        "complex regional pain syndrome",
                        "acute transverse myelitis",
                        "machado-joseph disease",
-                       "degenerative disease of the spinal cord")
+                       "degenerative disease of the spinal cord",
+                       "cerebral palsy"
+                       )
 
 gwas_study_info = gwas_study_info |>
  mutate(l2_all_disease_terms  = 
@@ -1736,7 +1773,8 @@ anxiety_terms <- get_descendants(url)
 anxiety_terms <- c(anxiety_terms, 
                    "obsessive-compulsive symptom measurement",
                    "obsessive-compulsive disorder",
-                   "obsessive-compulsive"
+                   "obsessive-compulsive",
+                   "anxiety"
                    )
 
 
@@ -1750,13 +1788,13 @@ gwas_study_info |>
         ) |>
    mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "(?<=^|, ) anxiety disorder(?=,|$)|(?<=^|, ) anxiety measurement(?=,|$)",
+                                  pattern = "(?<=^|, )anxiety disorder(?=,|$)|(?<=^|, ) anxiety measurement(?=,|$)",
                                    "anxiety disorders"
                           )  
         ) |>
      mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
-                                  pattern = "(?<=^|, ) anxiety(?=,|$)",
+                                  pattern = "(?<=^|, )anxiety(?=,|$)",
                                    "anxiety disorders"
                           )  
         )
@@ -1872,7 +1910,8 @@ gwas_study_info |>
 
 ```{r idiopathic_developmental_intellectual_disability}
 
-terms <- c("developmental disability")
+terms <- c("developmental disability",
+           "dyslexia")
 
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
@@ -2371,6 +2410,17 @@ gwas_study_info |>
 
 ```{r acne}
 
+acne_terms <- c("SAPHO syndrome")
+
+gwas_study_info = 
+  gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(acne_terms),
+                                   "acne vulgaris"
+                          )  
+        )
+
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
           stringr::str_replace_all(l2_all_disease_terms ,
@@ -2392,6 +2442,16 @@ gwas_study_info |>
 ## Pruritus
 
 ```{r pruritus_terms}
+
+# also add prurigo to puritus
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern("prurigo"),
+                                   "pruritus"
+                          )  
+        )
+
 
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("pruritus"), 
@@ -2446,7 +2506,8 @@ other_skin_disease_terms <- c("sebaceous gland disease",
                               "cutaneous lupus erythematosus",
                               "androgenetic alopecia",
                               "chemotherapy-induced alopecia",
-                              "cutaneous leishmaniasis")
+                              "cutaneous leishmaniasis",
+                              "acanthosis nigricans")
 
 gwas_study_info = gwas_study_info |> 
  mutate(l2_all_disease_terms  = 
@@ -2484,6 +2545,7 @@ vision_loss_terms <- c("blindness",
                        "visual impairment",
                        "myopia",
                        "refractive error",
+                       "retinopathy",
                        "hyperopia",
                        "astigmatism",
                        "corneal astigmatism",
@@ -2567,7 +2629,12 @@ gwas_study_info |>
 ```{r other_sense_organ_diseases}
 
 other_sense_terms <- c("abnormality of the sense of smell",
-                       "disturbances of sensation of smell and taste")
+                       "disturbances of sensation of smell and taste",
+                       "tinnitus",
+                       "disturbance of skin sensation",
+                       "disturbances to senses",
+                       "vogt-koyanagi-harada disease"
+                       )
 
 gwas_study_info =
 gwas_study_info |> 
@@ -2594,6 +2661,24 @@ gwas_study_info |>
 ## Rheumatoid arthritis
 
 ```{r rheumatoid_arthritis}
+
+# add juvenile idiopathic arthritis to rheumatoid arthritis
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern("juvenile idiopathic arthritis"),
+                                   "rheumatoid arthritis"
+                          )  
+        )
+
+# rheumatoid factor-negative juvenile idiopathic arthritis
+gwas_study_info = gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern("rheumatoid factor-negative juvenile idiopathic arthritis"),
+                                   "rheumatoid arthritis"
+                          )  
+        )
 
 gwas_study_info |>
  filter(grepl(vec_to_grep_pattern("rheumatoid arthritis"), 
@@ -2668,7 +2753,15 @@ gwas_study_info |>
 ```{r other_musculoskeletal_disorders}
 
 other_musculo_terms <- c("infectious arthritis",
-                         "scoliosis"
+                         "scoliosis",
+                         "fasciitis",
+                         "plica syndrome",
+                         "panniculitis",
+                         "sciatica",
+                         "polymyalgia rheumatica",
+                         "acquired musculoskeletal deformity",
+                         "pyogenic arthritis",
+                         "reactive arthritis"
                          )
 
 
@@ -3090,6 +3183,7 @@ urolithiasis_terms <-
     "uric acid nephrolithiasis",
     "nephrolithiasis",
     "renal colic", #icd-9 788.0
+    "ureterolithiasis",
     urolithiasis_terms
     )
 
@@ -3170,6 +3264,7 @@ urinary_diseases_terms <- c("urinary incontinence",
                             "enuresis",
                             "neurogenic bladder", # icd9 596.54
                             "bladder diverticulum", # icd9 596.3
+                            "priapism",
                             urine_terms
                             )
 
@@ -3434,6 +3529,7 @@ thyroid_terms <- c("congenital hypothyroidism due to developmental anomaly", #IC
                    "nontoxic goiter",#ICD-10: E04
                    "thyrotoxicosis", #ICD-10: E05
                    "toxic nodular goiter", # ICD9:242.3)
+                   "goiter",
                    "thyroiditis", #ICD-10: E06, IDC9:245
                    "hashimotos thyroiditis", #ICD9:245.2
                    "graves disease", #ICD9:242.0,
@@ -3454,7 +3550,9 @@ other_blood_disorders <- c("neutropenia",
                            "acquired coagulation factor deficiency", #ICD10: D68.4
                            "von willebrand disease", # ICD9 286.4
                            "hemophilia a", #  Congenital factor VIII disorder - ICD9 286.0
-                           "qualitative platelet defect"
+                           "qualitative platelet defect",
+                           "blood coagulation disease",
+                           "hematologic disease"
                            )
 
 gwas_study_info = gwas_study_info |>
@@ -3479,7 +3577,9 @@ metabolism_disorders <- c("hypoglycemia",
                           "mineral metabolism disease", # ICD9:275.8, ICD9:275.9, ICD10:E83
                           "acidosis", # ICD9:276.2
                           "disorder of acid-base balance", # ? ICD10-cm E87.8
-                          "bilirubin metabolism disease"
+                          "bilirubin metabolism disease",
+                          "cystic fibrosis" # ICD9:277.0, ICD10:E84
+                          
                           )
 
 gwas_study_info = gwas_study_info |>
@@ -3496,7 +3596,17 @@ gwas_study_info = gwas_study_info |>
 
 ```{r other_hemoglobinopathies_and_hemolytic_anemias}
 
-other_hemo <- c("aplastic anemia")
+other_hemo <- c("aplastic anemia",
+                "pure red cell aplasia",
+                "severe malarial anemia")
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(other_hemo),
+                                   "other hemoglobinopathies and hemolytic anemias"
+                          )  
+        )
 
 ```
 
