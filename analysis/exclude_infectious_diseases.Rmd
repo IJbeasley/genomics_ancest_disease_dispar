@@ -445,7 +445,10 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("otitis media")
+                          pattern = vec_to_grep_pattern(
+                            c("otitis media",
+                              "otitis media with effusion")
+                          )
          )
          )
 
@@ -895,7 +898,8 @@ gwas_study_info |>
 
 ```{r other_neglected_tropical_diseases}
 
-other_ntd_terms <- c("typhus"
+other_ntd_terms <- c("typhus",
+                     "hemorrhagic fever with renal syndrome"
                      )
 
 gwas_study_info = gwas_study_info |>
@@ -974,6 +978,15 @@ gwas_study_info = gwas_study_info |>
 ## Pertussis
 
 ```{r pertussis}
+
+# whooping cough = pertussis
+# remove wooping cough
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("whooping cough")
+         )
+         )
 
 gwas_study_info |>
   filter(grepl("pertussis", collected_all_disease_terms, ignore.case = T)) |>
@@ -1304,7 +1317,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## lassa fever
+### Lassa fever
 
 ```{r lassa_fever}
 
@@ -1318,6 +1331,74 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern("lassa fever")
          )
          )
+
+```
+
+### Rheumatic fever
+
+```{r rheumatic_fever}
+
+# pubmed id: 28928442
+# remove rheumatic fever - this is susceptibility to infection GWAS
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == 28928442 & 
+                grepl(vec_to_grep_pattern("rheumatic fever"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("rheumatic fever")),
+               collected_all_disease_terms
+         ))
+
+# pubmed id: 34594039 
+# remove rheumatic fever - this is susceptibility to infection GWAS
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == 34594039 & 
+                grepl(vec_to_grep_pattern("rheumatic fever"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("rheumatic fever")),
+               collected_all_disease_terms
+         ))
+
+# if `DISEASE/TRAIT` contains ICD10 I00
+# remove rheumatic fever from collected_all_disease_terms
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("ICD10 I00", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("rheumatic fever"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("rheumatic fever")),
+               collected_all_disease_terms
+         ))
+
+
+# not clear for pubmed id: 34662886
+# why some rheumatic fever have ICD10: I00, and others have no ICD10 ... 
+# remove rheumatic fever from collected_all_disease_terms
+# assuming both just refer to the initial infection
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == 34662886 &
+                grepl(vec_to_grep_pattern("rheumatic fever"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("rheumatic fever")),
+               collected_all_disease_terms
+         ))
 
 ```
 
