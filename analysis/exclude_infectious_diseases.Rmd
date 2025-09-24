@@ -147,7 +147,8 @@ gwas_study_info |>
 
 gwas_study_info |>
   filter(grepl("herpes", collected_all_disease_terms, ignore.case = T)) |>
-  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+  select(`DISEASE/TRAIT`, collected_all_disease_terms) |>
+  head()
 
 ```
 
@@ -323,6 +324,17 @@ gwas_study_info =
                collected_all_disease_terms
          ))
 
+# if laryngitis is specified as acute in DISEASE/TRAIT, remove disease from collected_all_disease_terms
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("acute laryngitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                collected_all_disease_terms == "disease",
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("disease")),
+               collected_all_disease_terms
+         ))
+
 # if laryngitis is specified as chronic in DISEASE/TRAIT, replace laryngitis with chronic laryngitis
 gwas_study_info = 
   gwas_study_info |>
@@ -349,6 +361,17 @@ gwas_study_info =
                       perl = T),
          stringr::str_remove_all(collected_all_disease_terms,
                           vec_to_grep_pattern("tonsillitis")),
+               collected_all_disease_terms
+         ))
+
+# remove disease, if DISEASE/TRAIT contains acute tonsillitis
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("acute tonsillitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                collected_all_disease_terms == "disease",
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("disease")),
                collected_all_disease_terms
          ))
 
@@ -379,6 +402,7 @@ uri_terms <- c("strep throat",
                "acute pharyngitis",
                "pharyngitis",
                "acute tonsillitis",
+               "scarlet fever",
                uri_terms
                )
 
@@ -424,6 +448,19 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern("otitis media")
          )
          )
+
+
+# where  collected_all_disease_terms==disease, and otitis media in DISEASE/TRAIT, remove disease
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("otitis media", `DISEASE/TRAIT`, ignore.case = T) & 
+                collected_all_disease_terms == "disease",
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("disease")),
+               collected_all_disease_terms
+         ))
 
 
 ```
@@ -487,6 +524,15 @@ gwas_study_info = gwas_study_info |>
                collected_all_disease_terms
                )
          )
+
+# remove dysentery
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("dysentery")
+         )
+         )
+
 
 ```
 
@@ -847,6 +893,21 @@ gwas_study_info |>
 
 ## Other neglected tropical diseases
 
+```{r other_neglected_tropical_diseases}
+
+other_ntd_terms <- c("typhus"
+                     )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(other_ntd_terms)
+         )
+  )
+
+
+```
+
 # Other infectious diseases
 
 ## Meningitis
@@ -977,6 +1038,20 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern("complication, herpes zoster, nervous system disease"),
                           "herpes zoster, nervous system disease"
                           
+         )
+         )
+
+```
+
+## Shingles 
+
+```{r shingles}
+
+# remove shingles ... ICD9 053.9 - included in varicella and herpes zoster by gbd
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("shingles")
          )
          )
 
@@ -1213,6 +1288,36 @@ for(term in infection_terms){
     
   }
 }
+
+```
+
+### Rubella
+
+```{r rubella}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("rubella")
+         )
+         )
+
+```
+
+## lassa fever
+
+```{r lassa_fever}
+
+gwas_study_info |>
+  filter(grepl("lassa", collected_all_disease_terms, ignore.case = T)) |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms)
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("lassa fever")
+         )
+         )
 
 ```
 
