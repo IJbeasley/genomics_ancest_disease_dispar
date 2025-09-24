@@ -61,15 +61,54 @@ gwas_study_info = gwas_study_info |>
 
 ```{r maternal_disorders}
 
-maternal_disorder_terms <- c("galactorrhea")
+maternal_disorder_terms <- c("galactorrhea", #other direct maternal disorders
+                             "eclampsia", # maternal hypertensive disorders
+                             "hyperemesis gravidarum", #other direct maternal disorders
+                             "vomiting of pregnancy", #other direct maternal disorders
+                             "intrahepatic cholestasis of pregnancy", #other direct maternal disorders (? indirect maternal deaths)
+                             "loss of pregnancy", # maternal abortion and miscarriage
+                             "ectopic pregnancy", # ectopic pregnancy
+                             "post term pregnancy", # other direct maternal disorders
+                             "pregnancy disorder",
+                             "obstructed labor", # Maternal obstructed labor and uterine rupture
+                             "early pregnancy hemorrhage", # maternal hemorrhage
+                             "preterm premature rupture of the membranes", # Other direct maternal disorders
+                             "stillbirth", # maternal abortion and miscarriage
+                             "miscarriage" # maternal abortion and miscarriage
+                             )
+
+
+
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(maternal_disorder_terms),
+                                   "maternal disorders"
+                          )  
+        )
 
 ```
 
-### 
+### Neonatal disorders
 
-```{r maternal_neonatal_disorders}
+```{r neonatal_disorders}
+
+neonatal_disorders <- c("neonatal jaundice", # Hemolytic disease and other neonatal jaundice)
+                        "neonatal sepsis", # Neonatal sepsis and other neonatal infections
+                        "neonatal abstinence syndrome", # Other neonatal disorders
+                        "perinatal disease" # Neonatal sepsis and other neonatal infections
+)
 
 
+gwas_study_info =
+gwas_study_info |> 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(neonatal_disorders),
+                                   "neonatal disorders"
+                          )  
+        )
 
 ```
 
@@ -1030,6 +1069,7 @@ other_cardiovascular_terms <- c("tachycardia",
                                 "carotid artery disease",
                                 "hypertension",
                                 "pericarditis",
+                                "phlebitis", # ICD9 - 451
                                 "coronary artery calcification",
                                 "arterial occlusion",
                                 "other vascular disorders",
@@ -1607,7 +1647,9 @@ other_neuro_terms <- c("huntington disease",
                        "demyelinating disease of central nervous system",
                        "myasthenia gravis",
                        "complex regional pain syndrome",
-                       "acute transverse myelitis")
+                       "acute transverse myelitis",
+                       "machado-joseph disease",
+                       "degenerative disease of the spinal cord")
 
 gwas_study_info = gwas_study_info |>
  mutate(l2_all_disease_terms  = 
@@ -2551,21 +2593,102 @@ gwas_study_info |>
 
 ## Rheumatoid arthritis
 
+```{r rheumatoid_arthritis}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("rheumatoid arthritis"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
 ## Osteoarthritis
+
+```{r osteoarthritis}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("osteoarthritis"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
 
 ## Low back pain
 
+```{r low_back_pain}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("low back pain"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+
+```
+
 ## Neck pain
 
+```{r neck_pain}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("neck pain"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+```
+
 ## Gout
+
+```{r gout}
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("gout"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
+
+```
 
 ## Other musculoskeletal disorders
 
 ```{r other_musculoskeletal_disorders}
 
-other_musculo_terms <- c("infectious arthritis"
-                        
+other_musculo_terms <- c("infectious arthritis",
+                         "scoliosis"
                          )
+
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(other_musculo_terms),
+                                   "other musculoskeletal disorders"
+                          )  
+        )
+
+
+gwas_study_info |>
+ filter(grepl(vec_to_grep_pattern("other musculoskeletal disorders"), 
+              l2_all_disease_terms,
+              perl = T)) |>
+  select(all_disease_terms, l2_all_disease_terms) |>
+  distinct() |>
+  head()
+
 
 ```
 
@@ -2960,6 +3083,7 @@ urolithiasis_terms <- stringr::str_remove_all(urolithiasis_terms, ", unspecified
 
 urolithiasis_terms <-
   c("lower urinary tract calculus",
+    "urinary calculus",
     "bladder calculus",
     "calcium oxalate nephrolithiasis",
     "calcium phosphate nephrolithiasis",
@@ -3217,7 +3341,9 @@ other_gyno_terms <- c("cervicitis", #N72
                       "vulvovaginitis",
                       "ulceration of vulva", # N77
                       "ovarian cyst", # N83
-                      "follicular cyst"
+                      "follicular cyst",
+                      "noninflammatory disorder of ovary fallopian tube and broad ligament",
+                      "cervical disorder"
                       )
 
 # pregnancy_terms <- grep("pregnancy", diseases, value = T)
@@ -3304,6 +3430,7 @@ gwas_study_info = gwas_study_info |>
 
 thyroid_terms <- c("congenital hypothyroidism due to developmental anomaly", #ICD-10:E03.1
                    "hypothyroidism",
+                   "myxedema",
                    "nontoxic goiter",#ICD-10: E04
                    "thyrotoxicosis", #ICD-10: E05
                    "toxic nodular goiter", # ICD9:242.3)
