@@ -1,0 +1,746 @@
+---
+title: "Other disease/disorder filtering + fixing"
+author: "Isobel Beasley"
+date: "2025-09-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set up
+
+```{r setup_2, message=FALSE, warning=FALSE}
+
+library(data.table)
+library(dplyr)
+library(stringr)
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered.csv"))
+
+```
+
+## Ontology help - for getting disease subtypes
+
+```{r ontology_fns}
+
+source(here::here("code/get_term_descendants.R"))
+
+```
+
+# Injuries 
+
+## Poisoning
+
+### Combining Poisoning
+
+```{r poisoning}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("carbon monoxide poisoning"),
+                          "poisoning"
+         ))
+
+```
+
+```{r remove_poisoning}
+
+gwas_study_info = gwas_study_info |>
+           mutate(collected_all_disease_terms =
+           stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("poisoning")
+                          )
+           )
+```
+
+
+
+## Bone fracture
+
+```{r bone_fracture}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0003931/descendants"
+
+bone_fracture_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(bone_fracture_terms),
+                          "bone fracture"
+         ))
+
+gwas_study_info = gwas_study_info |>
+           mutate(collected_all_disease_terms =
+           stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("bone fracture")
+                          )
+           )
+
+```
+
+
+## Toxicity 
+
+```{r toxicity}
+
+toxicity_terms = c("cardiotoxicity",
+                   "dermatological toxicity",
+                   "immune system toxicity",  
+                   "neurotoxicity"
+                   )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(toxicity_terms),
+                          "toxicity"
+         ))
+
+gwas_study_info = gwas_study_info |>
+           mutate(collected_all_disease_terms =
+           stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("toxicity")
+                          )
+           )
+
+```
+
+
+# Naming Fixing: 
+
+## Nausea, vomiting
+
+### Pregancy nausea 
+
+```{r pregnancy_nausea}
+
+gwas_study_info |> 
+  dplyr::filter(PUBMED_ID == "38509478") |> 
+  select(`DISEASE/TRAIT`, MAPPED_TRAIT, collected_all_disease_terms)
+
+
+# replace nausea and vomiting, with vomiting of pregnancy
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(PUBMED_ID == "38509478",
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(c("nausea and vomiting")),
+                          "vomiting of pregnancy"),
+         collected_all_disease_terms
+         )
+  )
+
+# where MAPPED_TRAIT is "nausea and vomiting of pregnancy" add vomiting of pregnancy
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(MAPPED_TRAIT == "nausea and vomiting of pregnancy severity measurement" & 
+                 PUBMED_ID == "38509478",
+         paste0(collected_all_disease_terms, ", vomiting of pregnancy"),
+         collected_all_disease_terms)
+  )
+
+
+```
+
+
+### Post-operative nausea and vomiting
+
+```{r post_op_nausea}
+
+
+gwas_study_info |> 
+  filter(grepl("nausea", collected_all_disease_terms))  |>
+  select(`DISEASE/TRAIT`, MAPPED_TRAIT, collected_all_disease_terms) |>
+  distinct()
+
+# for given pubmed id, remove post operative nausea and vomiting
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           ifelse(PUBMED_ID %in% c(21694509, 32928300, 37156489),
+                  stringr::str_remove_all(
+                    collected_all_disease_terms,
+                    pattern = vec_to_grep_pattern(c("post operative nausea and vomiting", 
+                                                    "post-operative nausea and vomiting"))
+                  ),
+                  collected_all_disease_terms
+           )
+  )
+  
+```
+
+### Unspecified nausea 
+
+```{r unspecified_nausea}
+
+
+# for given pubmed id, remove unspecified nausea
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(PUBMED_ID %in% c(30104761, 34737426, 39024449, 34662886),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("nausea and vomiting"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+```
+
+### Unspecified vomiting
+
+```{r unspecified_vomiting}
+
+# where `DISEASE/TRAIT' contains ICD10 R1, or PheCode 789.1 remove vomiting
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("ICD10 R11", `DISEASE/TRAIT`) | grepl("PheCode 789.1", `DISEASE/TRAIT`),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("vomiting"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# where `DISEASE/TRAIT' contains BNT162b2 vaccine, remove vomiting (and covid-19 implicitly)
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("BNT162b2 vaccine", `DISEASE/TRAIT`, ignore.case = TRUE),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("vomiting"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+```
+
+## Fever
+
+```{r fever}
+
+# remove fever where `DISEASE/TRAIT' contains BNT162b2 vaccine (and covid-19 implicitly)
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("BNT162b2 vaccine|COVID-19 booster vaccination", `DISEASE/TRAIT`, ignore.case = TRUE),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("fever"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+# remove fever where `DISEASE/TRAIT' contains "Postprocedural fever"
+
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Postprocedural fever", `DISEASE/TRAIT`, ignore.case = TRUE),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("fever"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+# where vec_to_grep_pattern(c("fever")) is in collected_all_disease_terms, and Fever when IBS symptoms first began
+# is in `DISEASE/TRAIT`, replace fever with irritable bowel syndrome
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Fever when IBS symptoms first began",
+                       `DISEASE/TRAIT`, 
+                       ignore.case = TRUE) &
+                 grepl(vec_to_grep_pattern(c("fever")), 
+                       collected_all_disease_terms,
+                       perl = T),
+         stringr::str_replace_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("fever")),
+            replacement = "irritable bowel syndrome"
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+```
+
+
+## Sneeze
+
+```{r sneeze}
+
+# remove sneeze from collected_all_disease_terms 
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("sneeze", collected_all_disease_terms, ignore.case = TRUE),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("sneeze"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+```
+
+
+# Unspecified disease
+
+## Asthma, and other disease
+
+```{r unspecified_disease}
+
+# if DISEASE/TRAIT contains Asthma in any disease, remove disease from collected_all_disease_terms
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Asthma in any disease", `DISEASE/TRAIT`, ignore.case = TRUE),
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+```
+
+### ICD10 R69: Illness, unspecified 
+
+```{r icd10_r69}
+
+# if DISEASE/TRAIT contains ICD10 R69, remove disease from collected_all_disease_terms
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("ICD10 R69", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+```
+
+## PheCode 1019 - unspecified illness 
+
+```{r phecode_1019}
+
+# if DISEASE/TRAIT contains PheCode 1019, remove disease from collected_all_disease_terms
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("PheCode 1019", `DISEASE/TRAIT`, ignore.case = TRUE) &
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+
+```
+
+## Number of non-cancer illnesses
+
+```{r n_non_cancer_illnesses}
+
+
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Number of non-cancer illnesses", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+```
+
+## Other unspecified disease terms
+
+```{r other_unspecified_disease_terms}
+
+# Unknown and unspecified causes of morbidity
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Unknown and unspecified causes of morbidity", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+# Non cancer illness - year age first occurred
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Non cancer illness - year age first occurred", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+# ICD10 Z87.8: Personal history of other specified conditions
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("ICD10 Z87.8: Personal history of other specified conditions", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# Number of non-cancer illnesses
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Number of non-cancer illnesses", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+#  Disease burden
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Disease burden", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# Diagnosed with life threatening illness 
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Diagnosed with life threatening illness", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# Interpolated Age of participant when non cancer illness 
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Interpolated Age of participant when non cancer illness", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# illness, injury, bereavement, stress in last 2 years
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Illness, injury, bereavement, stress in last 2 years", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# ICD10 Z87.89: Personal history of other specified conditions
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("ICD10 Z87.89: Personal history of other specified conditions", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# ICD10 Z86: Personal history of certain other diseases
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("ICD10 Z86: Personal history of certain other diseases", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+
+# ICD10 Z87.828.: Personal history of other (healed) physical injury and trauma
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Personal history of other \\(healed\\) physical injury and trauma", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+# Other serious medical condition/disability diagnosed by doctor
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Other serious medical condition/disability diagnosed by doctor", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+```
+
+
+### ? ICD10 Z86.6: Personal history of diseases of the nervous system and sense organs (? doesn't fit nicely in gbd so remove)
+
+```{r icd10_z86.6}
+
+# if DISEASE/TRAIT contains ICD10 Z86.6, remove disease from collected_all_disease_terms
+gwas_study_info  = 
+ gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+          ifelse(grepl("ICD10 Z86.6", `DISEASE/TRAIT`, ignore.case = TRUE) & 
+                   collected_all_disease_terms == "disease",
+         stringr::str_remove_all(
+           collected_all_disease_terms,
+            pattern = vec_to_grep_pattern(c("illness", "unspecified", "disease"))
+                          ),
+         collected_all_disease_terms)
+  )
+
+```
+
+
+### Fix diseases that should be specified: 
+
+```{r fix_diseases}
+
+diseases_to_fix = c("calculus of lower urinary tract" = "lower urinary tract calculus",
+                    "urinary calculus" = "urinary calculus",
+                    "miscarriage; stillbirth" = "miscarriage, stillbirth",
+                    "chronic ischemic heart disease" = "chronic ischemic heart disease",
+                    "pericarditis" = "pericarditis",
+                    "retention of urine" = "urinary retention",
+                    "back pain" = "back pain",
+                    "prostatitis" = "prostatitis",
+                    "dysuria" = "dysuria",
+                    "renal colic" = "renal colic",
+                    "cervicitis and endocervicitis" = "cervicitis, endocervicitis",
+                    "edema" = "edema",
+                    "hypertensive chronic kidney disease" = "hypertensive chronic kidney disease",
+                    "substance abuse" = "substance abuse",
+                    "pyogenic arthritis" = "pyogenic arthritis",
+                    "hematuria" = "hematuria",
+                    "pilonidal cyst" = "pilonidal cyst",
+                    "atopic/contact dermatitis" = "atopic dermatitis, contact dermatitis",
+                    "arterial embolism and thrombosis" = "arterial embolism, arterial thrombosis",
+                    "functional disorders of bladder" = "urinary disorder",
+                    "spondylosis" = "spondylosis",
+                    "abnormal involuntary movements" = "abnormal involuntary movements",
+                    "degenerative disease of the spinal cord" = "degenerative disease of the spinal cord",
+                    "voice disturbance" = "voice disturbance",
+                    "diseases of nail" = "nail disorder",
+                    "visual disturbances" = "visual disturbances",
+                    "late pregnancy and failed induction" = "late pregnancy, failed induction",
+                    "other diseases of respiratory system" = "respiratory system disease",
+                    "malposition and malpresentation of fetus or obstruction" = "obstructed labor",
+                    "Hemorrhage in early pregnancy" = "early pregnancy hemorrhage",
+                    "Chronic pharyngitis and nasopharyngitis" = "chronic pharyngitis, nasopharyngitis",
+                    "Chronic tonsillitis and adenoiditis" = "chronic tonsillitis, adenoiditis",
+                    "fetal abnormality affecting management of mother" = "fetal abnormality",
+                    "Other disorders of synovium and tendon" = "synovium and tendon disorder",
+                    "Noninfectious disorders of lymphatic channels" = "lymphatic system disorder",
+                    "Noninflammatory disorders of cervix" = "cervical disorder",
+                    "Noninflammatory disorders of ovary, fallopian tube, and broad ligament" = "noninflammatory disorder of ovary fallopian tube and broad ligament",
+                    "Other inflammatory spondylopathies" = "inflammatory spondylopathy",
+                    "Inflammatory disease of breast" = "inflammatory breast disease",
+                    "Lump or mass in breast" = "lump or mass in breast",
+                    "Corns and callosities" = "keratosis",
+                    "Other acquired musculoskeletal deformity" = "acquired musculoskeletal deformity",
+                    "Other derangement of joint" = "joint derangement",
+                    "Other and unspecified disc disorder" = "disc disorder",
+                    "Internal derangement of knee" = "joint derangement",
+                    "Diseases of the musculoskeletal system and connective tissue" = "musculoskeletal diseases",
+                    "diseases of the blood and blood-forming organs and certain disorders involving the immune mechanism" = "blood disorder",
+                    "endocrine, nutritional and metabolic diseases" = "endocrine and metabolic disease",
+                    "congenital malformations" = "congenital malformations",
+                    "Localized superficial swelling" = "localized superficial swelling or mass"
+                    )
+
+# if collected_all_disease_terms == disease,
+# but grep one of diseases_to_fix in DISEASE/TRAIT, replace disease with specific disease
+# in collected_all_disease_terms
+
+
+for(specifc_disease in 1:length(diseases_to_fix)){
+  
+  grep_pattern = names(diseases_to_fix[specifc_disease])
+  replacement = diseases_to_fix[specifc_disease]
+  
+  gwas_study_info  = 
+   gwas_study_info |>
+    mutate(collected_all_disease_terms  = 
+            ifelse(grepl(grep_pattern, `DISEASE/TRAIT`, ignore.case = TRUE) &
+                   collected_all_disease_terms == "disease",
+           stringr::str_replace_all(
+             collected_all_disease_terms,
+              pattern = vec_to_grep_pattern(c("disease")),
+              replacement = replacement
+                            ),
+           collected_all_disease_terms)
+    )
+  
+}
+
+
+```
+
+
+
+## Foot deformity
+
+```{r foot_abnormality}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mesh/terms/http%253A%252F%252Fid.nlm.nih.gov%252Fmesh%252FD005530/descendants"
+
+foot_abnormality_terms <- get_descendants(url)
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(foot_abnormality_terms),
+                          "foot deformity"
+         ))
+
+```
+
+
+
+# Other phenotypes to remove
+
+## Widows peak 
+
+```{r widows_peak}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(c("widows peak"))
+         ))
+
+
+```
+
+## Cough (non-specific)
+
+```{r cough}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(c("cough"))
+         ))
+
+```
+
+
+## Final summary - number of unique study terms
+
+```{r}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(collected_all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(collected_all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+### When separate studies with multiple terms 
+
+```{r}
+
+diseases <- stringr::str_split(pattern = ", ", 
+ gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+length(unique(diseases))
+
+```
+
+## Save output
+
+```{r save_output}
+
+fwrite(gwas_study_info,
+here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered_v2.csv"))
+
+```
