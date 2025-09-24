@@ -83,6 +83,19 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### AIDS
+
+```{r aids}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("aids")
+         )
+         )
+
+```
+
 ## Sexually transmitted infections (other than HIV)
 
 ### Syphilis
@@ -185,6 +198,30 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern(tb_terms),
                           "tuberculosis"
          ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("tuberculosis")
+         )
+         )
+
+# additionally, remove bacterial infection if `DISEASE/TRAIT` contains:
+# Resistance to Mycobacterium tuberculosis infection
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Resistance to Mycobacterium tuberculosis infection", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("bacterial infection"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("bacterial infection")),
+               collected_all_disease_terms
+         ))
+
 
 ```
 
@@ -411,7 +448,7 @@ gwas_study_info = gwas_study_info |>
 ```{r}
 
 gwas_study_info = gwas_study_info |>
-    mutate(l1_all_disease_terms  = 
+    mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("influenza a \\(h1n1\\)"),
                           "influenza"
@@ -687,9 +724,15 @@ gwas_study_info |>
 gwas_study_info = 
   gwas_study_info |> 
   mutate(collected_all_disease_terms  = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("dengue hemorrhagic fever"),
-                          "dengue"
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("dengue hemorrhagic fever")
+         ))
+
+gwas_study_info = 
+  gwas_study_info |> 
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                         vec_to_grep_pattern("dengue")
          ))
 
 gwas_study_info |>
@@ -1113,6 +1156,63 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern("tropical spastic paraparesis")
          )
          )
+
+```
+
+### Unspecified streptococcal infection
+
+```{r unspecified_streptococcal_infection}
+
+# remove streptococcal infection if DISEASE/TRAIT contains Streptococcus infection (PheCode 41.2)
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Streptococcus infection \\(PheCode 41.2\\)", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("streptococcal infection"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("streptococcal infection")),
+               collected_all_disease_terms
+         ))
+
+```
+
+### Any acute infection
+
+```{r any_acute_infection}
+
+diseases <- stringr::str_split(pattern = ", ", 
+ gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+infection_terms <- diseases[grepl("infection", diseases, ignore.case = T)]
+
+# if acute is in DISEASE/TRAIT and infection term in collected_all_disease_terms, remove infection term
+
+for(term in infection_terms){
+  
+  if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) > 0) {
+    
+    print(paste0("Term removed:", term))
+    
+    gwas_study_info = 
+      gwas_study_info |>
+      mutate(collected_all_disease_terms  = 
+             ifelse(grepl("acute", `DISEASE/TRAIT`, ignore.case = T) & 
+                    grepl(vec_to_grep_pattern(term), 
+                          collected_all_disease_terms, 
+                          ignore.case = T,
+                          perl = T),
+             stringr::str_remove_all(collected_all_disease_terms,
+                              vec_to_grep_pattern(term)),
+                   collected_all_disease_terms
+             ))
+    
+  }
+}
 
 ```
 
