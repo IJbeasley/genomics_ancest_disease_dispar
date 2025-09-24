@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree55fd648dc148ee77f09b85ec45d1dd3100a33776targetblank55fd648a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb1cb9287f30e086d7f3614bb89e410084fd865fatargetblankb1cb928a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/55fd648dc148ee77f09b85ec45d1dd3100a33776" target="_blank">55fd648</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b1cb9287f30e086d7f3614bb89e410084fd865fa" target="_blank">b1cb928</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree55fd648dc148ee77f09b85ec45d1dd3100a33776targetblank55fd648a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb1cb9287f30e086d7f3614bb89e410084fd865fatargetblankb1cb928a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/55fd648dc148ee77f09b85ec45d1dd3100a33776" target="_blank">55fd648</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b1cb9287f30e086d7f3614bb89e410084fd865fa" target="_blank">b1cb928</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -570,8 +570,8 @@ Ignored files:
     Ignored:    renv/
 
 Untracked files:
-    Untracked:  analysis/exclude_injuries.Rmd
     Untracked:  analysis/garbage_icd_codes.Rmd
+    Untracked:  analysis/other_disease_filtering.Rmd
 
 Unstaged changes:
     Modified:   analysis/level_1_disease_group_cancer.Rmd
@@ -622,6 +622,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/b1cb9287f30e086d7f3614bb89e410084fd865fa/analysis/exclude_infectious_diseases.Rmd" target="_blank">b1cb928</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-24
+</td>
+<td>
+More fixing diseases
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/8d6f6ecf923a925742c70076bbf57a6831afe5d9/docs/exclude_infectious_diseases.html" target="_blank">8d6f6ec</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-24
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1356,7 +1390,10 @@ otitis_media_terms &lt;- get_descendants(url)</code></pre>
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern(&quot;otitis media&quot;)
+                          pattern = vec_to_grep_pattern(
+                            c(&quot;otitis media&quot;,
+                              &quot;otitis media with effusion&quot;)
+                          )
          )
          )
 
@@ -1728,7 +1765,8 @@ disease</h2>
 number="5.20">
 <h2><span class="header-section-number">5.20</span> Other neglected
 tropical diseases</h2>
-<pre class="r"><code>other_ntd_terms &lt;- c(&quot;typhus&quot;
+<pre class="r"><code>other_ntd_terms &lt;- c(&quot;typhus&quot;,
+                     &quot;hemorrhagic fever with renal syndrome&quot;
                      )
 
 gwas_study_info = gwas_study_info |&gt;
@@ -1793,7 +1831,16 @@ gwas_study_info = gwas_study_info |&gt;
 </div>
 <div id="pertussis" class="section level2" number="6.4">
 <h2><span class="header-section-number">6.4</span> Pertussis</h2>
-<pre class="r"><code>gwas_study_info |&gt;
+<pre class="r"><code># whooping cough = pertussis
+# remove wooping cough
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;whooping cough&quot;)
+         )
+         )
+
+gwas_study_info |&gt;
   filter(grepl(&quot;pertussis&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
   select(`DISEASE/TRAIT`, collected_all_disease_terms)</code></pre>
 <pre><code>Empty data.table (0 rows and 2 cols): DISEASE/TRAIT,collected_all_disease_terms</code></pre>
@@ -2313,9 +2360,8 @@ for(term in infection_terms){
          )
          )</code></pre>
 </div>
-</div>
-<div id="lassa-fever" class="section level2" number="6.11">
-<h2><span class="header-section-number">6.11</span> lassa fever</h2>
+<div id="lassa-fever" class="section level3" number="6.10.13">
+<h3><span class="header-section-number">6.10.13</span> Lassa fever</h3>
 <pre class="r"><code>gwas_study_info |&gt;
   filter(grepl(&quot;lassa&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
   select(`DISEASE/TRAIT`, collected_all_disease_terms)</code></pre>
@@ -2333,8 +2379,75 @@ for(term in infection_terms){
                           pattern = vec_to_grep_pattern(&quot;lassa fever&quot;)
          )
          )</code></pre>
-<div id="hpv-infection" class="section level3" number="6.11.1">
-<h3><span class="header-section-number">6.11.1</span> HPV infection</h3>
+</div>
+<div id="rheumatic-fever" class="section level3" number="6.10.14">
+<h3><span class="header-section-number">6.10.14</span> Rheumatic
+fever</h3>
+<pre class="r"><code># pubmed id: 28928442
+# remove rheumatic fever - this is susceptibility to infection GWAS
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == 28928442 &amp; 
+                grepl(vec_to_grep_pattern(&quot;rheumatic fever&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;rheumatic fever&quot;)),
+               collected_all_disease_terms
+         ))
+
+# pubmed id: 34594039 
+# remove rheumatic fever - this is susceptibility to infection GWAS
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == 34594039 &amp; 
+                grepl(vec_to_grep_pattern(&quot;rheumatic fever&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;rheumatic fever&quot;)),
+               collected_all_disease_terms
+         ))
+
+# if `DISEASE/TRAIT` contains ICD10 I00
+# remove rheumatic fever from collected_all_disease_terms
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;ICD10 I00&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;rheumatic fever&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;rheumatic fever&quot;)),
+               collected_all_disease_terms
+         ))
+
+
+# not clear for pubmed id: 34662886
+# why some rheumatic fever have ICD10: I00, and others have no ICD10 ... 
+# remove rheumatic fever from collected_all_disease_terms
+# assuming both just refer to the initial infection
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == 34662886 &amp;
+                grepl(vec_to_grep_pattern(&quot;rheumatic fever&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;rheumatic fever&quot;)),
+               collected_all_disease_terms
+         ))</code></pre>
+</div>
+<div id="hpv-infection" class="section level3" number="6.10.15">
+<h3><span class="header-section-number">6.10.15</span> HPV
+infection</h3>
 <pre class="r"><code># parasitic infection</code></pre>
 </div>
 </div>
@@ -2380,14 +2493,14 @@ head(n_studies_trait)</code></pre>
 <pre><code># A tibble: 6 × 2
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
-1 &quot;&quot;                                149
+1 &quot;&quot;                                150
 2 &quot;type 2 diabetes mellitus&quot;        146
 3 &quot;alzheimers disease&quot;              116
 4 &quot;breast cancer&quot;                   113
 5 &quot;asthma&quot;                          111
 6 &quot;major depressive disorder&quot;       109</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2927    2</code></pre>
+<pre><code>[1] 2922    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="7.3.1">
 <h3><span class="header-section-number">7.3.1</span> When separate
@@ -2398,7 +2511,7 @@ studies with multiple terms</h3>
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2115</code></pre>
+<pre><code>[1] 2111</code></pre>
 </div>
 </div>
 <div id="save-output" class="section level2" number="7.4">
