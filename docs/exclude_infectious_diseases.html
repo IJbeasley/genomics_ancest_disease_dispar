@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea78628a11e6eba321c64e6672a456891498b1636targetblanka78628aa">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree3f2b1130ba88f76d91b38b8bb918f3c7bc470d73targetblank3f2b113a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a78628a11e6eba321c64e6672a456891498b1636" target="_blank">a78628a</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/3f2b1130ba88f76d91b38b8bb918f3c7bc470d73" target="_blank">3f2b113</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea78628a11e6eba321c64e6672a456891498b1636targetblanka78628aa"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree3f2b1130ba88f76d91b38b8bb918f3c7bc470d73targetblank3f2b113a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a78628a11e6eba321c64e6672a456891498b1636" target="_blank">a78628a</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/3f2b1130ba88f76d91b38b8bb918f3c7bc470d73" target="_blank">3f2b113</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -562,10 +562,11 @@ Ignored files:
     Ignored:    output/trait_ontology/
     Ignored:    renv/
 
+Untracked files:
+    Untracked:  analysis/exclude_injuries.Rmd
+
 Unstaged changes:
-    Modified:   analysis/level_1_disease_group_cancer.Rmd
     Modified:   analysis/level_1_disease_group_non_cancer.Rmd
-    Modified:   analysis/level_2_disease_group.Rmd
     Modified:   code/get_term_descendants.R
 
 </code></pre>
@@ -612,6 +613,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/3f2b1130ba88f76d91b38b8bb918f3c7bc470d73/analysis/exclude_infectious_diseases.Rmd" target="_blank">3f2b113</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-23
+</td>
+<td>
+Fixing typos
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/56db22e4f5f1ed62c1605e18285996438f252a68/docs/exclude_infectious_diseases.html" target="_blank">56db22e</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-23
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -892,6 +927,15 @@ subgrouping</h3>
          )
          )</code></pre>
 </div>
+<div id="aids" class="section level3" number="2.1.2">
+<h3><span class="header-section-number">2.1.2</span> AIDS</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;aids&quot;)
+         )
+         )</code></pre>
+</div>
 </div>
 <div id="sexually-transmitted-infections-other-than-hiv"
 class="section level2" number="2.2">
@@ -1059,6 +1103,29 @@ gwas_study_info = gwas_study_info |&gt;
          stringr::str_replace_all(collected_all_disease_terms,
                           pattern = vec_to_grep_pattern(tb_terms),
                           &quot;tuberculosis&quot;
+         ))
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;tuberculosis&quot;)
+         )
+         )
+
+# additionally, remove bacterial infection if `DISEASE/TRAIT` contains:
+# Resistance to Mycobacterium tuberculosis infection
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;Resistance to Mycobacterium tuberculosis infection&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;bacterial infection&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;bacterial infection&quot;)),
+               collected_all_disease_terms
          ))</code></pre>
 </div>
 <div id="lower-respiratory-infections" class="section level2"
@@ -1299,7 +1366,7 @@ number="3.6.1">
 <h3><span class="header-section-number">3.6.1</span> Influenza a (h1n1)
 (subset of influenza)</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-    mutate(l1_all_disease_terms  = 
+    mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;influenza a \\(h1n1\\)&quot;),
                           &quot;influenza&quot;
@@ -1524,17 +1591,21 @@ filariasis</h2>
 <pre class="r"><code>gwas_study_info = 
   gwas_study_info |&gt; 
   mutate(collected_all_disease_terms  = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern(&quot;dengue hemorrhagic fever&quot;),
-                          &quot;dengue&quot;
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;dengue hemorrhagic fever&quot;)
+         ))
+
+gwas_study_info = 
+  gwas_study_info |&gt; 
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                         vec_to_grep_pattern(&quot;dengue&quot;)
          ))
 
 gwas_study_info |&gt;
   filter(grepl(&quot;dengue&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
   select(`DISEASE/TRAIT`, collected_all_disease_terms)</code></pre>
-<pre><code>           DISEASE/TRAIT collected_all_disease_terms
-                  &lt;char&gt;                      &lt;char&gt;
-1: Dengue shock syndrome                      dengue</code></pre>
+<pre><code>Empty data.table (0 rows and 2 cols): DISEASE/TRAIT,collected_all_disease_terms</code></pre>
 </div>
 <div id="yellow-fever" class="section level2" number="5.12">
 <h2><span class="header-section-number">5.12</span> Yellow fever</h2>
@@ -1895,8 +1966,296 @@ paraparesis</h3>
          )
          )</code></pre>
 </div>
-<div id="hpv-infection" class="section level3" number="6.9.10">
-<h3><span class="header-section-number">6.9.10</span> HPV infection</h3>
+<div id="unspecified-streptococcal-infection" class="section level3"
+number="6.9.10">
+<h3><span class="header-section-number">6.9.10</span> Unspecified
+streptococcal infection</h3>
+<pre class="r"><code># remove streptococcal infection if DISEASE/TRAIT contains Streptococcus infection (PheCode 41.2)
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;Streptococcus infection \\(PheCode 41.2\\)&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;streptococcal infection&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;streptococcal infection&quot;)),
+               collected_all_disease_terms
+         ))</code></pre>
+</div>
+<div id="any-acute-infection" class="section level3" number="6.9.11">
+<h3><span class="header-section-number">6.9.11</span> Any acute
+infection</h3>
+<pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
+ gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != &quot;&quot;])  |&gt; 
+            unlist() |&gt;
+            stringr::str_trim()
+
+infection_terms &lt;- diseases[grepl(&quot;infection&quot;, diseases, ignore.case = T)]
+
+# if acute is in DISEASE/TRAIT and infection term in collected_all_disease_terms, remove infection term
+
+for(term in infection_terms){
+  
+  if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) &gt; 0) {
+    
+    print(paste0(&quot;Term removed:&quot;, term))
+    
+    gwas_study_info = 
+      gwas_study_info |&gt;
+      mutate(collected_all_disease_terms  = 
+             ifelse(grepl(&quot;acute&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                    grepl(vec_to_grep_pattern(term), 
+                          collected_all_disease_terms, 
+                          ignore.case = T,
+                          perl = T),
+             stringr::str_remove_all(collected_all_disease_terms,
+                              vec_to_grep_pattern(term)),
+                   collected_all_disease_terms
+             ))
+    
+  }
+}</code></pre>
+<pre><code>[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:viral and mycobacterial infections&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:bacterial infection&quot;
+[1] &quot;Term removed:bacterial infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:vaginal yeast infection&quot;
+[1] &quot;Term removed:childhood ear infection&quot;
+[1] &quot;Term removed:hepatitis a infection&quot;
+[1] &quot;Term removed:chronic sinus infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:childhood ear infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:staphylococcus aureus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:cytomegalovirus infection&quot;
+[1] &quot;Term removed:viral and mycobacterial infections&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:childhood ear infection&quot;
+[1] &quot;Term removed:staphylococcus aureus infection&quot;
+[1] &quot;Term removed:skin and soft tissue staphylococcus aureus infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:staphylococcus aureus infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:viral and mycobacterial infections&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:gram-negative bacterial infections&quot;
+[1] &quot;Term removed:gram-positive bacterial infections&quot;
+[1] &quot;Term removed:staphylococcal skin infections&quot;
+[1] &quot;Term removed:escherichia coli infections&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:hepatitis a infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:spirochaetales infections&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:central nervous system infection&quot;
+[1] &quot;Term removed:viral eye infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:encephalopathy acute infection-induced&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:chlamydiaceae infections&quot;
+[1] &quot;Term removed:pneumococcal infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:cytomegalovirus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:chronic sinus infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:pneumococcal infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:central nervous system infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:viral eye infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:gram-positive bacterial infections&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:central nervous system infection&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:spirochaetales infections&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:gram-negative bacterial infections&quot;
+[1] &quot;Term removed:gram-positive bacterial infections&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:escherichia coli infections&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:hepatitis a infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:skin infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:viral eye infection&quot;
+[1] &quot;Term removed:viral eye infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:escherichia coli infections&quot;
+[1] &quot;Term removed:escherichia coli infections&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:gram-negative bacterial infections&quot;
+[1] &quot;Term removed:gram-negative bacterial infections&quot;
+[1] &quot;Term removed:gram-positive bacterial infections&quot;
+[1] &quot;Term removed:staphylococcal skin infections&quot;
+[1] &quot;Term removed:staphylococcal skin infections&quot;
+[1] &quot;Term removed:staphylococcal skin infections&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:methicillin-resistant staphylococcus aureus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:gram-negative bacterial infections&quot;
+[1] &quot;Term removed:staphylococcal skin infections&quot;
+[1] &quot;Term removed:escherichia coli infections&quot;
+[1] &quot;Term removed:central nervous system infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:pulmonary non-tuberculous mycobacterial infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:chronic human papillomavirus infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:central nervous system infection&quot;
+[1] &quot;Term removed:viral eye infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:nosocomial infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:cytomegalovirus infection&quot;
+[1] &quot;Term removed:cytomegalovirus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:human papilloma virus infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:skin and soft tissue staphylococcus aureus infection&quot;
+[1] &quot;Term removed:urinary tract infection&quot;
+[1] &quot;Term removed:clostridium difficile infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:nosocomial infection&quot;
+[1] &quot;Term removed:viral human hepatitis infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:mycobacterium infection&quot;
+[1] &quot;Term removed:hepatitis b infection&quot;
+[1] &quot;Term removed:hepatitis c infection&quot;
+[1] &quot;Term removed:herpes simplex infection&quot;
+[1] &quot;Term removed:mycobacterium infection&quot;</code></pre>
+</div>
+<div id="hpv-infection" class="section level3" number="6.9.12">
+<h3><span class="header-section-number">6.9.12</span> HPV infection</h3>
 <pre class="r"><code># parasitic infection</code></pre>
 </div>
 </div>
@@ -1942,14 +2301,14 @@ head(n_studies_trait)</code></pre>
 <pre><code># A tibble: 6 × 2
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
-1 &quot;type 2 diabetes mellitus&quot;        146
-2 &quot;&quot;                                120
+1 &quot;&quot;                                148
+2 &quot;type 2 diabetes mellitus&quot;        146
 3 &quot;alzheimers disease&quot;              116
 4 &quot;breast cancer&quot;                   113
 5 &quot;asthma&quot;                          111
 6 &quot;major depressive disorder&quot;       109</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2940    2</code></pre>
+<pre><code>[1] 2933    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="7.3.1">
 <h3><span class="header-section-number">7.3.1</span> When separate
@@ -1960,7 +2319,7 @@ studies with multiple terms</h3>
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2127</code></pre>
+<pre><code>[1] 2121</code></pre>
 </div>
 </div>
 <div id="save-output" class="section level2" number="7.4">
