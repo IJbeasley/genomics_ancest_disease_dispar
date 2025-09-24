@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2025-09-22
+<strong>Last updated:</strong> 2025-09-23
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreef897b1327eea2dd2ac306cb301e23eee9fc37adctargetblankf897b13a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea78628a11e6eba321c64e6672a456891498b1636targetblanka78628aa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/f897b1327eea2dd2ac306cb301e23eee9fc37adc" target="_blank">f897b13</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a78628a11e6eba321c64e6672a456891498b1636" target="_blank">a78628a</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreef897b1327eea2dd2ac306cb301e23eee9fc37adctargetblankf897b13a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea78628a11e6eba321c64e6672a456891498b1636targetblanka78628aa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/f897b1327eea2dd2ac306cb301e23eee9fc37adc" target="_blank">f897b13</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a78628a11e6eba321c64e6672a456891498b1636" target="_blank">a78628a</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -551,6 +551,7 @@ Ignored files:
     Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
     Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
     Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/
     Ignored:    data/who/
     Ignored:    output/gwas_cat/
     Ignored:    output/gwas_study_info_cohort_corrected.csv
@@ -611,6 +612,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/a78628a11e6eba321c64e6672a456891498b1636/analysis/exclude_infectious_diseases.Rmd" target="_blank">a78628a</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-23
+</td>
+<td>
+More icd codes for infectious disease
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/bdcc9ebb8a0c2d593b318cc1c82f9f26373ff0be/docs/exclude_infectious_diseases.html" target="_blank">bdcc9eb</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-22
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1033,6 +1068,54 @@ infections</h2>
 <pre class="r"><code># acute lower respiratory infections
 url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F195742007/descendants&quot;
 
+
+# in the case of acute / chronic bronchitis, we will remove only acute
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;acute bronchitis&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;bronchitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;bronchitis&quot;)),
+               collected_all_disease_terms
+         ))
+
+# if bronchitis is specified as chronic in DISEASE/TRAIT, replace bronchitis with chronic bronchitis
+# in to collected_all_disease_terms
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;chronic bronchitis&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;bronchitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;bronchitis&quot;),
+                          &quot;chronic bronchitis&quot;),
+               collected_all_disease_terms
+         ))
+
+
+# similar, for bronchiolitis, remove if acute
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;acute bronchiolitis&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;bronchiolitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;bronchiolitis&quot;)),
+               collected_all_disease_terms
+         ))
+
+
+
 lri_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 35
@@ -1042,7 +1125,12 @@ lri_terms &lt;- get_descendants(url)</code></pre>
 [3] &quot;acute infective exacerbation of chronic obstructive pulmonary disease&quot;       
 [4] &quot;inflammation of bronchiole caused by human metapneumovirus&quot;                  
 [5] &quot;acute bronchiolitis caused by respiratory syncytial virus&quot;                   </code></pre>
-<pre class="r"><code>for(term in lri_terms){
+<pre class="r"><code>lri_terms &lt;- c(&quot;acute bronchitis&quot;,
+               &quot;respiratory syncytial virus infection&quot;,
+               lri_terms
+               )
+
+for(term in lri_terms){
   
   if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) &gt; 0) {
     
@@ -1057,12 +1145,74 @@ lri_terms &lt;- get_descendants(url)</code></pre>
   
   }
 }</code></pre>
+<pre><code>[1] &quot;Term removed:acute bronchitis&quot;
+[1] &quot;Term removed:respiratory syncytial virus infection&quot;</code></pre>
 </div>
 <div id="upper-respiratory-infections" class="section level2"
 number="3.3">
 <h2><span class="header-section-number">3.3</span> Upper respiratory
 infections</h2>
-<pre class="r"><code># acute upper respiratory infections
+<pre class="r"><code># remove larygitis, if acute
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;acute laryngitis&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;laryngitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;laryngitis&quot;)),
+               collected_all_disease_terms
+         ))
+
+# if laryngitis is specified as chronic in DISEASE/TRAIT, replace laryngitis with chronic laryngitis
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;chronic laryngitis&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;laryngitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;laryngitis&quot;),
+                          &quot;chronic laryngitis&quot;),
+               collected_all_disease_terms
+         ))
+
+# for tonsillitis, remove if acute
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;acute tonsillitis|ICD10 J03&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;tonsillitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;tonsillitis&quot;)),
+               collected_all_disease_terms
+         ))
+
+# for tonsillitis, if chronic in DISEASE/TRAIT, replace tonsillitis with chronic tonsillitis
+gwas_study_info = 
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;chronic tonsillitis&quot;, `DISEASE/TRAIT`, ignore.case = T) &amp; 
+                grepl(vec_to_grep_pattern(&quot;tonsillitis&quot;), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;tonsillitis&quot;),
+                          &quot;chronic tonsillitis&quot;),
+               collected_all_disease_terms
+         ))
+
+
+
+# acute upper respiratory infections
 url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F54398005/descendants&quot;
 
 uri_terms &lt;- get_descendants(url)</code></pre>
@@ -1074,7 +1224,17 @@ uri_terms &lt;- get_descendants(url)</code></pre>
 [3] &quot;acute nasopharyngitis caused by respiratory syncytial virus&quot;            
 [4] &quot;acute laryngitis caused by haemophilus influenzae&quot;                      
 [5] &quot;fusobacterial necrotizing tonsillitis (disorder)&quot;                       </code></pre>
-<pre class="r"><code>for(term in uri_terms){
+<pre class="r"><code>uri_terms &lt;- c(&quot;strep throat&quot;, 
+               &quot;streptococcal pharyngitis&quot;,
+               &quot;acute pharyngitis&quot;,
+               &quot;pharyngitis&quot;,
+               &quot;acute tonsillitis&quot;,
+               uri_terms
+               )
+
+
+
+for(term in uri_terms){
   
   if(sum(grepl(term, gwas_study_info$collected_all_disease_terms)) &gt; 0) {
     
@@ -1089,6 +1249,11 @@ uri_terms &lt;- get_descendants(url)</code></pre>
   
   }
 }</code></pre>
+<pre><code>[1] &quot;Term removed:strep throat&quot;
+[1] &quot;Term removed:streptococcal pharyngitis&quot;
+[1] &quot;Term removed:acute pharyngitis&quot;
+[1] &quot;Term removed:pharyngitis&quot;
+[1] &quot;Term removed:acute tonsillitis&quot;</code></pre>
 </div>
 <div id="otitis-media" class="section level2" number="3.4">
 <h2><span class="header-section-number">3.4</span> Otitis media</h2>
@@ -1356,12 +1521,20 @@ filariasis</h2>
 </div>
 <div id="dengue" class="section level2" number="5.11">
 <h2><span class="header-section-number">5.11</span> Dengue</h2>
-<pre class="r"><code>gwas_study_info |&gt;
+<pre class="r"><code>gwas_study_info = 
+  gwas_study_info |&gt; 
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;dengue hemorrhagic fever&quot;),
+                          &quot;dengue&quot;
+         ))
+
+gwas_study_info |&gt;
   filter(grepl(&quot;dengue&quot;, collected_all_disease_terms, ignore.case = T)) |&gt;
   select(`DISEASE/TRAIT`, collected_all_disease_terms)</code></pre>
 <pre><code>           DISEASE/TRAIT collected_all_disease_terms
                   &lt;char&gt;                      &lt;char&gt;
-1: Dengue shock syndrome    dengue hemorrhagic fever</code></pre>
+1: Dengue shock syndrome                      dengue</code></pre>
 </div>
 <div id="yellow-fever" class="section level2" number="5.12">
 <h2><span class="header-section-number">5.12</span> Yellow fever</h2>
@@ -1460,10 +1633,19 @@ tropical diseases</h2>
 diseases</h1>
 <div id="meningitis" class="section level2" number="6.1">
 <h2><span class="header-section-number">6.1</span> Meningitis</h2>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+<pre class="r"><code>meningitis_terms &lt;- c(
+                     &quot;meningococcal infection&quot;,
+                     &quot;infectious meningitis&quot;,
+                     &quot;bacterial meningitis&quot;,
+                     &quot;viral meningitis&quot;,
+                     &quot;pneumococcal meningitis&quot;,
+                     &quot;meningitis&quot;
+                     )
+
+gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern(&quot;infectious meningitis&quot;)
+                          pattern = vec_to_grep_pattern(meningitis_terms)
          )
          )</code></pre>
 </div>
@@ -1526,6 +1708,14 @@ number="6.7">
 <h2><span class="header-section-number">6.7</span> Varicella and herpes
 zoster</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;chickenpox&quot;)
+         )
+         )
+
+
+gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == &quot;Herpes zoster (PheCode 53)&quot; |
                 `DISEASE/TRAIT` == &quot;Herpes zoster&quot; |
@@ -1693,6 +1883,20 @@ infection</h3>
                           pattern = vec_to_grep_pattern(&quot;common cold&quot;)
          )
          )</code></pre>
+</div>
+<div id="tropical-spastic-paraparesis" class="section level3"
+number="6.9.9">
+<h3><span class="header-section-number">6.9.9</span> Tropical spastic
+paraparesis</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;tropical spastic paraparesis&quot;)
+         )
+         )</code></pre>
+</div>
+<div id="hpv-infection" class="section level3" number="6.9.10">
+<h3><span class="header-section-number">6.9.10</span> HPV infection</h3>
 <pre class="r"><code># parasitic infection</code></pre>
 </div>
 </div>
@@ -1739,13 +1943,13 @@ head(n_studies_trait)</code></pre>
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
 1 &quot;type 2 diabetes mellitus&quot;        146
-2 &quot;alzheimers disease&quot;              116
-3 &quot;&quot;                                115
+2 &quot;&quot;                                120
+3 &quot;alzheimers disease&quot;              116
 4 &quot;breast cancer&quot;                   113
 5 &quot;asthma&quot;                          111
 6 &quot;major depressive disorder&quot;       109</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2954    2</code></pre>
+<pre><code>[1] 2940    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="7.3.1">
 <h3><span class="header-section-number">7.3.1</span> When separate
@@ -1756,7 +1960,7 @@ studies with multiple terms</h3>
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2140</code></pre>
+<pre><code>[1] 2127</code></pre>
 </div>
 </div>
 <div id="save-output" class="section level2" number="7.4">
