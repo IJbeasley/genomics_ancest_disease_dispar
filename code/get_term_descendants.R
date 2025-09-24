@@ -3,6 +3,14 @@
 library(httr)
 library(jsonlite)
 
+
+# Function to sort a character vector by string length in descending order
+str_length_sort <- function(vec) {
+  sorted_desc <- vec[order(nchar(vec), decreasing = TRUE)]
+  return(sorted_desc)
+}
+
+
 # Function to get all descendants of a given EFO (or other ontology) term from the GWAS Catalog API
 # retrieves term name (e.g. "Alzheimer's disease") for all descendants of a given term
 # doesn't retrieve the term IDs (e.g. EFO_0000249)
@@ -30,6 +38,7 @@ get_descendants <- function(url){
   terms = unlist(terms)
   terms = stringr::str_trim(tolower(terms))
   terms = unique(terms)
+  terms = str_length_sort(terms)
 
   print("Number of terms collected:")
   print(length(terms))
@@ -39,5 +48,20 @@ get_descendants <- function(url){
 
   return(terms)
 
+
+}
+
+# Function to convert a character vector into a grep pattern
+# that deals with comma separated values
+vec_to_grep_pattern <- function(vec){
+
+  vec <- paste0("(?<=^|, )", vec)
+  vec <- paste0(vec, "(?=,|$)")
+
+  if(length(vec) > 1){
+    vec <- paste0(vec, collapse = "|")
+  }
+
+  return(vec)
 
 }
