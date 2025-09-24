@@ -59,6 +59,12 @@ gwas_study_info = gwas_study_info |>
 
 ## Maternal disorders
 
+```{r maternal_disorders}
+
+maternal_disorder_terms <- c("galactorrhea")
+
+```
+
 ### 
 
 ```{r maternal_neonatal_disorders}
@@ -1532,8 +1538,23 @@ gwas_study_info |>
 
 ```{r mnd}
 
+motor_neuron_disease_terms <- c("anterior horn cell disease",
+                              "motor neuron disease"
+)
+
+gwas_study_info = gwas_study_info |>
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms,
+                                  pattern = vec_to_grep_pattern(motor_neuron_disease_terms),
+                                   "motor neuron disease"
+                          )  
+        )
+
 gwas_study_info |>
- filter(grepl("motor neuron disease", l2_all_disease_terms)) |>
+ filter(grepl(
+      vec_to_grep_pattern("motor neuron disease"), 
+      l2_all_disease_terms,
+      perl = T)) |>
   select(all_disease_terms, l2_all_disease_terms) |>
   distinct() |>
   head()
@@ -1585,7 +1606,8 @@ other_neuro_terms <- c("huntington disease",
                         "chronic inflammatory demyelinating polyneuropathy",
                        "demyelinating disease of central nervous system",
                        "myasthenia gravis",
-                       "complex regional pain syndrome")
+                       "complex regional pain syndrome",
+                       "acute transverse myelitis")
 
 gwas_study_info = gwas_study_info |>
  mutate(l2_all_disease_terms  = 
@@ -2525,62 +2547,74 @@ gwas_study_info |>
 ```
 
 
+# Musculoskeletal disorders
 
+## Rheumatoid arthritis
 
+## Osteoarthritis
 
+## Low back pain
 
+## Neck pain
 
+## Gout
 
+## Other musculoskeletal disorders
 
+```{r other_musculoskeletal_disorders}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Other neurodegenerative disorder (to do)
-
-take url: "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F52522001/descendants"
-
-# Other neurological disorders
-
-```{r}
-
-other_neuro <- c("mild neurocognitive disorder",
-                 "hiv-associated neurocognitive disorder")
+other_musculo_terms <- c("infectious arthritis"
+                        
+                         )
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Other non-communicable diseases
 
@@ -2672,7 +2706,7 @@ other_chrom_abn_terms <-
   pull(`short_description_(valid_icd-10_fy2025)`) |>
   unique()
 
-other_chrom_abn <- c("marfran syndrome",
+other_chrom_abn <- c("marfan syndrome",
                      "fragile x syndrome",
                      "22q11.2 deletion syndrome",
                      "chromosomal disorder")
@@ -2851,6 +2885,14 @@ gwas_study_info |>
 
 ```
 
+### Other congenital birth defects
+
+```{r other_congenital_birth_defects}
+
+other_congen <- c("abnormality of the respiratory system")
+
+```
+
 ## Urinary diseases and male infertility
 
 ### Urinary tract infections and interstitial nephritis
@@ -2913,14 +2955,28 @@ urolithiasis_terms <-
   pull(`short_description_(valid_icd-10_fy2025)`) |>
   unique()
 
+urolithiasis_terms <- tolower(urolithiasis_terms)
+urolithiasis_terms <- stringr::str_remove_all(urolithiasis_terms, ", unspecified$")
+
 urolithiasis_terms <-
   c("lower urinary tract calculus",
     "bladder calculus",
     "calcium oxalate nephrolithiasis",
+    "calcium phosphate nephrolithiasis",
+    "uric acid nephrolithiasis",
     "nephrolithiasis",
     "renal colic", #icd-9 788.0
     urolithiasis_terms
     )
+
+gwas_study_info = gwas_study_info |>
+  mutate(l2_all_disease_terms = 
+           stringr::str_replace_all(
+             l2_all_disease_terms,
+             vec_to_grep_pattern(urolithiasis_terms),
+             "urolithiasis"
+           )
+  )
 
 ```
 
@@ -3110,7 +3166,8 @@ gwas_study_info |>
 
 fem_genital_prolapse_terms <- c("uterine prolapse",
                               "cystocele",
-                              "rectocele"
+                              "rectocele",
+                              "enterocele"
 )
 
 gwas_study_info = gwas_study_info |> 
@@ -3266,7 +3323,12 @@ gwas_study_info = gwas_study_info |>
 
 
 other_blood_disorders <- c("neutropenia",
-                           "cryoglobulinemia")
+                           "cryoglobulinemia",
+                           "acquired coagulation factor deficiency", #ICD10: D68.4
+                           "von willebrand disease", # ICD9 286.4
+                           "hemophilia a", #  Congenital factor VIII disorder - ICD9 286.0
+                           "qualitative platelet defect"
+                           )
 
 gwas_study_info = gwas_study_info |>
  mutate(l2_all_disease_terms  = 
@@ -3300,6 +3362,14 @@ gwas_study_info = gwas_study_info |>
                                    "other metabolic disorders"
                           )  
         )
+
+```
+
+### Other hemoglobinopathies and hemolytic anemias
+
+```{r other_hemoglobinopathies_and_hemolytic_anemias}
+
+other_hemo <- c("aplastic anemia")
 
 ```
 
