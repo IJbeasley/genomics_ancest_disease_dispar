@@ -195,7 +195,60 @@ gwas_study_info = gwas_study_info |>
 # acute lower respiratory infections
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F195742007/descendants"
 
+
+# in the case of acute / chronic bronchitis, we will remove only acute
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("acute bronchitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("bronchitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("bronchitis")),
+               collected_all_disease_terms
+         ))
+
+# if bronchitis is specified as chronic in DISEASE/TRAIT, replace bronchitis with chronic bronchitis
+# in to collected_all_disease_terms
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("chronic bronchitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("bronchitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("bronchitis"),
+                          "chronic bronchitis"),
+               collected_all_disease_terms
+         ))
+
+
+# similar, for bronchiolitis, remove if acute
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("acute bronchiolitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("bronchiolitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("bronchiolitis")),
+               collected_all_disease_terms
+         ))
+
+
+
 lri_terms <- get_descendants(url)
+
+lri_terms <- c("acute bronchitis",
+               "respiratory syncytial virus infection",
+               lri_terms
+               )
 
 for(term in lri_terms){
   
@@ -219,10 +272,80 @@ for(term in lri_terms){
 
 ```{r upper_respiratory_infections}
 
+# remove larygitis, if acute
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("acute laryngitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("laryngitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("laryngitis")),
+               collected_all_disease_terms
+         ))
+
+# if laryngitis is specified as chronic in DISEASE/TRAIT, replace laryngitis with chronic laryngitis
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("chronic laryngitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("laryngitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("laryngitis"),
+                          "chronic laryngitis"),
+               collected_all_disease_terms
+         ))
+
+# for tonsillitis, remove if acute
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("acute tonsillitis|ICD10 J03", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("tonsillitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("tonsillitis")),
+               collected_all_disease_terms
+         ))
+
+# for tonsillitis, if chronic in DISEASE/TRAIT, replace tonsillitis with chronic tonsillitis
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("chronic tonsillitis", `DISEASE/TRAIT`, ignore.case = T) & 
+                grepl(vec_to_grep_pattern("tonsillitis"), 
+                      collected_all_disease_terms, 
+                      ignore.case = T,
+                      perl = T),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("tonsillitis"),
+                          "chronic tonsillitis"),
+               collected_all_disease_terms
+         ))
+
+
+
 # acute upper respiratory infections
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F54398005/descendants"
 
 uri_terms <- get_descendants(url)
+
+uri_terms <- c("strep throat", 
+               "streptococcal pharyngitis",
+               "acute pharyngitis",
+               "pharyngitis",
+               "acute tonsillitis",
+               uri_terms
+               )
+
+
 
 for(term in uri_terms){
   
@@ -561,6 +684,14 @@ gwas_study_info |>
 
 ```{r dengue}
 
+gwas_study_info = 
+  gwas_study_info |> 
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("dengue hemorrhagic fever"),
+                          "dengue"
+         ))
+
 gwas_study_info |>
   filter(grepl("dengue", collected_all_disease_terms, ignore.case = T)) |>
   select(`DISEASE/TRAIT`, collected_all_disease_terms)
@@ -679,10 +810,19 @@ gwas_study_info |>
 
 ```{r meningitis}
 
+meningitis_terms <- c(
+                     "meningococcal infection",
+                     "infectious meningitis",
+                     "bacterial meningitis",
+                     "viral meningitis",
+                     "pneumococcal meningitis",
+                     "meningitis"
+                     )
+
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("infectious meningitis")
+                          pattern = vec_to_grep_pattern(meningitis_terms)
          )
          )
 
@@ -765,6 +905,14 @@ gwas_study_info = gwas_study_info |>
 ## Varicella and herpes zoster
 
 ```{r varicella_herpes_zoster}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("chickenpox")
+         )
+         )
+
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
@@ -954,6 +1102,26 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+### Tropical spastic paraparesis
+
+
+```{r tropical_spastic_paraparesis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("tropical spastic paraparesis")
+         )
+         )
+
+```
+
+### HPV infection
+
+```{r hpv_infection}
+
+
+```
 
 ```{r other_unspecified_infectious_diseases}
 
