@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefee6e4e29ac309180b6302f284cf213051a05eedtargetblankfee6e4ea">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefde6f07b03d4644acab618a54a923187b9c9a954targetblankfde6f07a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fee6e4e29ac309180b6302f284cf213051a05eed" target="_blank">fee6e4e</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fde6f07b03d4644acab618a54a923187b9c9a954" target="_blank">fde6f07</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefee6e4e29ac309180b6302f284cf213051a05eedtargetblankfee6e4ea"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefde6f07b03d4644acab618a54a923187b9c9a954targetblankfde6f07a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fee6e4e29ac309180b6302f284cf213051a05eed" target="_blank">fee6e4e</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fde6f07b03d4644acab618a54a923187b9c9a954" target="_blank">fde6f07</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -621,6 +621,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/fde6f07b03d4644acab618a54a923187b9c9a954/analysis/level_2_disease_group.Rmd" target="_blank">fde6f07</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-24
+</td>
+<td>
+Even more grouping
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/fd33f6d92310057fa96cca6bbb99a3aa53af6cd0/docs/level_2_disease_group.html" target="_blank">fd33f6d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-24
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -2631,7 +2665,18 @@ gwas_study_info |&gt;
 </div>
 <div id="other-neoplasms" class="section level2" number="4.34">
 <h2><span class="header-section-number">4.34</span> Other neoplasms</h2>
-<pre class="r"><code>other_neoplasm_terms &lt;- c(&quot;clonal hematopoiesis&quot;)
+<pre class="r"><code>other_neoplasm_terms &lt;- c(&quot;clonal hematopoiesis&quot;,
+                          &quot;neoplasm&quot;,
+                          &quot;benign neoplasm&quot;)
+
+gwas_study_info = 
+  gwas_study_info |&gt;
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(other_neoplasm_terms),
+                                   &quot;other neoplasms&quot;
+                          )  
+        )
 
 gwas_study_info =
   gwas_study_info |&gt;
@@ -2643,7 +2688,8 @@ gwas_study_info =
          )
 
 unknown_sig_terms &lt;- c(&quot;intracranial germ cell tumor&quot;,
-                       &quot;bladder tumor&quot;)
+                       &quot;bladder tumor&quot;,
+                       &quot;dysplasia of cervix&quot;)
 
 gwas_study_info =
 gwas_study_info |&gt; 
@@ -2661,14 +2707,22 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                         all_disease_terms l2_all_disease_terms
-                                    &lt;char&gt;               &lt;char&gt;
-1:            benign prostatic hyperplasia      other neoplasms
-2:                      colorectal adenoma      other neoplasms
-3: colorectal cancer, endometrial neoplasm      other neoplasms
-4:      upper aerodigestive tract neoplasm      other neoplasms
-5:                              meningioma      other neoplasms
-6:                             common wart      other neoplasms</code></pre>
+<pre><code>                         all_disease_terms
+                                    &lt;char&gt;
+1:            benign prostatic hyperplasia
+2:   colorectal cancer, colorectal adenoma
+3:                      colorectal adenoma
+4: colorectal cancer, endometrial neoplasm
+5:      upper aerodigestive tract neoplasm
+6:                              meningioma
+                       l2_all_disease_terms
+                                     &lt;char&gt;
+1:                          other neoplasms
+2: other neoplasms, colon and rectum cancer
+3:                          other neoplasms
+4:                          other neoplasms
+5:                          other neoplasms
+6:                          other neoplasms</code></pre>
 </div>
 </div>
 <div id="cardiovascular-diseases" class="section level1" number="5">
@@ -2701,6 +2755,15 @@ gwas_study_info =
                           )  
         )
 
+# unsure --- to double check: aortic atherosclerosis
+gwas_study_info = 
+  gwas_study_info |&gt;
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(&quot;aortic atherosclerosis&quot;),
+                                   &quot;ischemic heart disease&quot;
+                          )  
+        )
 
 gwas_study_info |&gt;
  filter(grepl(vec_to_grep_pattern(&quot;ischemic heart disease&quot;), 
@@ -2947,6 +3010,15 @@ peripheral arterial disease</h2>
 <pre class="r"><code>lower_extremity_peripheral_arterial_disease_terms &lt;- c(&quot;raynaud disease&quot;
                                                         )
 
+gwas_study_info =
+  gwas_study_info |&gt;
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(lower_extremity_peripheral_arterial_disease_terms),
+                                   &quot;lower extremity peripheral arterial disease&quot;
+                          )  
+        )
+
 gwas_study_info |&gt;
  filter(grepl(vec_to_grep_pattern(&quot;lower extremity peripheral arterial disease&quot;), 
               l2_all_disease_terms,
@@ -2958,12 +3030,14 @@ gwas_study_info |&gt;
                                                   &lt;char&gt;
 1:                           peripheral arterial disease
 2: type 2 diabetes mellitus, peripheral arterial disease
-3:        diabetes mellitus, peripheral arterial disease
+3:                                       raynaud disease
+4:        diabetes mellitus, peripheral arterial disease
                                                     l2_all_disease_terms
                                                                   &lt;char&gt;
 1:                           lower extremity peripheral arterial disease
 2: lower extremity peripheral arterial disease, type 2 diabetes mellitus
-3:        diabetes mellitus, lower extremity peripheral arterial disease</code></pre>
+3:                           lower extremity peripheral arterial disease
+4:        diabetes mellitus, lower extremity peripheral arterial disease</code></pre>
 </div>
 <div id="endocarditis" class="section level2" number="5.11">
 <h2><span class="header-section-number">5.11</span> Endocarditis</h2>
@@ -3009,7 +3083,8 @@ and circulatory diseases</h2>
                                 &quot;thromboembolism&quot;,
                                 &quot;vascular insufficiency&quot;,
                                 &quot;brain infarction&quot;,
-                                &quot;heart murmur&quot;
+                                &quot;heart murmur&quot;,
+                                &quot;deep vein thrombosis&quot;
                                  )
 
 gwas_study_info =
@@ -3045,14 +3120,14 @@ gwas_study_info |&gt;
 4:                                                                        ischemic stroke, small artery occlusion
 5: ischemic stroke, venous thromboembolism, stroke, deep vein thrombosis, pulmonary embolism, abnormal thrombosis
 6:                                                        type 2 diabetes mellitus, coronary artery calcification
-                                                                                                      l2_all_disease_terms
-                                                                                                                    &lt;char&gt;
-1:                                                                           other cardiovascular and circulatory diseases
-2:                                                       alzheimers disease, other cardiovascular and circulatory diseases
-3:                                                                   other cardiovascular and circulatory diseases, stroke
-4:                                                                   other cardiovascular and circulatory diseases, stroke
-5: deep vein thrombosis, other cardiovascular and circulatory diseases, stroke, thrombotic disease, venous thromboembolism
-6:                                                 other cardiovascular and circulatory diseases, type 2 diabetes mellitus</code></pre>
+                                                                                                                               l2_all_disease_terms
+                                                                                                                                             &lt;char&gt;
+1:                                                                                                    other cardiovascular and circulatory diseases
+2:                                                                                alzheimers disease, other cardiovascular and circulatory diseases
+3:                                                                                            other cardiovascular and circulatory diseases, stroke
+4:                                                                                            other cardiovascular and circulatory diseases, stroke
+5: other cardiovascular and circulatory diseases, other cardiovascular and circulatory diseases, stroke, thrombotic disease, venous thromboembolism
+6:                                                                          other cardiovascular and circulatory diseases, type 2 diabetes mellitus</code></pre>
 </div>
 </div>
 <div id="chronic-respiratory-diseases" class="section level1"
@@ -3132,7 +3207,8 @@ class="section level2" number="6.4">
 disease and pulmonary sarcoidosis</h2>
 <pre class="r"><code>interstitial_lung_disease_terms &lt;- c(&quot;pulmonary sarcoidosis&quot;,
                                    &quot;interstitial lung disease&quot;,
-                                   &quot;löfgren syndrome&quot;
+                                   &quot;löfgren syndrome&quot;,
+                                   &quot;sarcoidosis&quot;
                                    )
 
 gwas_study_info = 
@@ -3151,16 +3227,22 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                                 all_disease_terms
-                                            &lt;char&gt;
-1: rheumatoid arthritis, interstitial lung disease
-2:                       interstitial lung disease
-3: systemic scleroderma, interstitial lung disease
-                                                        l2_all_disease_terms
-                                                                      &lt;char&gt;
-1: interstitial lung disease and pulmonary sarcoidosis, rheumatoid arthritis
-2:                       interstitial lung disease and pulmonary sarcoidosis
-3: interstitial lung disease and pulmonary sarcoidosis, systemic scleroderma</code></pre>
+<pre><code>                                                                                                                                    all_disease_terms
+                                                                                                                                               &lt;char&gt;
+1:                                                                                                                                        sarcoidosis
+2:                                                                                                    rheumatoid arthritis, interstitial lung disease
+3:                                                                                                                        sarcoidosis, crohns disease
+4:                                                                                                                          interstitial lung disease
+5: rheumatoid arthritis, sarcoidosis, type 1 diabetes mellitus, psoriasis, celiac disease, ulcerative colitis, crohns disease, sclerosing cholangitis
+6:                                                                                                    systemic scleroderma, interstitial lung disease
+                                                                                                                                                                         l2_all_disease_terms
+                                                                                                                                                                                       &lt;char&gt;
+1:                                                                                                                                        interstitial lung disease and pulmonary sarcoidosis
+2:                                                                                                                  interstitial lung disease and pulmonary sarcoidosis, rheumatoid arthritis
+3:                                                                                                                        crohns disease, interstitial lung disease and pulmonary sarcoidosis
+4:                                                                                                                                        interstitial lung disease and pulmonary sarcoidosis
+5: celiac disease, crohns disease, psoriasis, rheumatoid arthritis, interstitial lung disease and pulmonary sarcoidosis, sclerosing cholangitis, type 1 diabetes mellitus, ulcerative colitis
+6:                                                                                                                  interstitial lung disease and pulmonary sarcoidosis, systemic scleroderma</code></pre>
 </div>
 <div id="other-chronic-respiratory-diseases" class="section level2"
 number="6.5">
@@ -3252,8 +3334,10 @@ number="7.2">
 <h2><span class="header-section-number">7.2</span> Upper digestive
 system diseases</h2>
 <pre class="r"><code>upper_dig_terms &lt;- c(&quot;peptic ulcer diseases&quot;,
+                     &quot;peptic ulcer&quot;,
                      &quot;duodenitis&quot;,
                      &quot;gastritis&quot;,
+                     &quot;atrophic gastritis&quot;,
                      &quot;gastroesophageal reflux disease&quot;)
 
 gwas_study_info = gwas_study_info |&gt;
@@ -3271,22 +3355,22 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                                                 all_disease_terms
-                                                            &lt;char&gt;
-1:                                 gastroesophageal reflux disease
-2:      esophageal adenocarcinoma, gastroesophageal reflux disease
-3:             barretts esophagus, gastroesophageal reflux disease
-4:                                                       gastritis
-5:      gastroesophageal reflux disease, major depressive disorder
-6: post-traumatic stress disorder, gastroesophageal reflux disease
-                                              l2_all_disease_terms
-                                                            &lt;char&gt;
-1:                                 upper digestive system diseases
-2:              esophageal cancer, upper digestive system diseases
-3:             barretts esophagus, upper digestive system diseases
-4:                                 upper digestive system diseases
-5:      upper digestive system diseases, major depressive disorder
-6: upper digestive system diseases, post-traumatic stress disorder</code></pre>
+<pre><code>                                            all_disease_terms
+                                                       &lt;char&gt;
+1:                            gastroesophageal reflux disease
+2: esophageal adenocarcinoma, gastroesophageal reflux disease
+3:        barretts esophagus, gastroesophageal reflux disease
+4:                                                  gastritis
+5:                                         atrophic gastritis
+6: gastroesophageal reflux disease, major depressive disorder
+                                         l2_all_disease_terms
+                                                       &lt;char&gt;
+1:                            upper digestive system diseases
+2:         esophageal cancer, upper digestive system diseases
+3:        barretts esophagus, upper digestive system diseases
+4:                            upper digestive system diseases
+5:                            upper digestive system diseases
+6: upper digestive system diseases, major depressive disorder</code></pre>
 </div>
 <div id="appendicitis" class="section level2" number="7.3">
 <h2><span class="header-section-number">7.3</span> Appendicitis</h2>
@@ -3346,7 +3430,8 @@ abdominal hernia</h2>
 <pre class="r"><code>hernia_terms &lt;- c(&quot;inguinal hernia&quot;,
                   &quot;femoral hernia&quot;,
                   &quot;abdominal hernia&quot;,
-                  &quot;hernia of the abdominal wall&quot;)
+                  &quot;hernia of the abdominal wall&quot;,
+                  &quot;hiatus hernia&quot;)
 
 gwas_study_info = gwas_study_info |&gt;
  mutate(l2_all_disease_terms  = 
@@ -3370,7 +3455,7 @@ gwas_study_info |&gt;
 3:               femoral hernia inguinal femoral and abdominal hernia
 4:             umbilical hernia inguinal femoral and abdominal hernia
 5:               ventral hernia inguinal femoral and abdominal hernia
-6:            incisional hernia inguinal femoral and abdominal hernia</code></pre>
+6:                hiatus hernia inguinal femoral and abdominal hernia</code></pre>
 </div>
 <div id="inflammatory-bowel-disease" class="section level2"
 number="7.6">
@@ -3435,7 +3520,9 @@ biliary diseases</h2>
                    &quot;bile duct disorder&quot;,
                    &quot;biliary tract disease&quot;,
                    &quot;cholelithiasis&quot;,
-                   &quot;cholecystitis&quot;)
+                   &quot;cholecystitis&quot;,
+                   &quot;sclerosing cholangitis&quot;,
+                   &quot;gallstones&quot;)
 
 
 gwas_study_info = gwas_study_info |&gt; 
@@ -3453,22 +3540,22 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                    all_disease_terms
-                               &lt;char&gt;
-1: sickle cell anemia, cholelithiasis
-2:                     cholelithiasis
-3:                 bile duct disorder
-4:                gallbladder disease
-5:              biliary tract disease
-6:      cholelithiasis, cholecystitis
-                                                         l2_all_disease_terms
-                                                                       &lt;char&gt;
-1: gallbladder and biliary diseases, sickle cell disease and related diseases
-2:                                           gallbladder and biliary diseases
-3:                                           gallbladder and biliary diseases
-4:                                           gallbladder and biliary diseases
-5:                                           gallbladder and biliary diseases
-6:         gallbladder and biliary diseases, gallbladder and biliary diseases</code></pre>
+<pre><code>                              all_disease_terms
+                                         &lt;char&gt;
+1: sclerosing cholangitis, autoimmune hepatitis
+2:                       sclerosing cholangitis
+3:   sclerosing cholangitis, cholangiocarcinoma
+4:   cholangiocarcinoma, sclerosing cholangitis
+5:    sclerosing cholangitis, colorectal cancer
+6: sclerosing cholangitis, gallbladder neoplasm
+                                                     l2_all_disease_terms
+                                                                   &lt;char&gt;
+1:                 autoimmune hepatitis, gallbladder and biliary diseases
+2:                                       gallbladder and biliary diseases
+3:                         liver cancer, gallbladder and biliary diseases
+4:                         liver cancer, gallbladder and biliary diseases
+5:              colon and rectum cancer, gallbladder and biliary diseases
+6: gallbladder and biliary tract cancer, gallbladder and biliary diseases</code></pre>
 </div>
 <div id="pancreatitis" class="section level2" number="7.9">
 <h2><span class="header-section-number">7.9</span> Pancreatitis</h2>
@@ -3528,7 +3615,9 @@ other_digestive_terms &lt;- c(&quot;esophagitis&quot;,
                            &quot;anal fistula&quot;,
                            #? &quot;anal polyp&quot;
                            &quot;rectal prolapse&quot;,
-                           &quot;rectal abscess&quot;
+                           &quot;rectal abscess&quot;,
+                           &quot;hemorrhoid&quot;,
+                           &quot;peritonitis&quot;
                            )
 
 gwas_study_info = gwas_study_info |&gt;
@@ -3671,6 +3760,17 @@ gwas_study_info |&gt;
                           )  
         )
 
+
+
+gwas_study_info =
+gwas_study_info |&gt; 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = &quot;partial epilepsy&quot;,
+                                   &quot;idiopathic epilepsy&quot;
+                          )  
+        )
+
 gwas_study_info |&gt;
  filter(grepl(&quot;idiopathic epilepsy&quot;, l2_all_disease_terms)) |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
@@ -3678,10 +3778,11 @@ gwas_study_info |&gt;
   head()</code></pre>
 <pre><code>             all_disease_terms l2_all_disease_terms
                         &lt;char&gt;               &lt;char&gt;
-1:  childhood absence epilepsy  idiopathic epilepsy
-2:   juvenile absence epilepsy  idiopathic epilepsy
-3: juvenile myoclonic epilepsy  idiopathic epilepsy
-4:           rolandic epilepsy  idiopathic epilepsy</code></pre>
+1:            partial epilepsy  idiopathic epilepsy
+2:  childhood absence epilepsy  idiopathic epilepsy
+3:   juvenile absence epilepsy  idiopathic epilepsy
+4: juvenile myoclonic epilepsy  idiopathic epilepsy
+5:           rolandic epilepsy  idiopathic epilepsy</code></pre>
 </div>
 <div id="multiple-sclerosis" class="section level2" number="8.4">
 <h2><span class="header-section-number">8.4</span> Multiple
@@ -3713,6 +3814,7 @@ sclerosis</h2>
 disease</h2>
 <pre class="r"><code>motor_neuron_disease_terms &lt;- c(&quot;anterior horn cell disease&quot;,
                                 &quot;anterior horn disorder&quot;,
+                                &quot;amyotrophic lateral sclerosis&quot;,
                               &quot;motor neuron disease&quot;
 )
 
@@ -3732,17 +3834,30 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>        all_disease_terms l2_all_disease_terms
-                   &lt;char&gt;               &lt;char&gt;
-1:   motor neuron disease motor neuron disease
-2: anterior horn disorder motor neuron disease</code></pre>
+<pre><code>                                                                                                                              all_disease_terms
+                                                                                                                                         &lt;char&gt;
+1:                                                                                                                amyotrophic lateral sclerosis
+2: rheumatoid arthritis, amyotrophic lateral sclerosis, type 1 diabetes mellitus, psoriasis, celiac disease, ulcerative colitis, crohns disease
+3:                                                                                                age of onset of amyotrophic lateral sclerosis
+4:                                                                                            amyotrophic lateral sclerosis, multiple sclerosis
+5:                                                                                       frontotemporal dementia, amyotrophic lateral sclerosis
+6:                                                                                                 amyotrophic lateral sclerosis, schizophrenia
+                                                                                                                                                l2_all_disease_terms
+                                                                                                                                                              &lt;char&gt;
+1:                                                                                                                                              motor neuron disease
+2: motor neuron disease, other digestive diseases, inflammatory bowel disease, psoriasis, rheumatoid arthritis, type 1 diabetes mellitus, inflammatory bowel disease
+3:                                                                                                                                              motor neuron disease
+4:                                                                                                                          motor neuron disease, multiple sclerosis
+5:                                                                                                     motor neuron disease, alzheimer&#39;s disease and other dementias
+6:                                                                                                                               motor neuron disease, schizophrenia</code></pre>
 </div>
 <div id="headache-disorders" class="section level2" number="8.6">
 <h2><span class="header-section-number">8.6</span> Headache
 disorders</h2>
 <pre class="r"><code>headache_terms &lt;- c(&quot;headache disorder&quot;,
                     &quot;cluster headache&quot;,
-                    &quot;migraine&quot;
+                    &quot;migraine&quot;,
+                    &quot;headache&quot;
                     )
 
 
@@ -3766,11 +3881,11 @@ gwas_study_info |&gt;
 <pre><code>                            all_disease_terms
                                        &lt;char&gt;
 1: migraine disorder, coronary artery disease
-2:                      migraine without aura
-3:                          migraine disorder
-4:                         migraine with aura
-5:                           cluster headache
-6:        bipolar disorder, migraine disorder
+2:                                   headache
+3:                      migraine without aura
+4:                          migraine disorder
+5:                         migraine with aura
+6:                           cluster headache
                          l2_all_disease_terms
                                        &lt;char&gt;
 1: ischemic heart disease, headache disorders
@@ -3778,7 +3893,7 @@ gwas_study_info |&gt;
 3:                         headache disorders
 4:                         headache disorders
 5:                         headache disorders
-6:       bipolar disorder, headache disorders</code></pre>
+6:                         headache disorders</code></pre>
 </div>
 <div id="other-neurological-disorders" class="section level2"
 number="8.7">
@@ -3800,7 +3915,11 @@ disorders</h2>
                        &quot;acute transverse myelitis&quot;,
                        &quot;machado-joseph disease&quot;,
                        &quot;degenerative disease of the spinal cord&quot;,
-                       &quot;cerebral palsy&quot;
+                       &quot;cerebral palsy&quot;,
+                       &quot;peripheral neuropathy&quot;,
+                       &quot;essential tremor&quot;,
+                       &quot;facial nerve disease&quot;,
+                       &quot;sporadic amyotrophic lateral sclerosis&quot;
                        )
 
 gwas_study_info = gwas_study_info |&gt;
@@ -3820,20 +3939,20 @@ gwas_study_info |&gt;
   head()</code></pre>
 <pre><code>                                     all_disease_terms
                                                 &lt;char&gt;
-1:                              restless legs syndrome
-2: huntington disease, disease progression measurement
-3:                        late-onset myasthenia gravis
-4:                      complex regional pain syndrome
-5:                  age of onset of huntington disease
-6:                                   myasthenia gravis
-           l2_all_disease_terms
-                         &lt;char&gt;
-1: other neurological disorders
-2: other neurological disorders
-3: other neurological disorders
-4: other neurological disorders
-5: other neurological disorders
-6: other neurological disorders</code></pre>
+1:              sporadic amyotrophic lateral sclerosis
+2:                              restless legs syndrome
+3:                               peripheral neuropathy
+4:             multiple myeloma, peripheral neuropathy
+5:             breast carcinoma, peripheral neuropathy
+6: huntington disease, disease progression measurement
+                             l2_all_disease_terms
+                                           &lt;char&gt;
+1:                   other neurological disorders
+2:                   other neurological disorders
+3:                   other neurological disorders
+4: multiple myeloma, other neurological disorders
+5:    breast cancer, other neurological disorders
+6:                   other neurological disorders</code></pre>
 </div>
 </div>
 <div id="mental-disorders" class="section level1" number="9">
@@ -4525,7 +4644,7 @@ gwas_study_info |&gt;
 1:                                                                                                                                                                                                                                                                     diabetes mellitus type 1
 2: ankylosing spondylitis, autoimmune disease, autoimmune thyroid disease, other digestive diseases, common variable immunodeficiency, inflammatory bowel disease, juvenile idiopathic arthritis, psoriasis, systemic lupus erythematosus, diabetes mellitus type 1, inflammatory bowel disease
 3:                                                                                                                  other digestive diseases, inflammatory bowel disease, progressive supranuclear palsy, psoriasis, rheumatoid arthritis, diabetes mellitus type 1, inflammatory bowel disease
-4:                                                                                                                   amyotrophic lateral sclerosis, other digestive diseases, inflammatory bowel disease, psoriasis, rheumatoid arthritis, diabetes mellitus type 1, inflammatory bowel disease
+4:                                                                                                                            motor neuron disease, other digestive diseases, inflammatory bowel disease, psoriasis, rheumatoid arthritis, diabetes mellitus type 1, inflammatory bowel disease
 5:                                                                                                              other digestive diseases, corticobasal degeneration disorder, inflammatory bowel disease, psoriasis, rheumatoid arthritis, diabetes mellitus type 1, inflammatory bowel disease
 6:                                                                                                                                                                                                                diabetic foot, neuropathy, diabetes mellitus type 1, type 2 diabetes mellitus</code></pre>
 </div>
@@ -4567,7 +4686,17 @@ gwas_study_info |&gt;
 <div id="chronic-kidney-disease" class="section level2" number="11.3">
 <h2><span class="header-section-number">11.3</span> Chronic kidney
 disease</h2>
-<pre class="r"><code>gwas_study_info |&gt;
+<pre class="r"><code>chronic_kidney_disease &lt;- c(&quot;cystic kidney disease&quot;)
+
+gwas_study_info = gwas_study_info |&gt; 
+ mutate(l2_all_disease_terms  = 
+          stringr::str_replace_all(l2_all_disease_terms ,
+                                  pattern = vec_to_grep_pattern(chronic_kidney_disease),
+                                   &quot;chronic kidney disease&quot;
+                          )  
+        )
+
+gwas_study_info |&gt;
  filter(grepl(vec_to_grep_pattern(&quot;chronic kidney disease&quot;), 
               l2_all_disease_terms,
               perl = T)) |&gt;
@@ -5067,7 +5196,9 @@ subcutaneous diseases</h2>
                               &quot;androgenetic alopecia&quot;,
                               &quot;chemotherapy-induced alopecia&quot;,
                               &quot;cutaneous leishmaniasis&quot;,
-                              &quot;acanthosis nigricans&quot;)
+                              &quot;acanthosis nigricans&quot;,
+                              &quot;stevens-johnson syndrome&quot;,
+                              &quot;keloid&quot;)
 
 gwas_study_info = gwas_study_info |&gt; 
  mutate(l2_all_disease_terms  = 
@@ -5085,22 +5216,22 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                                 all_disease_terms
-                                            &lt;char&gt;
-1:                           androgenetic alopecia
-2:                   chemotherapy-induced alopecia
-3:                    rosacea severity measurement
-4:                   cutaneous lupus erythematosus
-5:                                         rosacea
-6: breast carcinoma, chemotherapy-induced alopecia
-                                  l2_all_disease_terms
-                                                &lt;char&gt;
-1:                other skin and subcutaneous diseases
-2:                other skin and subcutaneous diseases
-3:                other skin and subcutaneous diseases
-4:                other skin and subcutaneous diseases
-5:                other skin and subcutaneous diseases
-6: breast cancer, other skin and subcutaneous diseases</code></pre>
+<pre><code>                                                     all_disease_terms
+                                                                &lt;char&gt;
+1: hiv infection, stevens-johnson syndrome, toxic epidermal necrolysis
+2:                                               androgenetic alopecia
+3:                stevens-johnson syndrome, toxic epidermal necrolysis
+4:                                                              keloid
+5:                                            stevens-johnson syndrome
+6:                                       chemotherapy-induced alopecia
+                                               l2_all_disease_terms
+                                                             &lt;char&gt;
+1: other skin and subcutaneous diseases, toxic epidermal necrolysis
+2:                             other skin and subcutaneous diseases
+3: other skin and subcutaneous diseases, toxic epidermal necrolysis
+4:                             other skin and subcutaneous diseases
+5:                             other skin and subcutaneous diseases
+6:                             other skin and subcutaneous diseases</code></pre>
 </div>
 </div>
 <div id="sense-organ-diseases" class="section level1" number="13">
@@ -5132,6 +5263,8 @@ loss</h2>
                        &quot;age-related macular degeneration&quot;,
                        &quot;degeneration of macula and posterior pole&quot;,
                        &quot;age-related cataract&quot;,
+                       &quot;retinal degeneration&quot;,
+                       &quot;retinal drusen&quot;,
                        &quot;cataract&quot;)
 
 gwas_study_info = gwas_study_info |&gt; 
@@ -5233,7 +5366,10 @@ diseases</h2>
                        &quot;tinnitus&quot;,
                        &quot;disturbance of skin sensation&quot;,
                        &quot;disturbances to senses&quot;,
-                       &quot;vogt-koyanagi-harada disease&quot;
+                       &quot;vogt-koyanagi-harada disease&quot;,
+                       &quot;pathological myopia&quot;,
+                       &quot;lacrimal apparatus disease&quot;,
+                       &quot;keratoconus&quot;
                        )
 
 gwas_study_info =
@@ -5252,14 +5388,14 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                                                           all_disease_terms
-                                                                      &lt;char&gt;
-1:        charcot-marie-tooth disease type 1a, disturbance of skin sensation
-2:                                              vogt-koyanagi-harada disease
-3:                                                                  tinnitus
-4:                                             disturbance of skin sensation
-5:                              disturbances of sensation of smell and taste
-6: covid-19 symptoms measurement, abnormality of the sense of smell, ageusia
+<pre><code>                                                    all_disease_terms
+                                                               &lt;char&gt;
+1: charcot-marie-tooth disease type 1a, disturbance of skin sensation
+2:                                                pathological myopia
+3:                                                        keratoconus
+4:                                       vogt-koyanagi-harada disease
+5:                                                           tinnitus
+6:                                      disturbance of skin sensation
                                               l2_all_disease_terms
                                                             &lt;char&gt;
 1: charcot-marie-tooth disease type 1a, other sense organ diseases
@@ -5400,7 +5536,14 @@ musculoskeletal disorders</h2>
                          &quot;polymyalgia rheumatica&quot;,
                          &quot;acquired musculoskeletal deformity&quot;,
                          &quot;pyogenic arthritis&quot;,
-                         &quot;reactive arthritis&quot;
+                         &quot;reactive arthritis&quot;,
+                         &quot;acroiliac arthritis&quot;,
+                         &quot;arthritis&quot;,
+                         &quot;systemic lupus erythematosus&quot;,
+                         &quot;musculoskeletal system disease&quot;,
+                         &quot;spondylosis&quot;,
+                         &quot;osteonecrosis&quot;,
+                         &quot;myalgia&quot;
                          )
 
 
@@ -5420,22 +5563,22 @@ gwas_study_info |&gt;
   select(all_disease_terms, l2_all_disease_terms) |&gt;
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                                                                     all_disease_terms
-                                                                                &lt;char&gt;
-1:                    adolescent idiopathic scoliosis, disease progression measurement
-2:                                      charcot-marie-tooth disease type 1a, scoliosis
-3:                                                     adolescent idiopathic scoliosis
-4:                                                                            sciatica
-5:                                                                           scoliosis
-6: lumbar disc herniation, sciatica, ldh-related sciatica symptom severity measurement
+<pre><code>                                                  all_disease_terms
+                                                             &lt;char&gt;
+1:                                     systemic lupus erythematosus
+2:               rheumatoid arthritis, systemic lupus erythematosus
+3: adolescent idiopathic scoliosis, disease progression measurement
+4:                   charcot-marie-tooth disease type 1a, scoliosis
+5:                                  adolescent idiopathic scoliosis
+6:       systemic lupus erythematosus, chronic lymphocytic leukemia
                                                    l2_all_disease_terms
                                                                  &lt;char&gt;
 1:                                      other musculoskeletal disorders
-2: charcot-marie-tooth disease type 1a, other musculoskeletal disorders
+2:                rheumatoid arthritis, other musculoskeletal disorders
 3:                                      other musculoskeletal disorders
-4:                                      other musculoskeletal disorders
+4: charcot-marie-tooth disease type 1a, other musculoskeletal disorders
 5:                                      other musculoskeletal disorders
-6:              lumbar disc herniation, other musculoskeletal disorders</code></pre>
+6:                            leukemia, other musculoskeletal disorders</code></pre>
 </div>
 </div>
 <div id="other-non-communicable-diseases" class="section level1"
@@ -5724,6 +5867,11 @@ digestive_terms &lt;-
 digestive_terms &lt;- tolower(digestive_terms)
 digestive_terms &lt;- stringr::str_remove_all(digestive_terms, &quot;, unspecified$&quot;)
 
+digestive_terms &lt;- c(
+  &quot;hirschsprung disease&quot;,
+  digestive_terms
+)
+
 gwas_study_info = gwas_study_info |&gt;
   mutate(l2_all_disease_terms  = 
          stringr::str_replace_all(l2_all_disease_terms,
@@ -5731,6 +5879,8 @@ gwas_study_info = gwas_study_info |&gt;
                           &quot;digestive congenital anomalies&quot;
          )
   )
+
+
 
 
 gwas_study_info |&gt;
@@ -5743,9 +5893,11 @@ gwas_study_info |&gt;
 <pre><code>                  all_disease_terms
                              &lt;char&gt;
 1: alagille syndrome, liver disease
+2:             hirschsprung disease
                                                          l2_all_disease_terms
                                                                        &lt;char&gt;
-1: digestive congenital anomalies, cirrhosis and other chronic liver diseases</code></pre>
+1: digestive congenital anomalies, cirrhosis and other chronic liver diseases
+2:                                             digestive congenital anomalies</code></pre>
 </div>
 <div id="other-congenital-birth-defects" class="section level3"
 number="15.1.11">
@@ -5789,6 +5941,7 @@ uti_terms &lt;-
     &quot;interstitial nephritis&quot;,
     &quot;pyelonephritis&quot;,
     &quot;urethritis&quot;,
+    &quot;cystitis&quot;,
     uti_terms
     )
 
@@ -5893,6 +6046,7 @@ urinary_diseases_terms &lt;- c(&quot;urinary incontinence&quot;,
                             &quot;urgency urinary incontinence&quot;,
                             &quot;urinary system disease&quot;,
                             &quot;bladder neck obstruction&quot;,
+                            &quot;urinary tract obstruction&quot;,
                             &quot;urethral disease&quot;,
                             &quot;urethral syndrome&quot;,
                             &quot;uterine inflammatory disease&quot;,
@@ -5900,6 +6054,7 @@ urinary_diseases_terms &lt;- c(&quot;urinary incontinence&quot;,
                             &quot;neurogenic bladder&quot;, # icd9 596.54
                             &quot;bladder diverticulum&quot;, # icd9 596.3
                             &quot;priapism&quot;,
+                            &quot;hydronephrosis&quot;,
                             urine_terms
                             )
 
@@ -6090,7 +6245,9 @@ other_gyno_terms &lt;- c(&quot;cervicitis&quot;, #N72
                       &quot;ovarian cyst&quot;, # N83
                       &quot;follicular cyst&quot;,
                       &quot;noninflammatory disorder of ovary fallopian tube and broad ligament&quot;,
-                      &quot;cervical disorder&quot;
+                      &quot;cervical disorder&quot;,
+                      &quot;dysmenorrhea&quot;,
+                      &quot;dyspareunia&quot;
                       )
 
 # pregnancy_terms &lt;- grep(&quot;pregnancy&quot;, diseases, value = T)
@@ -6173,7 +6330,8 @@ metabolic, blood, and immune disorders</h3>
                 &quot;hyperaldosteronism&quot;, # ICD10CM:E26, ICD9:255.1
                 &quot;delayed puberty&quot;, #ICD10:E30.1, ICD9:259.1
                 &quot;central precocious puberty&quot;,  #?ICD10: E30.1
-            &quot;endocrine system disease&quot; # ????
+            &quot;endocrine system disease&quot;, # ????
+            &quot;primary aldosteronism&quot;
                 )
 
 gwas_study_info = gwas_study_info |&gt;
@@ -6186,6 +6344,7 @@ gwas_study_info = gwas_study_info |&gt;
 
 thyroid_terms &lt;- c(&quot;congenital hypothyroidism due to developmental anomaly&quot;, #ICD-10:E03.1
                    &quot;hypothyroidism&quot;,
+                   &quot;hyperthyroidism&quot;,
                    &quot;myxedema&quot;,
                    &quot;nontoxic goiter&quot;,#ICD-10: E04
                    &quot;thyrotoxicosis&quot;, #ICD-10: E05
@@ -6213,7 +6372,8 @@ other_blood_disorders &lt;- c(&quot;neutropenia&quot;,
                            &quot;hemophilia a&quot;, #  Congenital factor VIII disorder - ICD9 286.0
                            &quot;qualitative platelet defect&quot;,
                            &quot;blood coagulation disease&quot;,
-                           &quot;hematologic disease&quot;
+                           &quot;hematologic disease&quot;,
+                           &quot;thrombophilia&quot;
                            )
 
 gwas_study_info = gwas_study_info |&gt;
@@ -6239,8 +6399,10 @@ metabolism_disorders &lt;- c(&quot;hypoglycemia&quot;,
                           &quot;acidosis&quot;, # ICD9:276.2
                           &quot;disorder of acid-base balance&quot;, # ? ICD10-cm E87.8
                           &quot;bilirubin metabolism disease&quot;,
-                          &quot;cystic fibrosis&quot; # ICD9:277.0, ICD10:E84
-                          
+                          &quot;cystic fibrosis&quot;, # ICD9:277.0, ICD10:E84
+                          &quot;hyperlipidemia&quot;,
+                          &quot;hypovolemia&quot;,
+                          &quot;rare dyslipidemia&quot;
                           )
 
 gwas_study_info = gwas_study_info |&gt;
@@ -6257,7 +6419,8 @@ class="section level3" number="15.4.2">
 hemoglobinopathies and hemolytic anemias</h3>
 <pre class="r"><code>other_hemo &lt;- c(&quot;aplastic anemia&quot;,
                 &quot;pure red cell aplasia&quot;,
-                &quot;severe malarial anemia&quot;)
+                &quot;severe malarial anemia&quot;,
+                &quot;anemia&quot;)
 
 gwas_study_info = gwas_study_info |&gt;
  mutate(l2_all_disease_terms  = 
@@ -6273,7 +6436,8 @@ gwas_study_info = gwas_study_info |&gt;
 <pre class="r"><code>oral_disorders_terms &lt;- c(&quot;dental caries&quot;,
                            &quot;tooth disease&quot;,
                           &quot;toothache&quot;,
-                           &quot;periodontal disease&quot;
+                           &quot;periodontal disease&quot;,
+                          &quot;tooth agenesis&quot;
 )
 
 
@@ -6297,11 +6461,11 @@ gwas_study_info |&gt;
 <pre><code>                       all_disease_terms l2_all_disease_terms
                                   &lt;char&gt;               &lt;char&gt;
 1:                         dental caries       oral disorders
-2:              aggressive periodontitis       oral disorders
-3: pit and fissure surface dental caries       oral disorders
-4:          smooth surface dental caries       oral disorders
-5:                         periodontitis       oral disorders
-6:                             toothache       oral disorders</code></pre>
+2:                        tooth agenesis       oral disorders
+3:              aggressive periodontitis       oral disorders
+4: pit and fissure surface dental caries       oral disorders
+5:          smooth surface dental caries       oral disorders
+6:                         periodontitis       oral disorders</code></pre>
 </div>
 </div>
 <div id="check-compatibility-with-gbd-data" class="section level1"
@@ -6412,7 +6576,7 @@ left_join(gwas_disease_traits,
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 1230</code></pre>
+<pre><code>[1] 1180</code></pre>
 <pre class="r"><code># make frequency table
 freq &lt;- table(as.factor(diseases))
 
@@ -6423,25 +6587,25 @@ freq_sorted &lt;- sort(freq, decreasing = TRUE)
 head(freq_sorted, 10)</code></pre>
 <pre><code>
                        chronic kidney disease 
-                                        10889 
+                                        10901 
 other cardiovascular and circulatory diseases 
-                                         7603 
+                                         7636 
                      diabetes mellitus type 2 
                                           922 
                        other mental disorders 
                                           828 
                          depressive disorders 
                                           726 
-                       ischemic heart disease 
-                                          580 
                               other neoplasms 
-                                          530 
+                                          670 
+                       ischemic heart disease 
+                                          584 
       alzheimer&#39;s disease and other dementias 
                                           514 
                     blindness and vision loss 
-                                          478 
+                                          497 
                     other metabolic disorders 
-                                          394 </code></pre>
+                                          465 </code></pre>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
 class="section level3" number="16.1.1">
 <h3><span class="header-section-number">16.1.1</span> Save the updated
