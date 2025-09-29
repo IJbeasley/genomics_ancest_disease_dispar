@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree41d6fe5b65f1628ed48b63351422535aad788c41targetblank41d6fe5a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree176d0eeace55d46a565e3fec81172e43a4631495targetblank176d0eea">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/41d6fe5b65f1628ed48b63351422535aad788c41" target="_blank">41d6fe5</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/176d0eeace55d46a565e3fec81172e43a4631495" target="_blank">176d0ee</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree41d6fe5b65f1628ed48b63351422535aad788c41targetblank41d6fe5a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree176d0eeace55d46a565e3fec81172e43a4631495targetblank176d0eea"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/41d6fe5b65f1628ed48b63351422535aad788c41" target="_blank">41d6fe5</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/176d0eeace55d46a565e3fec81172e43a4631495" target="_blank">176d0ee</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -643,6 +643,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/176d0eeace55d46a565e3fec81172e43a4631495/analysis/group_cancer_diseases.Rmd" target="_blank">176d0ee</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-29
+</td>
+<td>
+workflowr::wflow_publish("analysis/group_cancer_diseases.Rmd")
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/18c9053a00923c5991ab7b2a4ff1be86f7beb4f7/docs/group_cancer_diseases.html" target="_blank">18c9053</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-29
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -786,7 +820,7 @@ head(n_studies_trait)</code></pre>
 5 &quot;asthma&quot;                          111
 6 &quot;major depressive disorder&quot;       109</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2915    2</code></pre>
+<pre><code>[1] 2913    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms"
 class="section level2" number="1.1">
 <h2><span class="header-section-number">1.1</span> When separate studies
@@ -798,16 +832,177 @@ with multiple terms</h2>
 
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2107</code></pre>
+<pre><code>[1] 2106</code></pre>
 <pre class="r"><code>test &lt;- data.frame(trait = unique(diseases))</code></pre>
 </div>
 </div>
+<div id="dealing-with-non-specific-childhood-cancer"
+class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Dealing with
+non-specific (childhood cancer)</h1>
+<div id="childhood-cancer" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Childhood cancer</h2>
+<pre class="r"><code># for pubmed_id: 26811534
+# replace childhood cancer with
+# &quot;non-hodgkins lymphoma&quot;
+# &quot;hodgkins lymphoma&quot;
+# &quot;sarcoma&quot;
+# &quot;leukemia&quot;
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;26811534&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;non-hodgkins lymphoma, hodgkins lymphoma, sarcoma, leukemia, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id 29059430
+# replace childhood cancer with
+# &quot;retinoblastoma, leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;29059430&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;retinoblastoma, leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for 26237429
+# https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/instance/4552570/bin/NIHMS707555-supplement-2.pdf
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;26237429&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, bone cancer, kidney cancer, sarcoma, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id: 25963547
+# table 1. https://acsjournals.onlinelibrary.wiley.com/doi/10.1002/cncr.29153
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;25963547&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, central nervous system cancer, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, bone cancer, kidney cancer, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id: 36699085 
+# Osteosarcoma, medulloblastoma
+# table 1. https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC9870026/
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;36699085&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;osteosarcoma, medulloblastoma, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# pubmed id: 33338273
+# table 1. https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC8044050/
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;33338273&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, kidney cancer, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# pubmed id: 38652878
+# table 1: https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC3088729/#S20
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;38652878&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# 34286861 uses same cohort as 38652878
+# https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC8516694/
+# so replace in same way
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;34286861&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id: 35313970
+# https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC8939156/#Sec9 
+# table 1
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;35313970&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id: 36508697
+# table 1
+# https://www.ncbi.nlm.nih.gov/core/lw/2.0/html/tileshop_pmc/tileshop_pmc_inline.html?title=Click%20on%20image%20to%20zoom&amp;p=PMC3&amp;id=10043563_jco-41-1758-g001.jpg
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;36508697&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, bone cancer, soft tissue sarcoma, other cancer&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id: 34262104
+# sup table 1.
+# https://static-content.springer.com/esm/art%3A10.1038%2Fs41698-021-00178-z/MediaObjects/41698_2021_178_MOESM1_ESM.pdf
+gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == &quot;34262104&quot;,
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;childhood cancer&quot;),
+                          &quot;hodgkin lymphoma, central nervous system cancer, non-hodgkin lymphoma, bone cancer, soft tissue sarcoma, other cancer, neuroblastoma&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )</code></pre>
+</div>
+</div>
 <div id="disease-subtype-grouping-cancer" class="section level1"
-number="2">
-<h1><span class="header-section-number">2</span> Disease subtype
+number="3">
+<h1><span class="header-section-number">3</span> Disease subtype
 grouping (cancer)</h1>
-<div id="astrocytoma" class="section level3" number="2.0.1">
-<h3><span class="header-section-number">2.0.1</span> Astrocytoma</h3>
+<div id="astrocytoma" class="section level3" number="3.0.1">
+<h3><span class="header-section-number">3.0.1</span> Astrocytoma</h3>
 <pre class="r"><code>gwas_study_info |&gt;
     filter(grepl(&quot;astrocytoma&quot;, collected_all_disease_terms)) |&gt; 
     pull(STUDY) |&gt; 
@@ -826,8 +1021,8 @@ gwas_study_info = gwas_study_info |&gt;
         )
  )</code></pre>
 </div>
-<div id="bone-cancer" class="section level3" number="2.0.2">
-<h3><span class="header-section-number">2.0.2</span> Bone cancer</h3>
+<div id="bone-cancer" class="section level3" number="3.0.2">
+<h3><span class="header-section-number">3.0.2</span> Bone cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002129/descendants&quot;
 
 bone_cancer_terms &lt;- get_descendants(url)</code></pre>
@@ -855,8 +1050,8 @@ bone_cancer_terms = c(&quot;malignant bone neoplasm&quot;,
                           )  
         )</code></pre>
 </div>
-<div id="bladder-cancer" class="section level3" number="2.0.3">
-<h3><span class="header-section-number">2.0.3</span> Bladder cancer</h3>
+<div id="bladder-cancer" class="section level3" number="3.0.3">
+<h3><span class="header-section-number">3.0.3</span> Bladder cancer</h3>
 <pre class="r"><code>url &lt;-  &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_4007/descendants&quot;
 
 # maybe do uninary bladder cancer instead
@@ -881,8 +1076,8 @@ bladder_cancer_terms &lt;- get_descendants(url)</code></pre>
                           )  
         )</code></pre>
 </div>
-<div id="breast-cancer" class="section level3" number="2.0.4">
-<h3><span class="header-section-number">2.0.4</span> Breast cancer</h3>
+<div id="breast-cancer" class="section level3" number="3.0.4">
+<h3><span class="header-section-number">3.0.4</span> Breast cancer</h3>
 <pre class="r"><code>breast_cancer_terms &lt;- grep(&quot;breast cancer&quot;, unique(diseases), value = T)
 
 gwas_study_info = 
@@ -906,12 +1101,12 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="benign-neoplasms" class="section level3" number="2.0.5">
-<h3><span class="header-section-number">2.0.5</span> Benign
+<div id="benign-neoplasms" class="section level3" number="3.0.5">
+<h3><span class="header-section-number">3.0.5</span> Benign
 neoplasms</h3>
 <div id="benign-neoplasm-of-blood-vessel" class="section level4"
-number="2.0.5.1">
-<h4><span class="header-section-number">2.0.5.1</span> Benign neoplasm
+number="3.0.5.1">
+<h4><span class="header-section-number">3.0.5.1</span> Benign neoplasm
 of blood vessel</h4>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F92017000/descendants&quot;
 
@@ -938,8 +1133,8 @@ gwas_study_info = gwas_study_info |&gt;
 </div>
 </div>
 <div id="labelled-benign-neoplasms" class="section level3"
-number="2.0.6">
-<h3><span class="header-section-number">2.0.6</span> Labelled benign
+number="3.0.6">
+<h3><span class="header-section-number">3.0.6</span> Labelled benign
 neoplasms</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -978,8 +1173,8 @@ gwas_study_info = gwas_study_info |&gt;
          ) </code></pre>
 </div>
 </div>
-<div id="other-benign-neoplasms" class="section level1" number="3">
-<h1><span class="header-section-number">3</span> Other benign
+<div id="other-benign-neoplasms" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Other benign
 neoplasms</h1>
 <pre class="r"><code># https://my.clevelandclinic.org/health/diseases/21477-adenomas - benign
 other_benign_neoplasms = c(&quot;adenomatous colon polyp&quot;,
@@ -1021,8 +1216,8 @@ gwas_study_info = gwas_study_info |&gt;
                     &quot;benign neoplasm&quot;)
          )</code></pre>
 <div id="central-nervous-system-cancer" class="section level3"
-number="3.0.1">
-<h3><span class="header-section-number">3.0.1</span> Central nervous
+number="4.0.1">
+<h3><span class="header-section-number">4.0.1</span> Central nervous
 system cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000326/descendants&quot;
 
@@ -1048,8 +1243,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="cervical-cancer" class="section level3" number="3.0.2">
-<h3><span class="header-section-number">3.0.2</span> Cervical
+<div id="cervical-cancer" class="section level3" number="4.0.2">
+<h3><span class="header-section-number">4.0.2</span> Cervical
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_4362/descendants&quot;
 
@@ -1087,8 +1282,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="colorectal-cancer" class="section level3" number="3.0.3">
-<h3><span class="header-section-number">3.0.3</span> Colorectal
+<div id="colorectal-cancer" class="section level3" number="4.0.3">
+<h3><span class="header-section-number">4.0.3</span> Colorectal
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005575/descendants&quot;
 
@@ -1129,8 +1324,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="endometrial-cancer" class="section level3" number="3.0.4">
-<h3><span class="header-section-number">3.0.4</span> Endometrial
+<div id="endometrial-cancer" class="section level3" number="4.0.4">
+<h3><span class="header-section-number">4.0.4</span> Endometrial
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0011962/descendants&quot;
 
@@ -1158,8 +1353,8 @@ endometrial_cancer_terms = stringr::str_replace_all(endometrial_cancer_terms,
                           )  
         )</code></pre>
 </div>
-<div id="esophageal-cancer" class="section level3" number="3.0.5">
-<h3><span class="header-section-number">3.0.5</span> Esophageal
+<div id="esophageal-cancer" class="section level3" number="4.0.5">
+<h3><span class="header-section-number">4.0.5</span> Esophageal
 cancer</h3>
 <pre class="r"><code>esophageal_cancer_terms &lt;- c(&quot;esophageal adenocarcinoma&quot;,
                              &quot;esophageal squamous cell cancer&quot;)
@@ -1173,8 +1368,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="eye-cancer-to-add" class="section level3" number="3.0.6">
-<h3><span class="header-section-number">3.0.6</span> Eye cancer (to
+<div id="eye-cancer-to-add" class="section level3" number="4.0.6">
+<h3><span class="header-section-number">4.0.6</span> Eye cancer (to
 add)</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002236/descendants&quot;
 
@@ -1199,8 +1394,8 @@ ocular_cancer_terms &lt;- get_descendants(url)</code></pre>
         )</code></pre>
 </div>
 <div id="gallbladder-and-biliary-tract-cancer" class="section level3"
-number="3.0.7">
-<h3><span class="header-section-number">3.0.7</span> Gallbladder and
+number="4.0.7">
+<h3><span class="header-section-number">4.0.7</span> Gallbladder and
 biliary tract cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -1210,8 +1405,8 @@ biliary tract cancer</h3>
          )
          )</code></pre>
 </div>
-<div id="hodgkin-lymphoma" class="section level3" number="3.0.8">
-<h3><span class="header-section-number">3.0.8</span> Hodgkin
+<div id="hodgkin-lymphoma" class="section level3" number="4.0.8">
+<h3><span class="header-section-number">4.0.8</span> Hodgkin
 lymphoma</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -1220,8 +1415,8 @@ lymphoma</h3>
                           &quot;hodgkins lymphoma&quot;
          ))</code></pre>
 </div>
-<div id="head-and-neck-cancer" class="section level3" number="3.0.9">
-<h3><span class="header-section-number">3.0.9</span> Head and neck
+<div id="head-and-neck-cancer" class="section level3" number="4.0.9">
+<h3><span class="header-section-number">4.0.9</span> Head and neck
 cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -1231,15 +1426,15 @@ cancer</h3>
          ))</code></pre>
 </div>
 <div id="intestinal-cancer-non--colorectal" class="section level3"
-number="3.0.10">
-<h3><span class="header-section-number">3.0.10</span> Intestinal cancer
+number="4.0.10">
+<h3><span class="header-section-number">4.0.10</span> Intestinal cancer
 (non- colorectal)</h3>
 <pre class="r"><code>intestinal_cancer_terms &lt;- c(&quot;small intestine cancer&quot;,
                            &quot;small bowel cancer&quot;,
                            &quot;small intestine cancer&quot;)</code></pre>
 </div>
-<div id="kidney-cancer" class="section level3" number="3.0.11">
-<h3><span class="header-section-number">3.0.11</span> Kidney cancer</h3>
+<div id="kidney-cancer" class="section level3" number="4.0.11">
+<h3><span class="header-section-number">4.0.11</span> Kidney cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_263/descendants&quot;
 
 
@@ -1273,8 +1468,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="laryngeal-cancer" class="section level3" number="3.0.12">
-<h3><span class="header-section-number">3.0.12</span> Laryngeal
+<div id="laryngeal-cancer" class="section level3" number="4.0.12">
+<h3><span class="header-section-number">4.0.12</span> Laryngeal
 cancer</h3>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -1289,8 +1484,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="leukemia" class="section level3" number="3.0.13">
-<h3><span class="header-section-number">3.0.13</span> Leukemia</h3>
+<div id="leukemia" class="section level3" number="4.0.13">
+<h3><span class="header-section-number">4.0.13</span> Leukemia</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000565/descendants&quot;
 
 leukemia_terms &lt;- get_descendants(url)</code></pre>
@@ -1318,8 +1513,8 @@ gwas_study_info |&gt;
         )</code></pre>
 </div>
 <div id="lip-and-oral-cavity-cancer" class="section level3"
-number="3.0.14">
-<h3><span class="header-section-number">3.0.14</span> Lip and oral
+number="4.0.14">
+<h3><span class="header-section-number">4.0.14</span> Lip and oral
 cavity cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005570/descendants&quot;
 
@@ -1343,8 +1538,8 @@ lip_oral_cavity_cancer_terms &lt;- get_descendants(url)</code></pre>
                           )  
         )</code></pre>
 </div>
-<div id="liver-cancer" class="section level3" number="3.0.15">
-<h3><span class="header-section-number">3.0.15</span> Liver cancer</h3>
+<div id="liver-cancer" class="section level3" number="4.0.15">
+<h3><span class="header-section-number">4.0.15</span> Liver cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002691/descendants&quot;
 
 liver_cancer_terms &lt;- get_descendants(url)</code></pre>
@@ -1381,8 +1576,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="lung-cancer" class="section level3" number="3.0.16">
-<h3><span class="header-section-number">3.0.16</span> Lung cancer</h3>
+<div id="lung-cancer" class="section level3" number="4.0.16">
+<h3><span class="header-section-number">4.0.16</span> Lung cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008903/descendants&quot;
 
 lung_cancer_terms &lt;- get_descendants(url)</code></pre>
@@ -1406,8 +1601,8 @@ gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="ovarian-cancer" class="section level3" number="3.0.17">
-<h3><span class="header-section-number">3.0.17</span> Ovarian
+<div id="ovarian-cancer" class="section level3" number="4.0.17">
+<h3><span class="header-section-number">4.0.17</span> Ovarian
 cancer</h3>
 <pre class="r"><code>url &lt;-  &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008170/descendants&quot;
 
@@ -1450,8 +1645,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="pancreatic-cancer" class="section level3" number="3.0.18">
-<h3><span class="header-section-number">3.0.18</span> Pancreatic
+<div id="pancreatic-cancer" class="section level3" number="4.0.18">
+<h3><span class="header-section-number">4.0.18</span> Pancreatic
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0009831/descendants&quot;
 
@@ -1476,8 +1671,8 @@ pancreatic_cancer_terms &lt;- get_descendants(url)</code></pre>
         )</code></pre>
 </div>
 <div id="peripheral-nervous-system-cancer" class="section level2"
-number="3.1">
-<h2><span class="header-section-number">3.1</span> Peripheral nervous
+number="4.1">
+<h2><span class="header-section-number">4.1</span> Peripheral nervous
 system cancer</h2>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0021089/descendants&quot;
 
@@ -1500,8 +1695,8 @@ peripheral_nervous_system_cancer_terms &lt;- get_descendants(url)</code></pre>
                                    &quot;peripheral nervous system cancer&quot;
                           )  
         )</code></pre>
-<div id="prostate-cancer" class="section level3" number="3.1.1">
-<h3><span class="header-section-number">3.1.1</span> Prostate
+<div id="prostate-cancer" class="section level3" number="4.1.1">
+<h3><span class="header-section-number">4.1.1</span> Prostate
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10283/descendants&quot;
 
@@ -1529,8 +1724,8 @@ prostate_cancer_terms = c(&quot;grade iii prostatic intraepithelial neoplasia&qu
                           )  
         )</code></pre>
 </div>
-<div id="mesothelioma" class="section level3" number="3.1.2">
-<h3><span class="header-section-number">3.1.2</span> Mesothelioma</h3>
+<div id="mesothelioma" class="section level3" number="4.1.2">
+<h3><span class="header-section-number">4.1.2</span> Mesothelioma</h3>
 <pre class="r"><code>mesothelioma_terms = c(&quot;pleural mesothelioma&quot;,
                        &quot;malignant pleural mesothelioma&quot;)
 
@@ -1542,8 +1737,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="neuroendocrine-tumor" class="section level3" number="3.1.3">
-<h3><span class="header-section-number">3.1.3</span> Neuroendocrine
+<div id="neuroendocrine-tumor" class="section level3" number="4.1.3">
+<h3><span class="header-section-number">4.1.3</span> Neuroendocrine
 tumor</h3>
 <pre class="r"><code>neuroendo_terms &lt;- c(&quot;pulmonary neuroendocrine tumor&quot;,
                      &quot;small intestine neuroendocrine tumor&quot;,
@@ -1559,8 +1754,8 @@ gwas_study_info = gwas_study_info |&gt;
                           )  
         )</code></pre>
 </div>
-<div id="non-hodgkins-lymphoma" class="section level3" number="3.1.4">
-<h3><span class="header-section-number">3.1.4</span> Non-Hodgkins
+<div id="non-hodgkins-lymphoma" class="section level3" number="4.1.4">
+<h3><span class="header-section-number">4.1.4</span> Non-Hodgkins
 lymphoma</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005952/descendants&quot;
 
@@ -1602,8 +1797,8 @@ gwas_study_info |&gt;
         )</code></pre>
 </div>
 <div id="non-melanoma-skin-cancer" class="section level3"
-number="3.1.5">
-<h3><span class="header-section-number">3.1.5</span> Non-melanoma skin
+number="4.1.5">
+<h3><span class="header-section-number">4.1.5</span> Non-melanoma skin
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009260/descendants&quot;
 
@@ -1627,8 +1822,8 @@ non_melanoma_skin_cancer_terms &lt;- get_descendants(url)</code></pre>
                           )  
         )</code></pre>
 </div>
-<div id="other-pharygnx-cancer" class="section level3" number="3.1.6">
-<h3><span class="header-section-number">3.1.6</span> Other pharygnx
+<div id="other-pharygnx-cancer" class="section level3" number="4.1.6">
+<h3><span class="header-section-number">4.1.6</span> Other pharygnx
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_0060119/descendants&quot;
 
@@ -1653,8 +1848,8 @@ other_pharynx_cancer_terms = c(&quot;hypopharyngeal cancer&quot;,
                           )  
         )</code></pre>
 </div>
-<div id="soft-tissue-sarcoma" class="section level3" number="3.1.7">
-<h3><span class="header-section-number">3.1.7</span> Soft tissue
+<div id="soft-tissue-sarcoma" class="section level3" number="4.1.7">
+<h3><span class="header-section-number">4.1.7</span> Soft tissue
 sarcoma</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001968/descendants&quot;
 
@@ -1689,8 +1884,8 @@ gwas_study_info = gwas_study_info |&gt;
                                    &quot;soft tissue sarcoma&quot;
                           )
  )</code></pre>
-<div id="ewing-sarcoma" class="section level4" number="3.1.7.1">
-<h4><span class="header-section-number">3.1.7.1</span> Ewing
+<div id="ewing-sarcoma" class="section level4" number="4.1.7.1">
+<h4><span class="header-section-number">4.1.7.1</span> Ewing
 sarcoma</h4>
 <pre class="r"><code># can be either bone or soft tissue sarcoma
 # hard to tell from these studies: 
@@ -1700,8 +1895,8 @@ gwas_study_info |&gt;
 <pre><code>Empty data.table (0 rows and 4 cols): PUBMED_ID,DISEASE/TRAIT,COHORT,STUDY</code></pre>
 </div>
 </div>
-<div id="stomach-cancer" class="section level3" number="3.1.8">
-<h3><span class="header-section-number">3.1.8</span> Stomach cancer</h3>
+<div id="stomach-cancer" class="section level3" number="4.1.8">
+<h3><span class="header-section-number">4.1.8</span> Stomach cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10534/descendants&quot;
 
 stomach_cancer_terms &lt;- get_descendants(url)</code></pre>
@@ -1740,8 +1935,8 @@ stomach_cancer_terms = c(
                           )  
         )</code></pre>
 </div>
-<div id="squamous-cell-carcinoma" class="section level3" number="3.1.9">
-<h3><span class="header-section-number">3.1.9</span> Squamous cell
+<div id="squamous-cell-carcinoma" class="section level3" number="4.1.9">
+<h3><span class="header-section-number">4.1.9</span> Squamous cell
 carcinoma</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
@@ -1751,12 +1946,12 @@ carcinoma</h3>
                           )  
         )</code></pre>
 </div>
-<div id="testicular-cancer" class="section level3" number="3.1.10">
-<h3><span class="header-section-number">3.1.10</span> Testicular
+<div id="testicular-cancer" class="section level3" number="4.1.10">
+<h3><span class="header-section-number">4.1.10</span> Testicular
 cancer</h3>
 </div>
-<div id="thyroid-cancer" class="section level3" number="3.1.11">
-<h3><span class="header-section-number">3.1.11</span> Thyroid
+<div id="thyroid-cancer" class="section level3" number="4.1.11">
+<h3><span class="header-section-number">4.1.11</span> Thyroid
 cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_1781/descendants&quot;
 
@@ -1783,8 +1978,8 @@ thyroid_cancer_terms = c(&quot;differentiated thyroid cancer&quot;,
                           )  
         )</code></pre>
 </div>
-<div id="uterine-cancer" class="section level3" number="3.1.12">
-<h3><span class="header-section-number">3.1.12</span> Uterine
+<div id="uterine-cancer" class="section level3" number="4.1.12">
+<h3><span class="header-section-number">4.1.12</span> Uterine
 cancer</h3>
 <pre class="r"><code>uterine_cancer_terms &lt;- c(&quot;uterine corpus cancer&quot;,
                           &quot;uterine adnexa cancer&quot;)
@@ -1800,11 +1995,11 @@ gwas_study_info = gwas_study_info |&gt;
 </div>
 </div>
 <div id="reducing-non-specific-cancer-terms" class="section level1"
-number="4">
-<h1><span class="header-section-number">4</span> Reducing non-specific
+number="5">
+<h1><span class="header-section-number">5</span> Reducing non-specific
 cancer terms</h1>
-<div id="brain-neoplasm" class="section level3" number="4.0.1">
-<h3><span class="header-section-number">4.0.1</span> Brain neoplasm</h3>
+<div id="brain-neoplasm" class="section level3" number="5.0.1">
+<h3><span class="header-section-number">5.0.1</span> Brain neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;brain neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -1848,8 +2043,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="breast-neoplasm" class="section level3" number="4.0.2">
-<h3><span class="header-section-number">4.0.2</span> Breast
+<div id="breast-neoplasm" class="section level3" number="5.0.2">
+<h3><span class="header-section-number">5.0.2</span> Breast
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;breast neoplasm&quot;) |&gt; 
@@ -1887,8 +2082,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="bone-neoplasm" class="section level3" number="4.0.3">
-<h3><span class="header-section-number">4.0.3</span> Bone neoplasm</h3>
+<div id="bone-neoplasm" class="section level3" number="5.0.3">
+<h3><span class="header-section-number">5.0.3</span> Bone neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;bone neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -1915,8 +2110,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="cecal-neoplasm" class="section level3" number="4.0.4">
-<h3><span class="header-section-number">4.0.4</span> Cecal neoplasm</h3>
+<div id="cecal-neoplasm" class="section level3" number="5.0.4">
+<h3><span class="header-section-number">5.0.4</span> Cecal neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;cecal neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`)</code></pre>
@@ -1931,8 +2126,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="colonic-neoplasm" class="section level3" number="4.0.5">
-<h3><span class="header-section-number">4.0.5</span> Colonic
+<div id="colonic-neoplasm" class="section level3" number="5.0.5">
+<h3><span class="header-section-number">5.0.5</span> Colonic
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;colonic neoplasm&quot;) |&gt; 
@@ -2012,8 +2207,8 @@ gwas_study_info |&gt;
          )
   )</code></pre>
 </div>
-<div id="endometrial-neoplasm" class="section level3" number="4.0.6">
-<h3><span class="header-section-number">4.0.6</span> Endometrial
+<div id="endometrial-neoplasm" class="section level3" number="5.0.6">
+<h3><span class="header-section-number">5.0.6</span> Endometrial
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;endometrial neoplasm&quot;) |&gt; 
@@ -2029,8 +2224,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="esophageal-neoplasm" class="section level3" number="4.0.7">
-<h3><span class="header-section-number">4.0.7</span> Esophageal
+<div id="esophageal-neoplasm" class="section level3" number="5.0.7">
+<h3><span class="header-section-number">5.0.7</span> Esophageal
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;neoplasm of esophagus&quot;) |&gt; 
@@ -2054,8 +2249,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="eye-neoplasm" class="section level3" number="4.0.8">
-<h3><span class="header-section-number">4.0.8</span> Eye neoplasm</h3>
+<div id="eye-neoplasm" class="section level3" number="5.0.8">
+<h3><span class="header-section-number">5.0.8</span> Eye neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;eye neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`)</code></pre>
@@ -2070,8 +2265,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="gallbladder-neoplasm" class="section level3" number="4.0.9">
-<h3><span class="header-section-number">4.0.9</span> Gallbladder
+<div id="gallbladder-neoplasm" class="section level3" number="5.0.9">
+<h3><span class="header-section-number">5.0.9</span> Gallbladder
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;gallbladder neoplasm&quot;) |&gt; 
@@ -2114,8 +2309,8 @@ gwas_study_info |&gt;
          ))</code></pre>
 </div>
 <div id="glioma-can-be-benign-or-malignant" class="section level3"
-number="4.0.10">
-<h3><span class="header-section-number">4.0.10</span> Glioma (can be
+number="5.0.10">
+<h3><span class="header-section-number">5.0.10</span> Glioma (can be
 benign or malignant)</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -2320,8 +2515,8 @@ gwas_study_info |&gt;
                 collected_all_disease_terms)
   )</code></pre>
 </div>
-<div id="glottis-neoplasm" class="section level3" number="4.0.11">
-<h3><span class="header-section-number">4.0.11</span> Glottis
+<div id="glottis-neoplasm" class="section level3" number="5.0.11">
+<h3><span class="header-section-number">5.0.11</span> Glottis
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;glottis neoplasm&quot;) |&gt; 
@@ -2337,8 +2532,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="kidney-neoplasm" class="section level3" number="4.0.12">
-<h3><span class="header-section-number">4.0.12</span> Kidney
+<div id="kidney-neoplasm" class="section level3" number="5.0.12">
+<h3><span class="header-section-number">5.0.12</span> Kidney
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;kidney neoplasm&quot;) |&gt; 
@@ -2361,8 +2556,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="laryngeal-neoplasm" class="section level3" number="4.0.13">
-<h3><span class="header-section-number">4.0.13</span> Laryngeal
+<div id="laryngeal-neoplasm" class="section level3" number="5.0.13">
+<h3><span class="header-section-number">5.0.13</span> Laryngeal
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;laryngeal neoplasm&quot;) |&gt; 
@@ -2388,8 +2583,8 @@ gwas_study_info = gwas_study_info |&gt;
                 collected_all_disease_terms
          ))</code></pre>
 </div>
-<div id="liver-neoplasm" class="section level3" number="4.0.14">
-<h3><span class="header-section-number">4.0.14</span> Liver
+<div id="liver-neoplasm" class="section level3" number="5.0.14">
+<h3><span class="header-section-number">5.0.14</span> Liver
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;liver neoplasm&quot;) |&gt; 
@@ -2408,8 +2603,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="lung-neoplasm" class="section level3" number="4.0.15">
-<h3><span class="header-section-number">4.0.15</span> Lung neoplasm</h3>
+<div id="lung-neoplasm" class="section level3" number="5.0.15">
+<h3><span class="header-section-number">5.0.15</span> Lung neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;lung neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -2429,8 +2624,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="lymphoid-neoplasm" class="section level3" number="4.0.16">
-<h3><span class="header-section-number">4.0.16</span> Lymphoid
+<div id="lymphoid-neoplasm" class="section level3" number="5.0.16">
+<h3><span class="header-section-number">5.0.16</span> Lymphoid
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;lymphoid neoplasm&quot;) |&gt; 
@@ -2446,8 +2641,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="meningeal-neoplasm" class="section level3" number="4.0.17">
-<h3><span class="header-section-number">4.0.17</span> Meningeal
+<div id="meningeal-neoplasm" class="section level3" number="5.0.17">
+<h3><span class="header-section-number">5.0.17</span> Meningeal
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;meningeal neoplasm&quot;) |&gt; 
@@ -2463,8 +2658,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="mature-b-cell-neoplasm" class="section level3" number="4.0.18">
-<h3><span class="header-section-number">4.0.18</span> Mature b-cell
+<div id="mature-b-cell-neoplasm" class="section level3" number="5.0.18">
+<h3><span class="header-section-number">5.0.18</span> Mature b-cell
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;neoplasm of mature b-cells&quot;) |&gt; 
@@ -2480,8 +2675,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="mouth-neoplasm" class="section level3" number="4.0.19">
-<h3><span class="header-section-number">4.0.19</span> Mouth
+<div id="mouth-neoplasm" class="section level3" number="5.0.19">
+<h3><span class="header-section-number">5.0.19</span> Mouth
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;mouth neoplasm&quot;) |&gt; 
@@ -2499,8 +2694,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="myeloid-neoplasm" class="section level3" number="4.0.20">
-<h3><span class="header-section-number">4.0.20</span> Myeloid
+<div id="myeloid-neoplasm" class="section level3" number="5.0.20">
+<h3><span class="header-section-number">5.0.20</span> Myeloid
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(grepl(&quot;myeloid neoplasm&quot;, collected_all_disease_terms)) |&gt; 
@@ -2518,8 +2713,8 @@ neoplasm</h3>
          )</code></pre>
 </div>
 <div id="neuroendocrine-neoplasm" class="section level3"
-number="4.0.21">
-<h3><span class="header-section-number">4.0.21</span> Neuroendocrine
+number="5.0.21">
+<h3><span class="header-section-number">5.0.21</span> Neuroendocrine
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;neuroendocrine neoplasm&quot;) |&gt; 
@@ -2545,8 +2740,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="ovarian-neoplasm" class="section level3" number="4.0.22">
-<h3><span class="header-section-number">4.0.22</span> Ovarian
+<div id="ovarian-neoplasm" class="section level3" number="5.0.22">
+<h3><span class="header-section-number">5.0.22</span> Ovarian
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;ovarian neoplasm&quot;) |&gt; 
@@ -2568,8 +2763,8 @@ neoplasm</h3>
          )</code></pre>
 </div>
 <div id="nasopharyngeal-neoplasm" class="section level3"
-number="4.0.23">
-<h3><span class="header-section-number">4.0.23</span> Nasopharyngeal
+number="5.0.23">
+<h3><span class="header-section-number">5.0.23</span> Nasopharyngeal
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;nasopharyngeal neoplasm&quot;) |&gt; 
@@ -2615,8 +2810,8 @@ gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="pancreatic-neoplasm" class="section level3" number="4.0.24">
-<h3><span class="header-section-number">4.0.24</span> Pancreatic
+<div id="pancreatic-neoplasm" class="section level3" number="5.0.24">
+<h3><span class="header-section-number">5.0.24</span> Pancreatic
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;pancreatic neoplasm&quot;) |&gt; 
@@ -2633,8 +2828,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="sigmoid-neoplasm" class="section level3" number="4.0.25">
-<h3><span class="header-section-number">4.0.25</span> Sigmoid
+<div id="sigmoid-neoplasm" class="section level3" number="5.0.25">
+<h3><span class="header-section-number">5.0.25</span> Sigmoid
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;sigmoid neoplasm&quot;) |&gt; 
@@ -2653,8 +2848,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="skin-neoplasm" class="section level3" number="4.0.26">
-<h3><span class="header-section-number">4.0.26</span> Skin neoplasm</h3>
+<div id="skin-neoplasm" class="section level3" number="5.0.26">
+<h3><span class="header-section-number">5.0.26</span> Skin neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;skin neoplasm&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -2715,8 +2910,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="stomach-neoplasm" class="section level3" number="4.0.27">
-<h3><span class="header-section-number">4.0.27</span> Stomach
+<div id="stomach-neoplasm" class="section level3" number="5.0.27">
+<h3><span class="header-section-number">5.0.27</span> Stomach
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;stomach neoplasm&quot;) |&gt; 
@@ -2735,8 +2930,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="testicular-neoplasm" class="section level3" number="4.0.28">
-<h3><span class="header-section-number">4.0.28</span> Testicular
+<div id="testicular-neoplasm" class="section level3" number="5.0.28">
+<h3><span class="header-section-number">5.0.28</span> Testicular
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;testicular neoplasm&quot;) |&gt; 
@@ -2753,8 +2948,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="tongue-neoplasm" class="section level3" number="4.0.29">
-<h3><span class="header-section-number">4.0.29</span> Tongue
+<div id="tongue-neoplasm" class="section level3" number="5.0.29">
+<h3><span class="header-section-number">5.0.29</span> Tongue
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;tongue neoplasm&quot;) |&gt; 
@@ -2772,8 +2967,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="uterine-neoplasm" class="section level3" number="4.0.30">
-<h3><span class="header-section-number">4.0.30</span> Uterine
+<div id="uterine-neoplasm" class="section level3" number="5.0.30">
+<h3><span class="header-section-number">5.0.30</span> Uterine
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;uterine neoplasm&quot;) |&gt; 
@@ -2790,8 +2985,8 @@ neoplasm</h3>
          )
          )</code></pre>
 </div>
-<div id="urogenital-neoplasm" class="section level3" number="4.0.31">
-<h3><span class="header-section-number">4.0.31</span> Urogenital
+<div id="urogenital-neoplasm" class="section level3" number="5.0.31">
+<h3><span class="header-section-number">5.0.31</span> Urogenital
 neoplasm</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;urogenital neoplasm&quot;) |&gt; 
@@ -2819,8 +3014,8 @@ gwas_study_info = gwas_study_info |&gt;
                  collected_all_disease_terms
          )
          )</code></pre>
-<div id="vulvar-neoplasm" class="section level4" number="4.0.31.1">
-<h4><span class="header-section-number">4.0.31.1</span> Vulvar
+<div id="vulvar-neoplasm" class="section level4" number="5.0.31.1">
+<h4><span class="header-section-number">5.0.31.1</span> Vulvar
 neoplasm</h4>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms == &quot;vulvar neoplasm&quot;) |&gt; 
@@ -2837,8 +3032,8 @@ neoplasm</h4>
          )</code></pre>
 </div>
 </div>
-<div id="ocular-melanoma" class="section level3" number="4.0.32">
-<h3><span class="header-section-number">4.0.32</span> Ocular
+<div id="ocular-melanoma" class="section level3" number="5.0.32">
+<h3><span class="header-section-number">5.0.32</span> Ocular
 Melanoma</h3>
 <pre class="r"><code>ocular_melanoma_terms &lt;- c(&quot;uveal melanoma&quot;,
                            &quot;uveal melanoma disease severity&quot;,
@@ -2864,11 +3059,11 @@ gwas_study_info = gwas_study_info |&gt;
          ))</code></pre>
 </div>
 </div>
-<div id="other" class="section level1" number="5">
-<h1><span class="header-section-number">5</span> Other …</h1>
+<div id="other" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Other …</h1>
 <div id="benign-neoplasm-colorectal-cancer" class="section level3"
-number="5.0.1">
-<h3><span class="header-section-number">5.0.1</span> Benign neoplasm,
+number="6.0.1">
+<h3><span class="header-section-number">6.0.1</span> Benign neoplasm,
 colorectal cancer</h3>
 <pre class="r"><code>gwas_study_info |&gt;
   filter(collected_all_disease_terms == &quot;benign neoplasm, colorectal cancer&quot;) |&gt; 
@@ -2890,8 +3085,8 @@ colorectal cancer</h3>
          ))</code></pre>
 </div>
 <div id="more-other-pharynx-cancer" class="section level3"
-number="5.0.2">
-<h3><span class="header-section-number">5.0.2</span> More other pharynx
+number="6.0.2">
+<h3><span class="header-section-number">6.0.2</span> More other pharynx
 cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -2901,12 +3096,12 @@ cancer</h3>
          ))</code></pre>
 </div>
 <div id="malignant-melanoma-of-skin" class="section level3"
-number="5.0.3">
-<h3><span class="header-section-number">5.0.3</span> Malignant melanoma
+number="6.0.3">
+<h3><span class="header-section-number">6.0.3</span> Malignant melanoma
 of skin</h3>
 <div id="cutaneous-melanoma-to-malignant-melanoma-of-skin"
-class="section level4" number="5.0.3.1">
-<h4><span class="header-section-number">5.0.3.1</span> Cutaneous
+class="section level4" number="6.0.3.1">
+<h4><span class="header-section-number">6.0.3.1</span> Cutaneous
 melanoma to malignant melanoma of skin</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -2917,8 +3112,8 @@ melanoma to malignant melanoma of skin</h4>
          ))</code></pre>
 </div>
 <div id="dealing-with-studies-just-labelled-as-melanoma"
-class="section level4" number="5.0.3.2">
-<h4><span class="header-section-number">5.0.3.2</span> Dealing with
+class="section level4" number="6.0.3.2">
+<h4><span class="header-section-number">6.0.3.2</span> Dealing with
 studies just labelled as “melanoma”</h4>
 <pre class="r"><code>gwas_study_info |&gt;
  filter(collected_all_disease_terms == &quot;melanoma&quot;) |&gt;
@@ -3138,8 +3333,8 @@ gwas_study_info = gwas_study_info |&gt;
          ))</code></pre>
 </div>
 </div>
-<div id="in-situ-cancer" class="section level3" number="5.0.4">
-<h3><span class="header-section-number">5.0.4</span> In situ cancer</h3>
+<div id="in-situ-cancer" class="section level3" number="6.0.4">
+<h3><span class="header-section-number">6.0.4</span> In situ cancer</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(grepl(&quot;in situ&quot;, collected_all_disease_terms)) |&gt; 
   pull(collected_all_disease_terms) |&gt;
@@ -3195,8 +3390,8 @@ gwas_study_info = gwas_study_info |&gt;
   )</code></pre>
 </div>
 <div id="non-specific-cancer-terms" class="section level3"
-number="5.0.5">
-<h3><span class="header-section-number">5.0.5</span> Non-specific cancer
+number="6.0.5">
+<h3><span class="header-section-number">6.0.5</span> Non-specific cancer
 terms</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(collected_all_disease_terms==&quot;cancer&quot;)  |&gt; 
@@ -3281,8 +3476,8 @@ gwas_study_info = gwas_study_info |&gt;
   )</code></pre>
 </div>
 <div id="peritoneum-cancer---peritoneal-cancer" class="section level3"
-number="5.0.6">
-<h3><span class="header-section-number">5.0.6</span> peritoneum cancer
+number="6.0.6">
+<h3><span class="header-section-number">6.0.6</span> peritoneum cancer
 -&gt; peritoneal cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -3291,8 +3486,8 @@ number="5.0.6">
                           &quot;peritoneal cancer&quot;
          ))</code></pre>
 </div>
-<div id="bladder-tumor" class="section level3" number="5.0.7">
-<h3><span class="header-section-number">5.0.7</span> Bladder tumor</h3>
+<div id="bladder-tumor" class="section level3" number="6.0.7">
+<h3><span class="header-section-number">6.0.7</span> Bladder tumor</h3>
 <pre class="r"><code>gwas_study_info |&gt;
   filter(collected_all_disease_terms == &quot;bladder tumor&quot;) |&gt; 
   pull(`DISEASE/TRAIT`) |&gt;
@@ -3300,8 +3495,8 @@ number="5.0.6">
 <pre><code>[1] &quot;Neoplasm of uncertain behavior of bladder (UKB data field 40006) (Gene-based burden)&quot;
 [2] &quot;Neoplasm of uncertain behavior of bladder (UKB data field 40006)&quot;                    </code></pre>
 </div>
-<div id="squamous-cell-cancer" class="section level3" number="5.0.8">
-<h3><span class="header-section-number">5.0.8</span> Squamous cell
+<div id="squamous-cell-cancer" class="section level3" number="6.0.8">
+<h3><span class="header-section-number">6.0.8</span> Squamous cell
 cancer</h3>
 <pre class="r"><code>gwas_study_info |&gt;
     filter(grepl(&quot;squamous cell cancer&quot;, collected_all_disease_terms)) |&gt;
@@ -3377,8 +3572,8 @@ gwas_study_info = gwas_study_info |&gt;
          ))</code></pre>
 </div>
 <div id="female-reproductive-organ" class="section level3"
-number="5.0.9">
-<h3><span class="header-section-number">5.0.9</span> Female reproductive
+number="6.0.9">
+<h3><span class="header-section-number">6.0.9</span> Female reproductive
 organ</h3>
 <pre class="r"><code>gwas_study_info |&gt;
     filter(grepl(&quot;female reproductive organ cancer&quot;, collected_all_disease_terms)) |&gt;
@@ -3421,8 +3616,8 @@ gwas_study_info |&gt;
          )</code></pre>
 </div>
 <div id="male-reproductive-organ" class="section level3"
-number="5.0.10">
-<h3><span class="header-section-number">5.0.10</span> Male reproductive
+number="6.0.10">
+<h3><span class="header-section-number">6.0.10</span> Male reproductive
 organ</h3>
 <pre class="r"><code>gwas_study_info |&gt;
     filter(grepl(&quot;\\bmale reproductive organ cancer&quot;, collected_all_disease_terms)) |&gt;
@@ -3441,8 +3636,8 @@ organ</h3>
 3: male reproductive organ cancer
 4: male reproductive organ cancer</code></pre>
 </div>
-<div id="small-cell-cancer" class="section level3" number="5.0.11">
-<h3><span class="header-section-number">5.0.11</span> Small cell
+<div id="small-cell-cancer" class="section level3" number="6.0.11">
+<h3><span class="header-section-number">6.0.11</span> Small cell
 cancer</h3>
 <pre class="r"><code>gwas_study_info |&gt;
     filter(grepl(&quot;\\bsmall cell cancer&quot;, collected_all_disease_terms)) |&gt;
@@ -3462,8 +3657,8 @@ cancer</h3>
 )</code></pre>
 </div>
 <div id="central-nervous-system-cancer-nervous-system-cancer"
-class="section level3" number="5.0.12">
-<h3><span class="header-section-number">5.0.12</span> Central nervous
+class="section level3" number="6.0.12">
+<h3><span class="header-section-number">6.0.12</span> Central nervous
 system cancer, nervous system cancer</h3>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt;
@@ -3473,8 +3668,8 @@ gwas_study_info |&gt;
          ) </code></pre>
 </div>
 <div id="fix-non-melanoma-skin-cancer-woopsy" class="section level3"
-number="5.0.13">
-<h3><span class="header-section-number">5.0.13</span> Fix non-melanoma
+number="6.0.13">
+<h3><span class="header-section-number">6.0.13</span> Fix non-melanoma
 skin cancer, woopsy</h3>
 <pre class="r"><code>gwas_study_info =
 gwas_study_info |&gt;
@@ -3495,8 +3690,8 @@ gwas_study_info |&gt;
 #          ) </code></pre>
 </div>
 <div id="unspecified-skin-cancer" class="section level3"
-number="5.0.14">
-<h3><span class="header-section-number">5.0.14</span> Unspecified skin
+number="6.0.14">
+<h3><span class="header-section-number">6.0.14</span> Unspecified skin
 cancer</h3>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(grepl(&quot;skin cancer&quot;, collected_all_disease_terms) &amp; 
@@ -3538,8 +3733,8 @@ gwas_study_info = gwas_study_info |&gt;
          )
          )</code></pre>
 </div>
-<div id="unspecified-lymphoma" class="section level2" number="5.1">
-<h2><span class="header-section-number">5.1</span> Unspecified
+<div id="unspecified-lymphoma" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Unspecified
 lymphoma</h2>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(grepl(&quot;lymphoma&quot;, collected_all_disease_terms) &amp; 
@@ -3671,8 +3866,8 @@ gwas_study_info = gwas_study_info |&gt;
          )</code></pre>
 <div
 id="breast-cancer-cancer-colon-and-rectum-cancer-tracheal-bronchus-and-lung-cancer-ovarian-cancer-prostate-cancer"
-class="section level3" number="5.1.1">
-<h3><span class="header-section-number">5.1.1</span> breast cancer,
+class="section level3" number="6.1.1">
+<h3><span class="header-section-number">6.1.1</span> breast cancer,
 cancer, colon and rectum cancer, tracheal bronchus and lung cancer,
 ovarian cancer, prostate cancer</h3>
 <pre class="r"><code>gwas_study_info =
@@ -3686,12 +3881,12 @@ gwas_study_info |&gt;
 </div>
 </div>
 <div id="final-summary---number-of-unique-study-terns"
-class="section level1" number="6">
-<h1><span class="header-section-number">6</span> Final summary - number
+class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Final summary - number
 of unique study terns</h1>
 <div id="deal-with-duplicate-terms-created-during-grouping"
-class="section level2" number="6.1">
-<h2><span class="header-section-number">6.1</span> Deal with duplicate
+class="section level2" number="7.1">
+<h2><span class="header-section-number">7.1</span> Deal with duplicate
 terms created during grouping</h2>
 <pre class="r"><code>gwas_study_info = 
   gwas_study_info |&gt;
@@ -3702,8 +3897,8 @@ terms created during grouping</h2>
   ungroup()</code></pre>
 </div>
 <div id="deal-with-hanging-commas-and-spaces" class="section level2"
-number="6.2">
-<h2><span class="header-section-number">6.2</span> Deal with hanging
+number="7.2">
+<h2><span class="header-section-number">7.2</span> Deal with hanging
 commas and spaces</h2>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = stringr::str_remove_all(collected_all_disease_terms, &quot;^,|,$&quot;)
@@ -3712,8 +3907,8 @@ commas and spaces</h2>
          ) </code></pre>
 </div>
 <div id="final-summary---number-of-unique-study-terms-pairs"
-class="section level2" number="6.3">
-<h2><span class="header-section-number">6.3</span> Final summary -
+class="section level2" number="7.3">
+<h2><span class="header-section-number">7.3</span> Final summary -
 number of unique study terms pairs</h2>
 <pre class="r"><code>n_studies_trait = gwas_study_info |&gt;
   dplyr::filter(DISEASE_STUDY == T) |&gt;
@@ -3735,10 +3930,10 @@ head(n_studies_trait)</code></pre>
 5 &quot;asthma&quot;                          112
 6 &quot;major depressive disorder&quot;       109</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2647    2</code></pre>
+<pre><code>[1] 2649    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
-class="section level3" number="6.3.1">
-<h3><span class="header-section-number">6.3.1</span> When separate
+class="section level3" number="7.3.1">
+<h3><span class="header-section-number">7.3.1</span> When separate
 studies with multiple terms</h3>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;, 
                                gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != &quot;&quot;])  |&gt; 
@@ -3769,8 +3964,8 @@ head(freq_sorted, 10)</code></pre>
                       329 </code></pre>
 </div>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
-class="section level3" number="6.3.2">
-<h3><span class="header-section-number">6.3.2</span> Save the updated
+class="section level3" number="7.3.2">
+<h3><span class="header-section-number">7.3.2</span> Save the updated
 gwas_study_info with harmonized disease terms</h3>
 <pre class="r"><code>fwrite(gwas_study_info,
       here::here(&quot;output/gwas_cat/gwas_study_info_group.csv&quot;)
