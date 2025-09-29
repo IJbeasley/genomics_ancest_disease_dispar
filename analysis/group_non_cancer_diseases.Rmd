@@ -35,6 +35,214 @@ gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group.csv")
 
 ```
 
+## Typo: spine psteoarthritis
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                            "spine psteoarthritis"
+                            )
+                            ),
+                          "spine osteoarthritis"
+         )
+  )
+
+```
+
+
+- "aortic valve stenosis
+
+
+## Intracranial artery stenosis
+
+```{r icas}
+# "arterial stenosis"  -> "Intracranial artery stenosis"
+# where DISEASE/TRAIT contains "Intracranial artery stenosis"
+# replace "arterial stenosis" with "intracranial artery stenosis"
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Intracranial artery stenosis", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "arterial stenosis",
+                          replacement = "intracranial artery stenosis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+## Coronary restenosis <- add inclusion criteria 
+
+```{r coronary_restenosis}
+
+# for pubmed id 21878436 
+# measuring Coronary restenosis, which is an outcome of Percutaneous coronary intervention (PCI)
+# included / background traits for the relevant study GENetic DEterminants of Restenosis project (GENDER) 
+# are found:
+# https://academic.oup.com/eurheartj/article/25/13/1163/465324?login=true#89258510
+
+# stable angina
+# silent ischaemia -> silent myocardial ischaemia
+# non-ST-elevation acute coronary syndromes excl. acute ST-elevation myocardial infarction
+# this includes: 
+# unstable angina, 
+# non-ST-elevation myocardial infarction (NSTEMI) within acute subendocardial myocardial infarction
+# Acute ischemic heart disease, unspecified: 
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "21878436",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "coronary restenosis",
+                          replacement = "coronary restenosis, stable angina, silent myocardial ischaemia, unstable angina, acute subendocardial myocardial infarction, acute ischemic heart disease"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+
+## Acute coronary syndrome
+
+```{r acute_coronary_syndrome}
+
+# for pubmed id 28753643
+# acute coronary syndrome (ACS) 
+# comes from the SOLID-TIMI 52 cohort: experienced acute coronary syndrome (ACS; unstable angina, non–ST-elevation or ST-elevation MI)
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "28753643",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "acute coronary syndrome",
+                          replacement = "untable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# define similarly in pubmed id: 24952865, 25583994, 25935875
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID %in% c("28753643", "25583994", "25935875", "34158603"),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "acute coronary syndrome",
+                          replacement = "untable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# for pubmed id 35356681, acute coronary syndrome (ACS) - is actually non-ST elevation acute coronary syndrome
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("acute coronary syndrome"), 
+               collected_all_disease_terms, 
+               perl = T)) |> 
+  filter(PUBMED_ID == "35356681") |> 
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "35356681",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "acute coronary syndrome",
+                          replacement = "acute subendocardial myocardial infarction"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+
+## Treatment resistant depression
+
+```{r treatment_resistant_depression}
+
+# if DISEASE/TRAIT contains Treatment resistant depression
+# then replace depression with treatment resistant depression
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Treatment resistant depression", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("depression"),
+                          "treatment resistant depression"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+## Hepatic steatosis
+
+```{r hepatic_steatosis}
+
+# if DISEASE/TRAIT contains hepatic steatosis in non-alcoholic fatty liver disease
+# replace hepatic steatosis with nonalcoholic steatohepatitis 
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("hepatic steatosis in non-alcoholic fatty liver disease", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("hepatic steatosis"),
+                          "nonalcoholic steatohepatitis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("non-alcoholic steatohepatitis"),
+                          "nonalcoholic steatohepatitis"
+  )
+  )
+
+
+```
+
+## Thrombophilia
+
+```{r thrombophilia}
+
+# if DISEASE/TRAIT contains PheCode 286.8
+# then replce thrombophilia with primary thrombophilia
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("PheCode 286.8", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("thrombophilia"),
+                          "primary thrombophilia"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
 ### How many unique traits are there now?
 
 ```{r n_unique_traits_start}
@@ -229,6 +437,35 @@ gwas_study_info = gwas_study_info |>
          ))
 
 ```
+
+## Gender identity disorder
+
+```{r gender_identity_disorder}
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("childhood gender nonconformity"),
+                          "gender identity disorder"
+         ))
+
+gwas_study_info =
+    gwas_study_info |>
+    mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "gender identity disorder"
+         ))
+
+gwas_study_info =
+  gwas_study_info |>
+    mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = "sexual and gender identity disorders"
+         ))
+
+```
+
 
 ## Sneezing in response to bright light (autosomal dominant compelling helio-ophthalmic outburst syndrome)
 
@@ -2930,6 +3167,39 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Stuttering, tics -> Tics and stuttering 
+
+```{r tics_and_stuttering}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("PheCode 313.2", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("stuttering, tics")),
+                          "tics and stuttering"
+                          ),
+         collected_all_disease_terms
+)
+)
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("PheCode 333.3", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("stuttering, tics")),
+                          "tics and choreas"
+         ),
+         collected_all_disease_terms
+))
+
+
+```
+
 ## Systemic sclerosis
 
 ```{r systemic_sclerosis}
@@ -3000,10 +3270,10 @@ gwas_study_info = gwas_study_info |>
 ```{r diabetic_foot_neuropathy}
 
 
-icd_terms <- c("type 1 diabetes mellitus with foot ulcer",
-               "type 2 diabetes mellitus with foot ulcer",
-               "type 1 diabetes mellitus with diabetic neuropathy",
-               "type 2 diabetes mellitus with diabetic neuropathy")
+icd_terms <- c("type 1 diabetes with foot ulcer",
+               "type 2 diabetes with foot ulcer",
+               "type 1 diabetes with diabetic neuropathy",
+               "type 2 diabetes with diabetic neuropathy")
 
 icd_replacement <- paste0(icd_terms, collapse = ", ")
 
@@ -3208,7 +3478,7 @@ print(length(diseases))
 
 fwrite(
   gwas_study_info,
-  here::here("output/gwas_cat/gwas_study_info_group.csv")
+  here::here("output/gwas_cat/gwas_study_info_group_v2.csv")
   )
 
 ```
