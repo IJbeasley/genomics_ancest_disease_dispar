@@ -701,6 +701,22 @@ gwas_study_info =
 
 ```
 
+## Bronchopneumonia and lung abscess
+
+```{r bronchopneumonia_and_lung_abscess}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                             "bronchopneumonia, lung abscess"
+                             )
+                             ),
+                          "bronchopneumonia and lung abscess"
+         ))
+
+```
+
 ## Blindness and low vision
 
 ```{r blindness_and_low_vision}
@@ -1547,6 +1563,19 @@ gwas_study_info = gwas_study_info |>
                                      )),
                           "food allergy"
          ))
+```
+
+## Fuchs endothelial corneal dystrophy
+
+```{r fuchs_endothelial_corneal_dystrophy}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("fuchs endothelial dystrophy"),
+                          "fuchs endothelial corneal dystrophy"
+         ))
+
 ```
 
 ## Glaucoma
@@ -2721,7 +2750,9 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern(c("specific language impairment"
+                          vec_to_grep_pattern(c("specific language impairment",
+                                                "language impairment",
+                                                "social communication impairment"
                                                 )
                                               ),
                           "speech and language disorder"
@@ -2788,6 +2819,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Systemic sclerosis
+
+```{r systemic_sclerosis}
+
+terms <- c("diffuse scleroderma",
+           "limited scleroderma",
+           "anti-centromere-antibody-positive systemic scleroderma",
+           "anti-topoisomerase-i-antibody-positive systemic scleroderma")
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(terms),
+                          "systemic sclerosis"
+         ))
+
+```
+
 ## Thyrotoxicosis with or without goiter
 
 ```{r thyrotoxicosis_with_or_without_goiter}
@@ -2801,7 +2850,26 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Tinea 
 
+```{r tinea}
+
+# if DISEASE/TRAIT contains Ringworm, replace tinea with tinea corporis
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Ringworm", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("tinea"),
+                          "tinea corporis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+```
 ## Type 1 diabetes
 
 ```{r}
@@ -2822,8 +2890,16 @@ gwas_study_info = gwas_study_info |>
 type_2_eye_terms <- c("diabetes mellitus type 2 associated cataract",
                       "diabetic maculopathy, type 2 diabetes mellitus",
                       "diabetic macular edema, type 2 diabetes mellitus",
-                      "proliferative diabetic retinopathy, type 2 diabetes mellitus"
+                      "proliferative diabetic retinopathy, type 2 diabetes mellitus",
+                      "macrovascular complications of diabetes, type 2 diabetes mellitus"
                      )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(type_2_eye_terms),
+                          "type 2 diabetes with ophthalmic manifestations"
+         ))
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
