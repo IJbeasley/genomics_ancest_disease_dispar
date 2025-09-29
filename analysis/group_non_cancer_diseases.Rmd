@@ -249,6 +249,38 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Skin sensitivity to sun
+
+```{r skin_sensitivity_to_sun}
+
+gwas_study_info |> 
+  filter(grepl("skin sensitivity to sun", collected_all_disease_terms)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# remove skin sensitivity to sun
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("skin sensitivity to sun")
+         ))
+
+# also remove suntan
+gwas_study_info |> 
+  filter(grepl("suntan", collected_all_disease_terms)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("suntan"
+                          )
+         ))
+
+```
+
 
 # Group some non-cancer diseases together
 
@@ -738,6 +770,22 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Candidiasis of vulva and vagina
+
+```{r candid_vagina}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                             "vaginal yeast infection")
+                             ),
+                          "candidiasis of vulva and vagina"
+         ))
+
+
+```
+
 ## Carbuncle and furuncle
 
 ```{r carbuncle_and_furuncle}
@@ -920,6 +968,28 @@ gwas_study_info = gwas_study_info |>
                           vec_to_grep_pattern("stage 5 chronic kidney disease"),
                           "chronic kidney disease"
          ))
+
+```
+
+## Chronic non-alcoholic pancreatitis
+
+```{r chronic_non_alcoholic_pancreatitis}
+
+# if Non-alcoholic chronic pancreatitis  in `DISEASE/TRAIT`,
+# then non-alcoholic pancreatitis to chronic pancreatitis
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Non-alcoholic chronic pancreatitis", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("non-alcoholic pancreatitis"),
+                          "chronic pancreatitis"
+         ),
+         collected_all_disease_terms
+         )
+  )
 
 ```
 
@@ -1185,6 +1255,20 @@ gwas_study_info = gwas_study_info |>
                           "creutzfeldt-jakob disease"
          ))
 
+
+```
+
+## Cryoglobulinemia
+
+```{r cryoglobulinemia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("cryoglobulinemia"),
+                          "cryoglobulinaemia"
+         ))
+
 ```
 
 ## Chronic pain
@@ -1323,6 +1407,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Disorders of refraction and accommodation
+
+```{r disorders_of_refraction_and_accommodation}
+
+refractive_terms <- c("hyperopia",
+                      "refractive error"
+                      )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(refractive_terms),
+                          "disorders of refraction and accommodation"
+         )
+  )
+
+```
+
 ## Diseases of white blood cells
 
 ```{r diseases_of_white_blood_cells}
@@ -1397,6 +1499,19 @@ gwas_study_info = gwas_study_info |>
                           "essential hypertension"
          ))
 
+
+```
+
+## Exstrophy of urinary bladder
+
+```{r exstrophy_of_urinary_bladder}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("bladder exstrophy"),
+                          "exstrophy of urinary bladder"
+         ))
 
 ```
 
@@ -1554,6 +1669,37 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Hypercholesterolemia
+
+```{r hypercholesterolemia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                            "familial hypercholesterolemia"
+                            )),
+                          "hypercholesterolemia"
+         ))
+
+```
+
+## Hyperlipidemia
+
+```{r hyperlipidemia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                            "familial hypercholesterolemia"
+                            )),
+                          "hyperlipidemia"
+         ))
+
+```
+
+
 ## HIV disease resulting in encephalopathy
 
 ```{r hiv_disease_resulting_in_encephalopathy}
@@ -1680,6 +1826,20 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Idiopathic thrombocytopenic purpura
+
+```{r idiopathic_thrombocytopenic_purpura}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("autoimmune thrombocytopenic purpura"),
+                          "idiopathic thrombocytopenic purpura"
+         ))
+
+
+```
+
 ## Juvenile idiopathic arthritis
 
 ```{r juvenile_idiopathic_arthritis}
@@ -1797,6 +1957,20 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("late-onset myasthenia gravis"),
                           "myasthenia gravis"
+         ))
+
+
+```
+
+## narcolepsy-cataplexy syndrome -> Narcolepsy and cataplexy
+
+```{r narcolepsy_and_cataplexy}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("narcolepsy-cataplexy syndrom"),
+                          "narcolepsy and cataplexy"
          ))
 
 
@@ -1943,6 +2117,13 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("idiopathic osteonecrosis of the femoral head"),
+                          "osteonecrosis"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("osteoradionecrosis"),
                           "osteonecrosis"
          ))
 
@@ -2244,6 +2425,33 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Premature menopause and other ovarian failure
+
+```{r premature_menopause_and_other_ovarian_failure}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("premature menopause"),
+                          "premature menopause and other ovarian failure"
+         ))
+
+
+```
+
+## Primary hyperaldosteronism
+
+```{r primary_hyperaldosteronism}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("primary aldosteronism"),
+                          "primary hyperaldosteronism"
+         ))
+
+```
+
 ## Proteinuria
 
 ```{r proteinuria}
@@ -2357,6 +2565,24 @@ gwas_study_info = gwas_study_info |>
                                               ),
                           "separation of retinal layers"
          ))
+
+```
+
+## Rash and other nonspecific skin eruption
+
+```{r rash_and_other_nonspecific_skin_eruption}
+
+rash_terms <- c(
+                "maculopapular eruption"
+                )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(rash_terms),
+                          "rash and other nonspecific skin eruption"
+         )
+  )
 
 ```
 
@@ -2488,6 +2714,22 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Speech and language disorder
+
+```{r speech_and_language_disorder}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("specific language impairment"
+                                                )
+                                              ),
+                          "speech and language disorder"
+         ))
+
+
+```
+
 ## Staphylococcus infections
 
 ```{r staphylococcus_infections}
@@ -2513,6 +2755,8 @@ url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252F
 
 strabismus_terms <- get_descendants(url)
 
+strabismus_terms = c("non-accomodative esotropia",
+                     strabismus_terms)
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
@@ -2543,6 +2787,20 @@ gwas_study_info = gwas_study_info |>
          ))
 
 ```
+
+## Thyrotoxicosis with or without goiter
+
+```{r thyrotoxicosis_with_or_without_goiter}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("hyperthyroidism"),
+                          "thyrotoxicosis with or without goiter"
+         ))
+
+```
+
 
 ## Type 1 diabetes
 
@@ -2617,6 +2875,26 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Unspecified condition associated with female genital organs and menstrual cycle
+
+```{r menstrual}
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+    ifelse(grepl("Menstruation", 
+                `DISEASE/TRAIT`,
+                 ignore.case = TRUE),
+           str_replace_all(collected_all_disease_terms,
+                           pattern = vec_to_grep_pattern("decreased attention"),
+                           "unspecified condition associated with female genital organs and menstrual cycle"),
+           collected_all_disease_terms
+    )
+    )
+
+```
+
+
 ## Uveitis
 
 ```{r uveitis}
@@ -2624,7 +2902,8 @@ gwas_study_info = gwas_study_info |>
 uveitis_terms <- c("anterior uveitis",
                    "iritis",
                    "vogt-koyanagi-harada disease",
-                   "birdshot chorioretinopathy"
+                   "birdshot chorioretinopathy",
+                   "multifocal choroiditis"
                    )
 
 gwas_study_info = gwas_study_info |>
@@ -2648,7 +2927,51 @@ gwas_study_info = gwas_study_info |>
                           "other specified retinal disorders"
          ))
 
+```
 
+## Other disorders of eyelids
+
+```{r other_disorders_of_eyelids}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("dermatochalasis",
+                                                "filarial elephantiasis"
+                                                )
+                                              ),
+                          "other disorders of eyelids"
+         ))
+
+```
+
+## Other disorders of iris and ciliary body
+
+```{r other_disorders_of_iris_and_ciliary_body}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("iris disorder"
+                                                )
+                                              ),
+                          "other disorders of iris and ciliary body"
+         ))
+
+```
+
+## Background retinopathy and retinal vascular changes
+
+```{r background_retinopathy_and_retinal_vascular_changes}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("macular telangiectasia type 2"
+                                                )
+                                              ),
+                          "background retinopathy and retinal vascular changes"
+         ))
 
 ```
 
