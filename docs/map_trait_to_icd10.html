@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+<meta name="date" content="2025-09-26" />
+
+<title>Mapping GWAS traits to ICD 10</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Mapping GWAS traits to ICD 10</h1>
+<h4 class="author">Isobel Beasley</h4>
+<h4 class="date">2025-09-26</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2025-09-28
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree97d340dae80dcce5fec2e5fe2db9d93851769ae1targetblank97d340da">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/97d340dae80dcce5fec2e5fe2db9d93851769ae1" target="_blank">97d340d</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree97d340dae80dcce5fec2e5fe2db9d93851769ae1targetblank97d340da"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/97d340dae80dcce5fec2e5fe2db9d93851769ae1" target="_blank">97d340d</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rproj.user/
+    Ignored:    data/.DS_Store
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2021_COD_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/IHME_GBD_2021_NONFATAL_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/UK_Biobank_master_file.tsv
+    Ignored:    data/icd/cdc_valid_icd10_Sep_23_2025.xlsx
+    Ignored:    data/icd/cdc_valid_icd9_Sep_23_2025.xlsx
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/semiautomatic_ICD-pheno.txt
+    Ignored:    data/icd/~$IHME_GBD_2021_COD_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/~$IHME_GBD_2021_NONFATAL_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/who/
+    Ignored:    diseases.txt
+    Ignored:    not_found_diseases.txt
+    Ignored:    orig_phecode_map.csv
+    Ignored:    original_phecodes_pheinfo.csv
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_study_info_cohort_corrected.csv
+    Ignored:    output/gwas_study_info_trait_corrected.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info_l1.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info_l2.csv
+    Ignored:    output/trait_ontology/
+    Ignored:    renv/
+    Ignored:    sup_table.xlsx
+    Ignored:    zooma.tsv
+    Ignored:    zooma_res.tsv
+
+Untracked files:
+    Untracked:  analysis/garbage_icd_codes.Rmd
+    Untracked:  disease_mapping.R
+
+Unstaged changes:
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/exclude_infectious_diseases.Rmd
+    Modified:   analysis/gbd_data_plots.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/level_1_disease_group_non_cancer.Rmd
+    Modified:   analysis/level_2_disease_group.Rmd
+    Modified:   analysis/trait_ontology_categorization.Rmd
+    Modified:   data/icd/README.md
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/map_trait_to_icd10.Rmd</code>)
+and HTML (<code>docs/map_trait_to_icd10.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/97d340dae80dcce5fec2e5fe2db9d93851769ae1/analysis/map_trait_to_icd10.Rmd" target="_blank">97d340d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-28
+</td>
+<td>
+workflowr::wflow_publish("analysis/map_trait_to_icd10.Rmd")
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="set-up" class="section level1">
+<h1>Set up</h1>
+<pre class="r"><code>library(dplyr)
+library(stringr)
+library(data.table)</code></pre>
+<div id="ontology-help---for-getting-disease-subtypes"
+class="section level2">
+<h2>Ontology help - for getting disease subtypes</h2>
+<pre class="r"><code>source(here::here(&quot;code/get_term_descendants.R&quot;))</code></pre>
+<div id="load-data" class="section level3">
+<h3>Load Data</h3>
+<pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_cat/gwas_study_info_group.csv&quot;))</code></pre>
+</div>
+</div>
+</div>
+<div id="map-gwas-traits-to-icd-10" class="section level1">
+<h1>Map GWAS traits to ICD 10</h1>
+<div
+id="create-a-mapping-table---just-for-studies-with-a-single-disease-term"
+class="section level2">
+<h2>Create a mapping table - just for studies with a single disease
+term</h2>
+<pre class="r"><code>disease_mapping &lt;- gwas_study_info |&gt;
+  filter(DISEASE_STUDY == T) |&gt;
+  filter(!grepl(&quot;,&quot;, collected_all_disease_terms)) |&gt;
+  filter(collected_all_disease_terms != &quot; &quot;) |&gt;
+  filter(collected_all_disease_terms != &quot;&quot;) |&gt;
+  select(`DISEASE/TRAIT`, collected_all_disease_terms) |&gt;
+  distinct()
+
+diseases &lt;- stringr::str_split(pattern = &quot;, &quot;,
+                               gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != &quot;&quot;])  |&gt;
+  unlist() |&gt;
+  stringr::str_trim()
+
+diseases &lt;- unique(diseases)
+
+print(length(diseases))</code></pre>
+<pre><code>[1] 1697</code></pre>
+</div>
+<div id="get-icd10-codes-from-phecodes" class="section level2">
+<h2>Get ICD10 codes from PheCodes</h2>
+<div id="get-phecodes-for-diseases" class="section level3">
+<h3>Get Phecodes for diseases</h3>
+<pre class="r"><code>disease_mapping &lt;- disease_mapping |&gt;
+  mutate(
+    phecode = str_extract(`DISEASE/TRAIT`, &quot;(?&lt;=PheCode )[^)]+&quot;)
+  ) |&gt;
+  mutate(phecode = as.numeric(phecode))</code></pre>
+</div>
+<div id="convert-phecodes-to-icd10" class="section level3">
+<h3>Convert Phecodes to ICD10</h3>
+<pre class="r"><code># phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
+
+phecodes &lt;- fread(here::here(&quot;data/icd/phecode_international_version_unrolled.csv&quot;))
+
+phecode_icd_map =
+  phecodes |&gt;
+  select(icd10_code = ICD10, 
+         phecode = PheCode
+         )
+
+# if more than one ICD10 code per phecode, collapse into a single row
+phecode_icd_map =
+  phecode_icd_map |&gt;
+group_by(phecode) |&gt;
+  summarise(icd10_code = 
+            str_flatten(unique(icd10_code), collapse = &quot;, &quot;, na.rm = T), 
+            .groups = &quot;drop&quot;)
+
+
+disease_mapping =
+left_join(disease_mapping,
+          phecode_icd_map,
+          by = &quot;phecode&quot;,
+          relationship = &quot;many-to-one&quot;,
+          na_matches = &quot;never&quot;)</code></pre>
+</div>
+<div id="get-icd10-codes-from-author-provided-diseasetrait-column"
+class="section level3">
+<h3>Get ICD10 codes from author provided DISEASE/TRAIT column</h3>
+<pre class="r"><code>disease_mapping =
+  disease_mapping |&gt;
+  mutate(icd10_code = ifelse(grepl(&quot;ICD10&quot;, `DISEASE/TRAIT`),
+                             str_extract(`DISEASE/TRAIT`, &quot;(?&lt;=ICD10 )[^:]+(?=:)&quot;),
+                             icd10_code)
+)
+
+
+disease_mapping =
+disease_mapping |&gt;
+  group_by(collected_all_disease_terms) |&gt;
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = &quot;, &quot;, 
+                                     na.rm = T), 
+            .groups = &quot;drop&quot;)</code></pre>
+</div>
+<div id="how-many-diseases-are-not-mapped-yet" class="section level3">
+<h3>How many diseases are not mapped yet?</h3>
+<pre class="r"><code>disease_mapping =
+  disease_mapping |&gt;
+  filter(icd10_code != &quot;&quot;)
+
+
+not_found_diseases &lt;- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
+
+print(length(not_found_diseases))</code></pre>
+<pre><code>[1] 507</code></pre>
+</div>
+<div id="match-disease-terms-to-phenotypes" class="section level3">
+<h3>Match disease terms to phenotypes</h3>
+<pre class="r"><code>phenotype_icd_map =
+  phecodes |&gt;
+group_by(Phenotype) |&gt;
+  summarise(icd10_code = 
+            str_flatten(ICD10, collapse = &quot;, &quot;, na.rm = T), 
+            .groups = &quot;drop&quot;)
+
+matched_phenotypes =
+phenotype_icd_map |&gt;
+filter(tolower(Phenotype) %in% not_found_diseases)
+
+matched_phenotypes =
+matched_phenotypes |&gt;
+  mutate(collected_all_disease_terms = tolower(Phenotype)) |&gt;
+  select(collected_all_disease_terms, icd10_code) 
+
+disease_mapping =
+  bind_rows(disease_mapping, matched_phenotypes) |&gt;
+  distinct()</code></pre>
+</div>
+<div id="how-many-diseases-are-not-mapped-yet-1" class="section level3">
+<h3>How many diseases are not mapped yet?</h3>
+<pre class="r"><code>disease_mapping =
+  disease_mapping |&gt;
+  filter(icd10_code != &quot;&quot;)
+
+
+not_found_diseases &lt;- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
+
+print(length(not_found_diseases))</code></pre>
+<pre><code>[1] 455</code></pre>
+</div>
+<div id="match-disease-terms-to-icd-descriptions"
+class="section level3">
+<h3>Match disease terms to ICD descriptions</h3>
+<pre class="r"><code>to_add = 
+phecodes |&gt;
+    filter(tolower(iconv(ICD_DESCRIPTION, to = &quot;UTF-8&quot;)) %in% not_found_diseases) |&gt;
+    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = &quot;UTF-8&quot;))) |&gt;
+    select(collected_all_disease_terms,    
+           icd10_code = ICD10) 
+
+phecodes |&gt;
+    filter(tolower(iconv(ICD_DESCRIPTION, to = &quot;UTF-8&quot;)) %in% &quot;androgenetic alopecia&quot;) |&gt;
+    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = &quot;UTF-8&quot;))) |&gt;
+    select(collected_all_disease_terms,    
+           icd10_code = ICD10) </code></pre>
+<pre><code>Empty data.table (0 rows and 2 cols): collected_all_disease_terms,icd10_code</code></pre>
+<pre class="r"><code>disease_mapping =
+  bind_rows(disease_mapping, to_add) |&gt;
+  distinct()</code></pre>
+</div>
+<div id="how-many-diseases-are-not-mapped-yet-2" class="section level3">
+<h3>How many diseases are not mapped yet?</h3>
+<pre class="r"><code>disease_mapping =
+  disease_mapping |&gt;
+  filter(icd10_code != &quot;&quot;)
+
+
+not_found_diseases &lt;- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
+
+print(length(not_found_diseases))</code></pre>
+<pre><code>[1] 367</code></pre>
+</div>
+</div>
+<div id="manually-add-some-icd10-codes" class="section level2">
+<h2>Manually add some ICD10 codes</h2>
+<pre class="r"><code>collected_all_disease_terms = c(&quot;alcoholic liver cirrhosis&quot;,
+                                &quot;alcoholic pancreatitis&quot;,
+                                &quot;ischemic cardiomyopathy&quot;,
+                                &quot;systemic juvenile idiopathic arthritis&quot;,
+                                &quot;juvenile idiopathic arthritis&quot;,
+                                &quot;oligoarticular juvenile idiopathic arthritis&quot;,
+                                &quot;sapho syndrome&quot;,
+                                &quot;synovial plica syndrome&quot;,
+                                &quot;urgency urinary incontinence&quot;,
+                                &quot;abdominal distention&quot;,
+                                &quot;early-onset alzheimers disease&quot;,
+                                &quot;late-onset alzheimers disease&quot;,
+                                &quot;renal overload-type gout&quot;,
+                                &quot;vomiting of pregnancy&quot;,
+                                &quot;kleine-levin syndrome&quot;,
+                                &quot;autoimmune pancreatitis type 1&quot;,
+                                &quot;allergic contact dermatitis of eyelid&quot;,
+                                &quot;guillain-barre syndrome&quot;,
+                                &quot;idiopathic pulmonary fibrosis&quot;,
+                                &quot;behcets syndrome&quot;,
+                                &quot;kashin-beck disease&quot;,
+                                &quot;chronic thromboembolic pulmonary hypertension&quot;,
+                                &quot;pulmonary hypertension&quot;,
+                                &quot;pulmonary arterial hypertension&quot;,
+                                &quot;pulmonary coin lesion&quot;,
+                                &quot;pulmonary infarction&quot;,
+                                &quot;neuromyelitis optica&quot;,
+                                &quot;buruli ulcer disease&quot;,
+                                &quot;churg-strauss syndrome&quot;,
+                                &quot;graft versus host disease&quot;,
+                                &quot;takayasu arteritis&quot;,
+                                &quot;enuresis&quot;,
+                                &quot;cannabis dependence&quot;,
+                                &quot;orofacial cleft&quot;,
+                                &quot;eczema&quot;,
+                                &quot;drug dependence&quot;,
+                                &quot;cocaine-related disorders&quot;,
+                                &quot;pharynx cancer&quot;,
+                                &quot;pseudotumor cerebri&quot;,
+                                &quot;altitude sickness&quot;,
+                                &quot;high altitude pulmonary edema&quot;,
+                                &quot;intrahepatic cholestasis of pregnancy&quot;,
+                                &quot;brain injury&quot;,
+                                &quot;radiation-induced brain injury&quot;,
+                                &quot;abdominal infections code&quot;,
+                                &quot;secondary hyperparathyroidism of renal origin&quot;,
+                                &quot;gastroparesis&quot;,
+                                &quot;neuroblastoma&quot;,
+                                &quot;peripartum cardiomyopathy&quot;,
+                                &quot;retroperitoneal cancer&quot;,
+                                &quot;asphyxia neonatorum&quot;,
+                                &quot;postherpetic neuralgia&quot;,
+                                &quot;manic or hypomanic episode&quot;,
+                                &quot;allergic conjunctivitis&quot;,
+                                &quot;thiazide-induced hyponatremia&quot;,
+                                &quot;alpha 1-antitrypsin deficiency&quot;,
+                                &quot;autoimmune thyroid disease&quot;,
+                                &quot;hashimotos thyroiditis&quot;,
+                                &quot;charcot-marie-tooth disease type 1a&quot;,
+                                &quot;amyotrophic lateral sclerosis&quot;,
+                                &quot;fuchs endothelial corneal dystrophy&quot;,
+                                &quot;duchenne muscular dystrophy&quot;,
+                                &quot;familial apolipoprotein b hypobetalipoproteinemia&quot;,
+                                &quot;gastric metaplasia&quot;,
+                                &quot;inborn carbohydrate metabolic disorder&quot;,
+                                &quot;petaloid toenail&quot;,
+                                &quot;thyrotoxic periodic paralysis&quot;,
+                                &quot;schizoaffective disorder&quot;,
+                                &quot;rhegmatogenous retinal detachment&quot;,
+                                &quot;restless legs syndrome&quot;,
+                                &quot;preterm premature rupture of the membranes&quot;,
+                                &quot;porphyrin metabolism disease&quot;,
+                                &quot;peritoneal cancer&quot;,
+                                &quot;methamphetamine use disorders&quot;,
+                                &quot;familial sick sinus syndrome&quot;,
+                                &quot;drug misuse&quot;,
+                                &quot;abnormal ecg&quot;,
+                                &quot;adenoiditis&quot;,
+                                &quot;bacterial endocarditis&quot;,
+                                &quot;biliary atresia&quot;,
+                                &quot;bronchopulmonary dysplasia&quot;,
+                                &quot;cervical ectropion&quot;,
+                                &quot;chronic primary adrenal insufficiency&quot;,
+                                &quot;ciliopathy&quot;,
+                                &quot;collagenous colitis&quot;,
+                                &quot;colonic diverticula&quot;,
+                                &quot;craniofacial microsomia&quot;,
+                                &quot;cryptorchidism&quot;,
+                                &quot;plantar fasciitis&quot;,
+                                &quot;plantar fibromatosis&quot;,
+                                &quot;lewy body dementia&quot;,
+                                &quot;x-linked dystonia-parkinsonism&quot;,
+                                &quot;hippocampal sclerosis of aging&quot;,
+                                &quot;testicular dysgenesis syndrome&quot;,
+                                &quot;internet addiction disorder&quot;,
+                                &quot;food addiction&quot;,
+                                &quot;malignant lymphoid tumor&quot;,
+                                &quot;compartment syndrome&quot;,
+                                &quot;elevated lactate dehydrogenase&quot;,
+                                &quot;loss of consciousness&quot;,
+                                &quot;nephrosclerosis&quot;,
+                                &quot;periprosthetic osteolysis&quot;,
+                                &quot;polypoidal choroidal vasculopathy&quot;,
+                                &quot;pulmonary alveolar proteinosis&quot;,
+                                &quot;chorioamnionitis&quot;,
+                                &quot;hoarding disorder&quot;,
+                                &quot;unilateral renal agenesis&quot;,
+                                &quot;muscle spasm&quot;,
+                                &quot;oral ulcer&quot;,
+                                &quot;ileocolitis&quot;,
+                                &quot;microscopic colitis&quot;,
+                                &quot;lymphocytic colitis&quot;,
+                                &quot;drug-induced dyskinesia&quot;,
+                                &quot;plasma protein metabolism disease&quot;,
+                                &quot;oral lichen planus&quot;,
+                                &quot;epididymitis&quot;,
+                                &quot;orchitis&quot;,
+                                &quot;ectropion&quot;,
+                                &quot;entropion&quot;,
+                                &quot;cervical dystonia&quot;,
+                                &quot;clonal hematopoiesis&quot;,
+                                &quot;diffuse idiopathic skeletal hyperostosis&quot;,
+                                &quot;endocervicitis&quot;,
+                                &quot;eosinophilic esophagitis&quot;,
+                                &quot;focal segmental glomerulosclerosis&quot;,
+                                &quot;hypercalcemia&quot;,
+                                &quot;hypertriglyceridemia&quot;,
+                                &quot;hypocalcemia&quot;,
+                                &quot;lymphangioleiomyomatosis&quot;,
+                                &quot;mononucleosis&quot;,
+                                &quot;necrotizing enterocolitis&quot;,
+                                &quot;occupation-related stress disorder&quot;,
+                                &quot;ototoxicity&quot;,
+                                &quot;plantar warts&quot;,
+                                &quot;podoconiosis&quot;,
+                                &quot;posterior cortical atrophy&quot;,
+                                &quot;pigment dispersion syndrome&quot;,
+                                &quot;takotsubo cardiomyopathy&quot;,
+                                &quot;testicular germ cell tumor&quot;,
+                                &quot;normal pressure hydrocephalus&quot;,
+                                &quot;anti-nmda receptor encephalitis&quot;
+                                )
+
+icd10_code = c(&quot;K70.3&quot;, 
+               &quot;K85.2, K85.20, K85.21, K85.22&quot;,
+               &quot;I25.5&quot;,
+               &quot;M08.20&quot;,
+               &quot;M08.9&quot;,
+               &quot;MO8.4&quot;,
+               &quot;M86.3&quot;,
+               &quot;M67.8&quot;,
+               &quot;N39.4&quot;,
+               &quot;R14&quot;,
+               &quot;F00.0, G30.0&quot;,
+               &quot;F00.1, G30.1&quot;,
+               &quot;M10.3&quot;,
+               &quot;O21, O21.9&quot;,
+               &quot;G47.1&quot;,
+               &quot;K86.1&quot;,
+               &quot;H01.1&quot;,
+               &quot;G61.0&quot;,
+               &quot;J84.1&quot;,
+               &quot;M35.2&quot;,
+               &quot;M12.1&quot;,
+               &quot;I27.8&quot;,
+               &quot;I27.9&quot;,
+               &quot;I27.9&quot;,
+               &quot;R91&quot;,
+               &quot;I26.9&quot;,
+               &quot;G36.0&quot;,
+               &quot;A31.1&quot;,
+               &quot;M30.1&quot;,
+               &quot;D89.8&quot;,
+               &quot;M31.4&quot;,
+               &quot;R32&quot;,
+               &quot;F12.2&quot;,
+               &quot;Q36, Q36.0, Q36.9, Q35, Q35.1, Q35.3, Q35.5, Q35.7, Q35.9&quot;,
+               &quot;L30.9&quot;,
+               &quot;F19.2&quot;,
+               &quot;F14.1&quot;,
+               &quot;C14.0&quot;,
+               &quot;G93.2&quot;,
+               &quot;T70.2&quot;,
+               &quot;T70.2&quot;,
+               &quot;O26.6&quot;,
+               &quot;S06.9&quot;,
+               &quot;S06.9&quot;,
+               &quot;D73.3, K35-37, K57, K61, K63.0, K65, K75.0, K81, K83.0&quot;,
+               &quot;N25.8&quot;,
+               &quot;K31.8&quot;,
+               &quot;C74.9&quot;,
+               &quot;O90.3&quot;,
+               &quot;C48.0&quot;,
+               &quot;P24.8, P24.9&quot;,
+               &quot;B02.2&quot;,
+               &quot;F30.9&quot;,
+               &quot;H10.1&quot;,
+               &quot;E87.1&quot;,
+               &quot;E88.0&quot;,
+               &quot;E06.3&quot;,
+               &quot;E06.3&quot;,
+               &quot;G60.0&quot;,
+               &quot;G12.2&quot;,
+               &quot;H18.5&quot;,
+               &quot;G71.0&quot;,
+               &quot;E78.6&quot;,
+               &quot;K31&quot;,
+               &quot;E74.9&quot;,
+               &quot;L60&quot;,
+               &quot;G72.3&quot;,
+               &quot;F25&quot;,
+               &quot;H33.0&quot;,
+               &quot;G25.8&quot;,
+               &quot;O42&quot;,
+               &quot;E80.2&quot;,
+               &quot;C48.2&quot;,
+               &quot;F15.1, F15.2&quot;,
+               &quot;I49.5&quot;,
+               &quot;F19.1&quot;,
+               &quot;R94.3&quot;,
+               &quot;J35&quot;,
+               &quot;I33.0&quot;,
+               &quot;Q44.2&quot;,
+               &quot;P27.1&quot;,
+               &quot;H02.1&quot;,
+               &quot;E27.1&quot;,
+               &quot;Q34.8&quot;,
+               &quot;K52.8&quot;,
+               &quot;K57.3&quot;,
+               &quot;Q67.4&quot;,
+               &quot;Q53&quot;,
+               &quot;M72.2&quot;,
+               &quot;M72.2&quot;,
+               &quot;G31.8&quot;,
+               &quot;G24.1&quot;,
+               &quot;G93.8&quot;,
+               &quot;E29&quot;,
+               &quot;F63&quot;,
+               &quot;F50.8, F50.9&quot;,
+               &quot;C96.9&quot;,
+               &quot;T79&quot;,
+               &quot;R74&quot;,
+               &quot;R40&quot;,
+               &quot;I12&quot;,
+               &quot;T84&quot;,
+               &quot;H35&quot;,
+               &quot;J84&quot;,
+               &quot;O41.1&quot;,
+               &quot;F42.3&quot;,
+               &quot;Q60.0&quot;,
+               &quot;M62.8&quot;,
+               &quot;K12&quot;,
+               &quot;K50.0&quot;,
+               &quot;K52.8&quot;,
+               &quot;K52.8&quot;,
+               &quot;G25.8&quot;,
+               &quot;E88&quot;,
+               &quot;L43&quot;,
+               &quot;N45&quot;,
+               &quot;N45&quot;,
+               &quot;H02.1&quot;,
+               &quot;H02.0, H02.1&quot;,
+               &quot;G24&quot;,
+               &quot;D47&quot;,
+               &quot;M48.1&quot;,
+               &quot;N72&quot;,
+               &quot;K20&quot;,
+               &quot;N04.1&quot;,
+               &quot;E83.5&quot;,
+               &quot;E78.1&quot;,
+               &quot;E83.5&quot;,
+               &quot;J84.8&quot;,
+               &quot;B27&quot;,
+               &quot;P77&quot;,
+               &quot;F43&quot;,
+               &quot;H91.0&quot;,
+               &quot;B07&quot;,
+               &quot;I89.0&quot;,
+               &quot;G31.1&quot;,
+               &quot;H21.2&quot;,
+               &quot;I51.8&quot;,
+               &quot;D41&quot;,
+               &quot;G91.2&quot;,
+               &quot;A85&quot;
+               )
+
+
+to_add = data.frame(collected_all_disease_terms, icd10_code)
+
+disease_mapping =
+  bind_rows(disease_mapping, to_add) |&gt;
+  distinct()</code></pre>
+<div id="how-many-diseases-are-not-mapped-yet-3" class="section level3">
+<h3>How many diseases are not mapped yet?</h3>
+<pre class="r"><code>disease_mapping =
+  disease_mapping |&gt;
+  filter(icd10_code != &quot;&quot;)
+
+
+not_found_diseases &lt;- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
+
+print(length(not_found_diseases))</code></pre>
+<pre><code>[1] 229</code></pre>
+</div>
+</div>
+<div id="mapping-by-finding-fuzzy-matches" class="section level2">
+<h2>Mapping by finding fuzzy matches</h2>
+<pre class="r"><code>top_match_string =
+function(string1, string2, method){
+  
+  lcs_matrix = stringdistmatrix(string1, string2, method = method)
+  
+  colnames(lcs_matrix) = string2
+  rownames(lcs_matrix) = string1
+  
+  # only return rows where min distance is &lt; 10
+  #lcs_matrix = lcs_matrix[apply(lcs_matrix, 1, min) &lt; 5, ]
+  
+  # then only return the colname for the min distance for each row
+  original_string1 = rownames(lcs_matrix)
+  top_match_string2 = vector()
+  distance = vector()
+  
+  for(i in 1:nrow(lcs_matrix)){
+    
+    col_n = which(min(lcs_matrix[i, ]) == lcs_matrix[i, ])
+    top_match_string2[i] = colnames(lcs_matrix)[col_n[1]]
+    distance[i] = min(lcs_matrix[i, ])
+    
+    
+  }
+  
+  top_match_pairs = data.frame(original_string1, 
+                               top_match_string2,
+                               distance)
+  
+  return(top_match_pairs)
+  
+}
+
+
+top_match_string(not_found_diseases, 
+                 unique(tolower(phecodes$Phenotype)), 
+                 method = &quot;lv&quot;) -&gt; fuzzy_matches
+
+top_match_string(not_found_diseases, 
+                 unique(tolower(iconv(phecodes$ICD_DESCRIPTION, to = &quot;UTF-8&quot;))), 
+                 method = &quot;lv&quot;) -&gt; fuzzy_matches</code></pre>
+</div>
+<div
+id="map-remaining-diseases-using-uk-biobank-mapping-of-efo-to-icd10"
+class="section level2">
+<h2>Map remaining diseases using UK Biobank mapping of EFO to ICD10</h2>
+<pre class="r"><code>writeLines(not_found_diseases, con = here::here(&quot;not_found_diseases.txt&quot;))
+
+data.table::fread(here::here(&quot;zooma_res.tsv&quot;), skip = 6) -&gt; zooma_res
+
+zooma_res = 
+  zooma_res |&gt;
+  rename_with(~str_replace_all(., &quot; &quot;, &quot;_&quot;))
+
+  
+
+multiple_mapping &lt;-
+  zooma_res |&gt; 
+  group_by(PROPERTY_VALUE) |&gt; 
+  summarise(n = n()) |&gt; 
+  filter(n &gt; 1)
+
+zooma_res_to_check =
+  zooma_res |&gt;
+  filter(PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE)
+
+
+zooma_res =
+zooma_res |&gt;
+  rowwise() |&gt;
+  filter(
+          (PROPERTY_VALUE == tolower(`ONTOLOGY_TERM_LABEL(S)`) &amp; 
+         PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE) |
+         !PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE
+           ) |&gt;
+  ungroup()
+
+zooma_res =
+  zooma_res |&gt;
+  group_by(PROPERTY_VALUE) |&gt;
+  slice_sample(n= 1)
+
+zooma_res =
+  zooma_res |&gt;
+  select(uri = `ONTOLOGY_TERM(S)`, 
+         collected_all_disease_terms = PROPERTY_VALUE)</code></pre>
+<pre class="r"><code>uk_efo_icd &lt;- data.table::fread(here::here(&quot;data/icd/UK_Biobank_master_file.tsv&quot;))
+
+uk_efo_icd = 
+uk_efo_icd |&gt;
+  tidyr::separate_longer_delim(MAPPED_TERM_URI, delim = &quot;, &quot;) 
+
+uk_efo_icd =
+  uk_efo_icd |&gt;
+  rename_with(~str_replace_all(., &quot; &quot;, &quot;_&quot;)) |&gt;
+  rename_with(~str_replace_all(., &quot;/&quot;, &quot;_&quot;))
+
+uk_efo_icd =
+  uk_efo_icd |&gt;
+  filter(grepl(&quot;^[A-Z]&quot;, 
+               ICD10_CODE_SELF_REPORTED_TRAIT_FIELD_CODE)
+         )
+
+
+uk_efo_icd = 
+uk_efo_icd |&gt;
+  filter(MAPPED_TERM_URI %in% zooma_res$uri) |&gt;
+  select(uri = MAPPED_TERM_URI, 
+         icd10_code = ICD10_CODE_SELF_REPORTED_TRAIT_FIELD_CODE)
+
+uk_efo_icd = 
+  uk_efo_icd |&gt;
+  group_by(uri) |&gt;
+  summarise(icd10_code = 
+            str_flatten(icd10_code, collapse = &quot;, &quot;, na.rm = T), 
+            .groups = &quot;drop&quot;)
+
+to_add = 
+left_join(zooma_res,
+          uk_efo_icd,
+          by = c(&quot;uri&quot;),
+          na_matches = &quot;never&quot;) |&gt;
+  select(collected_all_disease_terms, icd10_code) |&gt;
+  filter(icd10_code != &quot;&quot;) |&gt;
+  distinct()
+
+disease_mapping =
+bind_rows(disease_mapping, to_add) </code></pre>
+<pre class="r"><code>readxl::read_xlsx(here::here(&quot;sup_table.xlsx&quot;), sheet = 1) -&gt; sup_table
+
+sup_table &lt;- sup_table |&gt; mutate(Mapped_trait_URI = str_remove_all(pattern = &quot;http://www.ebi.ac.uk/efo/|http://purl.obolibrary.org/obo/|http://www.orpha.net/ORDO/&quot;, Mapped_trait_URI))
+
+sup_table |&gt;
+  filter(Mapped_trait_URI %in% zooma_res$uri)</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] jsonlite_2.0.0    httr_1.4.7        data.table_1.17.8 stringr_1.5.1    
+[5] dplyr_1.1.4       workflowr_1.7.1  
+
+loaded via a namespace (and not attached):
+ [1] compiler_4.3.1    renv_1.0.3        promises_1.3.3    tidyselect_1.2.1 
+ [5] Rcpp_1.1.0        git2r_0.36.2      callr_3.7.6       later_1.4.2      
+ [9] jquerylib_0.1.4   yaml_2.3.10       fastmap_1.2.0     here_1.0.1       
+[13] R6_2.6.1          generics_0.1.4    knitr_1.50        tibble_3.3.0     
+[17] rprojroot_2.1.0   bslib_0.9.0       pillar_1.11.0     rlang_1.1.6      
+[21] cachem_1.1.0      stringi_1.8.7     httpuv_1.6.16     xfun_0.52        
+[25] getPass_0.2-4     fs_1.6.6          sass_0.4.10       cli_3.6.5        
+[29] withr_3.0.2       magrittr_2.0.3    ps_1.9.1          digest_0.6.37    
+[33] processx_3.8.6    rstudioapi_0.17.1 lifecycle_1.0.4   vctrs_0.6.5      
+[37] evaluate_1.0.4    glue_1.8.0        whisker_0.4.1     rmarkdown_2.29   
+[41] tools_4.3.1       pkgconfig_2.0.3   htmltools_0.5.8.1</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
