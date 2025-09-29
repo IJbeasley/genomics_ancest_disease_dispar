@@ -1,0 +1,708 @@
+---
+title: "Mapping GWAS traits to ICD 10"
+author: "Isobel Beasley"
+date: "2025-09-26"
+output: html_document
+---
+
+# Set up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_packages, message=FALSE}
+
+library(dplyr)
+library(stringr)
+library(data.table)
+
+```
+
+## Ontology help - for getting disease subtypes
+
+```{r ontology_fns}
+
+source(here::here("code/get_term_descendants.R"))
+
+```
+
+### Load Data
+
+```{r load_data}
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group.csv"))
+
+```
+
+
+# Map GWAS traits to ICD 10
+
+## Create a mapping table - just for studies with a single disease term
+
+```{r create_mapping_table}
+
+
+disease_mapping <- gwas_study_info |>
+  filter(DISEASE_STUDY == T) |>
+  filter(!grepl(",", collected_all_disease_terms)) |>
+  filter(collected_all_disease_terms != " ") |>
+  filter(collected_all_disease_terms != "") |>
+  select(`DISEASE/TRAIT`, collected_all_disease_terms) |>
+  distinct()
+
+diseases <- stringr::str_split(pattern = ", ",
+                               gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |>
+  unlist() |>
+  stringr::str_trim()
+
+diseases <- unique(diseases)
+
+print(length(diseases))
+
+```
+
+## Get ICD10 codes from PheCodes
+
+### Get Phecodes for diseases
+
+```{r get_phecodes}
+
+disease_mapping <- disease_mapping |>
+  mutate(
+    phecode = str_extract(`DISEASE/TRAIT`, "(?<=PheCode )[^)]+")
+  ) |>
+  mutate(phecode = as.numeric(phecode))
+
+
+
+```
+
+### Convert Phecodes to ICD10
+
+```{r convert_phecodes_to_icd10, message=FALSE}
+
+# phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
+
+phecodes <- fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+
+phecode_icd_map =
+  phecodes |>
+  select(icd10_code = ICD10, 
+         phecode = PheCode
+         )
+
+# if more than one ICD10 code per phecode, collapse into a single row
+phecode_icd_map =
+  phecode_icd_map |>
+group_by(phecode) |>
+  summarise(icd10_code = 
+            str_flatten(unique(icd10_code), collapse = ", ", na.rm = T), 
+            .groups = "drop")
+
+
+disease_mapping =
+left_join(disease_mapping,
+          phecode_icd_map,
+          by = "phecode",
+          relationship = "many-to-one",
+          na_matches = "never")
+
+
+```
+
+### Get ICD10 codes from author provided DISEASE/TRAIT column 
+
+```{r add_icd10_from_trait}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(grepl("ICD10", `DISEASE/TRAIT`),
+                             str_extract(`DISEASE/TRAIT`, "(?<=ICD10 )[^:]+(?=:)"),
+                             icd10_code)
+)
+
+
+disease_mapping =
+disease_mapping |>
+  group_by(collected_all_disease_terms) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ", 
+                                     na.rm = T), 
+            .groups = "drop")
+
+```
+
+### How many diseases are not mapped yet?
+
+```{r how_many_not_mapped_phecodes_icd}
+
+disease_mapping =
+  disease_mapping |>
+  filter(icd10_code != "")
+
+
+not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- not_found_diseases[not_found_diseases != ""]
+
+print(length(not_found_diseases))
+
+
+```
+
+### Match disease terms to phenotypes 
+
+```{r match_disease_terms_to_phenotypes, message=FALSE}
+
+phenotype_icd_map =
+  phecodes |>
+group_by(Phenotype) |>
+  summarise(icd10_code = 
+            str_flatten(ICD10, collapse = ", ", na.rm = T), 
+            .groups = "drop")
+
+matched_phenotypes =
+phenotype_icd_map |>
+filter(tolower(Phenotype) %in% not_found_diseases)
+
+matched_phenotypes =
+matched_phenotypes |>
+  mutate(collected_all_disease_terms = tolower(Phenotype)) |>
+  select(collected_all_disease_terms, icd10_code) 
+
+disease_mapping =
+  bind_rows(disease_mapping, matched_phenotypes) |>
+  distinct()
+         
+```
+
+### How many diseases are not mapped yet?
+
+```{r how_many_not_mapped_matched_phenotypes}
+
+disease_mapping =
+  disease_mapping |>
+  filter(icd10_code != "")
+
+
+not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- not_found_diseases[not_found_diseases != ""]
+
+print(length(not_found_diseases))
+
+```
+
+
+### Match disease terms to ICD descriptions
+
+```{r match_disease_terms_to_icd_descriptions, message=FALSE}
+
+to_add = 
+phecodes |>
+    filter(tolower(iconv(ICD_DESCRIPTION, to = "UTF-8")) %in% not_found_diseases) |>
+    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = "UTF-8"))) |>
+    select(collected_all_disease_terms,    
+           icd10_code = ICD10) 
+
+phecodes |>
+    filter(tolower(iconv(ICD_DESCRIPTION, to = "UTF-8")) %in% "androgenetic alopecia") |>
+    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = "UTF-8"))) |>
+    select(collected_all_disease_terms,    
+           icd10_code = ICD10) 
+
+
+
+disease_mapping =
+  bind_rows(disease_mapping, to_add) |>
+  distinct()
+
+
+```
+
+### How many diseases are not mapped yet?
+
+```{r how_many_not_mapped_matched_icd10}
+
+disease_mapping =
+  disease_mapping |>
+  filter(icd10_code != "")
+
+
+not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- not_found_diseases[not_found_diseases != ""]
+
+print(length(not_found_diseases))
+
+```
+
+
+
+## Manually add some ICD10 codes
+
+```{r}
+
+collected_all_disease_terms = c("alcoholic liver cirrhosis",
+                                "alcoholic pancreatitis",
+                                "ischemic cardiomyopathy",
+                                "systemic juvenile idiopathic arthritis",
+                                "juvenile idiopathic arthritis",
+                                "oligoarticular juvenile idiopathic arthritis",
+                                "sapho syndrome",
+                                "synovial plica syndrome",
+                                "urgency urinary incontinence",
+                                "abdominal distention",
+                                "early-onset alzheimers disease",
+                                "late-onset alzheimers disease",
+                                "renal overload-type gout",
+                                "vomiting of pregnancy",
+                                "kleine-levin syndrome",
+                                "autoimmune pancreatitis type 1",
+                                "allergic contact dermatitis of eyelid",
+                                "guillain-barre syndrome",
+                                "idiopathic pulmonary fibrosis",
+                                "behcets syndrome",
+                                "kashin-beck disease",
+                                "chronic thromboembolic pulmonary hypertension",
+                                "pulmonary hypertension",
+                                "pulmonary arterial hypertension",
+                                "pulmonary coin lesion",
+                                "pulmonary infarction",
+                                "neuromyelitis optica",
+                                "buruli ulcer disease",
+                                "churg-strauss syndrome",
+                                "graft versus host disease",
+                                "takayasu arteritis",
+                                "enuresis",
+                                "cannabis dependence",
+                                "orofacial cleft",
+                                "eczema",
+                                "drug dependence",
+                                "cocaine-related disorders",
+                                "pharynx cancer",
+                                "pseudotumor cerebri",
+                                "altitude sickness",
+                                "high altitude pulmonary edema",
+                                "intrahepatic cholestasis of pregnancy",
+                                "brain injury",
+                                "radiation-induced brain injury",
+                                "abdominal infections code",
+                                "secondary hyperparathyroidism of renal origin",
+                                "gastroparesis",
+                                "neuroblastoma",
+                                "peripartum cardiomyopathy",
+                                "retroperitoneal cancer",
+                                "asphyxia neonatorum",
+                                "postherpetic neuralgia",
+                                "manic or hypomanic episode",
+                                "allergic conjunctivitis",
+                                "thiazide-induced hyponatremia",
+                                "alpha 1-antitrypsin deficiency",
+                                "autoimmune thyroid disease",
+                                "hashimotos thyroiditis",
+                                "charcot-marie-tooth disease type 1a",
+                                "amyotrophic lateral sclerosis",
+                                "fuchs endothelial corneal dystrophy",
+                                "duchenne muscular dystrophy",
+                                "familial apolipoprotein b hypobetalipoproteinemia",
+                                "gastric metaplasia",
+                                "inborn carbohydrate metabolic disorder",
+                                "petaloid toenail",
+                                "thyrotoxic periodic paralysis",
+                                "schizoaffective disorder",
+                                "rhegmatogenous retinal detachment",
+                                "restless legs syndrome",
+                                "preterm premature rupture of the membranes",
+                                "porphyrin metabolism disease",
+                                "peritoneal cancer",
+                                "methamphetamine use disorders",
+                                "familial sick sinus syndrome",
+                                "drug misuse",
+                                "abnormal ecg",
+                                "adenoiditis",
+                                "bacterial endocarditis",
+                                "biliary atresia",
+                                "bronchopulmonary dysplasia",
+                                "cervical ectropion",
+                                "chronic primary adrenal insufficiency",
+                                "ciliopathy",
+                                "collagenous colitis",
+                                "colonic diverticula",
+                                "craniofacial microsomia",
+                                "cryptorchidism",
+                                "plantar fasciitis",
+                                "plantar fibromatosis",
+                                "lewy body dementia",
+                                "x-linked dystonia-parkinsonism",
+                                "hippocampal sclerosis of aging",
+                                "testicular dysgenesis syndrome",
+                                "internet addiction disorder",
+                                "food addiction",
+                                "malignant lymphoid tumor",
+                                "compartment syndrome",
+                                "elevated lactate dehydrogenase",
+                                "loss of consciousness",
+                                "nephrosclerosis",
+                                "periprosthetic osteolysis",
+                                "polypoidal choroidal vasculopathy",
+                                "pulmonary alveolar proteinosis",
+                                "chorioamnionitis",
+                                "hoarding disorder",
+                                "unilateral renal agenesis",
+                                "muscle spasm",
+                                "oral ulcer",
+                                "ileocolitis",
+                                "microscopic colitis",
+                                "lymphocytic colitis",
+                                "drug-induced dyskinesia",
+                                "plasma protein metabolism disease",
+                                "oral lichen planus",
+                                "epididymitis",
+                                "orchitis",
+                                "ectropion",
+                                "entropion",
+                                "cervical dystonia",
+                                "clonal hematopoiesis",
+                                "diffuse idiopathic skeletal hyperostosis",
+                                "endocervicitis",
+                                "eosinophilic esophagitis",
+                                "focal segmental glomerulosclerosis",
+                                "hypercalcemia",
+                                "hypertriglyceridemia",
+                                "hypocalcemia",
+                                "lymphangioleiomyomatosis",
+                                "mononucleosis",
+                                "necrotizing enterocolitis",
+                                "occupation-related stress disorder",
+                                "ototoxicity",
+                                "plantar warts",
+                                "podoconiosis",
+                                "posterior cortical atrophy",
+                                "pigment dispersion syndrome",
+                                "takotsubo cardiomyopathy",
+                                "testicular germ cell tumor",
+                                "normal pressure hydrocephalus",
+                                "anti-nmda receptor encephalitis"
+                                )
+
+icd10_code = c("K70.3", 
+               "K85.2, K85.20, K85.21, K85.22",
+               "I25.5",
+               "M08.20",
+               "M08.9",
+               "MO8.4",
+               "M86.3",
+               "M67.8",
+               "N39.4",
+               "R14",
+               "F00.0, G30.0",
+               "F00.1, G30.1",
+               "M10.3",
+               "O21, O21.9",
+               "G47.1",
+               "K86.1",
+               "H01.1",
+               "G61.0",
+               "J84.1",
+               "M35.2",
+               "M12.1",
+               "I27.8",
+               "I27.9",
+               "I27.9",
+               "R91",
+               "I26.9",
+               "G36.0",
+               "A31.1",
+               "M30.1",
+               "D89.8",
+               "M31.4",
+               "R32",
+               "F12.2",
+               "Q36, Q36.0, Q36.9, Q35, Q35.1, Q35.3, Q35.5, Q35.7, Q35.9",
+               "L30.9",
+               "F19.2",
+               "F14.1",
+               "C14.0",
+               "G93.2",
+               "T70.2",
+               "T70.2",
+               "O26.6",
+               "S06.9",
+               "S06.9",
+               "D73.3, K35-37, K57, K61, K63.0, K65, K75.0, K81, K83.0",
+               "N25.8",
+               "K31.8",
+               "C74.9",
+               "O90.3",
+               "C48.0",
+               "P24.8, P24.9",
+               "B02.2",
+               "F30.9",
+               "H10.1",
+               "E87.1",
+               "E88.0",
+               "E06.3",
+               "E06.3",
+               "G60.0",
+               "G12.2",
+               "H18.5",
+               "G71.0",
+               "E78.6",
+               "K31",
+               "E74.9",
+               "L60",
+               "G72.3",
+               "F25",
+               "H33.0",
+               "G25.8",
+               "O42",
+               "E80.2",
+               "C48.2",
+               "F15.1, F15.2",
+               "I49.5",
+               "F19.1",
+               "R94.3",
+               "J35",
+               "I33.0",
+               "Q44.2",
+               "P27.1",
+               "H02.1",
+               "E27.1",
+               "Q34.8",
+               "K52.8",
+               "K57.3",
+               "Q67.4",
+               "Q53",
+               "M72.2",
+               "M72.2",
+               "G31.8",
+               "G24.1",
+               "G93.8",
+               "E29",
+               "F63",
+               "F50.8, F50.9",
+               "C96.9",
+               "T79",
+               "R74",
+               "R40",
+               "I12",
+               "T84",
+               "H35",
+               "J84",
+               "O41.1",
+               "F42.3",
+               "Q60.0",
+               "M62.8",
+               "K12",
+               "K50.0",
+               "K52.8",
+               "K52.8",
+               "G25.8",
+               "E88",
+               "L43",
+               "N45",
+               "N45",
+               "H02.1",
+               "H02.0, H02.1",
+               "G24",
+               "D47",
+               "M48.1",
+               "N72",
+               "K20",
+               "N04.1",
+               "E83.5",
+               "E78.1",
+               "E83.5",
+               "J84.8",
+               "B27",
+               "P77",
+               "F43",
+               "H91.0",
+               "B07",
+               "I89.0",
+               "G31.1",
+               "H21.2",
+               "I51.8",
+               "D41",
+               "G91.2",
+               "A85"
+               )
+
+
+to_add = data.frame(collected_all_disease_terms, icd10_code)
+
+disease_mapping =
+  bind_rows(disease_mapping, to_add) |>
+  distinct()
+
+```
+
+### How many diseases are not mapped yet?
+
+```{r how_many_not_mapped_manual}
+
+disease_mapping =
+  disease_mapping |>
+  filter(icd10_code != "")
+
+
+not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- not_found_diseases[not_found_diseases != ""]
+
+print(length(not_found_diseases))
+
+```
+
+## Mapping by finding fuzzy matches 
+
+```{r fuzzy_matching, message=FALSE, eval = F}
+
+top_match_string =
+function(string1, string2, method){
+  
+  lcs_matrix = stringdistmatrix(string1, string2, method = method)
+  
+  colnames(lcs_matrix) = string2
+  rownames(lcs_matrix) = string1
+  
+  # only return rows where min distance is < 10
+  #lcs_matrix = lcs_matrix[apply(lcs_matrix, 1, min) < 5, ]
+  
+  # then only return the colname for the min distance for each row
+  original_string1 = rownames(lcs_matrix)
+  top_match_string2 = vector()
+  distance = vector()
+  
+  for(i in 1:nrow(lcs_matrix)){
+    
+    col_n = which(min(lcs_matrix[i, ]) == lcs_matrix[i, ])
+    top_match_string2[i] = colnames(lcs_matrix)[col_n[1]]
+    distance[i] = min(lcs_matrix[i, ])
+    
+    
+  }
+  
+  top_match_pairs = data.frame(original_string1, 
+                               top_match_string2,
+                               distance)
+  
+  return(top_match_pairs)
+  
+}
+
+
+top_match_string(not_found_diseases, 
+                 unique(tolower(phecodes$Phenotype)), 
+                 method = "lv") -> fuzzy_matches
+
+top_match_string(not_found_diseases, 
+                 unique(tolower(iconv(phecodes$ICD_DESCRIPTION, to = "UTF-8"))), 
+                 method = "lv") -> fuzzy_matches
+
+
+```
+
+## Map remaining diseases using UK Biobank mapping of EFO to ICD10
+
+```{r zooma_mapping, message=FALSE, eval = F}
+
+writeLines(not_found_diseases, con = here::here("not_found_diseases.txt"))
+
+data.table::fread(here::here("zooma_res.tsv"), skip = 6) -> zooma_res
+
+zooma_res = 
+  zooma_res |>
+  rename_with(~str_replace_all(., " ", "_"))
+
+  
+
+multiple_mapping <-
+  zooma_res |> 
+  group_by(PROPERTY_VALUE) |> 
+  summarise(n = n()) |> 
+  filter(n > 1)
+
+zooma_res_to_check =
+  zooma_res |>
+  filter(PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE)
+
+
+zooma_res =
+zooma_res |>
+  rowwise() |>
+  filter(
+          (PROPERTY_VALUE == tolower(`ONTOLOGY_TERM_LABEL(S)`) & 
+         PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE) |
+         !PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE
+           ) |>
+  ungroup()
+
+zooma_res =
+  zooma_res |>
+  group_by(PROPERTY_VALUE) |>
+  slice_sample(n= 1)
+
+zooma_res =
+  zooma_res |>
+  select(uri = `ONTOLOGY_TERM(S)`, 
+         collected_all_disease_terms = PROPERTY_VALUE)
+
+```
+
+```{r, eval = F}
+
+uk_efo_icd <- data.table::fread(here::here("data/icd/UK_Biobank_master_file.tsv"))
+
+uk_efo_icd = 
+uk_efo_icd |>
+  tidyr::separate_longer_delim(MAPPED_TERM_URI, delim = ", ") 
+
+uk_efo_icd =
+  uk_efo_icd |>
+  rename_with(~str_replace_all(., " ", "_")) |>
+  rename_with(~str_replace_all(., "/", "_"))
+
+uk_efo_icd =
+  uk_efo_icd |>
+  filter(grepl("^[A-Z]", 
+               ICD10_CODE_SELF_REPORTED_TRAIT_FIELD_CODE)
+         )
+
+
+uk_efo_icd = 
+uk_efo_icd |>
+  filter(MAPPED_TERM_URI %in% zooma_res$uri) |>
+  select(uri = MAPPED_TERM_URI, 
+         icd10_code = ICD10_CODE_SELF_REPORTED_TRAIT_FIELD_CODE)
+
+uk_efo_icd = 
+  uk_efo_icd |>
+  group_by(uri) |>
+  summarise(icd10_code = 
+            str_flatten(icd10_code, collapse = ", ", na.rm = T), 
+            .groups = "drop")
+
+to_add = 
+left_join(zooma_res,
+          uk_efo_icd,
+          by = c("uri"),
+          na_matches = "never") |>
+  select(collected_all_disease_terms, icd10_code) |>
+  filter(icd10_code != "") |>
+  distinct()
+
+disease_mapping =
+bind_rows(disease_mapping, to_add) 
+
+
+```
+
+
+```{r, eval = F}
+
+readxl::read_xlsx(here::here("sup_table.xlsx"), sheet = 1) -> sup_table
+
+sup_table <- sup_table |> mutate(Mapped_trait_URI = str_remove_all(pattern = "http://www.ebi.ac.uk/efo/|http://purl.obolibrary.org/obo/|http://www.orpha.net/ORDO/", Mapped_trait_URI))
+
+sup_table |>
+  filter(Mapped_trait_URI %in% zooma_res$uri)
+```
