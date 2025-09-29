@@ -53,10 +53,6 @@ gwas_study_info =
 
 ```
 
-
-- "aortic valve stenosis
-
-
 ## Intracranial artery stenosis
 
 ```{r icas}
@@ -76,6 +72,93 @@ gwas_study_info = gwas_study_info |>
          collected_all_disease_terms
          )
   )
+
+```
+
+# Pubmed id: 37271218 study of complications in Behcet's disease
+
+Taking definitions etc. from: https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC8584626/
+
+```{r behcets_disease}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "37271218",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "abnormality of the eye",
+                          replacement = "uveitis, retinal vasculitis, chorioretinitis, papillitis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "37271218",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "abnormality of the genital system",
+                          replacement = "genital aphthosis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "37271218",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "abnormal aortic morphology",
+                          replacement = "arterial thrombosis, aortic aneurysm, aneurysm of pulmonary artery"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "37271218",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "abnormal venous morphology",
+                          replacement = "venous thromboembolism, superficial thrombophlebitis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "37271218",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "abnormality of the vasculature",
+                          replacement = "arterial thrombosis, aortic aneurysm, aneurysm of pulmonary artery, venous thromboembolism, superficial thrombophlebitis"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+## Pigmentary iris degeneration 
+
+```{r pigmentary_iris_degeneration}
+
+# where Pigmentary iris degeneration in DISEASE/TRAIT & pubmed id 39024449
+# replace abnormality of the eye with pigmentary iris degeneration
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Pigmentary iris degeneration", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE) & PUBMED_ID == "39024449",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "abnormality of the eye",
+                          replacement = "pigmentary iris degeneration"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
 
 ```
 
@@ -124,7 +207,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(PUBMED_ID == "28753643",
                 stringr::str_replace_all(collected_all_disease_terms,
                           pattern = "acute coronary syndrome",
-                          replacement = "untable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
+                          replacement = "unstable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
          ),
          collected_all_disease_terms
          )
@@ -133,10 +216,10 @@ gwas_study_info = gwas_study_info |>
 # define similarly in pubmed id: 24952865, 25583994, 25935875
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
-         ifelse(PUBMED_ID %in% c("28753643", "25583994", "25935875", "34158603"),
+         ifelse(PUBMED_ID %in% c("28753643", "28753645", "25583994", "25935875", "34158603"),
                 stringr::str_replace_all(collected_all_disease_terms,
                           pattern = "acute coronary syndrome",
-                          replacement = "untable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
+                          replacement = "unstable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
          ),
          collected_all_disease_terms
          )
@@ -161,6 +244,62 @@ gwas_study_info = gwas_study_info |>
          collected_all_disease_terms
          )
   )
+
+```
+
+## Amebiasis
+
+```{r amebiasis}
+
+# If `DISEASE/TRAIT` contains Diarrhoea-associated Entamoeba histolytica infection
+# then replace amebiasis with amoeboma of intestine 
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Diarrhoea-associated Entamoeba histolytica infection", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("amebiasis"),
+                          "amoeboma of intestine"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+```
+
+## Congenital anomalies of intestin
+
+```{r congenital_anomalies_of_intestine}
+
+# anorectal malformation to congenital anomalies of intestine
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("anorectal malformation"),
+                          "congenital anomalies of intestine"
+         )
+  )
+
+```
+
+## Vasculitis
+
+```{r vasculitis}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("anti-neutrophil antibody associated vasculitis"),
+                          "vasculitis"
+         )
+  )
+
 
 ```
 
@@ -243,6 +382,123 @@ gwas_study_info =
 
 ```
 
+## Replace abnormal blistering of the skin -> blister
+
+
+```{r blistering_of_skin}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(`DISEASE/TRAIT` == "Blister (PheCode 911)",
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal blistering of the skin"),
+                          "blister"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+```
+
+## abnormal circulating lipid concentration -> disorders of lipid metabolism
+
+```{r abnormal_circulating_lipid_concentration}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Disorders of lipid metabolism", 
+                     collected_all_disease_terms,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal circulating lipid concentration"),
+                          "disorders of lipid metabolism"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+
+```
+
+## Abnormal thrombosis
+
+```{r abnormal_thrombosis}
+
+# interesting things going on with abnormal thrombosis
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("abnormal thrombosis"), 
+               collected_all_disease_terms, perl = T)) |> 
+  select(`DISEASE/TRAIT`, collected_all_disease_terms, PUBMED_ID)
+
+# if DISEASE/TRAIT contains Blood clot in the lung \\(UKB data field 6152\\) 
+# replace abnormal thrombosis in collected_all_disease_terms with pulmonary embolism
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Blood clot in the lung \\(UKB data field 6152\\)", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal thrombosis"),
+                          "pulmonary embolism"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Blood clot in the lung \\(UKB data field 6152_7\\)", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal thrombosis"),
+                          "pulmonary embolism"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+## PHESANT recoding (UKB data field 6152_100)
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("PHESANT recoding \\(UKB data field 6152_100\\)", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal thrombosis, allergic disease, respiratory system disease"),
+                          "pulmonary embolism, deep vein thrombosis, chronic bronchitis, emphysema, asthma, rhinitis, eczema"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+# for pubmed id: 26908601
+# remove abnormal thrombosis
+# because this is included in the other provided terms 
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "26908601",
+                stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal thrombosis")
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
+
 ### How many unique traits are there now?
 
 ```{r n_unique_traits_start}
@@ -287,10 +543,10 @@ gwas_study_info = gwas_study_info |>
          )
   )
 
-# also remove if `DISEASE/TRAIT` contains "Tatto pigmentation"
+# also remove if `DISEASE/TRAIT` contains "Tattoo pigmentation"
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
-         ifelse(grepl("tatto pigmentation", 
+         ifelse(grepl("tattoo pigmentation|tatto pigmentation", 
                      `DISEASE/TRAIT`,
                      ignore.case = TRUE),
                 stringr::str_remove_all(collected_all_disease_terms,
@@ -1289,6 +1545,21 @@ gwas_study_info = gwas_study_info |>
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
+          ifelse(grepl("Ischemic stroke \\(cardioembolic\\)", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                             "cardiac embolism"
+                             )),
+                          "cardioembolic stroke"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(c(
                              "mri defined brain infarct",
@@ -1298,7 +1569,6 @@ gwas_study_info = gwas_study_info |>
          ))
 
 ```
-
 
 
 ## Chronic kidney disease
@@ -1468,6 +1738,22 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(collected_all_disease_terms,
                           pattern = vec_to_grep_pattern(congenital_heart_disease_terms),
                           "congenital heart disease"
+         )
+  )
+
+# if DISEASE/TRAIT contains Congenital heart disease 
+# then replace abnormal cardiovascular system morphology with congenital heart disease
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Congenital heart disease", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal cardiovascular system morphology"),
+                          "congenital heart disease"
+         ),
+         collected_all_disease_terms
          )
   )
 
@@ -2066,7 +2352,7 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(c(
-                            "familial gyperlipidemia"
+                            "familial hyperlipidemia"
                             )),
                           "hyperlipidemia"
          ))
@@ -3106,6 +3392,35 @@ gwas_study_info = gwas_study_info |>
                           "speech and language disorder"
          ))
 
+# if DISEASE/TRAIT contains Developmental stuttering
+# then replace stuttering with speech and language disorder
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Developmental stuttering", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("stuttering"),
+                          "speech and language disorder"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+```
+
+## chronic pharyngitis, nasopharyngitis
+
+```{r chronic_pharyngitis_nasopharyngitis}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c("chronic pharyngitis, nasopharyngitis")
+                                              ),
+                          "chronic pharyngitis, chronic nasopharyngitis"
+         ))
 
 ```
 
