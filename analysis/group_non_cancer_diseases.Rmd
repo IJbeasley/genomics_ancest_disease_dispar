@@ -305,6 +305,25 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Abnormal ecg 
+
+```{r abnormal_ecg}
+# if abnormal ecg in disease/trait, then change abnormal ekg to abnormal ecg
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("abnormal ecg", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormal ekg"),
+                          "abnormal ecg"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+```
+
 ## Abnormality of gait
 
 ```{r abnormality_of_gait}
@@ -315,10 +334,81 @@ gwas_study_info =
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(c(
                             "gait imbalance",
-                            "decreased walking ability")
+                            "decreased walking ability",
+                            "postural instability")
                             ),
                           "abnormality of gait"
          ))
+
+```
+
+## Abnormality of the nervous system, abnormality of the musculature, abnormality of the skeletal system
+
+```{r abnormality_of_nervous_system_musculature_skeletal_system}
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(c(
+                            "abnormality of the musculature, abnormality of the nervous system, abnormality of the skeletal system")
+                            ),
+                          "other symptoms and signs involving the nervous and musculoskeletal systems"
+         ))
+
+
+```
+
+## Other demyelinating diseases of central nervous system
+
+```{r other_demyelinating_diseases_of_cns}
+
+# if DISEASE/TRAIT contains PheCode 341
+# replace abnormality of the nervous system, with other demyelinating diseases of central nervous system
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("PheCode 341", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormality of the nervous system"),
+                          "other demyelinating diseases of central nervous system"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("PheCode 345", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormality of the nervous system"),
+                          "epilepsy"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Neurological involvement in Behcet's disease", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("abnormality of the nervous system")
+         ),
+         collected_all_disease_terms
+         )
+  )
+
 
 ```
 
@@ -1366,6 +1456,24 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Disturbances of sensation of smell and taste
+
+```{r disturbances_of_sensation_of_smell_and_taste}
+
+terms <- c("ageusia",
+           "abnormality of the sense of smell")
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(terms),
+                          "disturbances of sensation of smell and taste"
+         )
+  )
+
+
+```
+
 ## Disorders of tooth development
 
 ```{r disorders_of_tooth_development}
@@ -1998,7 +2106,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("narcolepsy-cataplexy syndrom"),
+                          vec_to_grep_pattern("narcolepsy-cataplexy syndrome"),
                           "narcolepsy and cataplexy"
          ))
 
@@ -2184,6 +2292,7 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(c(
                             "22q11.2 deletion syndrome",
+                            "abnormality of chromosome segregation",
                             "fragile x syndrome")
                             ),
                           "chromosomal anomalies"
