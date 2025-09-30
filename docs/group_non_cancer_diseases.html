@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeabcec61a9f46fcb7e120693c346b8249884fa89dtargetblankabcec61a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree92641698d52d60a7f5d18104fcd3aa04cd2a3c7atargetblank9264169a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/abcec61a9f46fcb7e120693c346b8249884fa89d" target="_blank">abcec61</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/92641698d52d60a7f5d18104fcd3aa04cd2a3c7a" target="_blank">9264169</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeabcec61a9f46fcb7e120693c346b8249884fa89dtargetblankabcec61a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree92641698d52d60a7f5d18104fcd3aa04cd2a3c7atargetblank9264169a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/abcec61a9f46fcb7e120693c346b8249884fa89d" target="_blank">abcec61</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/92641698d52d60a7f5d18104fcd3aa04cd2a3c7a" target="_blank">9264169</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -641,6 +641,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/92641698d52d60a7f5d18104fcd3aa04cd2a3c7a/analysis/group_non_cancer_diseases.Rmd" target="_blank">9264169</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-29
+</td>
+<td>
+workflowr::wflow_publish("analysis/group_non_cancer_diseases.Rmd")
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/088e39a33f9f0f85a8fb74b9de2d59157b6c3258/docs/group_non_cancer_diseases.html" target="_blank">088e39a</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-09-29
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1149,38 +1183,6 @@ gwas_study_info =
          )
   )</code></pre>
 </div>
-<div id="treatment-resistant-depression" class="section level2">
-<h2>Treatment resistant depression</h2>
-<pre class="r"><code># if DISEASE/TRAIT contains Treatment resistant depression
-# then replace depression with treatment resistant depression
-gwas_study_info =
-  gwas_study_info |&gt;
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl(&quot;Treatment resistant depression&quot;, 
-                     `DISEASE/TRAIT`,
-                     ignore.case = TRUE),
-                stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern(&quot;depression&quot;),
-                          &quot;treatment resistant depression&quot;
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-gwas_study_info =
-  gwas_study_info |&gt;
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl(&quot;treatment resistant depression&quot;, 
-                     MAPPED_BACKGROUND_TRAIT,
-                     ignore.case = TRUE),
-                stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern(&quot;depression&quot;),
-                          &quot;treatment resistant depression&quot;
-         ),
-         collected_all_disease_terms
-         )
-  )</code></pre>
-</div>
 <div id="hepatic-steatosis" class="section level2">
 <h2>Hepatic steatosis</h2>
 <pre class="r"><code># if DISEASE/TRAIT contains hepatic steatosis in non-alcoholic fatty liver disease
@@ -1381,6 +1383,40 @@ print(length(diseases))</code></pre>
   mutate(collected_all_disease_terms =
            str_remove_all(collected_all_disease_terms,
                           pattern = vec_to_grep_pattern(&quot;abnormality of the digestive system&quot;)))</code></pre>
+</div>
+<div id="chronic-disease" class="section level2">
+<h2>Chronic disease</h2>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(vec_to_grep_pattern(&quot;chronic disease&quot;), 
+               collected_all_disease_terms, 
+               perl = T)) |&gt;
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Long standing illness disability or infirmity (UKB data field 2188)&quot;                    
+[2] &quot;Long standing illness disability or infirmity (UKB data field 2188) (Gene-based burden)&quot;</code></pre>
+<pre class="r"><code>gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms =
+           str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;chronic disease&quot;)))</code></pre>
+</div>
+<div id="formal-thought-disorder" class="section level2">
+<h2>Formal thought disorder</h2>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(vec_to_grep_pattern(&quot;formal thought disorder&quot;), 
+               collected_all_disease_terms, 
+               perl = T)) |&gt;
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Formal thought disorder in schizophrenia&quot;                                                                           
+[2] &quot;Positive formal thought disorder in major depressive disorder, bipolar disorder or schizophrenia spectrum disorders&quot;</code></pre>
+<pre class="r"><code># as formal thought disorder is within other psychiatric traits
+# remove
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms =
+           str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;formal thought disorder&quot;)))</code></pre>
 </div>
 <div id="hypersensitivity-reaction-disease" class="section level2">
 <h2>Hypersensitivity reaction disease</h2>
@@ -4105,6 +4141,38 @@ class="section level2">
                           &quot;background retinopathy and retinal vascular changes&quot;
          ))</code></pre>
 </div>
+<div id="treatment-resistant-depression" class="section level2">
+<h2>Treatment resistant depression</h2>
+<pre class="r"><code># if DISEASE/TRAIT contains Treatment resistant depression
+# then replace depression with treatment resistant depression
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;Treatment resistant depression&quot;, 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;depression&quot;),
+                          &quot;treatment resistant depression&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl(&quot;treatment resistant depression&quot;, 
+                     MAPPED_BACKGROUND_TRAIT,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern(&quot;depression&quot;),
+                          &quot;treatment resistant depression&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )</code></pre>
+</div>
 </div>
 <div id="save" class="section level1">
 <h1>Save</h1>
@@ -4118,7 +4186,7 @@ class="section level2">
 diseases &lt;- unique(diseases)
 
 print(length(diseases))</code></pre>
-<pre><code>[1] 1694</code></pre>
+<pre><code>[1] 1692</code></pre>
 <pre class="r"><code>fwrite(
   gwas_study_info,
   here::here(&quot;output/gwas_cat/gwas_study_info_group_v2.csv&quot;)
