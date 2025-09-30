@@ -535,6 +535,126 @@ gwas_study_info =
 
 ```
 
+## Fibrosis
+
+```{r fibrosis}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("fibrosis"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           pattern = vec_to_grep_pattern("fibrosis, head and neck cancer"),
+                          replacement = "head and neck cancer"
+           )
+  )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           ifelse(PUBMED_ID == "38601445",
+           str_replace_all(collected_all_disease_terms,
+                           pattern = vec_to_grep_pattern("fibrosis"),
+                          replacement = "lung cancer"
+           ),
+           collected_all_disease_terms
+           )
+  )
+
+```
+
+## Hyperplasia 
+
+```{r hyperplasia}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("hyperplasia"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           ifelse(grepl("Bilateral adrenal hyperplasia",
+                        `DISEASE/TRAIT`,
+                       ignore.case = TRUE),
+                  str_replace_all(collected_all_disease_terms,
+                                  pattern = vec_to_grep_pattern("hyperplasia"),
+                                  replacement = "bilateral adrenal hyperplasia"
+                  ),
+                  collected_all_disease_terms
+           )
+)
+
+```
+
+## Cognitive decline (age-related)
+
+```{r cognitive_decline}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           ifelse(grepl("Cognitive decline \\(age-related\\)",
+                        `DISEASE/TRAIT`,
+                       ignore.case = TRUE) |
+                  grepl("cognitive ageing",
+                        STUDY,
+                        ignore.case = TRUE),
+                  str_replace_all(collected_all_disease_terms,
+                                  pattern = vec_to_grep_pattern("mental deterioration"),
+                                  replacement = "cognitive decline (age-related)"
+                  ),
+                  collected_all_disease_terms
+           )
+)
+
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           ifelse(grepl("cognitive decline in schizophrenia",
+                        STUDY,
+                       ignore.case = TRUE),  
+                  str_replace_all(collected_all_disease_terms,
+                                  pattern = vec_to_grep_pattern("mental deterioration"),
+                                  replacement = "schizophrenia"
+                  ),
+                  collected_all_disease_terms
+           )
+)
+```
+
+## nasopharyngeal neoplasm
+
+```{r nasopharyngeal_neoplasm}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           ifelse(grepl("nasopharyngeal carcinoma",
+                        STUDY,
+                       ignore.case = TRUE),  
+                  str_replace_all(collected_all_disease_terms,
+                                  pattern = vec_to_grep_pattern("nasopharyngeal neoplasm"),
+                                  replacement = "nasopharyngeal cancer"
+                  ),
+                  collected_all_disease_terms
+           )
+)
+
+
+```
+
 ## Formal thought disorder
 
 ```{r formal_though_disorder}
