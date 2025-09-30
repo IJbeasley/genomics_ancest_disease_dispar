@@ -216,7 +216,7 @@ gwas_study_info = gwas_study_info |>
 # define similarly in pubmed id: 24952865, 25583994, 25935875
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
-         ifelse(PUBMED_ID %in% c("28753643", "28753645", "25583994", "25935875", "34158603"),
+         ifelse(PUBMED_ID %in% c("28753643","24952865", "28753645", "25583994", "25935875", "34158603"),
                 stringr::str_replace_all(collected_all_disease_terms,
                           pattern = "acute coronary syndrome",
                           replacement = "unstable angina, acute subendocardial myocardial infarction, acute transmural myocardial infarction of unspecified site"
@@ -324,6 +324,20 @@ gwas_study_info =
          )
   )
 
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("treatment resistant depression", 
+                     MAPPED_BACKGROUND_TRAIT,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("depression"),
+                          "treatment resistant depression"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
 ```
 
 ## Hepatic steatosis
@@ -410,7 +424,7 @@ gwas_study_info =
   gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(grepl("Disorders of lipid metabolism", 
-                     collected_all_disease_terms,
+                     `DISEASE/TRAIT`,
                      ignore.case = TRUE),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("abnormal circulating lipid concentration"),
@@ -419,8 +433,6 @@ gwas_study_info =
          collected_all_disease_terms
          )
   )
-
-
 
 ```
 
@@ -516,6 +528,94 @@ print(length(diseases))
 ```
 
 # Filtering some traits 
+
+## Abnormality of the digestive system
+
+```{r abnormality_of_digestion}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("abnormality of the digestive system"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("abnormality of the digestive system")))
+
+
+```
+
+## Hypersensitivity reaction disease
+
+```{r hypersensitivity reaction disease}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("hypersensitivity reaction disease"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("hypersensitivity reaction disease")))
+
+
+```
+
+## inflammatory skin disease
+
+```{r inflammatory_skin_disease}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("inflammatory skin disease"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           pattern = vec_to_grep_pattern("inflammatory skin disease"),
+                          replacement = "atopic dermatitis, psoriasis"
+           )
+  )
+
+```
+
+## intestinal cancer
+
+```{r intestinal_cancer}
+
+# if DISEASE?/TRAIT contains "Bowel cancer"
+# replace intestinal cancer with colorectal cancer
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Bowel cancer", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("intestinal cancer"),
+                          "colorectal cancer"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+
+
+```
 
 ## Abnormality of skin pigmentation
 
@@ -1570,6 +1670,19 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## cervical cancer, dysplasia -> cervical cancer, cervical dysplasia
+
+```{r cervical_cancer_dysplasia}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("cervical cancer, dysplasia"),
+                          "cervical cancer, cervical dysplasia"
+         ))
+
+
+```
 
 ## Chronic kidney disease
 
