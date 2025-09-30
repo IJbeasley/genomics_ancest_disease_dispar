@@ -304,41 +304,7 @@ gwas_study_info =
 ```
 
 
-## Treatment resistant depression
 
-```{r treatment_resistant_depression}
-
-# if DISEASE/TRAIT contains Treatment resistant depression
-# then replace depression with treatment resistant depression
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl("Treatment resistant depression", 
-                     `DISEASE/TRAIT`,
-                     ignore.case = TRUE),
-                stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("depression"),
-                          "treatment resistant depression"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl("treatment resistant depression", 
-                     MAPPED_BACKGROUND_TRAIT,
-                     ignore.case = TRUE),
-                stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("depression"),
-                          "treatment resistant depression"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-```
 
 ## Hepatic steatosis
 
@@ -545,6 +511,48 @@ gwas_study_info =
   mutate(collected_all_disease_terms =
            str_remove_all(collected_all_disease_terms,
                           pattern = vec_to_grep_pattern("abnormality of the digestive system")))
+
+
+```
+
+## Chronic disease
+
+```{r chronic_disease}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("chronic disease"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("chronic disease")))
+
+
+```
+
+## Formal thought disorder
+
+```{r formal_though_disorder}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("formal thought disorder"), 
+               collected_all_disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# as formal thought disorder is within other psychiatric traits
+# remove
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms =
+           str_remove_all(collected_all_disease_terms,
+                          pattern = vec_to_grep_pattern("formal thought disorder")))
 
 
 ```
@@ -3880,6 +3888,42 @@ gwas_study_info = gwas_study_info |>
                                               ),
                           "background retinopathy and retinal vascular changes"
          ))
+
+```
+
+## Treatment resistant depression
+
+```{r treatment_resistant_depression}
+
+# if DISEASE/TRAIT contains Treatment resistant depression
+# then replace depression with treatment resistant depression
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("Treatment resistant depression", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("depression"),
+                          "treatment resistant depression"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(grepl("treatment resistant depression", 
+                     MAPPED_BACKGROUND_TRAIT,
+                     ignore.case = TRUE),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("depression"),
+                          "treatment resistant depression"
+         ),
+         collected_all_disease_terms
+         )
+  )
 
 ```
 
