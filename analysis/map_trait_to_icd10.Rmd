@@ -31,25 +31,35 @@ source(here::here("code/get_term_descendants.R"))
 
 ```{r load_data}
 
-gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group.csv"))
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group_v2.csv"))
+
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = stringi::stri_trans_general(collected_all_disease_terms, "Latin-ASCII")
+           )
 
 ```
 
+# Automatic mapping of GWAS traits to ICD 10
 
-# Map GWAS traits to ICD 10
-
-## Create a mapping table - just for studies with a single disease term
+## Create a mapping table
 
 ```{r create_mapping_table}
 
-
 disease_mapping <- gwas_study_info |>
   filter(DISEASE_STUDY == T) |>
-  filter(!grepl(",", collected_all_disease_terms)) |>
   filter(collected_all_disease_terms != " ") |>
   filter(collected_all_disease_terms != "") |>
-  select(`DISEASE/TRAIT`, collected_all_disease_terms) |>
+  tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
+                               delim = ", ") |>
+  select(`DISEASE/TRAIT`, 
+         collected_all_disease_terms, 
+         PUBMED_ID) |>
   distinct()
+
+print("Number of unique disease trait & study pairs")
+nrow(disease_mapping)
+
 
 diseases <- stringr::str_split(pattern = ", ",
                                gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |>
@@ -58,11 +68,12 @@ diseases <- stringr::str_split(pattern = ", ",
 
 diseases <- unique(diseases)
 
+print("Number of unique disease terms")
 print(length(diseases))
 
 ```
 
-## Get ICD10 codes from PheCodes
+## Get ICD10 codes from PheCodes 
 
 ### Get Phecodes for diseases
 
@@ -73,8 +84,6 @@ disease_mapping <- disease_mapping |>
     phecode = str_extract(`DISEASE/TRAIT`, "(?<=PheCode )[^)]+")
   ) |>
   mutate(phecode = as.numeric(phecode))
-
-
 
 ```
 
@@ -100,6 +109,10 @@ group_by(phecode) |>
             str_flatten(unique(icd10_code), collapse = ", ", na.rm = T), 
             .groups = "drop")
 
+# phecode icd 10 map
+phecode_icd_map = 
+  phecode_icd_map |>
+  mutate(icd10_code_origin = "Study PheCode Mapping")
 
 disease_mapping =
 left_join(disease_mapping,
@@ -108,10 +121,176 @@ left_join(disease_mapping,
           relationship = "many-to-one",
           na_matches = "never")
 
+# disease_mapping =
+#   disease_mapping |>
+#   mutate(icd10_code_origin = "Study PheCode")
+
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  nrow()
+
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  head()
 
 ```
 
-### Get ICD10 codes from author provided DISEASE/TRAIT column 
+### Missing ICD10 codes for PheCodes
+
+```{r}
+
+disease_mapping |>
+    filter(is.na(icd10_code) & !is.na(phecode)) |> 
+    nrow()
+
+
+phecode = c("38.30",
+            "79.90",
+            "110.00",
+            "530.13",
+            "562.20",
+            "580.10",
+            "174.00",
+            "174.20",
+            "189.10",
+            "218.00",
+            "228.10",
+            "224.00",
+            "250.15",
+            "250.25",
+            "250.40",
+            "285.21",
+            "292.11",
+            "362.26",
+            "362.23",
+            "362.27",
+            "362.50",
+            "452.20",
+            "528.10",
+            "535.90",
+            "724.10",
+            "724.22",
+            "740.00",
+            "743.10",
+            "743.12",
+            "743.13",
+            "172.21",
+            "274.00",
+            "286.00",
+            "282.00",
+            "280.00",
+            "272.00",
+            "276.00",
+            "338.00",
+            "350.00",
+            "401.00",
+            "411.00",
+            "414.20",
+            "415.1",
+            "427.21",
+            "429.00",
+            "585.00",
+            "735.22",
+            "724.00",
+            "722.00",
+            "716.10",
+            "709.00",
+            "706.00",
+            "592.00",
+            "571.00",
+            "580.00",
+            "170.00",
+            "172.00",
+            "264.00",
+            "291.00",
+            "555.00",
+            "562.00",
+            "578.00")
+
+icd10_code = c("A49.9",
+               "B34.9",
+               "B35, B36",
+               "K22.7",
+               "K57",
+               "N00, N01, N02, N03, N04, N05, N06, N07",
+               "Z85.3",
+               "C50",
+               "C64, C65",
+               "D25, D26",
+               "D18.0",
+               "E00, E00.0, E00.1, E00.2, E00.9, E01.8, E02, E03.0, E03.1, E03.2, E03.3, E03.8, E03.9, E89.0",
+               "E10.5",
+               "E11.5",
+               "R73.0",
+               "D63",
+               "R47.0",
+               "H35.3",
+               "H35.3",
+               "H35.3",
+               "H35.5",
+               "I80",
+               "K12.30",
+               "K29.7, K29.8, K29.9",
+               "M43.2",
+               "M21.5",
+               "M13.9, M15.0, M15.1, M15.2, M15.3, M15.4, M16, M16.0, M16.1, M16.3, M16.6, M16.7, M16.9, M17.1, M17.4, M17.5, M18.0, M18.1, M18.5, M18.9, M19.0, M19.2",
+               "M81",
+               "M81.8",
+               "M81.8",
+               "C44",
+               "M10, M10.0, M10.1, M10.2, M10.4, M10.9, M11.0, M11.1, M11.2, M11.8, M11.9, M67.9",
+               "D65, D66, D67, D68, D68, D68.0, D68.1, D68.2, D68.3, D68.4, D68.8, D68.9, O72.3, O99.1",
+               "D55, D55.0, D55.1, D55.2, D55.3, D55.8, D55.9, D56, D56.0, D56.1, D56.2, D56.3, D56.4, D56.8, D56.9, D57, D57.0, D57.1, D57.2, D57.3, D57.8, D58, D58.0, D58.1, D58.2, D58.8, D58.9, M90.4",
+               "D50, D50.0, D50.1, D50.8, D50.9",
+               "E78.0, E78.1, E78.2, E78.3, E78.4, E78.5, E78.9",
+               "E86, E87.0, E87.1, E87.2, E87.3, E87.4, E87.5, E87.6, E87.7, E87.8, R63.1",
+               "R52.0, R52.2, R52.9",
+               "R25, R25.0, R25.1, R25.2, R25.3, R25.8, R26, R26.0, R26.1, R26.8, R27, R27.0, R27.8, R29.0, R29.2, R43, R43.0, R43.1, R43.2",
+               "I10, I11, I11.0, I11.9, I12, I12.0, I12.9, I13, I13.0, I13.1, I13.2, I13.9, I15, I15.0, I15.1, I15.2, I15.8, I15.9, I67.4",
+               "I20, I20.0, I20.1, I20.8, I20.9, I21, I21.0, I21.1, I21.2, I21.3, I21.4, I21.9, I22, I22.0, I22.1, I22.8, I22.9, I23, I23.0, I23.1, I23.2, I23.3, I23.6, I23.8, I24, I24.0, I24.1, I24.8, I24.9, I25, I25.1, I25.2, I25.3, I25.4, I25.5, I25.6, I25.8, I25.9, I34.1, I51.0, I51.3, Z95.1, Z95.5",
+               "I25.10",
+               "I26, I26.0",
+               "I48",
+               "I51.8",
+               "N17, N17.0, N17.1, N17.2, N17.8, N17.9, N18, N18.0, N18.9, N19, Y60.2, Y61.2, Y62.0, Y84.1, Z49.1, Z49.2, Z99.2",
+               "M21.5",
+               "M40.2, M43.2, M43.8, M48.8, M49.8, M50.0, M99.6",
+               "G55.1, M46.4, M50, M50.0, M50.0, M50.1, M50.2, M50.3, M50.8, M50.9, M51.3, M51.4, M96.1",
+               "M13.0",
+               "L94.3, M33, M33.0, M33.1, M33.2, M33.9, M34, M34.0, M34.1, M34.2, M34.8, M34.9, M35.0, M35.1, M35.5, M35.8, M35.9, M36.0, M36.8, M65.3, N16.4",
+               "K09.8, L70, L70.0, L70.1, L70.2, L70.3, L70.4, L70.5, L70.8, L70.9, L72, L72.0, L72.1, L72.2, L72.8, L72.9, L73.0, L85.3",
+               "N30, N30.0, N30.1, N30.2, N30.3, N30.8, N30.9, N34, N34.0, N34.2, N34.3, N35.1, N37",
+                "K70.4, K72, K72.1, K72.9, K74.0, K74.1, K74.2, K74.3, K74.4, K74.5, K74.6, K75.0, K75.1, K76.0, K76.6, K76.7",
+               "B52.0, N00.0, N00.1, N00.2, N00.3, N00.4, N00.5, N00.6, N00.7, N01, N01.0, N01.1, N01.2, N01.3, N01.4, N01.5, N01.6, N01.7, N01.9, N02.0, N02.1, N02.2, N02.3, N02.4, N02.5, N02.6, N02.7, N03, N03.0, N03.1, N03.2, N03.3, N03.4, N03.5, N03.6, N03.7, N03.9, N04, N04.0, N04.1, N04.2, N04.3, N04.4, N04.5, N04.6, N04.7, N04.8, N04.9, N05, N05.0, N05.1, N05.2, N05.3, N05.4, N05.5, N05.6, N05.7, N05.9, N06.0, N06.1, N06.2, N06.3, N06.4, N06.5, N06.6, N06.7, N07.0, N07.1, N07.2, N07.3, N07.4, N07.5, N07.6, N07.7, N08, N08.1, N08.2, N08.3, N08.4, N08.5, N08.8, N14, N14.0, N14.1, N14.2, N14.3, N14.4, N15.0, N15.8, N16.1, N16.2, N16.3, N16.4, N16.5",
+               "C40, C40.0, C40.1, C40.2, C40.3, C40.8, C40.9, C41, C41.0, C41.1, C41.2, C41.3, C41.4, C41.9, C47, C47.0, C47.1, C47.2, C47.3, C47.4, C47.5, C47.6, C47.8, C47.9, C49, C49.0, C49.1, C49.2, C49.3, C49.4, C49.5, C49.6, C49.8, C49.9",
+"C43, C43.0, C43.1, C43.2, C43.3, C43.4, C43.5, C43.6, C43.7, C43.8, C43.9, C44.0, C44.1, C44.2, C44.3, C44.4, C44.5, C44.6, C44.7, C44.8, C44.9, D03, D03.0, D03.1, D03.2, D03.3, D03.4, D03.5, D03.6, D03.7, D03.8, D03.9, D04, D04.0, D04.1, D04.2, D04.3, D04.4, D04.5, D04.6, D04.7, D04.8, D04.9",
+"R62.0, R62.8, R62.9",
+"F06, F06.1, F07.0, F07.1, F07.2, F07.8, F07.9, F23, F23.0, F23.1, F23.8, F23.9, G47.1, R40.0, R40.1",
+"K50, K50.0, K50.1, K50.8, K50.9, K51, K51.0, K51.1, K51.2, K51.3, K51.4, K51.5, K51.8, K51.9",
+"K57, K57.0, K57.1, K57.2, K57.3, K57.4, K57.5, K57.8, K57.9",
+"K62.5, K92.0, K92.1, K92.2")
+
+icd10_code_origin = rep("Study PheCode (Manual Mapping)", 
+                        length(phecode))
+
+to_add = data.frame(phecode, 
+                    icd10_code, 
+                    icd10_code_origin)
+
+to_add = 
+  to_add |>
+  mutate(phecode = as.numeric(phecode))
+
+disease_mapping =
+  rows_patch(disease_mapping,
+             to_add,
+             unmatched = "ignore")
+
+
+
+```
+
+## Get ICD10 codes from author provided DISEASE/TRAIT column 
 
 ```{r add_icd10_from_trait}
 
@@ -119,17 +298,24 @@ disease_mapping =
   disease_mapping |>
   mutate(icd10_code = ifelse(grepl("ICD10", `DISEASE/TRAIT`),
                              str_extract(`DISEASE/TRAIT`, "(?<=ICD10 )[^:]+(?=:)"),
-                             icd10_code)
+                             icd10_code),
+         icd10_code_origin = ifelse(grepl("ICD10", `DISEASE/TRAIT`),
+                                    "Study Provided",
+                                    icd10_code_origin)
 )
 
 
-disease_mapping =
 disease_mapping |>
-  group_by(collected_all_disease_terms) |>
-  summarise(icd10_code = str_flatten(unique(icd10_code), 
-                                     collapse = ", ", 
-                                     na.rm = T), 
-            .groups = "drop")
+  filter(icd10_code_origin == "Study Provided") |>
+  nrow()
+
+# disease_mapping =
+# disease_mapping |>
+#   group_by(collected_all_disease_terms) |>
+#   summarise(icd10_code = str_flatten(unique(icd10_code), 
+#                                      collapse = ", ", 
+#                                      na.rm = T), 
+#             .groups = "drop")
 
 ```
 
@@ -137,20 +323,21 @@ disease_mapping |>
 
 ```{r how_many_not_mapped_phecodes_icd}
 
-disease_mapping =
+disease_mapping_matched =
   disease_mapping |>
-  filter(icd10_code != "")
+  filter(icd10_code != "" | !is.na(icd10_code))
 
-
-not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- diseases[!diseases %in% disease_mapping_matched$collected_all_disease_terms] 
 not_found_diseases <- not_found_diseases[not_found_diseases != ""]
 
+print("Number of diseases not mapped to a single ICD10 code yet:")
 print(length(not_found_diseases))
-
 
 ```
 
-### Match disease terms to phenotypes 
+## Get ICD10 codes by matching terms 
+
+### Match disease terms to phenotypes (corresponding to PheCodes)
 
 ```{r match_disease_terms_to_phenotypes, message=FALSE}
 
@@ -162,17 +349,34 @@ group_by(Phenotype) |>
             .groups = "drop")
 
 matched_phenotypes =
-phenotype_icd_map |>
-filter(tolower(Phenotype) %in% not_found_diseases)
+phenotype_icd_map #|>
+#filter(tolower(Phenotype) %in% not_found_diseases)
 
 matched_phenotypes =
 matched_phenotypes |>
   mutate(collected_all_disease_terms = tolower(Phenotype)) |>
-  select(collected_all_disease_terms, icd10_code) 
+  select(collected_all_disease_terms, icd10_code) |>
+  mutate(icd10_code_origin = "Phecode Phenotype Match")
+
+# match by collected_all_disease_terms
+disease_mapping = 
+disease_mapping |>
+rows_patch(matched_phenotypes,
+           unmatched = "ignore")
+
+# match by DISEASE/TRAIT
+matched_phenotypes =
+  matched_phenotypes |>
+  rename(`DISEASE/TRAIT` = collected_all_disease_terms)
 
 disease_mapping =
-  bind_rows(disease_mapping, matched_phenotypes) |>
-  distinct()
+disease_mapping |>
+rows_patch(matched_phenotypes,
+           unmatched = "ignore")
+
+disease_mapping |>
+  filter(icd10_code_origin == "Phecode Phenotype Match") |>
+  nrow()
          
 ```
 
@@ -180,12 +384,17 @@ disease_mapping =
 
 ```{r how_many_not_mapped_matched_phenotypes}
 
-disease_mapping =
-  disease_mapping |>
-  filter(icd10_code != "")
+# disease_mapping =
+#   disease_mapping |>
+#   filter(icd10_code != "")
 
+matched <- c(disease_mapping_matched$collected_all_disease_terms,
+             matched_phenotypes$collected_all_disease_terms)
 
-not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- diseases[!diseases %in% 
+                               matched
+                               ] 
+
 not_found_diseases <- not_found_diseases[not_found_diseases != ""]
 
 print(length(not_found_diseases))
@@ -193,29 +402,49 @@ print(length(not_found_diseases))
 ```
 
 
-### Match disease terms to ICD descriptions
+### Match disease terms to ICD 10 descriptions 
 
 ```{r match_disease_terms_to_icd_descriptions, message=FALSE}
 
-to_add = 
+matched_icd10_desc  = 
 phecodes |>
-    filter(tolower(iconv(ICD_DESCRIPTION, to = "UTF-8")) %in% not_found_diseases) |>
-    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = "UTF-8"))) |>
-    select(collected_all_disease_terms,    
-           icd10_code = ICD10) 
-
-phecodes |>
-    filter(tolower(iconv(ICD_DESCRIPTION, to = "UTF-8")) %in% "androgenetic alopecia") |>
+    #filter(tolower(iconv(ICD_DESCRIPTION, to = "UTF-8")) %in% not_found_diseases) |>
     mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = "UTF-8"))) |>
     select(collected_all_disease_terms,    
            icd10_code = ICD10) 
 
 
+matched_icd10_desc =
+  matched_icd10_desc |>
+  group_by(collected_all_disease_terms) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ", 
+                                     na.rm = T), 
+            .groups = "drop")
+
+# match by collected_all_disease_terms
+matched_icd10_desc = 
+  matched_icd10_desc |>
+    mutate(icd10_code_origin = "ICD Description Match")
+
+disease_mapping = 
+disease_mapping |>
+rows_patch(matched_icd10_desc,
+           unmatched = "ignore")
+
+# match by DISEASE/TRAIT
+matched_icd10_desc =
+  matched_icd10_desc |>
+  rename(`DISEASE/TRAIT` = collected_all_disease_terms)
 
 disease_mapping =
-  bind_rows(disease_mapping, to_add) |>
-  distinct()
+  rows_patch(disease_mapping,
+             matched_icd10_desc,
+             unmatched = "ignore")
 
+disease_mapping |>
+  filter(icd10_code_origin == "ICD Description Match") |>
+  nrow()
 
 ```
 
@@ -223,316 +452,50 @@ disease_mapping =
 
 ```{r how_many_not_mapped_matched_icd10}
 
-disease_mapping =
-  disease_mapping |>
-  filter(icd10_code != "")
+# disease_mapping =
+#   disease_mapping |>
+#   filter(icd10_code != "")
 
+matched <- c(disease_mapping_matched$collected_all_disease_terms,
+             matched_phenotypes$collected_all_disease_terms,
+             to_add$collected_all_disease_terms)
 
-not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- diseases[!diseases %in%  matched] 
 not_found_diseases <- not_found_diseases[not_found_diseases != ""]
 
 print(length(not_found_diseases))
 
+disease_mapping |>
+  filter(is.na(icd10_code_origin)) |>
+  nrow()
+
 ```
 
 
+# Manual mapping of GWAS traits to ICD 10
 
-## Manually add some ICD10 codes
+```{r create_manual_mapping_table}
 
-```{r}
+manual_icd10_map <-
+  readxl::read_xlsx(here::here("data/icd/manual_disease_icd10_mappings.xlsx"))
 
-collected_all_disease_terms = c("alcoholic liver cirrhosis",
-                                "alcoholic pancreatitis",
-                                "ischemic cardiomyopathy",
-                                "systemic juvenile idiopathic arthritis",
-                                "juvenile idiopathic arthritis",
-                                "oligoarticular juvenile idiopathic arthritis",
-                                "sapho syndrome",
-                                "synovial plica syndrome",
-                                "urgency urinary incontinence",
-                                "abdominal distention",
-                                "early-onset alzheimers disease",
-                                "late-onset alzheimers disease",
-                                "renal overload-type gout",
-                                "vomiting of pregnancy",
-                                "kleine-levin syndrome",
-                                "autoimmune pancreatitis type 1",
-                                "allergic contact dermatitis of eyelid",
-                                "guillain-barre syndrome",
-                                "idiopathic pulmonary fibrosis",
-                                "behcets syndrome",
-                                "kashin-beck disease",
-                                "chronic thromboembolic pulmonary hypertension",
-                                "pulmonary hypertension",
-                                "pulmonary arterial hypertension",
-                                "pulmonary coin lesion",
-                                "pulmonary infarction",
-                                "neuromyelitis optica",
-                                "buruli ulcer disease",
-                                "churg-strauss syndrome",
-                                "graft versus host disease",
-                                "takayasu arteritis",
-                                "enuresis",
-                                "cannabis dependence",
-                                "orofacial cleft",
-                                "eczema",
-                                "drug dependence",
-                                "cocaine-related disorders",
-                                "pharynx cancer",
-                                "pseudotumor cerebri",
-                                "altitude sickness",
-                                "high altitude pulmonary edema",
-                                "intrahepatic cholestasis of pregnancy",
-                                "brain injury",
-                                "radiation-induced brain injury",
-                                "abdominal infections code",
-                                "secondary hyperparathyroidism of renal origin",
-                                "gastroparesis",
-                                "neuroblastoma",
-                                "peripartum cardiomyopathy",
-                                "retroperitoneal cancer",
-                                "asphyxia neonatorum",
-                                "postherpetic neuralgia",
-                                "manic or hypomanic episode",
-                                "allergic conjunctivitis",
-                                "thiazide-induced hyponatremia",
-                                "alpha 1-antitrypsin deficiency",
-                                "autoimmune thyroid disease",
-                                "hashimotos thyroiditis",
-                                "charcot-marie-tooth disease type 1a",
-                                "amyotrophic lateral sclerosis",
-                                "fuchs endothelial corneal dystrophy",
-                                "duchenne muscular dystrophy",
-                                "familial apolipoprotein b hypobetalipoproteinemia",
-                                "gastric metaplasia",
-                                "inborn carbohydrate metabolic disorder",
-                                "petaloid toenail",
-                                "thyrotoxic periodic paralysis",
-                                "schizoaffective disorder",
-                                "rhegmatogenous retinal detachment",
-                                "restless legs syndrome",
-                                "preterm premature rupture of the membranes",
-                                "porphyrin metabolism disease",
-                                "peritoneal cancer",
-                                "methamphetamine use disorders",
-                                "familial sick sinus syndrome",
-                                "drug misuse",
-                                "abnormal ecg",
-                                "adenoiditis",
-                                "bacterial endocarditis",
-                                "biliary atresia",
-                                "bronchopulmonary dysplasia",
-                                "cervical ectropion",
-                                "chronic primary adrenal insufficiency",
-                                "ciliopathy",
-                                "collagenous colitis",
-                                "colonic diverticula",
-                                "craniofacial microsomia",
-                                "cryptorchidism",
-                                "plantar fasciitis",
-                                "plantar fibromatosis",
-                                "lewy body dementia",
-                                "x-linked dystonia-parkinsonism",
-                                "hippocampal sclerosis of aging",
-                                "testicular dysgenesis syndrome",
-                                "internet addiction disorder",
-                                "food addiction",
-                                "malignant lymphoid tumor",
-                                "compartment syndrome",
-                                "elevated lactate dehydrogenase",
-                                "loss of consciousness",
-                                "nephrosclerosis",
-                                "periprosthetic osteolysis",
-                                "polypoidal choroidal vasculopathy",
-                                "pulmonary alveolar proteinosis",
-                                "chorioamnionitis",
-                                "hoarding disorder",
-                                "unilateral renal agenesis",
-                                "muscle spasm",
-                                "oral ulcer",
-                                "ileocolitis",
-                                "microscopic colitis",
-                                "lymphocytic colitis",
-                                "drug-induced dyskinesia",
-                                "plasma protein metabolism disease",
-                                "oral lichen planus",
-                                "epididymitis",
-                                "orchitis",
-                                "ectropion",
-                                "entropion",
-                                "cervical dystonia",
-                                "clonal hematopoiesis",
-                                "diffuse idiopathic skeletal hyperostosis",
-                                "endocervicitis",
-                                "eosinophilic esophagitis",
-                                "focal segmental glomerulosclerosis",
-                                "hypercalcemia",
-                                "hypertriglyceridemia",
-                                "hypocalcemia",
-                                "lymphangioleiomyomatosis",
-                                "mononucleosis",
-                                "necrotizing enterocolitis",
-                                "occupation-related stress disorder",
-                                "ototoxicity",
-                                "plantar warts",
-                                "podoconiosis",
-                                "posterior cortical atrophy",
-                                "pigment dispersion syndrome",
-                                "takotsubo cardiomyopathy",
-                                "testicular germ cell tumor",
-                                "normal pressure hydrocephalus",
-                                "anti-nmda receptor encephalitis"
-                                )
+manual_icd10_map =
+  manual_icd10_map |>
+  select(collected_all_disease_terms = mapped_trait, 
+         icd10_code) |>
+  mutate(icd10_code_origin = "Manual Mapping (collected_all_disease_terms)")
 
-icd10_code = c("K70.3", 
-               "K85.2, K85.20, K85.21, K85.22",
-               "I25.5",
-               "M08.20",
-               "M08.9",
-               "MO8.4",
-               "M86.3",
-               "M67.8",
-               "N39.4",
-               "R14",
-               "F00.0, G30.0",
-               "F00.1, G30.1",
-               "M10.3",
-               "O21, O21.9",
-               "G47.1",
-               "K86.1",
-               "H01.1",
-               "G61.0",
-               "J84.1",
-               "M35.2",
-               "M12.1",
-               "I27.8",
-               "I27.9",
-               "I27.9",
-               "R91",
-               "I26.9",
-               "G36.0",
-               "A31.1",
-               "M30.1",
-               "D89.8",
-               "M31.4",
-               "R32",
-               "F12.2",
-               "Q36, Q36.0, Q36.9, Q35, Q35.1, Q35.3, Q35.5, Q35.7, Q35.9",
-               "L30.9",
-               "F19.2",
-               "F14.1",
-               "C14.0",
-               "G93.2",
-               "T70.2",
-               "T70.2",
-               "O26.6",
-               "S06.9",
-               "S06.9",
-               "D73.3, K35-37, K57, K61, K63.0, K65, K75.0, K81, K83.0",
-               "N25.8",
-               "K31.8",
-               "C74.9",
-               "O90.3",
-               "C48.0",
-               "P24.8, P24.9",
-               "B02.2",
-               "F30.9",
-               "H10.1",
-               "E87.1",
-               "E88.0",
-               "E06.3",
-               "E06.3",
-               "G60.0",
-               "G12.2",
-               "H18.5",
-               "G71.0",
-               "E78.6",
-               "K31",
-               "E74.9",
-               "L60",
-               "G72.3",
-               "F25",
-               "H33.0",
-               "G25.8",
-               "O42",
-               "E80.2",
-               "C48.2",
-               "F15.1, F15.2",
-               "I49.5",
-               "F19.1",
-               "R94.3",
-               "J35",
-               "I33.0",
-               "Q44.2",
-               "P27.1",
-               "H02.1",
-               "E27.1",
-               "Q34.8",
-               "K52.8",
-               "K57.3",
-               "Q67.4",
-               "Q53",
-               "M72.2",
-               "M72.2",
-               "G31.8",
-               "G24.1",
-               "G93.8",
-               "E29",
-               "F63",
-               "F50.8, F50.9",
-               "C96.9",
-               "T79",
-               "R74",
-               "R40",
-               "I12",
-               "T84",
-               "H35",
-               "J84",
-               "O41.1",
-               "F42.3",
-               "Q60.0",
-               "M62.8",
-               "K12",
-               "K50.0",
-               "K52.8",
-               "K52.8",
-               "G25.8",
-               "E88",
-               "L43",
-               "N45",
-               "N45",
-               "H02.1",
-               "H02.0, H02.1",
-               "G24",
-               "D47",
-               "M48.1",
-               "N72",
-               "K20",
-               "N04.1",
-               "E83.5",
-               "E78.1",
-               "E83.5",
-               "J84.8",
-               "B27",
-               "P77",
-               "F43",
-               "H91.0",
-               "B07",
-               "I89.0",
-               "G31.1",
-               "H21.2",
-               "I51.8",
-               "D41",
-               "G91.2",
-               "A85"
-               )
-
-
-to_add = data.frame(collected_all_disease_terms, icd10_code)
-
+# disease_mapping =
+#   bind_rows(disease_mapping, to_add) |>
+#   distinct()
 disease_mapping =
-  bind_rows(disease_mapping, to_add) |>
-  distinct()
+  rows_patch(disease_mapping,
+             manual_icd10_map,
+             unmatched = "ignore")
+
+disease_mapping |>
+  filter(icd10_code_origin == "Manual Mapping (collected_all_disease_terms)") |>
+  nrow()
 
 ```
 
@@ -540,169 +503,1474 @@ disease_mapping =
 
 ```{r how_many_not_mapped_manual}
 
-disease_mapping =
-  disease_mapping |>
-  filter(icd10_code != "")
+# disease_mapping =
+#   disease_mapping |>
+#   filter(icd10_code != "")
 
+matched <- c(disease_mapping_matched$collected_all_disease_terms,
+             matched_phenotypes$collected_all_disease_terms,
+             to_add$collected_all_disease_terms,
+             manual_icd10_map$collected_all_disease_terms)
 
-not_found_diseases <- diseases[!diseases %in% disease_mapping$collected_all_disease_terms] 
+not_found_diseases <- diseases[!diseases %in% matched] 
 not_found_diseases <- not_found_diseases[not_found_diseases != ""]
 
 print(length(not_found_diseases))
 
 ```
 
-## Mapping by finding fuzzy matches 
+# Inferring ICD10 codes from similar study ICD10 codes
 
-```{r fuzzy_matching, message=FALSE, eval = F}
+```{r}
 
-top_match_string =
-function(string1, string2, method){
-  
-  lcs_matrix = stringdistmatrix(string1, string2, method = method)
-  
-  colnames(lcs_matrix) = string2
-  rownames(lcs_matrix) = string1
-  
-  # only return rows where min distance is < 10
-  #lcs_matrix = lcs_matrix[apply(lcs_matrix, 1, min) < 5, ]
-  
-  # then only return the colname for the min distance for each row
-  original_string1 = rownames(lcs_matrix)
-  top_match_string2 = vector()
-  distance = vector()
-  
-  for(i in 1:nrow(lcs_matrix)){
-    
-    col_n = which(min(lcs_matrix[i, ]) == lcs_matrix[i, ])
-    top_match_string2[i] = colnames(lcs_matrix)[col_n[1]]
-    distance[i] = min(lcs_matrix[i, ])
-    
-    
-  }
-  
-  top_match_pairs = data.frame(original_string1, 
-                               top_match_string2,
-                               distance)
-  
-  return(top_match_pairs)
-  
-}
+# similar studies:
+study_icd_map =
+disease_mapping |>
+filter(!is.na(icd10_code)) |>
+filter(icd10_code_origin == "Study Provided" | icd10_code_origin == "Study PheCode Mapping") 
 
-
-top_match_string(not_found_diseases, 
-                 unique(tolower(phecodes$Phenotype)), 
-                 method = "lv") -> fuzzy_matches
-
-top_match_string(not_found_diseases, 
-                 unique(tolower(iconv(phecodes$ICD_DESCRIPTION, to = "UTF-8"))), 
-                 method = "lv") -> fuzzy_matches
-
-
-```
-
-## Map remaining diseases using UK Biobank mapping of EFO to ICD10
-
-```{r zooma_mapping, message=FALSE, eval = F}
-
-writeLines(not_found_diseases, con = here::here("not_found_diseases.txt"))
-
-data.table::fread(here::here("zooma_res.tsv"), skip = 6) -> zooma_res
-
-zooma_res = 
-  zooma_res |>
-  rename_with(~str_replace_all(., " ", "_"))
-
-  
-
-multiple_mapping <-
-  zooma_res |> 
-  group_by(PROPERTY_VALUE) |> 
-  summarise(n = n()) |> 
-  filter(n > 1)
-
-zooma_res_to_check =
-  zooma_res |>
-  filter(PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE)
-
-
-zooma_res =
-zooma_res |>
-  rowwise() |>
-  filter(
-          (PROPERTY_VALUE == tolower(`ONTOLOGY_TERM_LABEL(S)`) & 
-         PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE) |
-         !PROPERTY_VALUE %in% multiple_mapping$PROPERTY_VALUE
-           ) |>
-  ungroup()
-
-zooma_res =
-  zooma_res |>
-  group_by(PROPERTY_VALUE) |>
-  slice_sample(n= 1)
-
-zooma_res =
-  zooma_res |>
-  select(uri = `ONTOLOGY_TERM(S)`, 
-         collected_all_disease_terms = PROPERTY_VALUE)
-
-```
-
-```{r, eval = F}
-
-uk_efo_icd <- data.table::fread(here::here("data/icd/UK_Biobank_master_file.tsv"))
-
-uk_efo_icd = 
-uk_efo_icd |>
-  tidyr::separate_longer_delim(MAPPED_TERM_URI, delim = ", ") 
-
-uk_efo_icd =
-  uk_efo_icd |>
-  rename_with(~str_replace_all(., " ", "_")) |>
-  rename_with(~str_replace_all(., "/", "_"))
-
-uk_efo_icd =
-  uk_efo_icd |>
-  filter(grepl("^[A-Z]", 
-               ICD10_CODE_SELF_REPORTED_TRAIT_FIELD_CODE)
-         )
-
-
-uk_efo_icd = 
-uk_efo_icd |>
-  filter(MAPPED_TERM_URI %in% zooma_res$uri) |>
-  select(uri = MAPPED_TERM_URI, 
-         icd10_code = ICD10_CODE_SELF_REPORTED_TRAIT_FIELD_CODE)
-
-uk_efo_icd = 
-  uk_efo_icd |>
-  group_by(uri) |>
-  summarise(icd10_code = 
-            str_flatten(icd10_code, collapse = ", ", na.rm = T), 
-            .groups = "drop")
-
-to_add = 
-left_join(zooma_res,
-          uk_efo_icd,
-          by = c("uri"),
-          na_matches = "never") |>
+study_icd_map =
+  study_icd_map |>
   select(collected_all_disease_terms, icd10_code) |>
-  filter(icd10_code != "") |>
   distinct()
 
+study_icd_map =
+  study_icd_map |>
+  group_by(collected_all_disease_terms) |>
+  summarise(icd10_code = str_flatten(unique(sort(icd10_code)), 
+                                     collapse = ", ", 
+                                     na.rm = T), 
+            .groups = "drop")
+
+study_icd_map = 
+  study_icd_map |>
+  mutate(icd10_code_origin = "Inferred from similar studies")
+
+disease_mapping = 
+  rows_patch(disease_mapping,
+             study_icd_map,
+             unmatched = "ignore")
+  
+
+disease_mapping |> 
+  filter(!is.na(icd10_code)) |> filter(collected_all_disease_terms == "adhd")
+
+icd10_code = c("F90, F90.1, F90.9",
+               "F00. G30",
+               "O45",
+               "H25",
+               "H25.1")
+
+collected_all_disease_terms = c("adhd",
+                                "alzheimers disease",
+                                "abruptio placentae",
+                                "age-related cataract",
+                                "age-related nuclear cataract")
+
+icd10_code_origin = c("Inferred from similar study")
+
+to_add = data.frame(collected_all_disease_terms, 
+                    icd10_code, 
+                    icd10_code_origin)
+
 disease_mapping =
-bind_rows(disease_mapping, to_add) 
+  rows_patch(disease_mapping,
+             to_add,
+             unmatched = "ignore")
+
+```
+
+
+# Completing missing combinations
+
+# Saving disease mapping 
+
+## Add description of ICD10 codes to mapping table
+
+### Prepare / fix disease mappings 
+
+#### Fixing multiple ICD10 codes missing commas
+
+```{r prepare_disease_mappings}
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F40 F41 F42",
+    replacement = "F40, F41, F42"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "G47.8. G47.9",
+    replacement = "G47.8, G47.9"
+    )
+  )
+
+```
+
+#### Converting ICD-10 cm codes to WHO ICD-10
+
+```{r expand_disease_mappings}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = str_split(icd10_code, ",\\s*")) |>
+  tidyr::unnest(icd10_code) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "B37.49",
+    replacement = "B37.4"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E05.90",
+    replacement = "E05.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E11.319|E11.31|E11.329.9|E11.329.|E11.32|E11.3.",
+    replacement = "E11.3"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E11.3.",
+    replacement = "E11.3"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E13.621.|E13.62",
+    replacement = "E11.3"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E78.00",
+    replacement = "E78.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F10.10",
+    replacement = "F10.1"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F17.201.|F17.20",
+    replacement = "F17.2"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F430",
+    replacement = "F43.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "G47.00",
+    replacement = "G47.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H01.00|H01.09.",
+    replacement = "H01.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H01.09.",
+    replacement = "H01.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H029",
+    replacement = "H02.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H60.90",
+    replacement = "H60.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H60.90",
+    replacement = "H60.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H91.8X9.",
+    replacement = "H91.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H91.90",
+    replacement = "H91.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H93.299.|H93.29",
+    replacement = "H01"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I70.20",
+    replacement = "I70.2"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I82.409.|I82.40|I82.4",
+    replacement = "I82"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "J30.9",
+    replacement = "J30.2"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "J45.998.|J45.909.|J45.901.|J45.99|J45.90",
+    replacement = "J45.9"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "J98.457.6",
+    replacement = "J98.4"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "K05.30-31",
+    replacement = "K05.3"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "K29.70",
+    replacement = "K29.7"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "K59.00",
+    replacement = "K59.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "L08.89",
+    replacement = "L08.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M06.99|M06.90",
+    replacement = "M06.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M10.99",
+    replacement = "M10.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M10.99",
+    replacement = "M10.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M13.90|M13.94|M13.96|M13.97|M13.99",
+    replacement = "M13.9"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M19.07",
+    replacement = "M19.0"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M19.90|M19.91|M19.94|M19.97|M19.99",
+    replacement = "M19.9"
+    )
+  )
+
+
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M25.50|M25.51|M25.55|M25.569.|M25.56|M25.571.|M25.57",
+    replacement = "M25.5"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M25.76|M25.77",
+    replacement = "M25.7"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M43.16",
+    replacement = "M43.1"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M47.80|M47.82|M47.86",
+    replacement = "M47.8"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M47.92|M47.96",
+    replacement = "M47.9"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M48.02|M48.06",
+    replacement = "M48.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M54.22",
+    replacement = "M54.2"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M54.30|M54.39",
+    replacement = "M54.3"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M54.56|M54.57|M54.59",
+    replacement = "M54.5"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M54.99",
+    replacement = "M54.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M65.34",
+    replacement = "M65.3"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M65.96",
+    replacement = "M65.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M72.04",
+    replacement = "M72.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M79.09",
+    replacement = "M79.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M79.65|M79.66|M79.67",
+    replacement = "M79.6"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M79.79",
+    replacement = "M79.7"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M79.86",
+    replacement = "M79.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M81.99",
+    replacement = "M81.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N390",
+    replacement = "N39.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N50.89",
+    replacement = "N50.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N52",
+    replacement = "F52"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N52.9",
+    replacement = "F52.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N814",
+    replacement = "N81.4"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "P29.12",
+    replacement = "P29.1"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R06.00|R06.09",
+    replacement = "R06.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R06.83",
+    replacement = "R06.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R07.89",
+    replacement = "R07.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R07.8|R07.9",
+    replacement = "R07"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R09.89",
+    replacement = "R09.8"
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R10.30",
+    replacement = "R10.3"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R10.8|R10.9",
+    replacement = "R10"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R11.0",
+    replacement = "R11"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R13.10",
+    replacement = "R13"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R13.1",
+    replacement = "R13"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R14.0",
+    replacement = "R14"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R19.7",
+    replacement = "R19"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R29.898.|R29.89",
+    replacement = "R29.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R31.29",
+    replacement = "R31.2"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R31.2|R31.9",
+    replacement = "R31"
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R53.82|R53.83|R5382",
+    replacement = "R53.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R53.8",
+    replacement = "R53"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R56.9",
+    replacement = "R56"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R73.09|R73.02",
+    replacement = "R73.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R80.9",
+    replacement = "R80"
+    )
+    ) 
+ 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R82.998.|R82.99",
+    replacement = "R82.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R871",
+    replacement = "R87.1"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R87.6",
+    replacement = "R87"
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R87.61",
+    replacement = "R87.6"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T50.905.",
+    replacement = "T50.9"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T78.40",
+    replacement = "T78.4"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T780",
+    replacement = "T78.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T81.149.88",
+    replacement = "T81.1"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T81.815.013.",
+    replacement = "T81.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T84.84",
+    replacement = "T84.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "T887",
+    replacement = "T88.7"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "Z86.79",
+    replacement = "Z86.7"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "Z87.09",
+    replacement = "Z87.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "Z87.39",
+    replacement = "Z87.3"
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "Z87.42",
+    replacement = "Z87.4"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "Z87.891.",
+    replacement = "Z87.8"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "W44.9",
+    replacement = "W44"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "U80",
+    replacement = "U82"
+    )
+    ) 
+
+disease_mapping =
+  disease_mapping |>
+  distinct()
+
+
 
 
 ```
 
 
-```{r, eval = F}
+### Add ICD10 descriptions
 
-readxl::read_xlsx(here::here("sup_table.xlsx"), sheet = 1) -> sup_table
+#### Other ICD10 descriptions to add
 
-sup_table <- sup_table |> mutate(Mapped_trait_URI = str_remove_all(pattern = "http://www.ebi.ac.uk/efo/|http://purl.obolibrary.org/obo/|http://www.orpha.net/ORDO/", Mapped_trait_URI))
+```{r other_icd10_descriptions}
 
-sup_table |>
-  filter(Mapped_trait_URI %in% zooma_res$uri)
+
+other_icd10_desc = 
+  data.frame(
+    icd10_code = c("A09.9", 
+                  "A41",
+                  "B95",
+                  "B96",
+                  "B97",
+                  "B98",
+                  "C44",
+                  "C79",
+                  "C80.0",
+                  "C80.9",
+                  "C90",
+                  "D07",
+                  "D35",
+                  "D37",
+                  "D47",
+                  "D48",
+                  "E03",
+                  "E04",
+                  "E21",
+                  "E23",
+                  "E27",
+                  "E61",
+                  "E80",
+                  "E87",
+                  "E89",
+                  "F05",
+                  "F17",
+                  "F41",
+                  "F43.0",
+                  "F53",
+                  "G31",
+                  "G45",
+                  "G46",
+                  "G62",
+                  "G93",
+                  "G99",
+                  "H47",
+                  "H50",
+                  "H57",
+                  "H83",
+                  "H91",
+                  "H92",
+                  "H93",
+                  "I08",
+                  "I27",
+                  "I27.2",
+                  "I44",
+                  "I45",
+                  "I48.0",
+                  "I49",
+                  "I51",
+                  "I62",
+                  "I71",
+                  "J15",
+                  "J16",
+                  "J34",
+                  "J38",
+                  "J69",
+                  "J84",
+                  "J95",
+                  "J96",
+                  "K05",
+                  "K07",
+                  "K08",
+                  "K09",
+                  "K10",
+                  "K12",
+                  "K13",
+                  "K22",
+                  "K22.7",
+                  "K52",
+                  "K56",
+                  "K64",
+                  "K64.0",
+                  "K64.9",
+                  "K74",
+                  "K75",
+                  "K85.9",
+                  "K86",
+                  "K91",
+                  "K91.8",
+                  "K92",
+                  "L02",
+                  "L13",
+                  "L30",
+                  "L65",
+                  "L73",
+                  "L85",
+                  "L89.1",
+                  "L98",
+                  "M05",
+                  "M06",
+                  "M07",
+                  "M11",
+                  "M13",
+                  "M18",
+                  "M19",
+                  "M24",
+                  "M25",
+                  "M31",
+                  "M35",
+                  "M43",
+                  "M48",
+                  "M53",
+                  "M62",
+                  "M66",
+                  "M67",
+                  "M71",
+                  "M77",
+                  "M79",
+                  "M79.7",
+                  "M80",
+                  "M81",
+                  "M85",
+                  "M89",
+                  "M96",
+                  "N02",
+                  "N18.3",
+                  "N18.4",
+                  "N28",
+                  "N39",
+                  "N48",
+                  "N73",
+                  "N76",
+                  "N88",
+                  "N89",
+                  "N91",
+                  "N92",
+                  "N93",
+                  "N94",
+                  "N99",
+                  "O14",
+                  "O04",
+                  "O26",
+                  "O32",
+                  "O34",
+                  "O36",
+                  "O68",
+                  "O75",
+                  "O99",
+                  "R03",
+                  "R07",
+                  "R09",
+                  "R10",
+                  "R19",
+                  "R29",
+                  "R29.6",
+                  "R39",
+                  "R40",
+                  "R47",
+                  "R57",
+                  "T95.8",
+                  "W44",
+                  "Y95",
+                  "Z86.3",
+                  "Z87.3",
+                  "Z87.4",
+                  "Z87.7",
+                  "Z87.8",
+                  "T85.8",
+                  "Z91.0",
+                  "Z88.9",
+                  "Z88.8",
+                  "Z88",
+                  "Z92.6",
+                  "N90",
+                  "U82"
+                  ),
+    icd10_description = c("Gastroenteritis and colitis of unspecified origin",
+                         "Other sepsis",
+                         "Streptococcus and staphylococcus as the cause of diseases classified to other chapters",
+                         "Other specified bacterial agents as the cause of diseases classified to other chapters",
+                         "Viral agents as the cause of diseases classified to other chapters",
+                         "Other specified infectious agents as the cause of diseases classified to other chapters",
+                         "Other malignant neoplasms of skin",
+                         "Secondary malignant neoplasm of other and unspecified sites",
+                         "Malignant neoplasm, primary site unknown, so stated",
+                         "Malignant neoplasm, primary site unspecified",
+                         "Multiple myeloma and malignant plasma cell neoplasms",
+                         "Carcinoma in situ of other and unspecified genital organs",
+                         "Benign neoplasm of other and unspecified endocrine glands",
+                         "Neoplasm of uncertain or unknown behaviour of oral cavity and digestive organs",
+                         "Other neoplasms of uncertain or unknown behaviour of lymphoid, haematopoietic and related tissue",
+                         "Neoplasm of uncertain or unknown behaviour of other and unspecified sites",
+                         "Other hypothyroidism",
+                         "Other nontoxic goitre",
+                         "Hyperparathyroidism and other disorders of parathyroid gland",
+                         "Hypofunction and other disorders of pituitary gland",
+                         "Other disorders of adrenal gland",
+                         "Deficiency of other nutrient elements",
+                         "Disorders of porphyrin and bilirubin metabolism",
+                         "Other disorders of fluid, electrolyte and acid-base balance",
+                         "Postprocedural endocrine and metabolic disorders, not elsewhere classified",
+                         "Delirium, not induced by alcohol and other psychoactive substances",
+                         "Mental and behavioural disorders due to use of tobacco",
+                         "Other anxiety disorders",
+                         "Acute stress reaction",
+                         "Mental and behavioural disorders associated with the puerperium, not elsewhere classified",
+                         "Other degenerative diseases of nervous system, not elsewhere classified",
+                         "Transient cerebral ischaemic attacks and related syndromes",
+                         "Vascular syndromes of brain in cerebrovascular diseases",
+                         "Other polyneuropathies",
+                         "Other disorders of brain",
+                         "Other disorders of nervous system in diseases classified elsewhere",
+                         "Other disorders of optic [2nd] nerve and visual pathways",
+                         "Other strabismus",
+                         "Other disorders of eye and adnexa",
+                         "Other diseases of inner ear",
+                         "Other hearing loss",
+                         "Otalgia and effusion of ear",
+                         "Other disorders of ear, not elsewhere classified",
+                         "Multiple valve diseases",
+                         "Other pulmonary heart diseases",
+                         "Other secondary pulmonary hypertension",
+                         "Atrioventricular and left bundle-branch block",
+                         "Other conduction disorders",
+                         "Paroxysmal atrial fibrillation",
+                         "Ventricular fibrillation and flutter",
+                         "Complications and ill-defined descriptions of heart disease",
+                         "Other nontraumatic intracranial haemorrhage",
+                         "Aortic aneurysm and dissection",
+                         "Bacterial pneumonia, not elsewhere classified",
+                         "Pneumonia due to other infectious organisms, not elsewhere classified",
+                         "Other disorders of nose and nasal sinuses",
+                         "Diseases of vocal cords and larynx, not elsewhere classified",
+                         "Pneumonitis due to solids and liquids",
+                         "Other interstitial pulmonary diseases",
+                         "Postprocedural respiratory disorders, not elsewhere classified",
+                         "Respiratory failure, not elsewhere classified",
+                         "Gingivitis and periodontal diseases",
+                         "Dentofacial anomalies [including malocclusion]",
+                         "Other disorders of teeth and supporting structures",
+                         "Cysts of oral region, not elsewhere classified",
+                         "Other diseases of jaws",
+                         "Stomatitis and related lesions",
+                         "Other diseases of lip and oral mucosa",
+                         "Other diseases of oesophagus",
+                         "Barrett oesophagus",
+                         "Other noninfective gastroenteritis and colitis",
+                         "Paralytic ileus and intestinal obstruction without hernia",
+                         "Haemorrhoids and perianal venous thrombosis",
+                         "First degree haemorrhoids",
+                         "Haemorrhoids, unspecified",
+                         "Fibrosis and cirrhosis of liver",
+                         "Other inflammatory liver diseases",
+                         "Acute pancreatitis, unspecified",
+                         "Other diseases of pancreas",
+                         "Postprocedural disorders of digestive system, not elsewhere classified",
+                         "Other postprocedural disorders of digestive system, not elsewhere classified",
+                         "Other diseases of digestive system",
+                         "Cutaneous abscess, furuncle and carbuncle",
+                         "Other bullous disorders",
+                         "Other dermatitis",
+                         "Other nonscarring hair loss",
+                         "Other follicular disorders",
+                         "Other epidermal thickening",
+                         "Stage II decubitus ulcer",
+                         "Other disorders of skin and subcutaneous tissue, not elsewhere classified",
+                         "Seropositive rheumatoid arthritis",
+                         "Other rheumatoid arthritis",
+                         "Psoriatic and enteropathic arthropathies",
+                         "Other crystal arthropathies",
+                         "Other arthritis",
+                         "Arthrosis of first carpometacarpal joint",
+                         "Other arthrosis",
+                         "Other specific joint derangements",
+                         "Other joint disorders, not elsewhere classified",
+                         "Other necrotizing vasculopathies",
+                         "Other systemic involvement of connective tissue",
+                         "Other deforming dorsopathies",
+                         "Other spondylopathies",
+                         "Other dorsopathies, not elsewhere classified",
+                         "Other disorders of muscle",
+                         "Spontaneous rupture of synovium and tendon",
+                         "Other disorders of synovium and tendon",
+                         "Other bursopathies",
+                         "Other enthesopathies",
+                         "Other soft tissue disorders, not elsewhere classified",
+                         "Fibromyalgia",
+                         "Osteoporosis with pathological fracture",
+                         "Osteoporosis without pathological fracture",
+                         "Other disorders of bone density and structure",
+                         "Other disorders of bone",
+                         "Postprocedural musculoskeletal disorders, not elsewhere classified",
+                         "Recurrent and persistent haematuria",
+                         "Chronic kidney disease, stage 3",
+                         "Chronic kidney disease, stage 4",
+                         "Other disorders of kidney and ureter, not elsewhere classified",
+                         "Other disorders of urinary system",
+                         "Other disorders of penis",
+                         "Other female pelvic inflammatory diseases",
+                         "Other inflammation of vagina and vulva",
+                         "Other noninflammatory disorders of cervix uteri",
+                         "Other noninflammatory disorders of vagina",
+                         "Other noninflammatory disorders of vulva and perineum",
+                         "Excessive, frequent and irregular menstruation",
+                         "Other abnormal uterine and vaginal bleeding",
+                         "Pain and other conditions associated with female genital organs and menstrual cycle",
+                         "Postprocedural disorders of genitourinary system, not elsewhere classified",
+                         "Pre-eclampsia",
+                         "Medical abortion",
+                         "Maternal care for other conditions predominantly related to pregnancy",
+                         "Maternal care for known or suspected malpresentation of fetus",
+                         "Maternal care for known or suspected abnormality of pelvic organs",
+                         "Maternal care for other known or suspected fetal problems",
+                         "Labour and delivery complicated by fetal stress [distress]",
+                         "Other complications of labour and delivery, not elsewhere classified",
+                         "Other maternal diseases classifiable elsewhere but complicating pregnancy, childbirth and the puerperium",
+                         "Abnormal blood-pressure reading, without diagnosis",
+                         "Pain in throat and chest",
+                         "Other symptoms and signs involving the circulatory and respiratory systems",
+                         "Abdominal and pelvic pain",
+                         "Other symptoms and signs involving the digestive system and abdomen",
+                         "Other symptoms and signs involving the nervous and musculoskeletal systems",
+                         "Tendency to fall, not elsewhere classified",
+                         "Other symptoms and signs involving the urinary system",
+                         "Somnolence, stupor and coma",
+                         "Speech disturbances, not elsewhere classified",
+                         "Shock, not elsewhere classified",
+                         "Other complications of internal prosthetic devices, implants and grafts, not elsewhere classified",
+                         "Foreign body entering into or through eye or natural orifice",
+                         "Nosocomial condition",
+                         "Personal history of endocrine, nutritional and metabolic diseases",
+                         "Personal history of diseases of the musculoskeletal system and connective tissue",
+                         "Personal history of diseases of the genitourinary system",
+                         "Personal history of congenital malformations, deformations and chromosomal abnormalities",
+                         "Personal history of other specified conditions",
+                         "Other complications of internal prosthetic devices, implants and grafts, not elsewhere classified",
+                         "Personal history of allergy, other than to drugs and biological substances",
+                         "Personal history of allergy to unspecified drugs, medicaments and biological substances",
+                         "Personal history of allergy to other drugs, medicaments and biological substances
+",
+"Personal history of allergy to drugs, medicaments and biological substances",
+"Personal history of chemotherapy for neoplastic disease",
+"Other noninflammatory disorders of vulva and perineum",
+"Resistance to betalactam antibiotics")
+  )
+
 ```
+
+```{r add_icd10_descriptions}
+
+manual_icd10_map <-
+  readxl::read_xlsx(here::here("data/icd/manual_disease_icd10_mappings.xlsx"))
+
+icd10_descriptions =
+  phecodes |>
+  select(icd10_code = ICD10, 
+         icd10_description = ICD_DESCRIPTION
+         ) |>
+  distinct()
+
+# Expand multiple ICD codes into rows
+to_add_expanded <- manual_icd10_map |>
+  mutate(icd10_code = str_split(icd10_code, ",\\s*")) |>
+  tidyr::unnest(icd10_code)
+
+icd10_descriptions = 
+  bind_rows(
+    icd10_descriptions,
+    to_add_expanded |>
+      select(icd10_code, 
+             icd10_description = icd10_desc),
+    other_icd10_desc
+  ) 
+
+icd10_descriptions = icd10_descriptions |> distinct()
+
+icd10_descriptions = 
+  icd10_descriptions |>
+  group_by(icd10_code) |>
+  summarise(icd10_description = 
+            str_flatten(unique(icd10_description), collapse = "; ", na.rm = T), 
+            .groups = "drop"
+            )
+
+disease_mapping =
+  left_join(disease_mapping,
+            icd10_descriptions,
+            by = "icd10_code",
+            relationship = "many-to-one",
+            na_matches = "never"
+            ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "R871",
+    replacement = "R87"
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_description = 
+    ifelse(icd10_code == "R87",
+           "Abnormal findings in specimens from female genital organs",
+           icd10_description)
+    ) 
+
+
+```
+
+### Missing descriptions for ICD10 codes
+
+```{r missing_icd10_descriptions}
+# check if any ICD10 codes are missing descriptions
+disease_mapping |> 
+  filter(is.na(icd10_description)) |>
+  head()
+```
+
+### Noticing some mistakes in MAPPED trait by icd 10 codes
+
+```{r check_mapped_trait}
+
+gwas_study_info |> 
+  filter(grepl("ICD10 F05", 
+               `DISEASE/TRAIT`)) |> 
+  select(`DISEASE/TRAIT`, MAPPED_TRAIT, collected_all_disease_terms, PUBMED_ID)
+
+
+disease_mapping |> 
+  filter(icd10_code == "F05")
+
+# F05 refers to delirium not induced by alcohol and other psychoactive substances
+# yet, the mapped trait is alcohol withdrawal delirium
+# replace with delirium
+disease_mapping = 
+disease_mapping |>
+  mutate(collected_all_disease_terms = 
+         ifelse(icd10_code == "F05",
+                "delirium",
+                collected_all_disease_terms)
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = 
+         ifelse(grepl("ICD10 F05", `DISEASE/TRAIT`),
+                str_replace_all(collected_all_disease_terms,
+                                pattern = "alcohol-related disorders",
+                                replacement = "delirium"),
+                collected_all_disease_terms)
+         )
+
+```
+
+### Save disease map
+
+
+```{r save_disease_mapping}
+
+disease_mapping = 
+  disease_mapping |> 
+  arrange(collected_all_disease_terms, icd10_code)
+
+fwrite(disease_mapping,
+       here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
+       )
+
+```
+
+
+        
+
+
