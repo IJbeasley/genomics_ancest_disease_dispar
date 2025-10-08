@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreecb8a570c803f4d528369b7b99fca0dcae3fa735ctargetblankcb8a570a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9bbe0ddf1641e9ebf392e866c41b11946258a4fbtargetblank9bbe0dda">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/cb8a570c803f4d528369b7b99fca0dcae3fa735c" target="_blank">cb8a570</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9bbe0ddf1641e9ebf392e866c41b11946258a4fb" target="_blank">9bbe0dd</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreecb8a570c803f4d528369b7b99fca0dcae3fa735ctargetblankcb8a570a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9bbe0ddf1641e9ebf392e866c41b11946258a4fbtargetblank9bbe0dda"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/cb8a570c803f4d528369b7b99fca0dcae3fa735c" target="_blank">cb8a570</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9bbe0ddf1641e9ebf392e866c41b11946258a4fb" target="_blank">9bbe0dd</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -543,6 +543,7 @@ were generated:
 Ignored files:
     Ignored:    .DS_Store
     Ignored:    .Rproj.user/
+    Ignored:    analysis/.DS_Store
     Ignored:    data/.DS_Store
     Ignored:    data/gbd/.DS_Store
     Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
@@ -565,11 +566,6 @@ Ignored files:
     Ignored:    data/icd/~$IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
     Ignored:    data/icd/~$IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
     Ignored:    data/who/
-    Ignored:    diseases.txt
-    Ignored:    manual_icd10_mappings.xlsx
-    Ignored:    not_found_diseases.txt
-    Ignored:    orig_phecode_map.csv
-    Ignored:    original_phecodes_pheinfo.csv
     Ignored:    output/.DS_Store
     Ignored:    output/gwas_cat/
     Ignored:    output/gwas_study_info_cohort_corrected.csv
@@ -581,13 +577,9 @@ Ignored files:
     Ignored:    output/trait_ontology/
     Ignored:    renv/
     Ignored:    sup_table.xlsx
-    Ignored:    zooma.tsv
-    Ignored:    zooma_res.tsv
 
 Untracked files:
-    Untracked:  analysis/garbage_icd_codes.Rmd
     Untracked:  analysis/gwas_to_gbd.Rmd
-    Untracked:  disease_mapping.R
 
 Unstaged changes:
     Modified:   analysis/disease_inves_by_ancest.Rmd
@@ -641,6 +633,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/9bbe0ddf1641e9ebf392e866c41b11946258a4fb/analysis/map_trait_to_icd10.Rmd" target="_blank">9bbe0dd</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-08
+</td>
+<td>
+Updating icd 10 mapping
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/ec027a3c722388c1c87eba69103f7e736b49e378/docs/map_trait_to_icd10.html" target="_blank">ec027a3</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-08
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -726,8 +752,6 @@ class="section level1">
 <h2>Create a mapping table</h2>
 <pre class="r"><code>disease_mapping &lt;- gwas_study_info |&gt;
   filter(DISEASE_STUDY == T) |&gt;
-  filter(collected_all_disease_terms != &quot; &quot;) |&gt;
-  filter(collected_all_disease_terms != &quot;&quot;) |&gt;
   tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
                                delim = &quot;, &quot;) |&gt;
   select(`DISEASE/TRAIT`, 
@@ -735,10 +759,15 @@ class="section level1">
          PUBMED_ID) |&gt;
   distinct()
 
+
+disease_mapping =
+  disease_mapping |&gt;
+  filter(collected_all_disease_terms != &quot;&quot;)
+
 print(&quot;Number of unique disease trait &amp; study pairs&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique disease trait &amp; study pairs&quot;</code></pre>
 <pre class="r"><code>nrow(disease_mapping)</code></pre>
-<pre><code>[1] 37378</code></pre>
+<pre><code>[1] 38248</code></pre>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;,
                                gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != &quot;&quot;])  |&gt;
   unlist() |&gt;
@@ -749,7 +778,7 @@ diseases &lt;- unique(diseases)
 print(&quot;Number of unique disease terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique disease terms&quot;</code></pre>
 <pre class="r"><code>print(length(diseases))</code></pre>
-<pre><code>[1] 1687</code></pre>
+<pre><code>[1] 1755</code></pre>
 </div>
 <div id="get-icd10-codes-from-phecodes" class="section level2">
 <h2>Get ICD10 codes from PheCodes</h2>
@@ -800,7 +829,7 @@ left_join(disease_mapping,
 disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 3273</code></pre>
+<pre><code>[1] 3438</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
   head()</code></pre>
@@ -838,7 +867,7 @@ disease_mapping |&gt;
 <pre class="r"><code>disease_mapping |&gt;
     filter(is.na(icd10_code) &amp; !is.na(phecode)) |&gt; 
     nrow()</code></pre>
-<pre><code>[1] 316</code></pre>
+<pre><code>[1] 322</code></pre>
 <pre class="r"><code>phecode = c(&quot;38.30&quot;,
             &quot;79.90&quot;,
             &quot;110.00&quot;,
@@ -900,7 +929,43 @@ disease_mapping |&gt;
             &quot;291.00&quot;,
             &quot;555.00&quot;,
             &quot;562.00&quot;,
-            &quot;578.00&quot;)
+            &quot;578.00&quot;,
+            &quot;783.1&quot;,
+            &quot;536.80&quot;,
+            &quot;427.40&quot;,
+            &quot;443.00&quot;,
+            &quot;41.80&quot;,
+            &quot;41.90&quot;,
+            &quot;244.00&quot;,
+            &quot;250.00&quot;,
+            &quot;427.40&quot;,
+            &quot;526.40&quot;,
+            &quot;977.00&quot;,
+            &quot;840.20&quot;,
+            &quot;823.00&quot;,
+            &quot;751.00&quot;,
+            &quot;743.00&quot;,
+            &quot;270.38&quot;,
+            &quot;504.10&quot;,
+            &quot;253.40&quot;,
+            &quot;279.20&quot;,
+            &quot;426.22&quot;,
+            &quot;537.1&quot;,
+            &quot;707.20&quot;,
+            &quot;736.10&quot;,
+            &quot;789.10&quot;,
+            &quot;290.13&quot;,
+            &quot;327.70&quot;,
+            &quot;433.60&quot;,
+            &quot;695.00&quot;,
+            &quot;602.30&quot;,
+            &quot;375.10&quot;,
+            &quot;560.00&quot;,
+            &quot;586.10&quot;,
+            &quot;593.20&quot;,
+            &quot;620.10&quot;,
+            &quot;475.90&quot;,
+            &quot;799.00&quot;)
 
 icd10_code = c(&quot;A49.9&quot;,
                &quot;B34.9&quot;,
@@ -963,7 +1028,43 @@ icd10_code = c(&quot;A49.9&quot;,
 &quot;F06, F06.1, F07.0, F07.1, F07.2, F07.8, F07.9, F23, F23.0, F23.1, F23.8, F23.9, G47.1, R40.0, R40.1&quot;,
 &quot;K50, K50.0, K50.1, K50.8, K50.9, K51, K51.0, K51.1, K51.2, K51.3, K51.4, K51.5, K51.8, K51.9&quot;,
 &quot;K57, K57.0, K57.1, K57.2, K57.3, K57.4, K57.5, K57.8, K57.9&quot;,
-&quot;K62.5, K92.0, K92.1, K92.2&quot;)
+&quot;K62.5, K92.0, K92.1, K92.2&quot;,
+&quot;R50.8&quot;,
+&quot;K30&quot;,
+&quot;I46, I46.0, I46.9, I49.0&quot;,
+&quot;E10.5, E11.5, E14.5, I73, I73.0, I73.8, I73.9, I79.1, I79.2, I79.8&quot;,
+&quot;B96.8&quot;,
+&quot;U82, U83, U84&quot;,
+&quot;E00, E00.0, E00.1, E00.2, E00.9, E01.8, E02, E03.0, E03.1, E03.2, E03.3, E03.8, E03.9, E89.0&quot;,
+&quot;E10, E10.0, E10.1, E10.2, E10.3, E10.3, E10.3, E10.4, E10.4, E10.6, E10.7, E10.8, E10.9, E11, E11.0, E11.1, E11.2, E11.3, E11.4, E11.6, E11.7, E11.8, E11.9, E12.3, E13, E13.1, E13.3, E13.4, E13.5, E13.6, E13.7, E13.8, E13.9, E14.9, G59.0, G63.2, H36.0, R73.0, R73.9, R81, R82.4, Z96.4&quot;,
+&quot;I46, I46.0, I46.9, I49.0&quot;,
+&quot;K07.6&quot;,
+&quot;Z88.9&quot;,
+&quot;S43.4&quot;,
+&quot;S82.1, S82.3, S82.8&quot;,
+ &quot;Q50.0, Q50.1, Q50.2, Q50.3, Q50.4, Q50.5, Q50.6, Q51, Q51.0, Q51.1, Q51.2, Q51.3, Q51.4, Q51.5, Q51.6, Q51.7, Q51.8, Q51.9, Q52.0, Q52.1, Q52.2, Q52.3, Q52.4, Q52.5, Q52.6, Q52.7, Q52.8, Q52.9, Q53, Q53.0, Q53.1, Q53.2, Q53.9, Q54, Q54.0, Q54.1, Q54.2, Q54.3, Q54.4, Q54.8, Q54.9, Q55, Q55.0, Q55.1, Q55.2, Q55.3, Q55.4, Q55.5, Q55.6, Q55.8, Q55.9, Q56, Q56.0, Q56.1, Q56.2, Q56.3, Q56.4, Q60, Q60.0, Q60.1, Q60.2, Q60.3, Q60.4, Q60.5, Q60.6, Q61, Q61.0, Q61.1, Q61.2, Q61.3, Q61.4, Q61.5, Q61.8, Q61.9, Q62, Q62.0, Q62.1, Q62.3, Q62.4, Q62.5, Q62.6, Q62.7, Q62.8, Q63, Q63.0, Q63.1, Q63.2, Q63.3, Q63.8, Q63.9, Q64.0, Q64.1, Q64.2, Q64.3, Q64.4, Q64.5, Q64.6, Q64.7, Q64.8, Q64.9&quot;,
+&quot;M48.4, M48.5, M80.5, M80.8, M81.6, M81.9, M84.4, M85.9, M89.9&quot;,
+&quot;E88.0&quot;,
+&quot;J84.1, J84.2&quot;,
+&quot;E23.6&quot;,
+&quot;D89.8&quot;,
+&quot;I44.1&quot;,
+&quot;K31.8. K31.9&quot;,
+&quot;L97&quot;,
+&quot;M21.0, M21.1, M21.9&quot;,
+&quot;R11.10&quot;,
+&quot;F03&quot;,
+&quot;G47.6, G25.8&quot;,
+&quot;G43.6&quot;,
+&quot;L49&quot;,
+&quot;N42.3&quot;,
+&quot;H04.1&quot;,
+&quot;K56.6&quot;,
+&quot;N28.8&quot;,
+&quot;R31.2&quot;,
+&quot;N87&quot;,
+&quot;R09.8&quot;,
+&quot;R53&quot;)
 
 icd10_code_origin = rep(&quot;Study PheCode (Manual Mapping)&quot;, 
                         length(phecode))
@@ -971,6 +1072,8 @@ icd10_code_origin = rep(&quot;Study PheCode (Manual Mapping)&quot;,
 to_add = data.frame(phecode, 
                     icd10_code, 
                     icd10_code_origin)
+
+to_add = to_add |&gt; distinct()
 
 to_add = 
   to_add |&gt;
@@ -1000,7 +1103,7 @@ class="section level2">
 disease_mapping |&gt;
   filter(icd10_code_origin == &quot;Study Provided&quot;) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 3568</code></pre>
+<pre><code>[1] 3763</code></pre>
 <pre class="r"><code># disease_mapping =
 # disease_mapping |&gt;
 #   group_by(collected_all_disease_terms) |&gt;
@@ -1020,7 +1123,7 @@ not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
 print(&quot;Number of diseases not mapped to a single ICD10 code yet:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of diseases not mapped to a single ICD10 code yet:&quot;</code></pre>
 <pre class="r"><code>print(length(not_found_diseases))</code></pre>
-<pre><code>[1] 459</code></pre>
+<pre><code>[1] 487</code></pre>
 </div>
 </div>
 <div id="get-icd10-codes-by-matching-terms" class="section level2">
@@ -1064,7 +1167,7 @@ rows_patch(matched_phenotypes,
 disease_mapping |&gt;
   filter(icd10_code_origin == &quot;Phecode Phenotype Match&quot;) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 4596</code></pre>
+<pre><code>[1] 4664</code></pre>
 </div>
 <div id="how-many-diseases-are-not-mapped-yet-1" class="section level3">
 <h3>How many diseases are not mapped yet?</h3>
@@ -1082,7 +1185,7 @@ matched &lt;- c(disease_mapping_matched$collected_all_disease_terms,
 not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
 
 print(length(not_found_diseases))</code></pre>
-<pre><code>[1] 459</code></pre>
+<pre><code>[1] 487</code></pre>
 </div>
 <div id="match-disease-terms-to-icd-10-descriptions"
 class="section level3">
@@ -1126,7 +1229,7 @@ disease_mapping =
 disease_mapping |&gt;
   filter(icd10_code_origin == &quot;ICD Description Match&quot;) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 12161</code></pre>
+<pre><code>[1] 12190</code></pre>
 </div>
 <div id="how-many-diseases-are-not-mapped-yet-2" class="section level3">
 <h3>How many diseases are not mapped yet?</h3>
@@ -1142,11 +1245,11 @@ matched &lt;- c(disease_mapping_matched$collected_all_disease_terms,
 not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
 
 print(length(not_found_diseases))</code></pre>
-<pre><code>[1] 459</code></pre>
+<pre><code>[1] 487</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   filter(is.na(icd10_code_origin)) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 13674</code></pre>
+<pre><code>[1] 14039</code></pre>
 </div>
 </div>
 </div>
@@ -1173,7 +1276,92 @@ disease_mapping =
 <pre class="r"><code>disease_mapping |&gt;
   filter(icd10_code_origin == &quot;Manual Mapping (collected_all_disease_terms)&quot;) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 1194</code></pre>
+<pre><code>[1] 1231</code></pre>
+<div id="additional-manual-mapping" class="section level2">
+<h2>Additional manual mapping</h2>
+<pre class="r"><code>disease_mapping =
+  disease_mapping |&gt;
+  mutate(icd10_code = ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                            grepl(&quot;Anthracycline-induced cardiotoxicity|Trastuzumab-induced cardiotoxicity&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                            &quot;I42.7, T45.1&quot;,
+                             icd10_code)) |&gt;
+mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                  grepl(&quot;Anthracycline-induced cardiotoxicity|Trastuzumab-induced cardiotoxicity&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                &quot;Manual Mapping (from DISEASE/TRAIT)&quot;,
+                icd10_code_origin)
+         )
+
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(icd10_code = ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                            grepl(&quot;Induration at the injection site after COVID-19&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                            &quot;R23.4&quot;,
+                             icd10_code)) |&gt;
+  mutate(collected_all_disease_terms = 
+           ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                    grepl(&quot;Induration at the injection site after COVID-19&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                  &quot;induration of skin&quot;,
+                  collected_all_disease_terms)) |&gt;
+  mutate(icd10_code_origin =
+           ifelse(collected_all_disease_terms == &quot;induration of skin&quot;,
+                  &quot;Manual Mapping (from DISEASE/TRAIT)&quot;,
+                  icd10_code_origin)
+         )
+
+
+# N64.5
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(icd10_code = ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                            grepl(&quot;Induration \\(&gt;= grade 2\\) in breast cancer treated with radiotherapy&quot;, 
+                                  `DISEASE/TRAIT`, ignore.case = T),
+                            &quot;N64.5&quot;,
+                             icd10_code)) |&gt;
+  mutate(collected_all_disease_terms = 
+           ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                    grepl(&quot;Induration \\(&gt;= grade 2\\) in breast cancer treated with radiotherapy&quot;, 
+                          `DISEASE/TRAIT`, ignore.case = T),
+                  &quot;induration of breast&quot;,
+                  collected_all_disease_terms)) |&gt;
+  mutate(icd10_code_origin =
+           ifelse(collected_all_disease_terms == &quot;induration of breast&quot;,
+                  &quot;Manual Mapping (from DISEASE/TRAIT)&quot;,
+                  icd10_code_origin)
+         )
+
+
+# T45.1
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(icd10_code = ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                            grepl(&quot;Nivolumab-induced immune-related adverse events in cancer|Response to immune checkpoint inhibitors in melanoma&quot;, 
+                                  `DISEASE/TRAIT`, ignore.case = T),
+                            &quot;T45.1&quot;,
+                             icd10_code)) |&gt;
+  mutate(icd10_code_origin =
+           ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                    grepl(&quot;Nivolumab-induced immune-related adverse events in cancer|Response to immune checkpoint inhibitors in melanoma&quot;, 
+                          `DISEASE/TRAIT`, ignore.case = T),
+                  &quot;Manual Mapping (from DISEASE/TRAIT)&quot;,
+                  icd10_code_origin)
+         )
+
+
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(icd10_code = ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                            grepl(&quot;Methotrexate-related central neurotoxicity in children treated for acute lymphoblastic leukemia&quot;, 
+                                  `DISEASE/TRAIT`, ignore.case = T),
+                            &quot;G92, T45.1&quot;,
+                             icd10_code)) |&gt;
+  mutate(icd10_code_origin =
+           ifelse(collected_all_disease_terms == &quot;toxicity&quot; &amp; 
+                    grepl(&quot;Methotrexate-related central neurotoxicity in children treated for acute lymphoblastic leukemia&quot;, 
+                          `DISEASE/TRAIT`, ignore.case = T),
+                  &quot;Manual Mapping (from DISEASE/TRAIT)&quot;,
+                  icd10_code_origin)
+         )</code></pre>
 <div id="how-many-diseases-are-not-mapped-yet-3" class="section level3">
 <h3>How many diseases are not mapped yet?</h3>
 <pre class="r"><code># disease_mapping =
@@ -1189,7 +1377,8 @@ matched &lt;- c(disease_mapping_matched$collected_all_disease_terms,
 not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
 
 print(length(not_found_diseases))</code></pre>
-<pre><code>[1] 133</code></pre>
+<pre><code>[1] 149</code></pre>
+</div>
 </div>
 </div>
 <div id="inferring-icd10-codes-from-similar-study-icd10-codes"
@@ -1223,586 +1412,29 @@ disease_mapping =
              study_icd_map,
              unmatched = &quot;ignore&quot;)</code></pre>
 <pre><code>Matching, by = &quot;collected_all_disease_terms&quot;</code></pre>
-<pre class="r"><code>disease_mapping |&gt; 
-  filter(!is.na(icd10_code)) |&gt; filter(collected_all_disease_terms == &quot;adhd&quot;)</code></pre>
-<pre><code>                                                                                                                                                                                                DISEASE/TRAIT
-1                                                                                                                                  Attention deficit hyperactivity disorder and obsessive compulsive disorder
-2                                                                                                                                                    Attention deficit hyperactivity disorder or cannabis use
-3                                                                                                                                                                    Attention deficit hyperactivity disorder
-4                                                                                                                           Response to methylphenidate treatment in attention-deficit/hyperactivity disorder
-5                                                                                                                                                                    Attention deficit hyperactivity disorder
-6                                                                                                                        Oppositional defiant disorder dimensions in attention-deficit hyperactivity disorder
-7                                                                                                                                                Attention function in attention deficit hyperactive disorder
-8                                                                                                                                                  Aggressiveness in attention deficit hyperactivity disorder
-9                                                                                                                        Oppositional defiant disorder dimensions in attention-deficit hyperactivity disorder
-10                                                                                                                                                                   Attention deficit hyperactivity disorder
-11                                                                                                                Attention deficit hyperactivity disorder symptoms (maternal expressed emotions interaction)
-12                                                                                                                                              Attention deficit hyperactivity disorder and conduct disorder
-13                                                                                                                                                                   Attention deficit hyperactivity disorder
-14                                                                                                                                               Attention deficit hyperactivity disorder (combined symptoms)
-15                                                                                                                              Attention deficit hyperactivity disorder (hyperactivity-impulsivity symptoms)
-16                                                                                                                                            Attention deficit hyperactivity disorder (inattention symptoms)
-17                                                                                                                                                                   Attention deficit hyperactivity disorder
-18                                                                                                                                                   Attention deficit hyperactivity disorder (time to onset)
-19                                                                                                                                                                   Attention deficit hyperactivity disorder
-20                                                                                                                                                Attention deficit hyperactivity disorder motor coordination
-21                                                                                                                                                                   Attention deficit hyperactivity disorder
-22                                                                                                                                                                   Attention deficit hyperactivity disorder
-23                                                                                                                                                                   Attention deficit hyperactivity disorder
-24                                                              Autism spectrum disorder, attention deficit-hyperactivity disorder, bipolar disorder, major depressive disorder, and schizophrenia (combined)
-25                                                                                                                                                                   Attention deficit hyperactivity disorder
-26                                                                                                                                                                   Attention deficit hyperactivity disorder
-27                                                                                                                                                                   Attention deficit hyperactivity disorder
-28                                                                                                                                                                   Attention deficit hyperactivity disorder
-29                                                                                                                      Executive inhibition (Stroop WIT and CIT) in attention deficit hyperactivity disorder
-30                                                                                                                            Bipolar disorder (age of onset &lt;21) or attention deficit hyperactivity disorder
-31                                                                                                                                               Bipolar disorder or attention deficit hyperactivity disorder
-32                                                                                                                                                 Attention deficit hyperactivity disorder (sex interaction)
-33                                                                                                                                                 Sex difference in attention deficit hyperactivity disorder
-34                                                                                                                                                                   Attention deficit hyperactivity disorder
-35                                                                                                       Attention deficit hyperactivity disorder or educational attainment (years of education) (pleiotropy)
-36                                                                                                                                                     Attention deficit hyperactivity disorder symptom score
-37                                                                                                              Attention deficit hyperactivity disorder, intelligence or educational attainment (pleiotropy)
-38                                                                                                                                                                                 Executive function in ADHD
-39                                                                                                                                                                   Attention deficit hyperactivity disorder
-40                                                                                                                                                        Persistent attention-deficit hyperactivity disorder
-41                                                                                                                                                        Asthma and attention deficit hyperactivity disorder
-42                                                                                                                                                                                            Mental disorder
-43                                                                                                                                                         Psychiatric disorder without cannabis use disorder
-44                                                                                                                          Irritable bowel syndrome or attention-deficit/hyperactivity disorder (pleiotropy)
-45                                                                                                                              Peptic ulcer disease or attention-deficit/hyperactivity disorder (pleiotropy)
-46                                                                                                                   Gastroesophageal reflux disease or attention-deficit/hyperactivity disorder (pleiotropy)
-47                                                                                                                                                                   Attention deficit hyperactivity disorder
-48                                                                                                                                                            Attention deficit hyperactivity disorder (MTAG)
-49                                                                                                                                                       Substance uses or psychiatric disorders (pleiotropy)
-50                                                                                                                                Attention deficit hyperactivity disorder or hippocampal volume (pleiotropy)
-51                                                                                                                          Attention deficit hyperactivity disorder or nucleus accumbens volume (pleiotropy)
-52                                                                                                                            Attention deficit hyperactivity disorder or caudate nucleus volume (pleiotropy)
-53                                                                                                                               Attention deficit hyperactivity disorder or intracranial volume (pleiotropy)
-54                                                                                                                                    Attention deficit hyperactivity disorder or putamen volume (pleiotropy)
-55                                                                                                                                   Attention deficit hyperactivity disorder or amygdala volume (pleiotropy)
-56                                                                                                                                   Attention deficit hyperactivity disorder or pallidum volume (pleiotropy)
-57                                                                                                                                   Attention deficit hyperactivity disorder or thalamus volume (pleiotropy)
-58                                                                                                                                    Attention deficit hyperactivity disorder (ADuLT model adjusted for sex)
-59                                                                                                                                                     Attention deficit hyperactivity disorder (ADuLT model)
-60                                                                                                                               Attention deficit hyperactivity disorder (ADuLT model adjusted for age, sex)
-61                                                                                                                                   Attention deficit hyperactivity disorder (SPACox model adjusted for sex)
-62                                                                                                                                           Attention deficit hyperactivity disorder (adjusted for age, sex)
-63                                                                                                                                                Attention deficit hyperactivity disorder (adjusted for sex)
-64                                                                                                                                                                   Attention deficit hyperactivity disorder
-65                                                                                                                              Attention deficit hyperactivity disorder (SPACox model adjusted for age, sex)
-66                                                                                                                              Attention deficit hyperactivity disorder or risk-taking behavior (pleiotropy)
-67                                                                                                                       Attention deficit hyperactivity disorder (first diagnosed in adulthood vs childhood)
-68                                                                                                                                                                   Attention deficit hyperactivity disorder
-69                                                                                                                                         Substance use disorder in attention deficit hyperactivity disorder
-70                                                                                                                                       Autism spectrum disorder in attention deficit hyperactivity disorder
-71                                                                                                                                      Attention deficit hyperactivity disorder first diagnosed in adulthood
-72                                                                                                                            Attention deficit hyperactivity disorder or Substance use disorder (pleiotropy)
-73                                                                                                                          Attention deficit hyperactivity disorder or autism spectrum disorder (pleiotropy)
-74                                                                                                                                        Attention deficit hyperactivity disorder and Substance use disorder
-75                                                                                                                                      Attention deficit hyperactivity disorder and Autism spectrum disorder
-76                                                                                                                                            ADHD vs autism spectrum disorder (ordinary least squares (OLS))
-77                                                                                                                                       ADHD vs obsessive compulsive disorder (ordinary least squares (OLS))
-78                                                                                                                         ADHD vs Tourette&#39;s syndrome and other tic disorders (ordinary least squares (OLS))
-79                                                                                                                                                    Bipolar disorder vs ADHD (ordinary least squares (OLS))
-80                                                                                                                                           Major depressive disorder vs ADHD (ordinary least squares (OLS))
-81                                                                                                                                                       Schizophrenia vs ADHD (ordinary least squares (OLS))
-82                                                                                                                                                    ADHD vs anorexia nervosa (ordinary least squares (OLS))
-83                                                                                                                                                            Externalizing behaviour (multivariate analysis)
-84                                                                                                                                                                   Attention deficit hyperactivity disorder
-85                                                                                                                                           Education attainment or attention deficit hyperactivity disorder
-86                                                                                                                          Attention deficit hyperactivity disorder or autism spectrum disorder (pleiotropy)
-87                                                                                  Type 2 diabetes and Attention deficit hiperactivty disorder or Major depressive disorder or obsessive compulsive disorder
-88                                                                                              Type 2 diabetes and Attention deficit hiperactivty disorder or schyzophrenia or obsessive compulsive disorder
-89                                                                              Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or Major depressive disorder or schyzophrenia
-90                                                                                                                                                Type 2 diabetes and Attention deficit hiperactivty disorder
-91                                                                                                                               Type 2 diabetes and Attention deficit hiperactivty disorder or schyzophrenia
-92                                                                                                               Type 2 diabetes and Attention deficit hiperactivty disorder or obsessive compulsive disorder
-93                                                                                                                            Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa
-94                                                                                                           Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or schyzophrenia
-95                                                                                               Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or Major depressive disorder
-96                                                                                           Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or obsessive compulsive disorder
-97                                                                                                                   Type 2 diabetes and Attention deficit hiperactivty disorder or Major depressive disorder
-98                                                                                                  Type 2 diabetes and Attention deficit hiperactivty disorder or Major depressive disorder or schyzophrenia
-99                                                                 Type 2 diabetes and Attention deficit hiperactivty disorder or Major depressive disorder or schyzophrenia or obsessive compulsive disorder
-100                                                                         Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or schyzophrenia or obsessive compulsive disorder
-101                                                             Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or Major depressive disorder or obsessive compulsive disorder
-102                                            Type 2 diabetes and Attention deficit hiperactivty disorder or Anorexia nervosa or Major depressive disorder or schyzophrenia or obsessive compulsive disorder
-103                                                                                                                                                  Attention deficit hyperactivity disorder (PheCode 313.1)
-104                                                                                                                                                                  Attention deficit hyperactivity disorder
-105                                                                                                                                                     Attention deficit hyperactivity disorder (persistent)
-106                                                                                                                                                      Attention deficit hyperactivity disorder (childhood)
-107                                                                                                                                                           Attention deficit hyperactivity disorder (MTAG)
-108                                                                                                                                                                                Neuropsychiatric disorders
-109                                                                                                                                                                  Attention deficit hyperactivity disorder
-110                                                                                                                                           Attention deficit hyperactivity disorder (inattention symptoms)
-111                                                                                                                             Attention deficit hyperactivity disorder (hyperactivity-impulsivity symptoms)
-112                                                                                                                                                                  Attention deficit hyperactivity disorder
-113                                                                                                                                                               Disruptive behavior (multivariate analysis)
-114                                                                                                         Attention deficit hyperactivity disorder or autism spectrum disorder or intelligence (pleiotropy)
-115                                                                                                                                                    Executive inhibition (color interference time) in ADHD
-116                                                                                                                                                     Executive inhibition (word interference time) in ADHD
-117                                                                                                                                                                                           Mental disorder
-118                                                                                                                                                      Psychiatric diseases (pleiotropy) (HIPO component 1)
-119 Anorexia nervosa, attention-deficit/hyperactivity disorder, autism spectrum disorder, bipolar disorder, major depression, obsessive-compulsive disorder, schizophrenia, or Tourette syndrome (pleiotropy)
-120                                                                                                                                           Attention deficit hyperactivity disorder (inattention symptoms)
-121                                                                                                                                            Emotional lability in attention deficit hyperactivity disorder
-122                                                                                                                                                    Attention deficit hyperactivity disorder symptom score
-123                                                                                                                                                                    Stimulant treatment initiation in ADHD
-124                                                                                                                                                               Stimulant treatment discontinuation in ADHD
-125                                                                                                                                                                 Switch to non-stimulant treatment in ADHD
-126                                                                                                                                  Disruptive behavior disorder in attention deficit hyperactivity disorder
-127                                                                                                                                                                  Attention deficit hyperactivity disorder
-128                                                                                                                                 Disruptive behavior disorder and attention deficit hyperactivity disorder
-129                                                                                                                                                      Attention deficit hyperactivity disorder (childhood)
-130                                                                                                                                                     Attention deficit hyperactivity disorder (persistent)
-131                                                                                                                                                 Attention deficit hyperactivity disorder (late-diagnosed)
-132                                                                                             Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder
-133                                                                                          Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Obsesive-compulsive disorder
-134                                                                                                         Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Schizophrenia
-135                                                                                              Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Autism spectrum disorder
-136                                                                                 Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Obsesive-compulsive disorder
-137                                                                                                Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Schizophrenia
-138                                                                                     Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Autism spectrum disorder
-139                                                                                             Obesity class I and Attention deficit hyperactivity disorder or Obsesive-compulsive disorder or Schizophrenia
-140                                                                                  Obesity class I and Attention deficit hyperactivity disorder or Obsesive-compulsive disorder or Autism spectrum disorder
-141                                                                                                 Obesity class I and Attention deficit hyperactivity disorder or Schizophrenia or Autism spectrum disorder
-142                                                                            Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Schizophrenia
-143                                                                                                                         Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa
-144                                                                                                                            Obesity class II and Attention deficit hyperactivity disorder or Schizophrenia
-145                                                                                                                Obesity class II and Attention deficit hyperactivity disorder or Major depressive disorder
-146                                                                                                             Obesity class II and Attention deficit hyperactivity disorder or Obsesive-compulsive disorder
-147                                                                                                                 Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder
-148                                                                                                                          Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa
-149                                                                                                              Obesity class I and Attention deficit hyperactivity disorder or Obsesive-compulsive disorder
-150                                                                                                                             Obesity class I and Attention deficit hyperactivity disorder or Schizophrenia
-151                                                                                                                  Obesity class I and Attention deficit hyperactivity disorder or Autism spectrum disorder
-152                                                             Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Obsesive-compulsive disorder
-153                                                                 Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Autism spectrum disorder
-154                                                                         Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Obsesive-compulsive disorder or Schizophrenia
-155                                                              Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Obsesive-compulsive disorder or Autism spectrum disorder
-156                                                                             Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Schizophrenia or Autism spectrum disorder
-157                                                                Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Obsesive-compulsive disorder or Schizophrenia
-158                                                     Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Obsesive-compulsive disorder or Autism spectrum disorder
-159                                                                    Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Schizophrenia or Autism spectrum disorder
-160                                                                 Obesity class I and Attention deficit hyperactivity disorder or Obsesive-compulsive disorder or Schizophrenia or Autism spectrum disorder
-161                                 Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Obsesive-compulsive disorder or Autism spectrum disorder
-162                                            Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Obsesive-compulsive disorder or Schizophrenia
-163                                                Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Schizophrenia or Autism spectrum disorder
-164                                    Obesity class I and Attention deficit hyperactivity disorder or Major depressive disorder or Obsesive-compulsive disorder or Schizophrenia or Autism spectrum disorder
-165                                             Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Obsesive-compulsive disorder or Schizophrenia or Autism spectrum disorder
-166                Obesity class I and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Obsesive-compulsive disorder or Schizophrenia or Autism spectrum disorder
-167                                                                                                                                             Obesity class II and attention deficit hyperactivity disorder
-168                                                                                            Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder
-169                                                                                         Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Obsesive-compulsive disorder
-170                                                                                Obesity class II and Attention deficit hyperactivity disorder or Major depressive disorder or Obsesive-compulsive disorder
-171                                                                                                        Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Schizophrenia
-172                                                                                               Obesity class II and Attention deficit hyperactivity disorder or Major depressive disorder or Schizophrenia
-173                                                                                            Obesity class II and Attention deficit hyperactivity disorder or Obsesive-compulsive disorder or Schizophrenia
-174                                                            Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Obsesive-compulsive disorder
-175                                                                           Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Schizophrenia
-176                                                                        Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Obsesive-compulsive disorder or Schizophrenia
-177                                                               Obesity class II and Attention deficit hyperactivity disorder or Major depressive disorder or Obsesive-compulsive disorder or Schizophrenia
-178                                           Obesity class II and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder or Obsesive-compulsive disorder or Schizophrenia
-179                                                                                                                                            Obesity class III and attention deficit hyperactivity disorder
-180                                                                                                                        Obesity class III and Attention deficit hyperactivity disorder or Anorexia nervosa
-181                                                                                                               Obesity class III and Attention deficit hyperactivity disorder or Major depressive disorder
-182                                                                                           Obesity class III and Attention deficit hyperactivity disorder or Anorexia nervosa or Major depressive disorder
-183                                                                                                                                              Obesity class I and Attention deficit hyperactivity disorder
-    collected_all_disease_terms PUBMED_ID phecode        icd10_code
-1                          adhd  28386217      NA F90, F90.1, F90.9
-2                          adhd  30610198      NA F90, F90.1, F90.9
-3                          adhd  28809852      NA F90, F90.1, F90.9
-4                          adhd  29382897      NA F90, F90.1, F90.9
-5                          adhd  30478444      NA F90, F90.1, F90.9
-6                          adhd  26184070      NA F90, F90.1, F90.9
-7                          adhd  26174813      NA F90, F90.1, F90.9
-8                          adhd  27021288      NA F90, F90.1, F90.9
-9                          adhd  27021288      NA F90, F90.1, F90.9
-10                         adhd  20732626      NA F90, F90.1, F90.9
-11                         adhd  18846501      NA F90, F90.1, F90.9
-12                         adhd  18951430      NA F90, F90.1, F90.9
-13                         adhd  20732627      NA F90, F90.1, F90.9
-14                         adhd  23527680      NA F90, F90.1, F90.9
-15                         adhd  23527680      NA F90, F90.1, F90.9
-16                         adhd  23527680      NA F90, F90.1, F90.9
-17                         adhd  22420046      NA F90, F90.1, F90.9
-18                         adhd  18937294      NA F90, F90.1, F90.9
-19                         adhd  18821565      NA F90, F90.1, F90.9
-20                         adhd  21473668      NA F90, F90.1, F90.9
-21                         adhd  18839057      NA F90, F90.1, F90.9
-22                         adhd  23728934      NA F90, F90.1, F90.9
-23                         adhd  20732625      NA F90, F90.1, F90.9
-24                         adhd  23453885      NA F90, F90.1, F90.9
-25                         adhd  18980221      NA F90, F90.1, F90.9
-26                         adhd  21784300      NA F90, F90.1, F90.9
-27                         adhd  22012869      NA F90, F90.1, F90.9
-28                         adhd  18821564      NA F90, F90.1, F90.9
-29                         adhd  28416812      NA F90, F90.1, F90.9
-30                         adhd  27890468      NA F90, F90.1, F90.9
-31                         adhd  27890468      NA F90, F90.1, F90.9
-32                         adhd  29325848      NA F90, F90.1, F90.9
-33                         adhd  29325848      NA F90, F90.1, F90.9
-34                         adhd  29325848      NA F90, F90.1, F90.9
-35                         adhd  29413154      NA F90, F90.1, F90.9
-36                         adhd  27663945      NA F90, F90.1, F90.9
-37                         adhd  32061372      NA F90, F90.1, F90.9
-38                         adhd  29769613      NA F90, F90.1, F90.9
-39                         adhd  25875332      NA F90, F90.1, F90.9
-40                         adhd  25284319      NA F90, F90.1, F90.9
-41                         adhd  31619474      NA F90, F90.1, F90.9
-42                         adhd  31209380      NA F90, F90.1, F90.9
-43                         adhd  31209380      NA F90, F90.1, F90.9
-44                         adhd  36753304      NA F90, F90.1, F90.9
-45                         adhd  36753304      NA F90, F90.1, F90.9
-46                         adhd  36753304      NA F90, F90.1, F90.9
-47                         adhd  32606422      NA F90, F90.1, F90.9
-48                         adhd  32606422      NA F90, F90.1, F90.9
-49                         adhd  32762793      NA F90, F90.1, F90.9
-50                         adhd  30818988      NA F90, F90.1, F90.9
-51                         adhd  30818988      NA F90, F90.1, F90.9
-52                         adhd  30818988      NA F90, F90.1, F90.9
-53                         adhd  30818988      NA F90, F90.1, F90.9
-54                         adhd  30818988      NA F90, F90.1, F90.9
-55                         adhd  30818988      NA F90, F90.1, F90.9
-56                         adhd  30818988      NA F90, F90.1, F90.9
-57                         adhd  30818988      NA F90, F90.1, F90.9
-58                         adhd  37689771      NA F90, F90.1, F90.9
-59                         adhd  37689771      NA F90, F90.1, F90.9
-60                         adhd  37689771      NA F90, F90.1, F90.9
-61                         adhd  37689771      NA F90, F90.1, F90.9
-62                         adhd  37689771      NA F90, F90.1, F90.9
-63                         adhd  37689771      NA F90, F90.1, F90.9
-64                         adhd  37689771      NA F90, F90.1, F90.9
-65                         adhd  37689771      NA F90, F90.1, F90.9
-66                         adhd  38565336      NA F90, F90.1, F90.9
-67                         adhd  38036780      NA F90, F90.1, F90.9
-68                         adhd  38036780      NA F90, F90.1, F90.9
-69                         adhd  38036780      NA F90, F90.1, F90.9
-70                         adhd  38036780      NA F90, F90.1, F90.9
-71                         adhd  38036780      NA F90, F90.1, F90.9
-72                         adhd  38036780      NA F90, F90.1, F90.9
-73                         adhd  38036780      NA F90, F90.1, F90.9
-74                         adhd  38036780      NA F90, F90.1, F90.9
-75                         adhd  38036780      NA F90, F90.1, F90.9
-76                         adhd  33686288      NA F90, F90.1, F90.9
-77                         adhd  33686288      NA F90, F90.1, F90.9
-78                         adhd  33686288      NA F90, F90.1, F90.9
-79                         adhd  33686288      NA F90, F90.1, F90.9
-80                         adhd  33686288      NA F90, F90.1, F90.9
-81                         adhd  33686288      NA F90, F90.1, F90.9
-82                         adhd  33686288      NA F90, F90.1, F90.9
-83                         adhd  34446935      NA F90, F90.1, F90.9
-84                         adhd  37865391      NA F90, F90.1, F90.9
-85                         adhd  38250258      NA F90, F90.1, F90.9
-86                         adhd  35717853      NA F90, F90.1, F90.9
-87                         adhd  36738649      NA F90, F90.1, F90.9
-88                         adhd  36738649      NA F90, F90.1, F90.9
-89                         adhd  36738649      NA F90, F90.1, F90.9
-90                         adhd  36738649      NA F90, F90.1, F90.9
-91                         adhd  36738649      NA F90, F90.1, F90.9
-92                         adhd  36738649      NA F90, F90.1, F90.9
-93                         adhd  36738649      NA F90, F90.1, F90.9
-94                         adhd  36738649      NA F90, F90.1, F90.9
-95                         adhd  36738649      NA F90, F90.1, F90.9
-96                         adhd  36738649      NA F90, F90.1, F90.9
-97                         adhd  36738649      NA F90, F90.1, F90.9
-98                         adhd  36738649      NA F90, F90.1, F90.9
-99                         adhd  36738649      NA F90, F90.1, F90.9
-100                        adhd  36738649      NA F90, F90.1, F90.9
-101                        adhd  36738649      NA F90, F90.1, F90.9
-102                        adhd  36738649      NA F90, F90.1, F90.9
-103                        adhd  39024449   313.1 F90, F90.1, F90.9
-104                        adhd  32279069      NA F90, F90.1, F90.9
-105                        adhd  32279069      NA F90, F90.1, F90.9
-106                        adhd  32279069      NA F90, F90.1, F90.9
-107                        adhd  33479212      NA F90, F90.1, F90.9
-108                        adhd  33479212      NA F90, F90.1, F90.9
-109                        adhd  30563984      NA F90, F90.1, F90.9
-110                        adhd  32595297      NA F90, F90.1, F90.9
-111                        adhd  32595297      NA F90, F90.1, F90.9
-112                        adhd  32595297      NA F90, F90.1, F90.9
-113                        adhd  36324656      NA F90, F90.1, F90.9
-114                        adhd  35764056      NA F90, F90.1, F90.9
-115                        adhd  38430954      NA F90, F90.1, F90.9
-116                        adhd  38430954      NA F90, F90.1, F90.9
-117                        adhd  30692689      NA F90, F90.1, F90.9
-118                        adhd  30289880      NA F90, F90.1, F90.9
-119                        adhd  31835028      NA F90, F90.1, F90.9
-120                        adhd  31959275      NA F90, F90.1, F90.9
-121                        adhd  31085060      NA F90, F90.1, F90.9
-122                        adhd  30659475      NA F90, F90.1, F90.9
-123                        adhd  34154395      NA F90, F90.1, F90.9
-124                        adhd  34154395      NA F90, F90.1, F90.9
-125                        adhd  34154395      NA F90, F90.1, F90.9
-126                        adhd  33495439      NA F90, F90.1, F90.9
-127                        adhd  33495439      NA F90, F90.1, F90.9
-128                        adhd  33495439      NA F90, F90.1, F90.9
-129                        adhd  35927488      NA F90, F90.1, F90.9
-130                        adhd  35927488      NA F90, F90.1, F90.9
-131                        adhd  35927488      NA F90, F90.1, F90.9
-132                        adhd  36137488      NA F90, F90.1, F90.9
-133                        adhd  36137488      NA F90, F90.1, F90.9
-134                        adhd  36137488      NA F90, F90.1, F90.9
-135                        adhd  36137488      NA F90, F90.1, F90.9
-136                        adhd  36137488      NA F90, F90.1, F90.9
-137                        adhd  36137488      NA F90, F90.1, F90.9
-138                        adhd  36137488      NA F90, F90.1, F90.9
-139                        adhd  36137488      NA F90, F90.1, F90.9
-140                        adhd  36137488      NA F90, F90.1, F90.9
-141                        adhd  36137488      NA F90, F90.1, F90.9
-142                        adhd  36137488      NA F90, F90.1, F90.9
-143                        adhd  36137488      NA F90, F90.1, F90.9
-144                        adhd  36137488      NA F90, F90.1, F90.9
-145                        adhd  36137488      NA F90, F90.1, F90.9
-146                        adhd  36137488      NA F90, F90.1, F90.9
-147                        adhd  36137488      NA F90, F90.1, F90.9
-148                        adhd  36137488      NA F90, F90.1, F90.9
-149                        adhd  36137488      NA F90, F90.1, F90.9
-150                        adhd  36137488      NA F90, F90.1, F90.9
-151                        adhd  36137488      NA F90, F90.1, F90.9
-152                        adhd  36137488      NA F90, F90.1, F90.9
-153                        adhd  36137488      NA F90, F90.1, F90.9
-154                        adhd  36137488      NA F90, F90.1, F90.9
-155                        adhd  36137488      NA F90, F90.1, F90.9
-156                        adhd  36137488      NA F90, F90.1, F90.9
-157                        adhd  36137488      NA F90, F90.1, F90.9
-158                        adhd  36137488      NA F90, F90.1, F90.9
-159                        adhd  36137488      NA F90, F90.1, F90.9
-160                        adhd  36137488      NA F90, F90.1, F90.9
-161                        adhd  36137488      NA F90, F90.1, F90.9
-162                        adhd  36137488      NA F90, F90.1, F90.9
-163                        adhd  36137488      NA F90, F90.1, F90.9
-164                        adhd  36137488      NA F90, F90.1, F90.9
-165                        adhd  36137488      NA F90, F90.1, F90.9
-166                        adhd  36137488      NA F90, F90.1, F90.9
-167                        adhd  36137488      NA F90, F90.1, F90.9
-168                        adhd  36137488      NA F90, F90.1, F90.9
-169                        adhd  36137488      NA F90, F90.1, F90.9
-170                        adhd  36137488      NA F90, F90.1, F90.9
-171                        adhd  36137488      NA F90, F90.1, F90.9
-172                        adhd  36137488      NA F90, F90.1, F90.9
-173                        adhd  36137488      NA F90, F90.1, F90.9
-174                        adhd  36137488      NA F90, F90.1, F90.9
-175                        adhd  36137488      NA F90, F90.1, F90.9
-176                        adhd  36137488      NA F90, F90.1, F90.9
-177                        adhd  36137488      NA F90, F90.1, F90.9
-178                        adhd  36137488      NA F90, F90.1, F90.9
-179                        adhd  36137488      NA F90, F90.1, F90.9
-180                        adhd  36137488      NA F90, F90.1, F90.9
-181                        adhd  36137488      NA F90, F90.1, F90.9
-182                        adhd  36137488      NA F90, F90.1, F90.9
-183                        adhd  36137488      NA F90, F90.1, F90.9
-                icd10_code_origin
-1   Inferred from similar studies
-2   Inferred from similar studies
-3   Inferred from similar studies
-4   Inferred from similar studies
-5   Inferred from similar studies
-6   Inferred from similar studies
-7   Inferred from similar studies
-8   Inferred from similar studies
-9   Inferred from similar studies
-10  Inferred from similar studies
-11  Inferred from similar studies
-12  Inferred from similar studies
-13  Inferred from similar studies
-14  Inferred from similar studies
-15  Inferred from similar studies
-16  Inferred from similar studies
-17  Inferred from similar studies
-18  Inferred from similar studies
-19  Inferred from similar studies
-20  Inferred from similar studies
-21  Inferred from similar studies
-22  Inferred from similar studies
-23  Inferred from similar studies
-24  Inferred from similar studies
-25  Inferred from similar studies
-26  Inferred from similar studies
-27  Inferred from similar studies
-28  Inferred from similar studies
-29  Inferred from similar studies
-30  Inferred from similar studies
-31  Inferred from similar studies
-32  Inferred from similar studies
-33  Inferred from similar studies
-34  Inferred from similar studies
-35  Inferred from similar studies
-36  Inferred from similar studies
-37  Inferred from similar studies
-38  Inferred from similar studies
-39  Inferred from similar studies
-40  Inferred from similar studies
-41  Inferred from similar studies
-42  Inferred from similar studies
-43  Inferred from similar studies
-44  Inferred from similar studies
-45  Inferred from similar studies
-46  Inferred from similar studies
-47  Inferred from similar studies
-48  Inferred from similar studies
-49  Inferred from similar studies
-50  Inferred from similar studies
-51  Inferred from similar studies
-52  Inferred from similar studies
-53  Inferred from similar studies
-54  Inferred from similar studies
-55  Inferred from similar studies
-56  Inferred from similar studies
-57  Inferred from similar studies
-58  Inferred from similar studies
-59  Inferred from similar studies
-60  Inferred from similar studies
-61  Inferred from similar studies
-62  Inferred from similar studies
-63  Inferred from similar studies
-64  Inferred from similar studies
-65  Inferred from similar studies
-66  Inferred from similar studies
-67  Inferred from similar studies
-68  Inferred from similar studies
-69  Inferred from similar studies
-70  Inferred from similar studies
-71  Inferred from similar studies
-72  Inferred from similar studies
-73  Inferred from similar studies
-74  Inferred from similar studies
-75  Inferred from similar studies
-76  Inferred from similar studies
-77  Inferred from similar studies
-78  Inferred from similar studies
-79  Inferred from similar studies
-80  Inferred from similar studies
-81  Inferred from similar studies
-82  Inferred from similar studies
-83  Inferred from similar studies
-84  Inferred from similar studies
-85  Inferred from similar studies
-86  Inferred from similar studies
-87  Inferred from similar studies
-88  Inferred from similar studies
-89  Inferred from similar studies
-90  Inferred from similar studies
-91  Inferred from similar studies
-92  Inferred from similar studies
-93  Inferred from similar studies
-94  Inferred from similar studies
-95  Inferred from similar studies
-96  Inferred from similar studies
-97  Inferred from similar studies
-98  Inferred from similar studies
-99  Inferred from similar studies
-100 Inferred from similar studies
-101 Inferred from similar studies
-102 Inferred from similar studies
-103         Study PheCode Mapping
-104 Inferred from similar studies
-105 Inferred from similar studies
-106 Inferred from similar studies
-107 Inferred from similar studies
-108 Inferred from similar studies
-109 Inferred from similar studies
-110 Inferred from similar studies
-111 Inferred from similar studies
-112 Inferred from similar studies
-113 Inferred from similar studies
-114 Inferred from similar studies
-115 Inferred from similar studies
-116 Inferred from similar studies
-117 Inferred from similar studies
-118 Inferred from similar studies
-119 Inferred from similar studies
-120 Inferred from similar studies
-121 Inferred from similar studies
-122 Inferred from similar studies
-123 Inferred from similar studies
-124 Inferred from similar studies
-125 Inferred from similar studies
-126 Inferred from similar studies
-127 Inferred from similar studies
-128 Inferred from similar studies
-129 Inferred from similar studies
-130 Inferred from similar studies
-131 Inferred from similar studies
-132 Inferred from similar studies
-133 Inferred from similar studies
-134 Inferred from similar studies
-135 Inferred from similar studies
-136 Inferred from similar studies
-137 Inferred from similar studies
-138 Inferred from similar studies
-139 Inferred from similar studies
-140 Inferred from similar studies
-141 Inferred from similar studies
-142 Inferred from similar studies
-143 Inferred from similar studies
-144 Inferred from similar studies
-145 Inferred from similar studies
-146 Inferred from similar studies
-147 Inferred from similar studies
-148 Inferred from similar studies
-149 Inferred from similar studies
-150 Inferred from similar studies
-151 Inferred from similar studies
-152 Inferred from similar studies
-153 Inferred from similar studies
-154 Inferred from similar studies
-155 Inferred from similar studies
-156 Inferred from similar studies
-157 Inferred from similar studies
-158 Inferred from similar studies
-159 Inferred from similar studies
-160 Inferred from similar studies
-161 Inferred from similar studies
-162 Inferred from similar studies
-163 Inferred from similar studies
-164 Inferred from similar studies
-165 Inferred from similar studies
-166 Inferred from similar studies
-167 Inferred from similar studies
-168 Inferred from similar studies
-169 Inferred from similar studies
-170 Inferred from similar studies
-171 Inferred from similar studies
-172 Inferred from similar studies
-173 Inferred from similar studies
-174 Inferred from similar studies
-175 Inferred from similar studies
-176 Inferred from similar studies
-177 Inferred from similar studies
-178 Inferred from similar studies
-179 Inferred from similar studies
-180 Inferred from similar studies
-181 Inferred from similar studies
-182 Inferred from similar studies
-183 Inferred from similar studies</code></pre>
-<pre class="r"><code>icd10_code = c(&quot;F90, F90.1, F90.9&quot;,
-               &quot;F00. G30&quot;,
-               &quot;O45&quot;,
-               &quot;H25&quot;,
-               &quot;H25.1&quot;)
-
-collected_all_disease_terms = c(&quot;adhd&quot;,
-                                &quot;alzheimers disease&quot;,
-                                &quot;abruptio placentae&quot;,
-                                &quot;age-related cataract&quot;,
-                                &quot;age-related nuclear cataract&quot;)
-
-icd10_code_origin = c(&quot;Inferred from similar study&quot;)
-
-to_add = data.frame(collected_all_disease_terms, 
-                    icd10_code, 
-                    icd10_code_origin)
-
-disease_mapping =
-  rows_patch(disease_mapping,
-             to_add,
-             unmatched = &quot;ignore&quot;)</code></pre>
-<pre><code>Matching, by = &quot;collected_all_disease_terms&quot;</code></pre>
+<pre class="r"><code>disease_mapping |&gt;
+  filter(is.na(icd10_code)) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 197</code></pre>
 </div>
-<div id="completing-missing-combinations" class="section level1">
-<h1>Completing missing combinations</h1>
+<div id="how-was-icd-10-code-inferred" class="section level1">
+<h1>How was ICD-10 code inferred?</h1>
+<pre class="r"><code>disease_mapping  |&gt; 
+group_by(icd10_code_origin) |&gt; 
+summarise(n = n()) |&gt; 
+arrange(desc(n))</code></pre>
+<pre><code># A tibble: 9 × 2
+  icd10_code_origin                                n
+  &lt;chr&gt;                                        &lt;int&gt;
+1 Inferred from similar studies                12602
+2 ICD Description Match                        12190
+3 Phecode Phenotype Match                       4664
+4 Study Provided                                3763
+5 Study PheCode Mapping                         3438
+6 Manual Mapping (collected_all_disease_terms)  1231
+7 &lt;NA&gt;                                           197
+8 Study PheCode (Manual Mapping)                 154
+9 Manual Mapping (from DISEASE/TRAIT)              9</code></pre>
 </div>
 <div id="saving-disease-mapping" class="section level1">
 <h1>Saving disease mapping</h1>
@@ -3120,15 +2752,14 @@ disease_mapping |&gt;
   filter(is.na(icd10_description)) |&gt;
   head()</code></pre>
 <pre><code># A tibble: 6 × 7
-  `DISEASE/TRAIT`            collected_all_diseas…¹ PUBMED_ID phecode icd10_code
-  &lt;chr&gt;                      &lt;chr&gt;                      &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;     
-1 Ribavirin-induced anemia   anemia                  20637204      NA D63.165.8 
-2 Iron deficiency            anemia                  21483845      NA D63.165.8 
-3 Source of report of D64 (… anemia                  36779085      NA D63.165.8 
-4 Anemia in mycophenolic ac… anemia                  30801552      NA D63.165.8 
-5 Genital aphthosis in Behc… genital aphthosis       37271218      NA &lt;NA&gt;      
-6 Deferral due to hypohemog… anemia                  38018286      NA D63.165.8 
-# ℹ abbreviated name: ¹​collected_all_disease_terms
+  `DISEASE/TRAIT`       collected_all_disease_terms PUBMED_ID phecode icd10_code
+  &lt;chr&gt;                 &lt;chr&gt;                           &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;     
+1 Fractures (vertebral) bone fracture                29170203      NA S02.20    
+2 Fractures (vertebral) bone fracture                29170203      NA S22       
+3 Fractures (vertebral) bone fracture                29170203      NA S22.30    
+4 Fractures (vertebral) bone fracture                29170203      NA S223      
+5 Fractures (vertebral) bone fracture                29170203      NA S32       
+6 Fractures (vertebral) bone fracture                29170203      NA S32.00    
 # ℹ 2 more variables: icd10_code_origin &lt;chr&gt;, icd10_description &lt;chr&gt;</code></pre>
 </div>
 <div id="noticing-some-mistakes-in-mapped-trait-by-icd-10-codes"
