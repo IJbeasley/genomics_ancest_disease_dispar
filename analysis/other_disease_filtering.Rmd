@@ -47,6 +47,15 @@ gwas_study_info = gwas_study_info |>
          )
   )
 
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(DISEASE_STUDY = 
+           ifelse(PUBMED_ID == "36035146",
+                  FALSE,
+                  DISEASE_STUDY
+           )
+  )
+
 ```
 
 # Injuries 
@@ -66,17 +75,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-```{r remove_poisoning}
-
-gwas_study_info = gwas_study_info |>
-           mutate(collected_all_disease_terms =
-           stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("poisoning")
-                          )
-           )
-```
-
-
 
 ## Bone fracture
 
@@ -92,13 +90,6 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern(bone_fracture_terms),
                           "bone fracture"
          ))
-
-gwas_study_info = gwas_study_info |>
-           mutate(collected_all_disease_terms =
-           stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("bone fracture")
-                          )
-           )
 
 ```
 
@@ -119,13 +110,6 @@ gwas_study_info = gwas_study_info |>
                           pattern = vec_to_grep_pattern(toxicity_terms),
                           "toxicity"
          ))
-
-gwas_study_info = gwas_study_info |>
-           mutate(collected_all_disease_terms =
-           stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("toxicity")
-                          )
-           )
 
 ```
 
@@ -165,160 +149,6 @@ gwas_study_info = gwas_study_info |>
          collected_all_disease_terms)
   )
 
-
-```
-
-
-### Post-operative nausea and vomiting
-
-```{r post_op_nausea}
-
-
-gwas_study_info |> 
-  filter(grepl("nausea", collected_all_disease_terms))  |>
-  select(`DISEASE/TRAIT`, MAPPED_TRAIT, collected_all_disease_terms) |>
-  distinct()
-
-# for given pubmed id, remove post operative nausea and vomiting
-
-gwas_study_info = 
-  gwas_study_info |>
-  mutate(collected_all_disease_terms = 
-           ifelse(PUBMED_ID %in% c(21694509, 32928300, 37156489),
-                  stringr::str_remove_all(
-                    collected_all_disease_terms,
-                    pattern = vec_to_grep_pattern(c("post operative nausea and vomiting", 
-                                                    "post-operative nausea and vomiting"))
-                  ),
-                  collected_all_disease_terms
-           )
-  )
-  
-```
-
-### Unspecified nausea 
-
-```{r unspecified_nausea}
-
-
-# for given pubmed id, remove unspecified nausea
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(PUBMED_ID %in% c(30104761, 34737426, 39024449, 34662886),
-         stringr::str_remove_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("nausea and vomiting"))
-                          ),
-         collected_all_disease_terms)
-  )
-
-```
-
-### Unspecified vomiting
-
-```{r unspecified_vomiting}
-
-# where `DISEASE/TRAIT' contains ICD10 R1, or PheCode 789.1 remove vomiting
-
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(grepl("ICD10 R11", `DISEASE/TRAIT`) | grepl("PheCode 789.1", `DISEASE/TRAIT`),
-         stringr::str_remove_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("vomiting"))
-                          ),
-         collected_all_disease_terms)
-  )
-
-# where `DISEASE/TRAIT' contains BNT162b2 vaccine, remove vomiting (and covid-19 implicitly)
-
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(grepl("BNT162b2 vaccine", `DISEASE/TRAIT`, ignore.case = TRUE),
-         stringr::str_remove_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("vomiting"))
-                          ),
-         collected_all_disease_terms)
-  )
-
-```
-
-## Fever
-
-```{r fever}
-
-# remove fever where `DISEASE/TRAIT' contains BNT162b2 vaccine (and covid-19 implicitly)
-
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(grepl("BNT162b2 vaccine|COVID-19 booster vaccination", `DISEASE/TRAIT`, ignore.case = TRUE),
-         stringr::str_remove_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("fever"))
-                          ),
-         collected_all_disease_terms)
-  )
-
-
-# remove fever where `DISEASE/TRAIT' contains "Postprocedural fever"
-
-
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(grepl("Postprocedural fever", `DISEASE/TRAIT`, ignore.case = TRUE),
-         stringr::str_remove_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("fever"))
-                          ),
-         collected_all_disease_terms)
-  )
-
-
-# where vec_to_grep_pattern(c("fever")) is in collected_all_disease_terms, and Fever when IBS symptoms first began
-# is in `DISEASE/TRAIT`, replace fever with irritable bowel syndrome
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(grepl("Fever when IBS symptoms first began",
-                       `DISEASE/TRAIT`, 
-                       ignore.case = TRUE) &
-                 grepl(vec_to_grep_pattern(c("fever")), 
-                       collected_all_disease_terms,
-                       perl = T),
-         stringr::str_replace_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("fever")),
-            replacement = "irritable bowel syndrome"
-                          ),
-         collected_all_disease_terms)
-  )
-
-
-```
-
-
-## Sneeze
-
-```{r sneeze}
-
-# remove sneeze from collected_all_disease_terms 
-
-gwas_study_info  = 
- gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-          ifelse(grepl("sneeze", collected_all_disease_terms, ignore.case = TRUE),
-         stringr::str_remove_all(
-           collected_all_disease_terms,
-            pattern = vec_to_grep_pattern(c("sneeze"))
-                          ),
-         collected_all_disease_terms)
-  )
 
 ```
 
@@ -711,19 +541,6 @@ gwas_study_info = gwas_study_info |>
 
 
 ```
-
-## Cough (non-specific)
-
-```{r cough}
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern(c("cough"))
-         ))
-
-```
-
 
 # Other phenotypes to group
 
