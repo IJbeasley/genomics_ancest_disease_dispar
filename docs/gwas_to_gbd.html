@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+<meta name="date" content="2025-10-07" />
+
+<title>Matching GWAS traits to GBD causes / diseases</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Matching GWAS traits to GBD causes /
+diseases</h1>
+<h4 class="author">Isobel Beasley</h4>
+<h4 class="date">2025-10-07</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2025-10-09
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree8e94754440b5e1f18efdd5818d51a8ad8e86db9ftargetblank8e94754a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/8e94754440b5e1f18efdd5818d51a8ad8e86db9f" target="_blank">8e94754</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree8e94754440b5e1f18efdd5818d51a8ad8e86db9ftargetblank8e94754a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/8e94754440b5e1f18efdd5818d51a8ad8e86db9f" target="_blank">8e94754</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rproj.user/
+    Ignored:    analysis/.DS_Store
+    Ignored:    data/.DS_Store
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2021_COD_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/IHME_GBD_2021_NONFATAL_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/UK_Biobank_master_file.tsv
+    Ignored:    data/icd/cdc_valid_icd10_Sep_23_2025.xlsx
+    Ignored:    data/icd/cdc_valid_icd9_Sep_23_2025.xlsx
+    Ignored:    data/icd/manual_disease_icd10_mappings.xlsx
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/semiautomatic_ICD-pheno.txt
+    Ignored:    data/icd/~$IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/~$IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/who/
+    Ignored:    output/.DS_Store
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_study_info_cohort_corrected.csv
+    Ignored:    output/gwas_study_info_trait_corrected.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info_l1.csv
+    Ignored:    output/gwas_study_info_trait_ontology_info_l2.csv
+    Ignored:    output/icd_map/
+    Ignored:    output/trait_ontology/
+    Ignored:    renv/
+    Ignored:    sup_table.xlsx
+
+Unstaged changes:
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/gbd_data_plots.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/level_1_disease_group_non_cancer.Rmd
+    Modified:   analysis/level_2_disease_group.Rmd
+    Modified:   analysis/trait_ontology_categorization.Rmd
+    Modified:   data/icd/README.md
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/gwas_to_gbd.Rmd</code>) and HTML
+(<code>docs/gwas_to_gbd.html</code>) files. If you’ve configured a
+remote Git repository (see <code>?wflow_git_remote</code>), click on the
+hyperlinks in the table below to view the files as they were in that
+past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/8e94754440b5e1f18efdd5818d51a8ad8e86db9f/analysis/gwas_to_gbd.Rmd" target="_blank">8e94754</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-09
+</td>
+<td>
+Integrating gwas traits with ICD10
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="set-up" class="section level1">
+<h1>Set up</h1>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>
+Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>The following objects are masked from &#39;package:stats&#39;:
+
+    filter, lag</code></pre>
+<pre><code>The following objects are masked from &#39;package:base&#39;:
+
+    intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(stringr)
+library(purrr)
+library(tidyr)
+library(data.table)</code></pre>
+<pre><code>
+Attaching package: &#39;data.table&#39;</code></pre>
+<pre><code>The following object is masked from &#39;package:purrr&#39;:
+
+    transpose</code></pre>
+<pre><code>The following objects are masked from &#39;package:dplyr&#39;:
+
+    between, first, last</code></pre>
+<div id="load-gbd-2019-data" class="section level2">
+<h2>Load GBD 2019 data</h2>
+<pre class="r"><code>gbd_2019 &lt;- readxl::read_xlsx(here::here(&quot;data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX&quot;), 
+                               skip = 1)
+
+gbd_2019 = 
+  gbd_2019 |&gt;
+  rename_with(~str_replace_all(., &quot; &quot;, &quot;_&quot;)) |&gt;
+  rename_with(~ str_replace_all(., &quot;\\\\&quot;, &quot;_&quot;)) |&gt;
+  rename_with(~ tolower(.))
+
+gbd_2019 = 
+gbd_2019 |&gt;
+  filter(`...1` != 0)</code></pre>
+</div>
+<div id="load-gbd-2021-data" class="section level2">
+<h2>Load GBD 2021 data</h2>
+<pre class="r"><code>gbd_2021 &lt;- readxl::read_xlsx(here::here(&quot;data/icd/IHME_GBD_2021_NONFATAL_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX&quot;), 
+                               skip = 1)
+
+gbd_2021 = 
+  gbd_2021 |&gt;
+  rename_with(~str_replace_all(., &quot; &quot;, &quot;_&quot;)) |&gt;
+  rename_with(~ str_replace_all(., &quot;\\\\&quot;, &quot;_&quot;)) |&gt;
+  rename_with(~ tolower(.))
+
+
+cause_level = 
+  gbd_2021 |&gt;
+  select(cause_hierarchy_level, cause = cause_name)</code></pre>
+</div>
+<div id="add-cause-level-to-2019-data-using-2021"
+class="section level2">
+<h2>Add cause level to 2019 data (using 2021)</h2>
+<pre class="r"><code>gbd_2019 = 
+left_join(
+  gbd_2019,
+  cause_level)
+
+
+# check if any cause_hierarchy_level is NA
+# meaning not filled in by GBD 2021 
+gbd_2019 |&gt;
+  filter(is.na(cause_hierarchy_level))
+
+# Pertussis == Wooping cough
+# this is a level 3 cause
+
+gbd_2019 = 
+  gbd_2019 |&gt;
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == &quot;Whooping cough&quot;,
+                3,
+                cause_hierarchy_level)
+         )
+
+# Other direct maternal disorders appears (GBD 2021) to be equiv to other maternal disorders (GBD 2019)
+# cause_hierarchy_level = 4
+gbd_2019 = 
+  gbd_2019 |&gt;
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == &quot;Other maternal disorders&quot;,
+                4,
+                cause_hierarchy_level)
+         )
+
+# Urinary tract infections and interstitial nephritis (GBD 2021) appears to be equiv to Urinary tract infections (GBD 2019)
+# cause_hierarchy_level = 4
+gbd_2019 = 
+  gbd_2019 |&gt;
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == &quot;Urinary tract infections&quot;,
+                4,
+                cause_hierarchy_level)
+         )
+
+# Peripheral artery disease
+# likely level = 3
+gbd_2019 = 
+  gbd_2019 |&gt;
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == &quot;Peripheral artery disease&quot;,
+                3,
+                cause_hierarchy_level)
+         )
+
+# Police conflict and executions (GBD 2021) equiv to Executions and police conflict (GBD 2019)
+# level = 3
+gbd_2019 = 
+  gbd_2019 |&gt;
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == &quot;Executions and police conflict&quot;,
+                3,
+                cause_hierarchy_level)
+         )
+
+
+# Edentulism and severe tooth loss
+# level = 3
+gbd_2019 = 
+  gbd_2019 |&gt;
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == &quot;Edentulism and severe tooth loss&quot;,
+                3,
+                cause_hierarchy_level)
+         )
+
+# check that all cause levels filled in
+gbd_2019 |&gt;
+  filter(is.na(cause_hierarchy_level))</code></pre>
+</div>
+</div>
+<div id="prepare-gbd-2019-data-for-merging-with-gwas-traits"
+class="section level1">
+<h1>Prepare GBD 2019 data for merging with GWAS traits</h1>
+<div id="tidy-icd-codes" class="section level2">
+<h2>Tidy ICD codes</h2>
+<div id="make-long-format-separate-multiple-icd-code-ranges-into-rows"
+class="section level3">
+<h3>Make long format, separate multiple ICD code ranges into rows</h3>
+<pre class="r"><code>gbd_2021 = 
+  gbd_2021 |&gt;
+  rename(icd10_code = icd10,
+         icd10_code_used_in_hosp = `icd10_used_in_hospital/claims_analyses`) |&gt;
+  select(-1)
+
+# expand multiple ICD codes into rows
+gbd_2021 = 
+  gbd_2021 |&gt;
+  mutate(icd10_code = str_split(icd10_code, &quot;,\\s*&quot;)) |&gt;
+  tidyr::unnest(icd10_code) 
+
+# expand multiple ICD codes into rows
+# gbd_2021 = 
+#   gbd_2021 |&gt;
+#   mutate(icd10_code_used_in_hosp = str_split(icd10_code_used_in_hosp, &quot;,\\s*&quot;)) |&gt;
+#   tidyr::unnest(icd10_code_used_in_hosp) 
+
+gbd_2021 = 
+gbd_2021 |&gt;
+  tidyr::pivot_longer(c(#&quot;icd10_code_used_in_hosp&quot;, 
+                 &quot;icd10_code&quot;),
+               names_to = &quot;icd10_code_type&quot;, 
+               values_to = &quot;icd10_code&quot;)
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  select(icd10_code,
+         cause_name,
+         cause_hierarchy_level) |&gt;
+  distinct()
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  tidyr::separate_wider_delim(col = &quot;icd10_code&quot;,
+                        delim = &quot;-&quot;, 
+                       names = c(&quot;start_icd10_code&quot;, &quot;end_icd10_code&quot;),
+                       too_few = &quot;align_end&quot;
+                       ) |&gt;
+  mutate(start_icd10_code = 
+         ifelse(is.na(start_icd10_code),
+                end_icd10_code,
+                start_icd10_code)
+         ) 
+
+
+head(gbd_2021)</code></pre>
+<pre><code># A tibble: 6 × 4
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 A50              A60.9          HIV/AIDS and sexually t…                     2
+2 A63              A64.0          HIV/AIDS and sexually t…                     2
+3 B20              B23.8          HIV/AIDS and sexually t…                     2
+4 B24              B24.0          HIV/AIDS and sexually t…                     2
+5 B63              B63            HIV/AIDS and sexually t…                     2
+6 B97.81           B97.81         HIV/AIDS and sexually t…                     2</code></pre>
+</div>
+<div
+id="where-icd10-code-ranges-are-the-same-but-missing-decimal-places-add-.9-to-end-code-to-help-with-filtering-ranges"
+class="section level3">
+<h3>Where icd10 code ranges are the same, but missing decimal places,
+add .9 to end code (to help with filtering ranges)</h3>
+<pre class="r"><code>gbd_2021 |&gt;
+  filter(start_icd10_code == end_icd10_code &amp;
+         !grepl(&quot;.&quot;, start_icd10_code, fixed = TRUE)
+         ) |&gt;
+  arrange(start_icd10_code) |&gt;
+  head()</code></pre>
+<pre><code># A tibble: 6 × 4
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 A09              A09            Enteric infections                           2
+2 A09              A09            Diarrheal diseases                           3
+3 A70              A70            Respiratory infections …                     2
+4 A70              A70            Lower respiratory infec…                     3
+5 A76              A76            Other infectious diseas…                     2
+6 A76              A76            Other unspecified infec…                     3</code></pre>
+<pre class="r"><code>gbd_2021 = 
+gbd_2021 |&gt;
+  mutate(end_icd10_code =
+         ifelse(
+         start_icd10_code == end_icd10_code &amp;
+         !grepl(&quot;.&quot;, start_icd10_code, fixed = TRUE),
+         paste0(end_icd10_code, &quot;.9&quot;),
+         end_icd10_code
+         ) 
+  )</code></pre>
+</div>
+<div
+id="make-sure-start_icd10_code-and-end_icd10_code-start-with-the-same-letter"
+class="section level3">
+<h3>Make sure start_icd10_code and end_icd10_code start with the same
+letter</h3>
+<pre class="r"><code>gbd_2021 |&gt; 
+  filter(end_icd10_code == &quot;N95.9&quot;)</code></pre>
+<pre><code># A tibble: 3 × 4
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 N88              N95.9          Other non-communicable …                     2
+2 N88              N95.9          Gynecological diseases                       3
+3 N95.1            N95.9          Other gynecological dis…                     4</code></pre>
+<pre class="r"><code># check start_icd10_code and end_icd10_code start with the same letter
+# if not, need to fix these rows
+  gbd_2021 |&gt;
+  filter(str_extract(start_icd10_code, &quot;^[A-Z]&quot;) != 
+         str_extract(end_icd10_code, &quot;^[A-Z]&quot;)
+         )</code></pre>
+<pre><code># A tibble: 6 × 4
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 O98.8            P22.9          Maternal and neonatal d…                     2
+2 C8               D24.9          Neoplasms                                    2
+3 W49              X58.9          Unintentional injuries                       2
+4 T74.2            U03            Self-harm and interpers…                     2
+5 X66              Y08.9          Self-harm and interpers…                     2
+6 X85              Y08.9          Interpersonal violence                       3</code></pre>
+<pre class="r"><code>gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(start_icd10_code = 
+        ifelse(start_icd10_code == &quot;W99&quot; &amp; 
+               end_icd10_code == &quot;X06.9&quot;,
+               &quot;X00.0&quot;,
+               start_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  add_row(
+    start_icd10_code = &quot;W99&quot;,
+    end_icd10_code = &quot;W99&quot;,
+    cause_name = &quot;Unintentional injuries&quot;,
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == &quot;O98.8&quot; &amp; 
+               end_icd10_code == &quot;P05.9&quot;,
+               &quot;O99.9&quot;,
+               end_icd10_code)
+         )
+
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  add_row(
+    start_icd10_code = &quot;P00&quot;,
+    end_icd10_code = &quot;P05.9&quot;,
+    cause_name = &quot;Maternal and neonatal disorders&quot;,
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == &quot;T74.2&quot; &amp; 
+               end_icd10_code == &quot;U03&quot;,
+               &quot;T98.3&quot;,
+               end_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  add_row(
+    start_icd10_code = &quot;U00&quot;,
+    end_icd10_code = &quot;U03&quot;,
+    cause_name = &quot;Self-harm and interpersonal violence&quot;,
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == &quot;X66&quot; &amp; 
+               end_icd10_code == &quot;Y08.9&quot;,
+               &quot;X99&quot;,
+               end_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  add_row(
+    start_icd10_code = &quot;Y00&quot;,
+    end_icd10_code = &quot;Y08.9&quot;,
+    cause_name = &quot;Self-harm and interpersonal violence&quot;,
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == &quot;X85&quot; &amp; 
+               end_icd10_code == &quot;Y08.9&quot;,
+               &quot;X99&quot;,
+               end_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  add_row(
+    start_icd10_code = &quot;Y00&quot;,
+    end_icd10_code = &quot;Y08.9&quot;,
+    cause_name = &quot;Interpersonal violence&quot;,
+    cause_hierarchy_level = 2
+  )
+
+  gbd_2021 |&gt;
+  filter(str_extract(start_icd10_code, &quot;^[A-Z]&quot;) != 
+         str_extract(end_icd10_code, &quot;^[A-Z]&quot;)
+         )</code></pre>
+<pre><code># A tibble: 3 × 4
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 O98.8            P22.9          Maternal and neonatal d…                     2
+2 C8               D24.9          Neoplasms                                    2
+3 W49              X58.9          Unintentional injuries                       2</code></pre>
+<pre class="r"><code>    gbd_2021 |&gt;
+    filter(
+         is.na(end_icd10_code)
+         | is.na(start_icd10_code)) |&gt;
+    head()</code></pre>
+<pre><code># A tibble: 6 × 4
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 &lt;NA&gt;             &lt;NA&gt;           HIV/AIDS - Multidrug-re…                     4
+2 &lt;NA&gt;             &lt;NA&gt;           HIV/AIDS - Extensively …                     4
+3 &lt;NA&gt;             &lt;NA&gt;           Latent tuberculosis inf…                     4
+4 &lt;NA&gt;             &lt;NA&gt;           Extensively drug-resist…                     4
+5 &lt;NA&gt;             &lt;NA&gt;           COVID-19                                     3
+6 &lt;NA&gt;             &lt;NA&gt;           Liver cancer due to hep…                     4</code></pre>
+<pre class="r"><code>  # some nas ... 
+  # remove these rows at least for now
+  
+  gbd_2021 =
+    gbd_2021 |&gt;
+    filter(
+      !is.na(end_icd10_code)
+      &amp; !is.na(start_icd10_code))</code></pre>
+</div>
+<div
+id="seperate-numeric-and-letter-parts-of-icd-codes-to-help-with-filtering-ranges"
+class="section level3">
+<h3>Seperate numeric and letter parts of ICD codes (to help with
+filtering ranges)</h3>
+<pre class="r"><code>gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(icd10_code_letter = str_extract(start_icd10_code, &quot;^[A-Z]&quot;)) 
+
+gbd_2021 =
+  gbd_2021 |&gt;
+  mutate(start_icd10_code_num = as.numeric(str_remove(start_icd10_code, &quot;^[A-Z]&quot;)),
+         end_icd10_code_num = as.numeric(str_remove(end_icd10_code, &quot;^[A-Z]&quot;))
+         )</code></pre>
+<pre><code>Warning: There were 2 warnings in `mutate()`.
+The first warning was:
+ℹ In argument: `start_icd10_code_num = as.numeric(str_remove(start_icd10_code,
+  &quot;^[A-Z]&quot;))`.
+Caused by warning:
+! NAs introduced by coercion
+ℹ Run `dplyr::last_dplyr_warnings()` to see the 1 remaining warning.</code></pre>
+<pre class="r"><code>gbd_2021 |&gt; 
+  filter(icd10_code_letter == &quot;N&quot; &amp; 
+           start_icd10_code_num &lt;= 93.0 &amp; 
+           end_icd10_code_num &gt;= 93.0)</code></pre>
+<pre><code># A tibble: 3 × 7
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 N88              N95.9          Other non-communicable …                     2
+2 N88              N95.9          Gynecological diseases                       3
+3 N92              N93.9          Premenstrual syndrome                        4
+# ℹ 3 more variables: icd10_code_letter &lt;chr&gt;, start_icd10_code_num &lt;dbl&gt;,
+#   end_icd10_code_num &lt;dbl&gt;</code></pre>
+<pre class="r"><code>gbd_2021 |&gt; 
+  filter(end_icd10_code == &quot;N95.9&quot;)</code></pre>
+<pre><code># A tibble: 3 × 7
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 N88              N95.9          Other non-communicable …                     2
+2 N88              N95.9          Gynecological diseases                       3
+3 N95.1            N95.9          Other gynecological dis…                     4
+# ℹ 3 more variables: icd10_code_letter &lt;chr&gt;, start_icd10_code_num &lt;dbl&gt;,
+#   end_icd10_code_num &lt;dbl&gt;</code></pre>
+<pre class="r"><code>gbd_2021 |&gt;
+  filter(start_icd10_code_num &lt;= 93.0 &amp;
+         end_icd10_code_num &gt;= 93.0 &amp;
+         icd10_code_letter == &quot;N&quot;
+         )</code></pre>
+<pre><code># A tibble: 3 × 7
+  start_icd10_code end_icd10_code cause_name               cause_hierarchy_level
+  &lt;chr&gt;            &lt;chr&gt;          &lt;chr&gt;                                    &lt;dbl&gt;
+1 N88              N95.9          Other non-communicable …                     2
+2 N88              N95.9          Gynecological diseases                       3
+3 N92              N93.9          Premenstrual syndrome                        4
+# ℹ 3 more variables: icd10_code_letter &lt;chr&gt;, start_icd10_code_num &lt;dbl&gt;,
+#   end_icd10_code_num &lt;dbl&gt;</code></pre>
+</div>
+</div>
+</div>
+<div id="merge-gwas-traits-with-gbd-causes" class="section level1">
+<h1>Merge GWAS traits with GBD causes</h1>
+<div id="load-disease-mapping" class="section level2">
+<h2>Load Disease Mapping</h2>
+<pre class="r"><code>disease_mapping &lt;- data.table::fread(
+here::here(&quot;output/icd_map/gwas_disease_to_icd10_mapping.csv&quot;)
+)
+
+disease_mapping =
+  disease_mapping |&gt;
+    mutate(icd10_code_letter = str_extract(icd10_code, &quot;^[A-Z]&quot;)) |&gt;
+    mutate(icd10_code_num = as.numeric(str_remove(icd10_code, &quot;^[A-Z]&quot;)))</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `icd10_code_num = as.numeric(str_remove(icd10_code, &quot;^[A-Z]&quot;))`.
+Caused by warning:
+! NAs introduced by coercion</code></pre>
+<pre class="r"><code>disease_mapping = 
+  disease_mapping |&gt;
+  mutate(icd10_code_num = as.numeric(icd10_code_num))</code></pre>
+</div>
+<div id="join-disease-mapping-with-gbd-2019-data"
+class="section level2">
+<h2>Join disease mapping with GBD 2019 data</h2>
+<pre class="r"><code>disease_mapping_with_cause &lt;- disease_mapping |&gt;
+  rowwise() |&gt;
+  mutate(
+    cause = 
+      list(
+      gbd_2021$cause_name[
+      which(icd10_code_num &gt;= gbd_2021$start_icd10_code_num &amp;
+            icd10_code_num &lt;= gbd_2021$end_icd10_code_num &amp; 
+            icd10_code_letter == gbd_2021$icd10_code_letter)
+      ]),
+    cause_hierarchy_level  = 
+       list(
+            gbd_2021$cause_hierarchy_level[
+      which(icd10_code_num &gt;= gbd_2021$start_icd10_code_num &amp;
+            icd10_code_num &lt;= gbd_2021$end_icd10_code_num &amp; 
+            icd10_code_letter == gbd_2021$icd10_code_letter)
+      ])
+  ) |&gt;
+  ungroup()
+
+
+disease_mapping_with_cause = 
+  disease_mapping_with_cause |&gt;
+  tidyr::unnest(c(cause, cause_hierarchy_level),
+                keep_empty = TRUE
+                )</code></pre>
+<div id="checking-hierarchy-levels" class="section level3">
+<h3>Checking hierarchy levels</h3>
+<pre class="r"><code>disease_mapping_with_cause = 
+  disease_mapping_with_cause |&gt;
+  filter(!is.na(cause))
+
+# filtering na to deal with pivoting 
+disease_mapping_with_cause_grouped = 
+disease_mapping_with_cause |&gt;
+select(-icd10_code_num) |&gt;
+tidyr::pivot_wider(
+            id_cols = c(&quot;collected_all_disease_terms&quot;, &quot;icd10_code&quot;, &quot;icd10_description&quot;),
+            names_from = cause_hierarchy_level, 
+            names_glue = &quot;l{.name}_{.value}&quot;,
+            values_from = cause,
+            values_fn = ~paste0(unique(.x), collapse = &quot;, &quot;)
+            )</code></pre>
+<pre class="r"><code># check which l2 causes are NA but l3 causes are not NA
+# can use l3 causes therefore to fill in l2 causes
+disease_mapping_with_cause_grouped |&gt; 
+  rowwise() |&gt; 
+  filter(is.na(l2_cause) &amp; !is.na(l3_cause)) |&gt;
+  head()</code></pre>
+<pre><code># A tibble: 6 × 6
+# Rowwise: 
+  collected_all_diseas…¹ icd10_code icd10_description l2_cause l3_cause l4_cause
+  &lt;chr&gt;                  &lt;chr&gt;      &lt;chr&gt;             &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;   
+1 abnormal delivery      P20        Intrauterine hyp… &lt;NA&gt;     Neonata… Neonata…
+2 abnormal delivery      P20.9      Intrauterine hyp… &lt;NA&gt;     Neonata… Neonata…
+3 abnormal delivery      P21        Birth asphyxia    &lt;NA&gt;     Neonata… Neonata…
+4 abnormal delivery      P21.0      Severe birth asp… &lt;NA&gt;     Neonata… Neonata…
+5 abnormal delivery      P21.1      Mild and moderat… &lt;NA&gt;     Neonata… Neonata…
+6 abnormal delivery      P21.9      Birth asphyxia, … &lt;NA&gt;     Neonata… Neonata…
+# ℹ abbreviated name: ¹​collected_all_disease_terms</code></pre>
+<pre class="r"><code>neoplasms = c(&quot;Other neoplasms&quot;, 
+                                    &quot;Hodgkin lymphoma&quot;,
+                                    &quot;Leukemia&quot;,
+                                    &quot;Non-Hodgkin lymphoma&quot;,
+              &quot;Multiple myeloma&quot;)
+
+disease_mapping_with_cause_grouped = 
+  disease_mapping_with_cause_grouped |&gt;
+  rowwise() |&gt;
+  mutate(l2_cause = 
+           list(ifelse(is.na(l2_cause),
+                  case_when(map_lgl(l3_cause, ~ .x %in% neoplasms) ~ &quot;Neoplasms&quot;,
+                            map_lgl(l3_cause, ~ .x %in% &quot;Neonatal disorders&quot;) ~ &quot;Maternal and neonatal disorders&quot;,
+                            map_lgl(l3_cause, ~ .x %in% &quot;Other cardiovascular and circulatory diseases&quot;) ~ &quot;Cardiovascular diseases&quot;
+                            ),
+                  l2_cause
+           )
+           )) |&gt;
+  ungroup()
+          
+
+# to_map_manually &lt;- 
+# disease_mapping_with_cause_grouped |&gt; 
+#   rowwise() |&gt; 
+#   filter(is.null(l2_cause)) |&gt; 
+#   pull(collected_all_disease_terms) |&gt; 
+#   unique()
+# 
+# 
+# update_unmapped_cause = function(df, 
+#                                  unmapped_term, 
+#                                  l2_cause_rep, 
+#                                  l3_cause_rep){
+#   
+#   df = 
+#   df |&gt;
+#     mutate(l3_cause = 
+#            ifelse(collected_all_disease_terms == unmapped_term,
+#                   l3_cause_rep,
+#                   l3_cause
+#            )) |&gt;
+#     mutate(l2_cause = 
+#            ifelse(collected_all_disease_terms == unmapped_term,
+#                   l2_cause_rep,
+#                   l2_cause
+#            ))    
+#            
+#     return(df)
+#            
+# }
+# 
+# disease_mapping_with_cause_grouped = 
+# update_unmapped_cause(disease_mapping_with_cause_grouped, 
+#                       &quot;bone cancer&quot;,
+#                       &quot;Neoplasms&quot;,
+#                       &quot;Malignant neoplasms of bone and articular cartilage&quot;)</code></pre>
+</div>
+</div>
+</div>
+<div id="save-combine-with-gwas-data" class="section level1">
+<h1>Save + combine with GWAS data</h1>
+<pre class="r"><code>disease_mapping_orig &lt;- data.table::fread(
+here::here(&quot;output/icd_map/gwas_disease_to_icd10_mapping.csv&quot;)
+)
+
+disease_mapping_with_cause_grouped =
+  disease_mapping_with_cause_grouped |&gt;
+  tidyr::unnest_longer(c(&quot;l2_cause&quot;, &quot;l3_cause&quot;, &quot;l4_cause&quot;)) 
+
+disease_mapping_final = 
+  left_join(
+    disease_mapping_orig,
+    disease_mapping_with_cause_grouped,
+    by = c(&quot;collected_all_disease_terms&quot;, 
+           &quot;icd10_code&quot;, 
+           &quot;icd10_description&quot;)
+  )
+
+gwas_study_info &lt;- fread(here::here(&quot;output/gwas_cat/gwas_study_info_group_v2.csv&quot;))
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  select(`DISEASE/TRAIT`, PUBMED_ID, STUDY_ACCESSION, COHORT)
+
+disease_mapping_final =
+  left_join(
+    disease_mapping_final,
+    gwas_study_info
+  )</code></pre>
+<pre><code>Joining with `by = join_by(`DISEASE/TRAIT`, PUBMED_ID, STUDY_ACCESSION)`</code></pre>
+<pre class="r"><code>data.table::fwrite(
+disease_mapping_final,
+here::here(&quot;output/icd_map/gwas_disease_to_icd10_mapping_gbd_cat.csv&quot;)
+)</code></pre>
+<pre class="r"><code>gbd_data &lt;- data.table::fread(here::here(&quot;data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv&quot;))
+
+gbd_data = gbd_data |&gt; 
+           dplyr::filter(metric == &quot;Rate&quot;) |&gt;
+           dplyr::filter(measure == &quot;DALYs (Disability-Adjusted Life Years)&quot;) |&gt; 
+           dplyr::filter(year == 2019) </code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] data.table_1.17.8 tidyr_1.3.1       purrr_1.1.0       stringr_1.5.1    
+[5] dplyr_1.1.4       workflowr_1.7.1  
+
+loaded via a namespace (and not attached):
+ [1] jsonlite_2.0.0    compiler_4.3.1    renv_1.0.3        promises_1.3.3   
+ [5] tidyselect_1.2.1  Rcpp_1.1.0        git2r_0.36.2      callr_3.7.6      
+ [9] later_1.4.2       jquerylib_0.1.4   readxl_1.4.5      yaml_2.3.10      
+[13] fastmap_1.2.0     here_1.0.1        R6_2.6.1          generics_0.1.4   
+[17] knitr_1.50        tibble_3.3.0      rprojroot_2.1.0   bslib_0.9.0      
+[21] pillar_1.11.0     rlang_1.1.6       utf8_1.2.6        cachem_1.1.0     
+[25] stringi_1.8.7     httpuv_1.6.16     xfun_0.52         getPass_0.2-4    
+[29] fs_1.6.6          sass_0.4.10       cli_3.6.5         withr_3.0.2      
+[33] magrittr_2.0.3    ps_1.9.1          digest_0.6.37     processx_3.8.6   
+[37] rstudioapi_0.17.1 lifecycle_1.0.4   vctrs_0.6.5       evaluate_1.0.4   
+[41] glue_1.8.0        cellranger_1.1.0  whisker_0.4.1     rmarkdown_2.29   
+[45] httr_1.4.7        tools_4.3.1       pkgconfig_2.0.3   htmltools_0.5.8.1</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
