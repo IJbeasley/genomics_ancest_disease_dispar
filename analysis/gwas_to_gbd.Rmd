@@ -1,0 +1,601 @@
+---
+title: "Matching GWAS traits to GBD causes / diseases"
+author: "Isobel Beasley"
+date: "2025-10-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set up
+
+```{r load_libraries}
+
+library(dplyr)
+library(stringr)
+library(purrr)
+library(tidyr)
+library(data.table)
+
+```
+
+## Load GBD 2019 data
+
+```{r gbd_2019_load, eval = F}
+
+gbd_2019 <- readxl::read_xlsx(here::here("data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX"), 
+                               skip = 1)
+
+gbd_2019 = 
+  gbd_2019 |>
+  rename_with(~str_replace_all(., " ", "_")) |>
+  rename_with(~ str_replace_all(., "\\\\", "_")) |>
+  rename_with(~ tolower(.))
+
+gbd_2019 = 
+gbd_2019 |>
+  filter(`...1` != 0)
+
+
+```
+
+## Load GBD 2021 data
+
+```{r gbd_2021_load}
+
+gbd_2021 <- readxl::read_xlsx(here::here("data/icd/IHME_GBD_2021_NONFATAL_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX"), 
+                               skip = 1)
+
+gbd_2021 = 
+  gbd_2021 |>
+  rename_with(~str_replace_all(., " ", "_")) |>
+  rename_with(~ str_replace_all(., "\\\\", "_")) |>
+  rename_with(~ tolower(.))
+
+
+cause_level = 
+  gbd_2021 |>
+  select(cause_hierarchy_level, cause = cause_name)
+
+```
+
+
+## Add cause level to 2019 data (using 2021)
+
+
+```{r add_cause_level_2019, eval = F}
+
+gbd_2019 = 
+left_join(
+  gbd_2019,
+  cause_level)
+
+
+# check if any cause_hierarchy_level is NA
+# meaning not filled in by GBD 2021 
+gbd_2019 |>
+  filter(is.na(cause_hierarchy_level))
+
+# Pertussis == Wooping cough
+# this is a level 3 cause
+
+gbd_2019 = 
+  gbd_2019 |>
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == "Whooping cough",
+                3,
+                cause_hierarchy_level)
+         )
+
+# Other direct maternal disorders appears (GBD 2021) to be equiv to other maternal disorders (GBD 2019)
+# cause_hierarchy_level = 4
+gbd_2019 = 
+  gbd_2019 |>
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == "Other maternal disorders",
+                4,
+                cause_hierarchy_level)
+         )
+
+# Urinary tract infections and interstitial nephritis (GBD 2021) appears to be equiv to Urinary tract infections (GBD 2019)
+# cause_hierarchy_level = 4
+gbd_2019 = 
+  gbd_2019 |>
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == "Urinary tract infections",
+                4,
+                cause_hierarchy_level)
+         )
+
+# Peripheral artery disease
+# likely level = 3
+gbd_2019 = 
+  gbd_2019 |>
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == "Peripheral artery disease",
+                3,
+                cause_hierarchy_level)
+         )
+
+# Police conflict and executions (GBD 2021) equiv to Executions and police conflict (GBD 2019)
+# level = 3
+gbd_2019 = 
+  gbd_2019 |>
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == "Executions and police conflict",
+                3,
+                cause_hierarchy_level)
+         )
+
+
+# Edentulism and severe tooth loss
+# level = 3
+gbd_2019 = 
+  gbd_2019 |>
+  mutate(cause_hierarchy_level = 
+         ifelse(cause == "Edentulism and severe tooth loss",
+                3,
+                cause_hierarchy_level)
+         )
+
+# check that all cause levels filled in
+gbd_2019 |>
+  filter(is.na(cause_hierarchy_level))
+
+
+
+```
+
+
+# Prepare GBD 2019 data for merging with GWAS traits
+
+## Tidy ICD codes
+
+### Make long format, separate multiple ICD code ranges into rows
+
+```{r make_long_icd10_2019}
+
+gbd_2021 = 
+  gbd_2021 |>
+  rename(icd10_code = icd10,
+         icd10_code_used_in_hosp = `icd10_used_in_hospital/claims_analyses`) |>
+  select(-1)
+
+# expand multiple ICD codes into rows
+gbd_2021 = 
+  gbd_2021 |>
+  mutate(icd10_code = str_split(icd10_code, ",\\s*")) |>
+  tidyr::unnest(icd10_code) 
+
+# expand multiple ICD codes into rows
+# gbd_2021 = 
+#   gbd_2021 |>
+#   mutate(icd10_code_used_in_hosp = str_split(icd10_code_used_in_hosp, ",\\s*")) |>
+#   tidyr::unnest(icd10_code_used_in_hosp) 
+
+gbd_2021 = 
+gbd_2021 |>
+  tidyr::pivot_longer(c(#"icd10_code_used_in_hosp", 
+                 "icd10_code"),
+               names_to = "icd10_code_type", 
+               values_to = "icd10_code")
+
+gbd_2021 =
+  gbd_2021 |>
+  select(icd10_code,
+         cause_name,
+         cause_hierarchy_level) |>
+  distinct()
+
+gbd_2021 =
+  gbd_2021 |>
+  tidyr::separate_wider_delim(col = "icd10_code",
+                        delim = "-", 
+                       names = c("start_icd10_code", "end_icd10_code"),
+                       too_few = "align_end"
+                       ) |>
+  mutate(start_icd10_code = 
+         ifelse(is.na(start_icd10_code),
+                end_icd10_code,
+                start_icd10_code)
+         ) 
+
+
+head(gbd_2021)
+
+
+```
+
+### Where icd10 code ranges are the same, but missing decimal places, add .9 to end code (to help with filtering ranges)
+
+```{r}
+
+gbd_2021 |>
+  filter(start_icd10_code == end_icd10_code &
+         !grepl(".", start_icd10_code, fixed = TRUE)
+         ) |>
+  arrange(start_icd10_code) |>
+  head()
+
+gbd_2021 = 
+gbd_2021 |>
+  mutate(end_icd10_code =
+         ifelse(
+         start_icd10_code == end_icd10_code &
+         !grepl(".", start_icd10_code, fixed = TRUE),
+         paste0(end_icd10_code, ".9"),
+         end_icd10_code
+         ) 
+  )
+
+```
+
+
+### Make sure start_icd10_code and end_icd10_code start with the same letter
+
+```{r check_start_end_icd10_2019}
+
+gbd_2021 |> 
+  filter(end_icd10_code == "N95.9")
+
+# check start_icd10_code and end_icd10_code start with the same letter
+# if not, need to fix these rows
+  gbd_2021 |>
+  filter(str_extract(start_icd10_code, "^[A-Z]") != 
+         str_extract(end_icd10_code, "^[A-Z]")
+         )
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(start_icd10_code = 
+        ifelse(start_icd10_code == "W99" & 
+               end_icd10_code == "X06.9",
+               "X00.0",
+               start_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |>
+  add_row(
+    start_icd10_code = "W99",
+    end_icd10_code = "W99",
+    cause_name = "Unintentional injuries",
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == "O98.8" & 
+               end_icd10_code == "P05.9",
+               "O99.9",
+               end_icd10_code)
+         )
+
+
+gbd_2021 =
+  gbd_2021 |>
+  add_row(
+    start_icd10_code = "P00",
+    end_icd10_code = "P05.9",
+    cause_name = "Maternal and neonatal disorders",
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == "T74.2" & 
+               end_icd10_code == "U03",
+               "T98.3",
+               end_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |>
+  add_row(
+    start_icd10_code = "U00",
+    end_icd10_code = "U03",
+    cause_name = "Self-harm and interpersonal violence",
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == "X66" & 
+               end_icd10_code == "Y08.9",
+               "X99",
+               end_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |>
+  add_row(
+    start_icd10_code = "Y00",
+    end_icd10_code = "Y08.9",
+    cause_name = "Self-harm and interpersonal violence",
+    cause_hierarchy_level = 2
+  )
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(end_icd10_code = 
+        ifelse(start_icd10_code == "X85" & 
+               end_icd10_code == "Y08.9",
+               "X99",
+               end_icd10_code)
+         )
+
+gbd_2021 =
+  gbd_2021 |>
+  add_row(
+    start_icd10_code = "Y00",
+    end_icd10_code = "Y08.9",
+    cause_name = "Interpersonal violence",
+    cause_hierarchy_level = 2
+  )
+
+  gbd_2021 |>
+  filter(str_extract(start_icd10_code, "^[A-Z]") != 
+         str_extract(end_icd10_code, "^[A-Z]")
+         )
+  
+  
+    gbd_2021 |>
+    filter(
+         is.na(end_icd10_code)
+         | is.na(start_icd10_code)) |>
+    head()
+  
+  
+  # some nas ... 
+  # remove these rows at least for now
+  
+  gbd_2021 =
+    gbd_2021 |>
+    filter(
+      !is.na(end_icd10_code)
+      & !is.na(start_icd10_code))
+
+```
+
+
+### Seperate numeric and letter parts of ICD codes (to help with filtering ranges)
+
+```{r separate_numeric_letter_icd10_2019}
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(icd10_code_letter = str_extract(start_icd10_code, "^[A-Z]")) 
+
+gbd_2021 =
+  gbd_2021 |>
+  mutate(start_icd10_code_num = as.numeric(str_remove(start_icd10_code, "^[A-Z]")),
+         end_icd10_code_num = as.numeric(str_remove(end_icd10_code, "^[A-Z]"))
+         )
+
+
+gbd_2021 |> 
+  filter(icd10_code_letter == "N" & 
+           start_icd10_code_num <= 93.0 & 
+           end_icd10_code_num >= 93.0)
+
+gbd_2021 |> 
+  filter(end_icd10_code == "N95.9")
+
+gbd_2021 |>
+  filter(start_icd10_code_num <= 93.0 &
+         end_icd10_code_num >= 93.0 &
+         icd10_code_letter == "N"
+         )
+  
+
+```
+
+
+
+# Merge GWAS traits with GBD causes
+
+## Load Disease Mapping 
+
+```{r load_gwas_study_info}
+
+disease_mapping <- data.table::fread(
+here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
+)
+
+disease_mapping =
+  disease_mapping |>
+    mutate(icd10_code_letter = str_extract(icd10_code, "^[A-Z]")) |>
+    mutate(icd10_code_num = as.numeric(str_remove(icd10_code, "^[A-Z]")))
+
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code_num = as.numeric(icd10_code_num))
+
+```
+
+## Join disease mapping with GBD 2019 data
+
+```{r join_gwas_gbd_2021}
+
+
+disease_mapping_with_cause <- disease_mapping |>
+  rowwise() |>
+  mutate(
+    cause = 
+      list(
+      gbd_2021$cause_name[
+      which(icd10_code_num >= gbd_2021$start_icd10_code_num &
+            icd10_code_num <= gbd_2021$end_icd10_code_num & 
+            icd10_code_letter == gbd_2021$icd10_code_letter)
+      ]),
+    cause_hierarchy_level  = 
+       list(
+            gbd_2021$cause_hierarchy_level[
+      which(icd10_code_num >= gbd_2021$start_icd10_code_num &
+            icd10_code_num <= gbd_2021$end_icd10_code_num & 
+            icd10_code_letter == gbd_2021$icd10_code_letter)
+      ])
+  ) |>
+  ungroup()
+
+
+disease_mapping_with_cause = 
+  disease_mapping_with_cause |>
+  tidyr::unnest(c(cause, cause_hierarchy_level),
+                keep_empty = TRUE
+                )
+
+
+```
+
+### Checking hierarchy levels
+
+```{r check_hierarchy_levels}
+
+disease_mapping_with_cause = 
+  disease_mapping_with_cause |>
+  filter(!is.na(cause))
+
+# filtering na to deal with pivoting 
+disease_mapping_with_cause_grouped = 
+disease_mapping_with_cause |>
+select(-icd10_code_num) |>
+tidyr::pivot_wider(
+            id_cols = c("collected_all_disease_terms", "icd10_code", "icd10_description"),
+            names_from = cause_hierarchy_level, 
+            names_glue = "l{.name}_{.value}",
+            values_from = cause,
+            values_fn = ~paste0(unique(.x), collapse = ", ")
+            )
+
+
+```
+
+
+
+```{r fill_in_l2_causes}
+
+# check which l2 causes are NA but l3 causes are not NA
+# can use l3 causes therefore to fill in l2 causes
+disease_mapping_with_cause_grouped |> 
+  rowwise() |> 
+  filter(is.na(l2_cause) & !is.na(l3_cause)) |>
+  head()
+
+neoplasms = c("Other neoplasms", 
+                                    "Hodgkin lymphoma",
+                                    "Leukemia",
+                                    "Non-Hodgkin lymphoma",
+              "Multiple myeloma")
+
+disease_mapping_with_cause_grouped = 
+  disease_mapping_with_cause_grouped |>
+  rowwise() |>
+  mutate(l2_cause = 
+           list(ifelse(is.na(l2_cause),
+                  case_when(map_lgl(l3_cause, ~ .x %in% neoplasms) ~ "Neoplasms",
+                            map_lgl(l3_cause, ~ .x %in% "Neonatal disorders") ~ "Maternal and neonatal disorders",
+                            map_lgl(l3_cause, ~ .x %in% "Other cardiovascular and circulatory diseases") ~ "Cardiovascular diseases"
+                            ),
+                  l2_cause
+           )
+           )) |>
+  ungroup()
+          
+
+# to_map_manually <- 
+# disease_mapping_with_cause_grouped |> 
+#   rowwise() |> 
+#   filter(is.null(l2_cause)) |> 
+#   pull(collected_all_disease_terms) |> 
+#   unique()
+# 
+# 
+# update_unmapped_cause = function(df, 
+#                                  unmapped_term, 
+#                                  l2_cause_rep, 
+#                                  l3_cause_rep){
+#   
+#   df = 
+#   df |>
+#     mutate(l3_cause = 
+#            ifelse(collected_all_disease_terms == unmapped_term,
+#                   l3_cause_rep,
+#                   l3_cause
+#            )) |>
+#     mutate(l2_cause = 
+#            ifelse(collected_all_disease_terms == unmapped_term,
+#                   l2_cause_rep,
+#                   l2_cause
+#            ))    
+#            
+#     return(df)
+#            
+# }
+# 
+# disease_mapping_with_cause_grouped = 
+# update_unmapped_cause(disease_mapping_with_cause_grouped, 
+#                       "bone cancer",
+#                       "Neoplasms",
+#                       "Malignant neoplasms of bone and articular cartilage")
+
+
+```
+
+# Save + combine with GWAS data
+
+```{r save_final_gwas_gbd_mapping}
+
+disease_mapping_orig <- data.table::fread(
+here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
+)
+
+disease_mapping_with_cause_grouped =
+  disease_mapping_with_cause_grouped |>
+  tidyr::unnest_longer(c("l2_cause", "l3_cause", "l4_cause")) 
+
+disease_mapping_final = 
+  left_join(
+    disease_mapping_orig,
+    disease_mapping_with_cause_grouped,
+    by = c("collected_all_disease_terms", 
+           "icd10_code", 
+           "icd10_description")
+  )
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group_v2.csv"))
+
+gwas_study_info =
+  gwas_study_info |>
+  select(`DISEASE/TRAIT`, PUBMED_ID, STUDY_ACCESSION, COHORT)
+
+disease_mapping_final =
+  left_join(
+    disease_mapping_final,
+    gwas_study_info
+  )
+
+data.table::fwrite(
+disease_mapping_final,
+here::here("output/icd_map/gwas_disease_to_icd10_mapping_gbd_cat.csv")
+)
+
+```
+
+
+```{r}
+
+gbd_data <- data.table::fread(here::here("data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv"))
+
+gbd_data = gbd_data |> 
+           dplyr::filter(metric == "Rate") |>
+           dplyr::filter(measure == "DALYs (Disability-Adjusted Life Years)") |> 
+           dplyr::filter(year == 2019) 
+
+```
+
