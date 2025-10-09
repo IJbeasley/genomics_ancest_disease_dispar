@@ -368,6 +368,17 @@ disease_mapping =
 
 ```
 
+## Fixing some known mappings
+
+```{r fix_known_mappings}
+
+# if phecode is 184.11
+# 
+
+
+
+```
+
 ## Get ICD10 codes from author provided DISEASE/TRAIT column 
 
 ```{r add_icd10_from_trait}
@@ -415,7 +426,448 @@ print(length(not_found_diseases))
 
 ## Get ICD10 codes by matching terms 
 
-### Match disease terms to phenotypes (corresponding to PheCodes)
+### Match disease/trait to ICD 10 descriptions 
+
+```{r match_disease_terms_to_icd_descriptions, message=FALSE}
+
+matched_icd10_desc  = 
+phecodes |>
+    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = "UTF-8"))) |>
+    select(collected_all_disease_terms,    
+           icd10_code = ICD10) 
+
+
+matched_icd10_desc =
+  matched_icd10_desc |>
+  group_by(collected_all_disease_terms) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ", 
+                                     na.rm = T), 
+            .groups = "drop")
+
+matched_icd10_desc = 
+  matched_icd10_desc |>
+    mutate(icd10_code_origin = "ICD Description Match (DISEASE/TRAIT)")
+
+# match by DISEASE/TRAIT
+matched_icd10_desc =
+  matched_icd10_desc |>
+  rename(`DISEASE/TRAIT` = collected_all_disease_terms)
+
+disease_mapping = 
+disease_mapping |>
+rows_patch(matched_icd10_desc,
+           unmatched = "ignore")
+
+# Mapping of some other disease terms to ICD10 descriptions
+# if `DISEASE/TRAIT` contains
+# Carcinoma in situ of other and unspecified sites \\(UKB data field 40006\\)
+# and collected_all_disease_terms is "cancer"
+# then map to D09
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "cancer" & 
+                            grepl("Carcinoma in situ of other and unspecified sites", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "D09",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "cancer" & 
+                  grepl("Carcinoma in situ of other and unspecified sites", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` contains
+# Carcinoma in situ \\(UKB data field 40012\\)
+# and collected_all_disease_terms is "cancer"
+# then map to D09.9
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "cancer" & 
+                            grepl("Carcinoma in situ \\(UKB data field 40012\\)", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "D09.9",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "cancer" & 
+                  grepl("Carcinoma in situ \\(UKB data field 40012\\)", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# Male pattern baldness `DISEASE/TRAIT`
+# map to L64
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "alopecia" & 
+                            grepl("Male pattern baldness", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "L64",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "alopecia" & 
+                  grepl("Male pattern baldness", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )  
+
+
+# Alopecia areata `DISEASE/TRAIT`
+# map to L63
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "alopecia" & 
+                            grepl("Alopecia areata", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "L63",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "alopecia" & 
+                  grepl("Alopecia areata", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# Frontal fibrosing alopecia
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "alopecia" & 
+                            grepl("Frontal fibrosing alopecia", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "L66.1",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "alopecia" & 
+                  grepl("Frontal fibrosing alopecia", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# Thiopurine-induced in `DISEASE/TRAIT
+# and collected_all_disease_terms is "alopecia"
+# map to L64.0
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "alopecia" & 
+                            grepl("Thiopurine-induced", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "L64.0",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "alopecia" & 
+                  grepl("Thiopurine-induced", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if (AL) amyloidosis in `DISEASE/TRAIT`
+# and collected_all_disease_terms is "amyloidosis"
+# map to E85.8
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "amyloidosis" & 
+                            grepl("\\(AL\\) amyloidosis", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "E85.8",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "amyloidosis" & 
+                  grepl("\\(AL\\) amyloidosis", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` == "Meningioma" 
+# and collected_all_disease_terms is "benign neoplasm"
+# map to D32
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                            grepl("Meningioma", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "D32",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                  grepl("Meningioma", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if Benign prostatic hyperplasia in `DISEASE/TRAIT`
+# and collected_all_disease_terms is "benign neoplasm"
+# map to D29.1
+# D29.1
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                            grepl("Benign prostatic hyperplasia", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "D29.1",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                  grepl("Benign prostatic hyperplasia", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` == Colon polyp
+# and collected_all_disease_terms is "benign neoplasm"
+# map to K63.5
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                (`DISEASE/TRAIT` == "Colon polyp" | `DISEASE/TRAIT` == "Colon polyps" | `DISEASE/TRAIT` == "Takes medication for colon polyps?"),
+                            "K63.5",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                (`DISEASE/TRAIT` == "Colon polyp" | `DISEASE/TRAIT` == "Colon polyps" | `DISEASE/TRAIT` == "Takes medication for colon polyps?"),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` contains Source of report of B07
+# and collected_all_disease_terms is benign neoplasm
+# map to B07
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                            grepl("Source of report of B07", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "B07",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                  grepl("Source of report of B07", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+
+# if `DISEASE/TRAIT` == Actinic keratosis
+# and collected_all_disease_terms is "benign neoplasm"
+# then map to L57.0
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                            grepl("Actinic keratosis", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "L57.0",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "benign neoplasm" & 
+                  grepl("Actinic keratosis", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# If `DISEASE/TRAIT` == Takayasu arteritis
+# and congenital anomaly of cardiovascular system
+# map to M31.4
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "congenital anomaly of cardiovascular system" & 
+                            grepl("Takayasu arteritis", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "M31.4",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "congenital anomaly of cardiovascular system" & 
+                  grepl("Takayasu arteritis", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` contains Intraductal carcinoma in situ
+# and collected_all_disease_terms is "breast cancer"
+# map to D05.1
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "breast cancer" & 
+                            grepl("Intraductal carcinoma in situ", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "D05.1",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "breast cancer" & 
+                  grepl("Intraductal carcinoma in situ", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+
+# if `DISEASE/TRAIT` contains Carcinoma in situ of breast
+# and collected_all_disease_terms is "breast cancer"
+# map to D05
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "breast cancer" & 
+                            grepl("Carcinoma in situ of breast", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "D05",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "breast cancer" & 
+                  grepl("Carcinoma in situ of breast", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT`  == "Stroke"
+# and collected_all_disease_terms is "stroke"
+# map to I64
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "stroke" & 
+                            grepl("^Stroke$", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "I64",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "stroke" & 
+                  grepl("^Stroke$", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+
+# if `DISEASE/TRAIT` == Biliary tract cancer 
+# and collected_all_disease_terms is "liver cancer"
+# map to C24
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "liver cancer" & 
+                            grepl("Biliary tract cancer", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "C24",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "liver cancer" & 
+                  grepl("Biliary tract cancer", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` == Hepatocellular carcinoma
+# and collected_all_disease_terms is "liver cancer"
+# then map to C22.0
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "liver cancer" & 
+                            grepl("Hepatocellular carcinoma", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "C22.0",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "liver cancer" & 
+                  grepl("Hepatocellular carcinoma", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+# if `DISEASE/TRAIT` == Extrahepatic cholangiocarcinoma
+# and collected_all_disease_terms is "liver cancer"
+# then map to 24.0
+disease_mapping = 
+  disease_mapping |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "liver cancer" & 
+                            grepl("Extrahepatic cholangiocarcinoma", 
+                                  `DISEASE/TRAIT`, 
+                                  ignore.case = T),
+                            "C24.0",
+                             icd10_code)) |>
+  mutate(icd10_code_origin = 
+         ifelse(collected_all_disease_terms == "liver cancer" & 
+                  grepl("Extrahepatic cholangiocarcinoma", 
+                        `DISEASE/TRAIT`, 
+                        ignore.case = T),
+                "ICD Description Match (DISEASE/TRAIT)",
+                icd10_code_origin)
+         )
+
+
+disease_mapping |>
+  dplyr::filter(icd10_code_origin == "ICD Description Match (DISEASE/TRAIT)") |>
+  nrow()
+
+```
+
+### How many diseases are not mapped yet?
+
+```{r how_many_not_mapped_matched_icd10}
+
+matched =
+  disease_mapping |>
+  filter(icd10_code != "") |>
+  pull(collected_all_disease_terms)
+
+not_found_diseases <- diseases[!diseases %in%  matched] 
+not_found_diseases <- not_found_diseases[not_found_diseases != ""]
+
+print(length(not_found_diseases))
+
+disease_mapping |>
+  filter(is.na(icd10_code_origin)) |>
+  nrow()
+
+```
+
+### Match disease/trait to phenotypes (corresponding to PheCodes)
 
 ```{r match_disease_terms_to_phenotypes, message=FALSE}
 
@@ -434,13 +886,7 @@ matched_phenotypes =
 matched_phenotypes |>
   mutate(collected_all_disease_terms = tolower(Phenotype)) |>
   select(collected_all_disease_terms, icd10_code) |>
-  mutate(icd10_code_origin = "Phecode Phenotype Match")
-
-# match by collected_all_disease_terms
-disease_mapping = 
-disease_mapping |>
-rows_patch(matched_phenotypes,
-           unmatched = "ignore")
+  mutate(icd10_code_origin = "Phecode Phenotype Match (DISEASE/TRAIT)")
 
 # match by DISEASE/TRAIT
 matched_phenotypes =
@@ -453,7 +899,7 @@ rows_patch(matched_phenotypes,
            unmatched = "ignore")
 
 disease_mapping |>
-  filter(icd10_code_origin == "Phecode Phenotype Match") |>
+  filter(icd10_code_origin == "Phecode Phenotype Match (DISEASE/TRAIT") |>
   nrow()
          
 ```
@@ -462,12 +908,10 @@ disease_mapping |>
 
 ```{r how_many_not_mapped_matched_phenotypes}
 
-# disease_mapping =
-#   disease_mapping |>
-#   filter(icd10_code != "")
-
-matched <- c(disease_mapping_matched$collected_all_disease_terms,
-             matched_phenotypes$collected_all_disease_terms)
+matched =
+  disease_mapping |>
+  filter(icd10_code != "") |>
+  pull(collected_all_disease_terms)
 
 not_found_diseases <- diseases[!diseases %in% 
                                matched
@@ -480,72 +924,83 @@ print(length(not_found_diseases))
 ```
 
 
-### Match disease terms to ICD 10 descriptions 
+### Match collected_all_disease_terms to ICD10 descriptions
 
-```{r match_disease_terms_to_icd_descriptions, message=FALSE}
+```{r match_collected_icd10_desc}
 
-matched_icd10_desc  = 
-phecodes |>
-    #filter(tolower(iconv(ICD_DESCRIPTION, to = "UTF-8")) %in% not_found_diseases) |>
-    mutate(collected_all_disease_terms = tolower(iconv(ICD_DESCRIPTION, to = "UTF-8"))) |>
-    select(collected_all_disease_terms,    
-           icd10_code = ICD10) 
-
-
-matched_icd10_desc =
-  matched_icd10_desc |>
-  group_by(collected_all_disease_terms) |>
-  summarise(icd10_code = str_flatten(unique(icd10_code), 
-                                     collapse = ", ", 
-                                     na.rm = T), 
-            .groups = "drop")
-
-# match by collected_all_disease_terms
 matched_icd10_desc = 
   matched_icd10_desc |>
-    mutate(icd10_code_origin = "ICD Description Match")
+  rename(collected_all_disease_terms = `DISEASE/TRAIT`)
 
-disease_mapping = 
-disease_mapping |>
-rows_patch(matched_icd10_desc,
-           unmatched = "ignore")
-
-# match by DISEASE/TRAIT
-matched_icd10_desc =
+matched_icd10_desc = 
   matched_icd10_desc |>
-  rename(`DISEASE/TRAIT` = collected_all_disease_terms)
+  mutate(icd10_code_origin = "ICD Description Match (collected_all_disease_terms)")
 
 disease_mapping =
   rows_patch(disease_mapping,
              matched_icd10_desc,
              unmatched = "ignore")
 
+```
+
+### How many diseases are not mapped yet?
+
+```{r how_many_not_mapped_matched_phenotypes_collected_all_disease_terms_icd_desc}
+
+matched =
+  disease_mapping |>
+  filter(icd10_code != "") |>
+  pull(collected_all_disease_terms)
+
+not_found_diseases <- diseases[!diseases %in% 
+                               matched
+                               ] 
+
+not_found_diseases <- not_found_diseases[not_found_diseases != ""]
+
+print(length(not_found_diseases))
+
+```
+
+
+
+### Match collected_all_disease_terms to ICD10 codes (by phenotypes)
+
+```{r match_collected_icd10}
+
+matched_phenotypes = 
+  matched_phenotypes |>
+  rename(collected_all_disease_terms = `DISEASE/TRAIT`)
+
+matched_phenotypes = 
+  matched_phenotypes |>
+  mutate(icd10_code_origin = "Phecode Phenotype Match (collected_all_disease_terms)")
+
+# match by collected_all_disease_terms
+disease_mapping = 
 disease_mapping |>
-  filter(icd10_code_origin == "ICD Description Match") |>
-  nrow()
+rows_patch(matched_phenotypes,
+           unmatched = "ignore")
+
 
 ```
 
 ### How many diseases are not mapped yet?
 
-```{r how_many_not_mapped_matched_icd10}
+```{r how_many_not_mapped_matched_phenotypes_collected_all_disease_terms}
 
-# disease_mapping =
-#   disease_mapping |>
-#   filter(icd10_code != "")
+matched =
+  disease_mapping |>
+  filter(icd10_code != "") |>
+  pull(collected_all_disease_terms)
 
-matched <- c(disease_mapping_matched$collected_all_disease_terms,
-             matched_phenotypes$collected_all_disease_terms,
-             to_add$collected_all_disease_terms)
+not_found_diseases <- diseases[!diseases %in% 
+                               matched
+                               ] 
 
-not_found_diseases <- diseases[!diseases %in%  matched] 
 not_found_diseases <- not_found_diseases[not_found_diseases != ""]
 
 print(length(not_found_diseases))
-
-disease_mapping |>
-  filter(is.na(icd10_code_origin)) |>
-  nrow()
 
 ```
 
@@ -702,10 +1157,35 @@ study_icd_map =
   select(collected_all_disease_terms, icd10_code) |>
   distinct()
 
+# remove Z95.1 and Z95.5 from coronary artery disease
+study_icd_map =
+  study_icd_map |>
+  mutate(icd10_code = ifelse(collected_all_disease_terms == "coronary artery disease",
+                             str_replace_all(icd10_code, "Z95.1|Z95.5", ""),
+                             icd10_code))
+
+# assume ovarian cancer terms more specific than 
+# Malignant neoplasm of ovary and other uterine adnexa (PheCode 184.1)
+study_icd_map =
+  study_icd_map |>
+  filter(!(
+         collected_all_disease_terms == "ovarian cancer" & 
+         phecode == "184.10")
+  )
+
+study_icd_map =
+  study_icd_map |>
+  filter(icd10_code != "" & !is.na(icd10_code))
+
+study_icd_map =
+  study_icd_map |>
+  tidyr::separate_longer_delim(icd10_code, delim = ", ") |>
+  tidyr::separate_longer_delim(icd10_code, delim = ",")
+
 study_icd_map =
   study_icd_map |>
   group_by(collected_all_disease_terms) |>
-  summarise(icd10_code = str_flatten(unique(sort(icd10_code)), 
+  summarise(icd10_code = str_flatten(unique(sort(icd10_code)),
                                      collapse = ", ", 
                                      na.rm = T), 
             .groups = "drop")
