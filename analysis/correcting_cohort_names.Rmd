@@ -40,7 +40,7 @@ mutate(COHORT = str_replace_all(COHORT, "\\| ", "|")) |>
 
 # Accounting for some discrepancies in cohort names across studies 
 
-## Check in: how many unique cohorts now? 
+## Check in: how many unique cohorts (at the start)? 
 
 ```{r}
 
@@ -885,6 +885,32 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
+## Taiwan -> TWB
+
+```{r}
+
+# for PUBMED_IDs
+twb_pubmed_ids <-  c("34026292",
+                     "36329257",
+                     "36009466",
+                     "35046404",
+                     "34934334",
+                     "34834521",
+                     "34404248",
+                     "36778051",
+                     "34522458"
+                    )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID %in% twb_pubmed_ids,
+                         str_replace_all(COHORT, "Taiwan", "TWB"),
+                       COHORT
+  )
+  )
+
+```
+
 ## VIVA 
 
 ```{r}
@@ -911,6 +937,8 @@ gwas_study_info = gwas_study_info |>
   mutate(COHORT = str_replace_all(COHORT, "Rotterdam", "RS"))
 
 ```
+
+
 
 ## China Kadoorie Biobank
 
@@ -941,6 +969,21 @@ unique(all_cohorts) |> length()
 
 ```
 
+## Check in: how many cohorts are only used in one PUBMED ID (indicating possibly misnaming error?)
+
+```{r}
+
+single_use_cohorts  =   
+data.frame(cohort = all_cohorts) |>
+  group_by(cohort) |>
+  summarise(n_studies = n()) |>
+  filter(n_studies == 1) |>
+  pull(cohort)
+
+length(single_use_cohorts)
+
+```
+
 
 ## Check in: have we corrected the simple changes we sought to corect? 
 
@@ -964,7 +1007,7 @@ dup_groups[lengths(dup_groups) > 1]
 
 ```
 
-## Now additional checks: 
+## Aditional checks: 
 
 ```{r}
 
@@ -978,65 +1021,180 @@ dup_groups[lengths(dup_groups) > 1]
 
 ```
 
-
-# Check in: how many cohorts are only used in one PUBMED ID (indicating possibly misnaming error?)
-
-```{r}
-
-
-single_use_cohorts  =   
-data.frame(cohort = all_cohorts) |>
-  group_by(cohort) |>
-  summarise(n_studies = n()) |>
-  filter(n_studies == 1) |>
-  pull(cohort)
-
-length(single_use_cohorts)
-
-
-
-```
-
-# Fuzzy name look-up 
+## Checking: Any fuzzy names to check? 
 
 ```{r}
 
 library(stringdist)
 library(dplyr)
 
-# Create a vector of unique cohort names
-cohorts <- unique(all_cohorts)
-
-# Compute pairwise string distances (Levenshtein distance)
-dist_matrix <- stringdistmatrix(single_use_cohorts, cohorts, method = "lv")
-
 # Identify pairs with small distance (e.g., <=2 edits)
-threshold <- 2
-matches <- which(dist_matrix > 0 & dist_matrix <= threshold, arr.ind = TRUE)
-matches <- data.frame(
-  cohort1 = single_use_cohorts[matches[,1]],
-  cohort2 = cohorts[matches[,2]],
-  distance = dist_matrix[matches]
-)
-matches <- matches[matches$cohort1 != matches$cohort2, ]
-matches <- unique(matches)
+small_dist_pairs <- function(threshold, 
+                             dist_matrix_method,
+                             all_cohorts) {
+  
+  # Create a vector of unique cohort names
+  cohorts <- unique(all_cohorts)
+  
+  single_use_cohorts  =   data.frame(cohort = all_cohorts) |>
+                          group_by(cohort) |>
+                          summarise(n_studies = n()) |>
+                          filter(n_studies == 1) |>
+                          pull(cohort)
+  
+  # Compute pairwise string distances (Levenshtein distance)
+  dist_matrix <- stringdistmatrix(single_use_cohorts, 
+                                  cohorts, 
+                                  method = dist_matrix_method)
+  
+  matches <- which(dist_matrix > 0 & dist_matrix <= threshold, 
+                   arr.ind = TRUE)
+  
+  matches <- data.frame(
+    cohort1 = single_use_cohorts[matches[,1]],
+    cohort2 = cohorts[matches[,2]],
+    distance = dist_matrix[matches]
+  )
+  
+  matches <- matches[matches$cohort1 != matches$cohort2, ]
+  matches <- unique(matches)
+  
+  return(matches)
+  
+}
 
-matches |>
+small_dist_pairs(threshold = 2, 
+                 dist_matrix_method = "lv",
+                 all_cohorts = all_cohorts) |>
   arrange(distance) |>
   head()
 
+small_dist_pairs(threshold = 2,
+                 dist_matrix_method = "lcs",
+                 all_cohorts = all_cohorts) |>
+  arrange(distance) |>
+  head()
 
+# COHRA1 vs COHRA
+# COHRA2 vs COHRA
+
+# EGLE vs EAGLE
+# GHS-II GHS-I
+
+# B-PROOF BPROOF
+gwas_study_info |>
+  filter(grepl("\\bB-PROOF\\b", COHORT))
+
+gwas_study_info |>
+  filter(grepl("\\bBPROOF\\b", COHORT))
+
+# WAMHS WASHS
+
+# CALGB 40502 CALGB 40503
+
+# matches <- which(dist_matrix > 0 & dist_matrix <= threshold, arr.ind = TRUE)
+# matches <- data.frame(
+#   cohort1 = single_use_cohorts[matches[,1]],
+#   cohort2 = cohorts[matches[,2]],
+#   distance = dist_matrix[matches]
+# )
+# 
+# 
+# matches |>
+#   arrange(distance) |>
+#   head()
 
 ```
 
+# Specific studies 
 
+## European NAFLD Registry Metacohort
+
+```{r euro_nafld}
+
+# PUBMED_ID = 32298765
+# European NAFLD Registry Metacohort
+# if STAGE = "initial"
+# then set
+# COHORT = European NAFLD Registry Metacohort|WTCCC|HYPERGENES|KORA|Understanding Society
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(COHORT == "" & PUBMED_ID == "32298765",
+                       "European NAFLD Registry Metacohort|WTCCC|HYPERGENES|KORA|Understanding Society",
+                       COHORT
+  )
+  )
+
+# PUBMED_ID = 32298765
+# if STAGE = "replication"
+# then set:
+# COHORT = European NAFLD Registry Metacohort
+# gwas_study_info =
+#   gwas_study_info |>
+#   mutate(COHORT = ifelse(COHORT == "" &
+#                          PUBMED_ID == "32298765" &
+#                          STAGE == "replication",
+#                        "European NAFLD Registry Metacohort",
+#                        COHORT
+#   )
+#   )
+```
+
+## Pubmed id: 36551779
+
+```{r}
+# replace other with: AGORA
+# for PUBMED_ID 36551779
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 36551779,
+                         str_replace_all(COHORT, "other", "AGORA"),
+                         COHORT
+  )
+  )
+
+```
+
+## Estonian Biobank
+
+
+```{r}
+# if first author, COVID-19 Host Genetics Initiative
+# replace Estonia with: EB
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(COHORT = ifelse(FIRST_AUTHOR == "COVID-19 Host Genetics Initiative",
+                         str_replace_all(COHORT, "Estonia", "EB"),
+                         COHORT
+  )
+  )
+
+
+# then pubmed id: 34791234
+# replace Estonia with EB
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 34791234,
+                         str_replace_all(COHORT, "Estonia", "EB"),
+                         COHORT
+  )
+  )
+
+```
 
 # Saving: 
 
 ```{r}
 
+gwas_study_info =
+  gwas_study_info |>
+  select(STUDY_ACCESSION,
+         COHORT) |>
+  distinct()
+
 data.table::fwrite(gwas_study_info,
-                  here::here("output/gwas_study_info_cohort_corrected.csv"), 
+                  here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"), 
                   sep = ",")
 
 ```
@@ -1073,6 +1231,24 @@ gwas_study_info |>
 
 
 ```
+
+## MAYO
+
+Mayo Clinic Bipolar Biobank (GCST90554822)
+
+MAYO-Clinic RGC Project Generation. (37949852)
+
+Mayo Clinic (40050615)
+
+
+Mayo-VDB|
+
+
+
+
+
+
+
 
 ```{r, eval = F}
 
