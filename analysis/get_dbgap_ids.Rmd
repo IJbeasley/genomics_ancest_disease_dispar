@@ -1,0 +1,87 @@
+---
+title: "Get dbGAP ids for studies"
+author: "Isobel Beasley"
+date: "2025-10-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup-libraries}
+
+library(dplyr)
+library(data.table)
+library(rentrez)
+library(purrr)
+library(stringr)
+
+```
+
+## Get pubmed ids for disease studies
+
+```{r load-data}
+
+gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info =
+  gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  slice_sample(n = 1000)
+
+all_pmids <-
+unique(gwas_study_info$PUBMED_ID)
+
+print(length(all_pmids))
+
+```
+
+# Get dbGAP ids for pubmed ids
+
+## Extract internal dbGAP ids
+
+```{r get-dbgap-ids}
+
+get_internal_dbgap_ids = function(pubmed_id) {
+
+dbgap_links <- entrez_link(
+            dbfrom = "pubmed",
+            db = "gap",
+            id = pubmed_id
+)
+
+dbgap_ids <- unlist(dbgap_links$links$pubmed_gap)
+
+return(data.frame(PUBMED_ID = pubmed_id,
+                  DBGAP_ID = str_flatten(dbgap_ids,
+                                         collapse = ",",
+                                         na.rm = TRUE)
+                  )
+)
+
+}
+
+
+pubmed_dbgap_mapping <-
+purrr::map(all_pmids,
+           get_internal_dbgap_ids
+           ) |>
+  dplyr::bind_rows()
+
+
+
+```
+
+## Save dbGAP id mapping
+
+```{r save-dbgap-ids}
+
+data.table::fwrite(pubmed_dbgap_mapping,
+                   here::here("output/gwas_cohorts/gwas_study_dbgap_ids.csv")
+                   )
+
+```
