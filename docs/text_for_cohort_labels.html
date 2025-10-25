@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree748dac2c44b726dbede003c6d4810481e18466a7targetblank748dac2a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0d8b8727e9ef63901141f9e5e118e6db4f0e7393targetblank0d8b872a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/748dac2c44b726dbede003c6d4810481e18466a7" target="_blank">748dac2</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0d8b8727e9ef63901141f9e5e118e6db4f0e7393" target="_blank">0d8b872</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree748dac2c44b726dbede003c6d4810481e18466a7targetblank748dac2a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0d8b8727e9ef63901141f9e5e118e6db4f0e7393targetblank0d8b872a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/748dac2c44b726dbede003c6d4810481e18466a7" target="_blank">748dac2</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0d8b8727e9ef63901141f9e5e118e6db4f0e7393" target="_blank">0d8b872</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -591,7 +591,6 @@ Untracked files:
     Untracked:  analysis/specific_aims_stats.Rmd
     Untracked:  code/full_text_download.R
     Untracked:  code/get_dbgap_ids.py
-    Untracked:  code/get_full_text.R
     Untracked:  code/get_pmids_from_dbgap.py
     Untracked:  test_cohort_info_overlap.R
 
@@ -602,10 +601,12 @@ Unstaged changes:
     Modified:   analysis/gbd_data_plots.Rmd
     Modified:   analysis/group_cancer_diseases.Rmd
     Modified:   analysis/gwas_to_gbd.Rmd
+    Modified:   analysis/index.Rmd
     Modified:   analysis/level_1_disease_group_non_cancer.Rmd
     Modified:   analysis/level_2_disease_group.Rmd
     Modified:   analysis/map_trait_to_icd10.Rmd
     Modified:   analysis/trait_ontology_categorization.Rmd
+    Deleted:    code/abstracts.R
     Modified:   code/pubmedbert_train_test.py
 
 </code></pre>
@@ -657,6 +658,40 @@ Message
 Rmd
 </td>
 <td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/0d8b8727e9ef63901141f9e5e118e6db4f0e7393/analysis/text_for_cohort_labels.Rmd" target="_blank">0d8b872</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-24
+</td>
+<td>
+Cleaning up abstract collecting code again
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/2afc108f64bdf3160790bb105a7cba49ad647a01/docs/text_for_cohort_labels.html" target="_blank">2afc108</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-24
+</td>
+<td>
+Build site.
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
 <a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/748dac2c44b726dbede003c6d4810481e18466a7/analysis/text_for_cohort_labels.Rmd" target="_blank">748dac2</a>
 </td>
 <td>
@@ -682,16 +717,8 @@ Cleaning up abstract collecting
 <h2>Required packages</h2>
 <pre class="r"><code>library(stringr)
 library(readxl)
-library(dplyr)</code></pre>
-<pre><code>
-Attaching package: &#39;dplyr&#39;</code></pre>
-<pre><code>The following objects are masked from &#39;package:stats&#39;:
-
-    filter, lag</code></pre>
-<pre><code>The following objects are masked from &#39;package:base&#39;:
-
-    intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>library(stringi)
+library(dplyr)
+library(stringi)
 library(rentrez)
 library(xml2)
 library(jsonlite)
@@ -853,8 +880,8 @@ rows =
 
 pmids = pmids[rows]
 
-cohorts = cohort[rows]
-names(cohorts) = pmids
+cohort = cohort[rows]
+names(cohort) = pmids
 
 date = date[rows]
 names(date) = pmids
@@ -989,7 +1016,7 @@ for (i in seq_along(abstracts)) {
 <h3>Check: What abstracts are missing?</h3>
 <pre class="r"><code>abstract_files &lt;- list.files(here::here(&quot;output/abstracts/&quot;), 
                              pattern = &quot;*.txt&quot;, 
-                             full.names = TRUE
+                             full.names = FALSE
                              )
 
 pmids_with_abstracts = gsub(&quot;\\.txt$&quot;, &quot;&quot;, abstract_files)
@@ -1002,569 +1029,40 @@ missing_abstracts = setdiff(all_pmids,
 print(&quot;Number of missing abstracts:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of missing abstracts:&quot;</code></pre>
 <pre class="r"><code>length(missing_abstracts)</code></pre>
-<pre><code>[1] 4511</code></pre>
-<pre class="r"><code>library(openalexR)</code></pre>
-<pre><code>openalexR v2.0.0 introduces breaking changes.
-See NEWS.md for details.
+<pre><code>[1] 42</code></pre>
+<pre class="r"><code>library(openalexR)
 
-To suppress this message, add `openalexR.message = suppressed` to your .Renviron file.</code></pre>
-<pre class="r"><code># get information on these papers from openAlex
+# get information on these papers from openAlex
 oa_example &lt;- 
 oa_fetch(entity = &quot;works&quot;,
          pmid = missing_abstracts,
-         abstract = TRUE)</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2134783591, W1994664175.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2134783591&quot;, &quot;W1994664175&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2054153086, W2064041354.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2054153086&quot;, &quot;W2064041354&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2166431807.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2166431807&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2109529720, W2135456872.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2109529720&quot;, &quot;W2135456872&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2165019590, W1993904263.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2165019590&quot;, &quot;W1993904263&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2141642891, W2152157708, W2170326618.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2141642891&quot;, &quot;W2152157708&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W1934392702, W2126864982, W1985742486.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W1934392702&quot;, &quot;W2126864982&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2109130469, W2039310245, W2041144936, W2113463873.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2109130469&quot;, &quot;W2039310245&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2112848098, W1980725116, W2095821741, W2108525019.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2112848098&quot;, &quot;W1980725116&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2145210308, W1966831629, W2159532900.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2145210308&quot;, &quot;W1966831629&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2145707775, W2063993913, W2149637146.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2145707775&quot;, &quot;W2063993913&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2040547343, W2101605059, W1993588417, W2091808830.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2040547343&quot;, &quot;W2101605059&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2080077971, W2079712106.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2080077971&quot;, &quot;W2079712106&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W1999690368.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W1999690368&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2065692954, W2165238174.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2065692954&quot;, &quot;W2165238174&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2100242214.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2100242214&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2045017910, W2100825937, W2165084094, W2135176038.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2045017910&quot;, &quot;W2100825937&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2143625465, W2147452548, W2049330354, W2117667316.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2143625465&quot;, &quot;W2147452548&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2035310463, W2136376873.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2035310463&quot;, &quot;W2136376873&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2135665336, W2004429375, W2132559433, W2158740417, W2105369704, W2159227882.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2135665336&quot;, &quot;W2004429375&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2108305936.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2108305936&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2135403800.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2135403800&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2115779804, W2117505014, W2127034229, W1984568232.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2115779804&quot;, &quot;W2117505014&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2148749248, W1602867585, W2108356100, W2087005537.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2148749248&quot;, &quot;W1602867585&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2152748843.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2152748843&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2101357408, W1992891812, W2078675213, W2003751484, W2015410907, W2155276106, W2154340576, W2046600562.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2101357408&quot;, &quot;W1992891812&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2171315731, W2088182134, W2105786909, W1687266585.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2171315731&quot;, &quot;W2088182134&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2002715948, W2028546773, W2095936660, W2082423183, W2142907734, W2148977592.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2002715948&quot;, &quot;W2028546773&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2018046598, W2142283589.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2018046598&quot;, &quot;W2142283589&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2227148039, W2197792425, W2105096699.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2227148039&quot;, &quot;W2197792425&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2243398804, W2107139378, W2244701831.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2243398804&quot;, &quot;W2107139378&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2233221674, W2262279506, W2564640632, W2183868793, W2188742158, W2293438364, W2189635544, W2266228206.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2233221674&quot;, &quot;W2262279506&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2411709723, W2325541602, W2341676109, W2322578512, W2295479254, W2333739416.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2411709723&quot;, &quot;W2325541602&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2464448281, W2465667391, W2336130565, W2339358896, W2462494405.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2464448281&quot;, &quot;W2465667391&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2477863367, W2519483107, W2504181072, W2509403461.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2477863367&quot;, &quot;W2519483107&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2557527880, W2561088732, W2560318205.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2557527880&quot;, &quot;W2561088732&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2586698568.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2586698568&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2601822003, W2593282276.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2601822003&quot;, &quot;W2593282276&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2592518050, W2617316722, W2612427157, W2623056867, W2613022045, W2734534935, W2722517739, W2702170325, W2612200829.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2592518050&quot;, &quot;W2617316722&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2765253743, W2593940628, W2768987398.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2765253743&quot;, &quot;W2593940628&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2780232486, W2788540749, W2635658300, W2779204423.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2780232486&quot;, &quot;W2788540749&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2791863121, W2790053519.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2791863121&quot;, &quot;W2790053519&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2738082385, W2619003201, W2802079625, W2802484183.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2738082385&quot;, &quot;W2619003201&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2806504012, W2807295499, W2808886822.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2806504012&quot;, &quot;W2807295499&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2886497950, W2891085289, W2887040813.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2886497950&quot;, &quot;W2891085289&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2894662039, W2896468934.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2894662039&quot;, &quot;W2896468934&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2791854743, W2903533144, W2904891280, W2902554187, W2903416893, W2901268166, W2742705741, W2905221341.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2791854743&quot;, &quot;W2903533144&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2910684629.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2910684629&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2916749909, W2917263971, W2917444392, W2918113141.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2916749909&quot;, &quot;W2917263971&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2950375827, W2944046200.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2950375827&quot;, &quot;W2944046200&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2947278243, W2945877977, W2948055130, W2949800402.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2947278243&quot;, &quot;W2945877977&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2960372990, W2970474312.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2960372990&quot;, &quot;W2970474312&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2986932567, W2981477552, W2979994192, W2977833465, W2978880955, W2956245605, W2982511147.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2986932567&quot;, &quot;W2981477552&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2995971356, W2995738534.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2995971356&quot;, &quot;W2995738534&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W2999230481, W2988793804, W2984805909.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W2999230481&quot;, &quot;W2988793804&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3018522922, W3013248105.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3018522922&quot;, &quot;W3013248105&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3036779511, W3035152464, W3024294833, W3009825875, W3018118540, W3027724762, W3034638407.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3036779511&quot;, &quot;W3035152464&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3040251959.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3040251959&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3092894050, W3082058008, W3093044960, W3088087046.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3092894050&quot;, &quot;W3082058008&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3094181094, W3094435518, W3109183357.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3094181094&quot;, &quot;W3094435518&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3115151307, W3128471417, W3049150590.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3115151307&quot;, &quot;W3128471417&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3128153416, W3131963404, W3120099202.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3128153416&quot;, &quot;W3131963404&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3147448391.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3147448391&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3162259891, W3165249197.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3162259891&quot;, &quot;W3165249197&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3172294552, W3136918134, W3176639233.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3172294552&quot;, &quot;W3136918134&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3182807823, W3195015166.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3182807823&quot;, &quot;W3195015166&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3197290161, W3202494027, W3135990307, W2948656458, W3203354976.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3197290161&quot;, &quot;W3202494027&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W3202518185, W4229334951, W3096966615.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W3202518185&quot;, &quot;W4229334951&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4226286160, W4205105460, W4205756350, W3204914697.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4226286160&quot;, &quot;W4205105460&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4213416315, W4210780562, W3194462435.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4213416315&quot;, &quot;W4210780562&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4223520055, W4223591189, W4220729480, W4214884216, W4220661916, W4220996951.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4223520055&quot;, &quot;W4223591189&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4280552086, W4229455035, W2976906159, W4224938995, W4281672760, W4282940533.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4280552086&quot;, &quot;W4229455035&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4289637440, W4285733805.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4289637440&quot;, &quot;W4285733805&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4298138773, W4292259454.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4298138773&quot;, &quot;W4292259454&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4306888850, W4308101961, W4293843054, W4307114719, W3200584904, W4303184032.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4306888850&quot;, &quot;W4308101961&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4312019552, W4311025052, W4313528573.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4312019552&quot;, &quot;W4311025052&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4304695497, W4318979117, W4318775835.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4304695497&quot;, &quot;W4318979117&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4324045019, W4323043273.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4324045019&quot;, &quot;W4323043273&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4353055381, W4376959222, W4375859145, W4376642583, W4378472172, W4377038143, W4367600445.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4353055381&quot;, &quot;W4376959222&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4382394400, W4381185249, W4379599680, W4379877956, W4380628026.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4382394400&quot;, &quot;W4381185249&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4386332807, W4386087061, W4387335128, W4385701286.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4386332807&quot;, &quot;W4386087061&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4390345401, W4388541037, W4388591912, W4387805440.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4390345401&quot;, &quot;W4388541037&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4391925503, W4390979516.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4391925503&quot;, &quot;W4390979516&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4394924136, W4395667837.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4394924136&quot;, &quot;W4395667837&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4396578590, W4396721881, W4396749278.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4396578590&quot;, &quot;W4396721881&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4391823610.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4391823610&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4409283610, W4408243820, W4409781760, W4404995179.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4409283610&quot;, &quot;W4408243820&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
-The following work(s) have truncated lists of authors: W4411428667, W4411442413.
-Query each work separately by its identifier to get full list of authors.
-For example:
-  lapply(c(&quot;W4411428667&quot;, &quot;W4411442413&quot;), \(x) oa_fetch(identifier = x))
-Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
-<pre class="r"><code>oa_example |&gt;
+         abstract = TRUE)
+
+oa_example |&gt;
   select(doi, abstract) |&gt;
   distinct()</code></pre>
-<pre><code># A tibble: 4,469 × 2
-   doi                                     abstract                             
-   &lt;chr&gt;                                   &lt;chr&gt;                                
- 1 https://doi.org/10.1038/nature05911     &lt;NA&gt;                                 
- 2 https://doi.org/10.1126/science.1109557 Age-related macular degeneration (AM…
- 3 https://doi.org/10.1038/nature05616     &lt;NA&gt;                                 
- 4 https://doi.org/10.1126/science.1135245 The inflammatory bowel diseases Croh…
- 5 https://doi.org/10.1126/science.1142358 New strategies for prevention and tr…
- 6 https://doi.org/10.1126/science.1142382 Identifying the genetic variants tha…
- 7 https://doi.org/10.1038/nature05887     &lt;NA&gt;                                 
- 8 https://doi.org/10.1126/science.1142364 The molecular mechanisms involved in…
- 9 https://doi.org/10.1056/nejmoa072366    Modern genotyping platforms permit a…
-10 https://doi.org/10.1038/ng2032          &lt;NA&gt;                                 
-# ℹ 4,459 more rows</code></pre>
+<pre><code># A tibble: 41 × 2
+   doi                                             abstract                     
+   &lt;chr&gt;                                           &lt;chr&gt;                        
+ 1 https://doi.org/10.1038/s41431-020-0636-6        &lt;NA&gt;                        
+ 2 https://doi.org/10.1038/s41586-022-04826-7       &lt;NA&gt;                        
+ 3 https://doi.org/10.1038/mp.2009.107              &lt;NA&gt;                        
+ 4 https://doi.org/10.1016/j.jaci.2015.01.047       &lt;NA&gt;                        
+ 5 https://doi.org/10.1002/art.23603                &lt;NA&gt;                        
+ 6 https://doi.org/10.1016/j.jaci.2010.06.051       &lt;NA&gt;                        
+ 7 https://doi.org/10.1176/appi.ajp.2013.12091228   &lt;NA&gt;                        
+ 8 https://doi.org/10.1164/rccm.202206-1139le      &quot;\&quot;Identification of a Genet…
+ 9 https://doi.org/10.1161/circgenetics.111.960989  &lt;NA&gt;                        
+10 https://doi.org/10.4088/jcp.15l10127            &quot;Article Abstract Because th…
+# ℹ 31 more rows</code></pre>
 </div>
 </div>
 <div id="read-in-abstracts-from-files" class="section level2">
 <h2>Read in abstracts from files</h2>
 <pre class="r"><code>abstracts &lt;- sapply(abstract_files,
                     function(file) {
-                      readLines(file, warn = FALSE) |&gt; 
+                      readLines(here::here(paste0(&quot;output/abstracts/&quot;,file)), 
+                                warn = FALSE) |&gt; 
                         paste(collapse = &quot; &quot;)
                     }
                     )
@@ -1643,7 +1141,6 @@ names</h2>
 # n_tp_sentences = nrow(cohort_sentences_df |&gt;
 #                       filter(COHORT != &quot;&quot;)
 #                       )
-
 # cohort_sentences_df  =
 #   cohort_sentences_df |&gt;
 #   mutate(has_cohort = ifelse(COHORT == &quot;&quot;, FALSE, TRUE)) |&gt;
@@ -1679,12 +1176,12 @@ filtered_cohort_sentences_df =
   ungroup()</code></pre>
 <pre><code>`summarise()` has grouped output by &#39;abstract_id&#39;, &#39;sentence_id&#39;. You can
 override using the `.groups` argument.</code></pre>
-<pre class="r"><code>#abstract_ids = cohort_sentences_df$abstract_id |&gt; unique() |&gt; sort()
+<pre class="r"><code>abstract_ids = filtered_cohort_sentences_df$abstract_id |&gt; unique() |&gt; sort()
 
-# pmids = pmids[abstract_ids]
-# abstracts = abstracts[abstract_ids]
-# date = date[abstract_ids]
-# cohort = cohort[abstract_ids]</code></pre>
+pmids = pmids[abstract_ids]
+abstracts = abstracts[abstract_ids]
+date = date[abstract_ids]
+cohort = cohort[abstract_ids]</code></pre>
 </div>
 <div id="prepare-data-in-doccano-json-format" class="section level2">
 <h2>Prepare data in Doccano JSON format</h2>
@@ -1696,7 +1193,8 @@ jsonl_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.jsonl&qu
 
 convert_to_doccano_json_sentence_level &lt;- function(pmids,
                                                    date,
-                                                   cohorts,
+                                                   cohort,
+                                                   country,
                                                    cohort_sentences_df) {
   
   # set up json list
@@ -1725,7 +1223,8 @@ convert_to_doccano_json_sentence_level &lt;- function(pmids,
           text = current_sentence,
           pubmed_id = pmids[abstract_id],
           date = date[abstract_id],
-          gwas_cat_cohort_label = cohorts[abstract_id],
+          country = country[abstract_id],
+          gwas_cat_cohort_label = cohort[abstract_id],
           label = list()
           )
         
@@ -1787,7 +1286,8 @@ convert_to_doccano_json_sentence_level &lt;- function(pmids,
         text = current_sentence,
         pubmed_id = pmids[abstract_id],
         date = date[abstract_id],
-        gwas_cat_cohort_label = cohorts[abstract_id],
+        country = country[abstract_id],
+        gwas_cat_cohort_label = cohort[abstract_id],
         label = entities
       )
       
@@ -1814,9 +1314,10 @@ convert_to_doccano_json_sentence_level &lt;- function(pmids,
 
 
 # Create JSON as a list
-json_list &lt;- convert_to_doccano_json_sentence_level(pmids,
-                                                    date,
-                                                    cohort,
+json_list &lt;- convert_to_doccano_json_sentence_level(pmids = pmids,
+                                                    date = date,
+                                                    cohort = cohort,
+                                                    country = country,
                                                     filtered_cohort_sentences_df)
 
 
