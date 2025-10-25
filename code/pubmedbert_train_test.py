@@ -198,7 +198,7 @@ num_labels = 3  # O, B-COHORT, I-COHORT
 # 7. Training arguments
 args = TrainingArguments(
     "pubmedbert-cohort-ner",
-    learning_rate=2e-5,
+    learning_rate=1e-5,
     per_device_train_batch_size=16,
     num_train_epochs=5,
     weight_decay=0.05,
@@ -259,3 +259,34 @@ print("Number of predicted entity tokens:", num_pred_entities)
 # Optional: check percentage of predicted entities
 total_tokens = np.prod(pred_labels.shape)
 print("Percentage of predicted entity tokens:", num_pred_entities / total_tokens * 100, "%")
+
+# === Save predictions ===
+id2label = {i: label for i, label in enumerate(label_list)}
+
+# Convert token IDs back to tokens and labels
+tokenized_texts = tokenized_val["input_ids"]
+tokens = [tokenizer.convert_ids_to_tokens(seq) for seq in tokenized_texts]
+true_labels = [[id2label[label_id] if label_id != -100 else "PAD" for label_id in seq] for seq in labels]
+pred_labels_named = [[id2label[label_id] for label_id in seq] for seq in pred_labels]
+
+# Flatten and structure as dataframe
+all_records = []
+for i in range(len(tokens)):
+    for token, true_label, pred_label in zip(tokens[i], true_labels[i], pred_labels_named[i]):
+        if token not in ["[PAD]", "[CLS]", "[SEP]"]:  # ignore special tokens
+            all_records.append({
+                "abstract_id": i,
+                "token": token,
+                "true_label": true_label,
+                "pred_label": pred_label
+            })
+
+import pandas as pd
+
+df_preds = pd.DataFrame(all_records)
+
+# Save to CSV and JSONL
+df_preds.to_csv("output/pubmedbert_predictions.csv", index=False)
+df_preds.to_json("output/pubmedbert_predictions.jsonl", orient="records", lines=True)
+
+print(f"Saved {len(df_preds)} token-level predictions to output/pubmedbert_predictions.csv and .jsonl")
