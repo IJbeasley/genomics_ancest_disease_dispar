@@ -1,0 +1,668 @@
+---
+title: "Get abstract text for GWAS Catalog studies"
+author: "Isobel Beasley"
+date: "2025-10-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set up 
+
+## Required packages
+
+```{r}
+
+library(stringr)
+library(readxl)
+library(dplyr)
+library(stringi)
+library(rentrez)
+library(xml2)
+library(jsonlite)
+
+# Improve sentence recognition
+# library(reticulate)
+
+# Path to the Python inside your venv
+# python_path <- file.path(here::here(), "venv", "bin", "python")  # Mac/Linux
+# Sys.setenv(SPACY_PYTHON = python_path)
+# 
+# use_python(Sys.getenv("SPACY_PYTHON", 
+#                                       unset = "r-spacyr"), required = TRUE)
+# 
+# # Check configuration
+# py_config()
+# 
+# py_module_available("spacy")
+# 
+# library(spacyr)
+# spacy_initialize(model = "en_core_web_sm")
+# library(spacyr)
+# reticulate::virtualenv_create("r-spacyr", python = python_exe)
+# spacy_install(version = "apple")
+# spacy_download_langmodel("en_core_web_sm")
+library(tokenizers)
+
+```
+
+## Getting required information from GWAS catalog
+
+### Step 1: Get only disease studies, and select relevant columns
+
+```{r gwas_cat_load_preprocess}
+
+## Step 1: 
+# get only disease studies
+gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info =
+  gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(-COHORT)
+
+
+```
+
+### Step 2: Get cohort information
+
+```{r gwas_cat_add_cohort_info}
+gwas_study_info_cohort =
+  data.table::fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
+
+gwas_study_info_cohort =
+  gwas_study_info_cohort |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info_cohort =
+  gwas_study_info_cohort |>
+  select(STUDY_ACCESSION,
+         COHORT) |>
+  distinct()
+
+gwas_study_info =
+  left_join(gwas_study_info,
+            gwas_study_info_cohort,
+            by = "STUDY_ACCESSION"
+  )
+
+```
+
+### Step 3: Add ancestry/population info
+
+```{r gwas_cat_add_ancestry_info}
+gwas_ancest_info <-  data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
+                           sep = "\t",
+                           quote = "")
+
+gwas_ancest_info = gwas_ancest_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_ancest_info =
+  gwas_ancest_info |>
+  select(STUDY_ACCESSION,
+         BROAD_ANCESTRAL_CATEGORY,
+         COUNTRY_OF_RECRUITMENT) |>
+  distinct() |>
+  group_by(STUDY_ACCESSION) |>
+  summarise(
+    BROAD_ANCESTRAL_CATEGORY = paste(
+      unique(
+        unlist(strsplit(BROAD_ANCESTRAL_CATEGORY, split = "\\|"))
+      ),
+      collapse = "|"
+    ),
+    COUNTRY_OF_RECRUITMENT = paste(
+      unique(
+        unlist(strsplit(COUNTRY_OF_RECRUITMENT, split = "\\|"))
+      ),
+      collapse = "|"
+    )
+  )
+
+gwas_study_info =
+  left_join(gwas_study_info,
+            gwas_ancest_info,
+            by = "STUDY_ACCESSION"
+  )
+
+```
+
+
+### Step 4: Extract information required to get paper text & abstracts
+
+```{r gwas_cat_extract_info}
+
+gwas_study_info <-
+  gwas_study_info |>
+  #filter(COHORT != "") |>
+  select(PUBMED_ID,
+         COHORT,
+         DATE,
+         BROAD_ANCESTRAL_CATEGORY,
+         COUNTRY_OF_RECRUITMENT) |>
+  distinct() |>
+  group_by(PUBMED_ID,
+           DATE,
+           BROAD_ANCESTRAL_CATEGORY,
+           COUNTRY_OF_RECRUITMENT) |>
+  summarise(
+    COHORT = paste(
+      unique(
+        unlist(strsplit(COHORT, split = "\\|"))
+      ),
+      collapse = "|"
+    )
+  )
+
+pmids = gwas_study_info$PUBMED_ID
+cohort = gwas_study_info$COHORT
+date = gwas_study_info$DATE
+country = gwas_study_info$COUNTRY_OF_RECRUITMENT
+ancestry = gwas_study_info$BROAD_ANCESTRAL_CATEGORY
+
+# how many papers without cohort information
+gwas_study_info |> 
+  filter(COHORT == "") |>
+  nrow()
+
+# papers for which there is cohort information
+gwas_study_info |>
+  filter(COHORT != "") |>
+  nrow()
+
+```
+
+### Just take a sample: 
+
+```{r gwas_cat_sample_pmids, eval = F}
+
+# Example PMIDs
+rows_with_cohort = which(gwas_study_info$COHORT != "")
+rows_without_cohort = which(gwas_study_info$COHORT == "")
+
+rows = 
+  c(rows_with_cohort, 
+    sample(rows_without_cohort, length(rows_with_cohort))
+    )
+
+pmids = pmids[rows]
+
+cohorts = cohort[rows]
+names(cohorts) = pmids
+
+date = date[rows]
+names(date) = pmids
+
+country = country[rows]
+names(country) = pmids
+
+ancestry = ancestry[rows]
+names(ancestry) = pmids
+
+```
+
+## Getting cohort names 
+
+```{r get_cohort_names}
+
+# this xlsx was built from looking at acrynyms / cohort names in the gwas catalog
+# and finding the corresponding full names / details of cohorts
+
+cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
+                                 sheet = 1)
+
+
+cohort_full_names = cohort_names$full_name[!is.na(cohort_names$full_name)]
+cohort_full_names <- str_trim(cohort_full_names)
+cohort_full_names <- iconv(cohort_full_names, to = "UTF-8")
+cohort_full_names <- gsub("[\u00A0\r\n]", " ", cohort_full_names)  # replace non-breaking spaces, CR, LF with space
+cohort_full_names <- str_squish(cohort_full_names)  # trims and removes extra spaces
+# sort by length of name (longest first) to match longest names first
+cohort_full_names <- cohort_full_names[order(-nchar(cohort_full_names))]
+cohort_full_names <- cohort_full_names[cohort_full_names != "Not Reported"]
+
+
+cohort_abbr_names = cohort_names$cohort[!is.na(cohort_names$cohort)]
+cohort_abbr_names <- str_trim(cohort_abbr_names)
+cohort_abbr_names <- iconv(cohort_abbr_names, to = "UTF-8")
+cohort_abbr_names <- gsub("[\u00A0\r\n]", " ", cohort_abbr_names)  # replace non-breaking spaces, CR, LF with space
+cohort_abbr_names <- str_squish(cohort_abbr_names)  # trims and removes extra spaces
+# remove abbreviations that are too short
+cohort_abbr_names <- cohort_abbr_names[nchar(cohort_abbr_names) >= 4]
+small_abbr_to_keep <- c("C4D", 
+                        "BBJ", 
+                        "UKB", 
+                        "MVP", 
+                        "TWB", 
+                        "QBB",
+                        "MEC"
+                        )
+cohort_abbr_names <- unique(c(cohort_abbr_names, 
+                              small_abbr_to_keep
+                              ))
+cohort_abbr_names <- cohort_abbr_names[!grepl("?", cohort_abbr_names)]
+# sort by length of name (longest first) to match longest names first
+cohort_abbr_names <- cohort_abbr_names[order(-nchar(cohort_abbr_names))]
+
+
+```
+
+# Relevant abstract text 
+
+## Get abstracts from Entrez
+
+```{r get_abstracts_entrez, eval = FALSE}
+
+set_entrez_key(Sys.getenv('NCBI_API_KEY'))
+
+get_pubmed_abstracts <- function(pmids, 
+                                 batch_size = 200, 
+                                 verbose = TRUE) {
+  
+  n <- length(pmids)
+  
+  abstracts <- setNames(rep("MISSING", 
+                            n), 
+                        pmids
+                        )  # initialize result
+  
+  # Split PMIDs into batches
+  batches <- split(pmids, 
+                   ceiling(seq_along(pmids)/batch_size)
+                   )
+  
+  for(i in seq_along(batches)) {
+    
+    batch_pmids <- batches[[i]]
+    
+    if(verbose) message(sprintf("Fetching batch %d of %d (%d PMIDs)...", 
+                                i, 
+                                length(batches), 
+                                length(batch_pmids)
+                                )
+                        )
+    
+    # Fetch XML
+    xml_data <- entrez_fetch(db = "pubmed", 
+                             id = paste(batch_pmids, 
+                                        collapse = ","), 
+                             rettype = "xml", 
+                             parsed = FALSE
+                             )
+    
+    doc <- read_xml(xml_data)
+    articles <- xml_find_all(doc, ".//PubmedArticle")
+    
+    for(article in articles) {
+      
+      pmid_node <- xml_find_first(article, 
+                                  ".//PMID")
+      
+      pmid <- xml_text(pmid_node)
+      
+      abstract_nodes <- xml_find_all(article, 
+                                     ".//AbstractText")
+      
+      if(length(abstract_nodes) > 0) {
+        abstracts[pmid] <- paste(xml_text(abstract_nodes), 
+                                 collapse = " ")
+      }
+    }
+  }
+  
+  return(abstracts)
+}
+
+pmids = unique(pmids)
+abstracts <- get_pubmed_abstracts(pmids)
+
+pmids <- pmids[abstracts != "MISSING"]
+date <- date[abstracts != "MISSING"]
+cohort <- cohort[abstracts != "MISSING"]
+abstracts <- abstracts[abstracts != "MISSING"]
+
+# Loop through abstracts and write each to a file
+for (i in seq_along(abstracts)) {
+  file_name <- paste0(here::here("output/abstracts/"), pmids[i], ".txt")
+  writeLines(abstracts[i], file_name)
+}
+
+```
+
+###  Check: What abstracts are missing? 
+
+```{r check_missing_abstracts}
+
+abstract_files <- list.files(here::here("output/abstracts/"), 
+                             pattern = "*.txt", 
+                             full.names = TRUE
+                             )
+
+pmids_with_abstracts = gsub("\\.txt$", "", abstract_files)
+
+all_pmids = gwas_study_info$PUBMED_ID |> unique()
+
+missing_abstracts = setdiff(all_pmids,
+                             pmids_with_abstracts)
+
+print("Number of missing abstracts:")
+length(missing_abstracts)
+
+library(openalexR)
+
+# get information on these papers from openAlex
+oa_example <- 
+oa_fetch(entity = "works",
+         pmid = missing_abstracts,
+         abstract = TRUE)
+
+oa_example |>
+  select(doi, abstract) |>
+  distinct()
+
+```
+
+## Read in abstracts from files
+
+```{r read_abstracts_from_files}
+
+abstracts <- sapply(abstract_files,
+                    function(file) {
+                      readLines(file, warn = FALSE) |> 
+                        paste(collapse = " ")
+                    }
+                    )
+
+pmids = pmids_with_abstracts 
+cohort = cohort[pmids]
+date = date[pmids]
+country = country[pmids]
+
+```
+
+
+## Extract sentences from abstracts with cohort names
+
+```{r extract_cohort_sentences}
+
+extract_cohort_sentences <- function(text_vector, 
+                                     cohort_names, 
+                                     ignore_case) {
+  
+  
+  results <- lapply(seq_along(text_vector), function(i) {
+    
+    abstract <- text_vector[i]
+    # Split abstract into sentences
+    sentences <- unlist(tokenize_sentences(abstract))
+
+    # For each sentence, find all matching cohort names
+    lapply(seq_along(sentences), function(s) {
+      
+      sentence <- sentences[s]
+      
+      # Identify cohort names present in this sentence
+      matched_cohorts <- cohort_names[str_detect(sentence, 
+                                                 regex(cohort_names, 
+                                                       ignore_case = ignore_case))]
+
+      data.frame(
+        abstract_id = i,
+        sentence_id = s,
+        sentence = sentence,
+        has_cohort = length(matched_cohorts) > 0,
+        COHORT = if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else "",
+        stringsAsFactors = FALSE
+      )
+    }) |> bind_rows()
+  })
+
+  bind_rows(results)
+}
+
+cohort_sentences_df <- extract_cohort_sentences(abstracts,
+                                                cohort_full_names,
+                                                ignore_case = TRUE
+                                                )
+
+cohort_sentences_df_p2 = extract_cohort_sentences(abstracts,
+                                                  cohort_abbr_names,
+                                                  ignore_case = FALSE
+                                                  )
+
+cohort_sentences_df =
+  bind_rows(cohort_sentences_df,
+            cohort_sentences_df_p2
+            )
+
+cohort_sentences_df = 
+  cohort_sentences_df |>
+  distinct()
+
+```
+
+
+## Correct for the over-representation of sentences without cohort names
+
+```{r correct_overrep_no_cohort}
+
+# set the ratio of sentences with/without cohort names
+# ratio = 1
+# 
+# # number of sentences with cohort names
+# n_tp_sentences = nrow(cohort_sentences_df |>
+#                       filter(COHORT != "")
+#                       )
+
+# cohort_sentences_df  =
+#   cohort_sentences_df |>
+#   mutate(has_cohort = ifelse(COHORT == "", FALSE, TRUE)) |>
+#   group_by(has_cohort) |>
+#   slice_sample(n = ratio*n_tp_sentences,
+#                replace = FALSE
+#                ) 
+
+filtered_cohort_sentences_df =
+  cohort_sentences_df |>
+  filter(COHORT != "")
+
+control_cohort_sentences_df <-
+cohort_sentences_df |>
+  filter(grepl("cohort|consortium|study|population|registry|biobank|corsortia", 
+               sentence, 
+               ignore.case = TRUE)
+         ) |>
+  slice_sample(n = 1000)
+
+filtered_cohort_sentences_df =
+  bind_rows(filtered_cohort_sentences_df,
+            control_cohort_sentences_df
+            ) |>
+  distinct()
+
+filtered_cohort_sentences_df =
+  filtered_cohort_sentences_df |>
+  group_by(abstract_id, sentence_id, sentence) |>
+  summarise(
+    COHORT = str_flatten(unique(COHORT), collapse = "|", na.rm = T)
+  ) |>
+  ungroup()
+
+#abstract_ids = cohort_sentences_df$abstract_id |> unique() |> sort()
+
+# pmids = pmids[abstract_ids]
+# abstracts = abstracts[abstract_ids]
+# date = date[abstract_ids]
+# cohort = cohort[abstract_ids]
+
+```
+
+
+## Prepare data in Doccano JSON format
+
+```{r prepare_doccano_json}
+
+# file path for intermediate json file output
+json_file = here::here("output/doccano/abstracts_with_cohort_info.json")
+
+# file path for final jsonl file output
+jsonl_file = here::here("output/doccano/abstracts_with_cohort_info.jsonl")
+
+convert_to_doccano_json_sentence_level <- function(pmids,
+                                                   date,
+                                                   cohorts,
+                                                   cohort_sentences_df) {
+  
+  # set up json list
+  doccano_list <- list()
+  example_id <- 1
+
+  for(current_sentence in cohort_sentences_df$sentence) {
+
+      # Filter cohort sentences that match this sentence (safe matching)
+      df <- cohort_sentences_df |>
+             dplyr::filter(sentence == current_sentence) 
+      
+      # abstract_id <- df$abstract_id
+      # matched_cohort <- df$COHORT
+      
+      for (i in seq_len(nrow(df))) {
+        
+        matched_cohort <- df$COHORT[i]
+        abstract_id <- df$abstract_id[i]
+        
+        #browser()
+      
+        if(matched_cohort == ""){
+        
+          doccano_list[[example_id]] <- list(
+          text = current_sentence,
+          pubmed_id = pmids[abstract_id],
+          date = date[abstract_id],
+          gwas_cat_cohort_label = cohorts[abstract_id],
+          label = list()
+          )
+        
+        } else {
+        
+        # Find the location of all matches of the cohort name in the sentence
+        if(grepl("\\|", matched_cohort)) {
+           
+           # If multiple cohort names, separate
+           matched_cohort <- unlist(
+                                    strsplit(matched_cohort, 
+                                             split = "\\|")
+                                    )
+        
+           match_locations <- list()
+        
+           for(current_matched_cohort in matched_cohort){
+          
+               matches <- str_locate_all(current_sentence,
+                                         fixed(current_matched_cohort, 
+                                               ignore_case = TRUE)
+                                         )[[1]]
+          
+               match_locations <- append(match_locations, 
+                                         list(matches)
+                                         )
+          
+           }
+        
+           # Combine all match locations into a single matrix
+           matches <- do.call(rbind, match_locations)
+        
+        }  else {
+        
+           matches <- str_locate_all(current_sentence,
+                                     fixed(matched_cohort, 
+                                           ignore_case = TRUE)
+                                     )[[1]]
+      
+      }
+      
+      # Convert matches to 0-based indexing (for doccano)
+      matches[, "start"] <- matches[, "start"] - 1  
+      
+      # Turn match locations into entity list
+      entities <- list()
+      
+      for(k in seq_len(nrow(matches))) {
+              entities <- append(entities, list(list(
+                start_offset = matches[k, "start"],
+                end_offset = matches[k, "end"],
+                label = "COHORT"
+              )))
+      }
+      
+      # Create Doccano JSON entry
+      doccano_list[[example_id]] <- list(
+        # id = example_id,
+        text = current_sentence,
+        pubmed_id = pmids[abstract_id],
+        date = date[abstract_id],
+        gwas_cat_cohort_label = cohorts[abstract_id],
+        label = entities
+      )
+      
+      }
+      }
+
+      example_id <- example_id + 1
+  }
+  
+  
+# Suppose each element of json_list has 'labels' as a list of named lists
+  doccano_list <- lapply(doccano_list, function(x) {
+  x$label <- lapply(x$label, function(l) {
+    # convert named list to vector/list format [start, end, label]
+    c(l$start_offset, l$end_offset, l$label)
+  })
+  x
+})
+
+  return(doccano_list)
+}
+
+
+
+
+# Create JSON as a list
+json_list <- convert_to_doccano_json_sentence_level(pmids,
+                                                    date,
+                                                    cohort,
+                                                    filtered_cohort_sentences_df)
+
+
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+
+json_data <- fromJSON(json_file,
+                      simplifyVector = FALSE)
+
+# Open connection to JSONL file
+con <- file(jsonl_file, "w")
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+
+# Close connection
+close(con)
+
+cat("JSONL saved to:", jsonl_file, "\n")
+
+```
+
