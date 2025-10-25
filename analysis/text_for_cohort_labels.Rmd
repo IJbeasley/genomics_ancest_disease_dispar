@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Required packages
 
-```{r}
+```{r, message=FALSE}
 
 library(stringr)
 library(readxl)
@@ -193,8 +193,8 @@ rows =
 
 pmids = pmids[rows]
 
-cohorts = cohort[rows]
-names(cohorts) = pmids
+cohort = cohort[rows]
+names(cohort) = pmids
 
 date = date[rows]
 names(date) = pmids
@@ -337,11 +337,11 @@ for (i in seq_along(abstracts)) {
 
 ###  Check: What abstracts are missing? 
 
-```{r check_missing_abstracts}
+```{r check_missing_abstracts, warning=FALSE, message=FALSE}
 
 abstract_files <- list.files(here::here("output/abstracts/"), 
                              pattern = "*.txt", 
-                             full.names = TRUE
+                             full.names = FALSE
                              )
 
 pmids_with_abstracts = gsub("\\.txt$", "", abstract_files)
@@ -374,7 +374,8 @@ oa_example |>
 
 abstracts <- sapply(abstract_files,
                     function(file) {
-                      readLines(file, warn = FALSE) |> 
+                      readLines(here::here(paste0("output/abstracts/",file)), 
+                                warn = FALSE) |> 
                         paste(collapse = " ")
                     }
                     )
@@ -459,7 +460,6 @@ cohort_sentences_df =
 # n_tp_sentences = nrow(cohort_sentences_df |>
 #                       filter(COHORT != "")
 #                       )
-
 # cohort_sentences_df  =
 #   cohort_sentences_df |>
 #   mutate(has_cohort = ifelse(COHORT == "", FALSE, TRUE)) |>
@@ -494,12 +494,12 @@ filtered_cohort_sentences_df =
   ) |>
   ungroup()
 
-#abstract_ids = cohort_sentences_df$abstract_id |> unique() |> sort()
+abstract_ids = filtered_cohort_sentences_df$abstract_id |> unique() |> sort()
 
-# pmids = pmids[abstract_ids]
-# abstracts = abstracts[abstract_ids]
-# date = date[abstract_ids]
-# cohort = cohort[abstract_ids]
+pmids = pmids[abstract_ids]
+abstracts = abstracts[abstract_ids]
+date = date[abstract_ids]
+cohort = cohort[abstract_ids]
 
 ```
 
@@ -516,7 +516,8 @@ jsonl_file = here::here("output/doccano/abstracts_with_cohort_info.jsonl")
 
 convert_to_doccano_json_sentence_level <- function(pmids,
                                                    date,
-                                                   cohorts,
+                                                   cohort,
+                                                   country,
                                                    cohort_sentences_df) {
   
   # set up json list
@@ -545,7 +546,8 @@ convert_to_doccano_json_sentence_level <- function(pmids,
           text = current_sentence,
           pubmed_id = pmids[abstract_id],
           date = date[abstract_id],
-          gwas_cat_cohort_label = cohorts[abstract_id],
+          country = country[abstract_id],
+          gwas_cat_cohort_label = cohort[abstract_id],
           label = list()
           )
         
@@ -607,7 +609,8 @@ convert_to_doccano_json_sentence_level <- function(pmids,
         text = current_sentence,
         pubmed_id = pmids[abstract_id],
         date = date[abstract_id],
-        gwas_cat_cohort_label = cohorts[abstract_id],
+        country = country[abstract_id],
+        gwas_cat_cohort_label = cohort[abstract_id],
         label = entities
       )
       
@@ -634,9 +637,10 @@ convert_to_doccano_json_sentence_level <- function(pmids,
 
 
 # Create JSON as a list
-json_list <- convert_to_doccano_json_sentence_level(pmids,
-                                                    date,
-                                                    cohort,
+json_list <- convert_to_doccano_json_sentence_level(pmids = pmids,
+                                                    date = date,
+                                                    cohort = cohort,
+                                                    country = country,
                                                     filtered_cohort_sentences_df)
 
 
