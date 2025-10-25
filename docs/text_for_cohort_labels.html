@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+<meta name="date" content="2025-10-17" />
+
+<title>Get abstract text for GWAS Catalog studies</title>
+
+<script src="site_libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Get abstract text for GWAS Catalog
+studies</h1>
+<h4 class="author">Isobel Beasley</h4>
+<h4 class="date">2025-10-17</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2025-10-24
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree748dac2c44b726dbede003c6d4810481e18466a7targetblank748dac2a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/748dac2c44b726dbede003c6d4810481e18466a7" target="_blank">748dac2</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree748dac2c44b726dbede003c6d4810481e18466a7targetblank748dac2a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/748dac2c44b726dbede003c6d4810481e18466a7" target="_blank">748dac2</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rproj.user/
+    Ignored:    IHME_GBD_2019_Level_2.csv
+    Ignored:    analysis/.DS_Store
+    Ignored:    ancestry_dispar_env/
+    Ignored:    author_manuscript.filelist.txt
+    Ignored:    author_manuscript_files.txt
+    Ignored:    data/.DS_Store
+    Ignored:    data/cohort/
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2021_COD_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/IHME_GBD_2021_NONFATAL_CAUSE_ICD_CODE_MAP_Y2024M05D16.XLSX
+    Ignored:    data/icd/UK_Biobank_master_file.tsv
+    Ignored:    data/icd/cdc_valid_icd10_Sep_23_2025.xlsx
+    Ignored:    data/icd/cdc_valid_icd9_Sep_23_2025.xlsx
+    Ignored:    data/icd/manual_disease_icd10_mappings.xlsx
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/semiautomatic_ICD-pheno.txt
+    Ignored:    data/icd/~$IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/who/
+    Ignored:    fulltexts_pmc/
+    Ignored:    output/.DS_Store
+    Ignored:    output/abstracts/
+    Ignored:    output/doccano/
+    Ignored:    output/fulltexts/
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_cohorts/
+    Ignored:    output/icd_map/
+    Ignored:    output/trait_ontology/
+    Ignored:    pubmedbert-cohort-ner-model/
+    Ignored:    pubmedbert-cohort-ner/
+    Ignored:    r-spacyr/
+    Ignored:    renv/
+    Ignored:    venv/
+
+Untracked files:
+    Untracked:  analysis/get_full_text.Rmd
+    Untracked:  analysis/specific_aims_stats.Rmd
+    Untracked:  code/full_text_download.R
+    Untracked:  code/get_dbgap_ids.py
+    Untracked:  code/get_full_text.R
+    Untracked:  code/get_pmids_from_dbgap.py
+    Untracked:  test_cohort_info_overlap.R
+
+Unstaged changes:
+    Modified:   .gitignore
+    Modified:   analysis/correcting_cohort_names.Rmd
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/gbd_data_plots.Rmd
+    Modified:   analysis/group_cancer_diseases.Rmd
+    Modified:   analysis/gwas_to_gbd.Rmd
+    Modified:   analysis/level_1_disease_group_non_cancer.Rmd
+    Modified:   analysis/level_2_disease_group.Rmd
+    Modified:   analysis/map_trait_to_icd10.Rmd
+    Modified:   analysis/trait_ontology_categorization.Rmd
+    Modified:   code/pubmedbert_train_test.py
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/text_for_cohort_labels.Rmd</code>) and HTML
+(<code>docs/text_for_cohort_labels.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/748dac2c44b726dbede003c6d4810481e18466a7/analysis/text_for_cohort_labels.Rmd" target="_blank">748dac2</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-24
+</td>
+<td>
+Cleaning up abstract collecting
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="set-up" class="section level1">
+<h1>Set up</h1>
+<div id="required-packages" class="section level2">
+<h2>Required packages</h2>
+<pre class="r"><code>library(stringr)
+library(readxl)
+library(dplyr)</code></pre>
+<pre><code>
+Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>The following objects are masked from &#39;package:stats&#39;:
+
+    filter, lag</code></pre>
+<pre><code>The following objects are masked from &#39;package:base&#39;:
+
+    intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(stringi)
+library(rentrez)
+library(xml2)
+library(jsonlite)
+
+# Improve sentence recognition
+# library(reticulate)
+
+# Path to the Python inside your venv
+# python_path &lt;- file.path(here::here(), &quot;venv&quot;, &quot;bin&quot;, &quot;python&quot;)  # Mac/Linux
+# Sys.setenv(SPACY_PYTHON = python_path)
+# 
+# use_python(Sys.getenv(&quot;SPACY_PYTHON&quot;, 
+#                                       unset = &quot;r-spacyr&quot;), required = TRUE)
+# 
+# # Check configuration
+# py_config()
+# 
+# py_module_available(&quot;spacy&quot;)
+# 
+# library(spacyr)
+# spacy_initialize(model = &quot;en_core_web_sm&quot;)
+# library(spacyr)
+# reticulate::virtualenv_create(&quot;r-spacyr&quot;, python = python_exe)
+# spacy_install(version = &quot;apple&quot;)
+# spacy_download_langmodel(&quot;en_core_web_sm&quot;)
+library(tokenizers)</code></pre>
+</div>
+<div id="getting-required-information-from-gwas-catalog"
+class="section level2">
+<h2>Getting required information from GWAS catalog</h2>
+<div id="step-1-get-only-disease-studies-and-select-relevant-columns"
+class="section level3">
+<h3>Step 1: Get only disease studies, and select relevant columns</h3>
+<pre class="r"><code>## Step 1: 
+# get only disease studies
+gwas_study_info &lt;- data.table::fread(here::here(&quot;output/gwas_cat/gwas_study_info_trait_group_l2.csv&quot;))
+
+gwas_study_info = gwas_study_info |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  dplyr::filter(DISEASE_STUDY == T) |&gt;
+  dplyr::select(-COHORT)</code></pre>
+</div>
+<div id="step-2-get-cohort-information" class="section level3">
+<h3>Step 2: Get cohort information</h3>
+<pre class="r"><code>gwas_study_info_cohort =
+  data.table::fread(here::here(&quot;output/gwas_cohorts/gwas_cohort_name_corrected.csv&quot;))
+
+gwas_study_info_cohort =
+  gwas_study_info_cohort |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_study_info_cohort =
+  gwas_study_info_cohort |&gt;
+  select(STUDY_ACCESSION,
+         COHORT) |&gt;
+  distinct()
+
+gwas_study_info =
+  left_join(gwas_study_info,
+            gwas_study_info_cohort,
+            by = &quot;STUDY_ACCESSION&quot;
+  )</code></pre>
+</div>
+<div id="step-3-add-ancestrypopulation-info" class="section level3">
+<h3>Step 3: Add ancestry/population info</h3>
+<pre class="r"><code>gwas_ancest_info &lt;-  data.table::fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv&quot;),
+                           sep = &quot;\t&quot;,
+                           quote = &quot;&quot;)
+
+gwas_ancest_info = gwas_ancest_info |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_ancest_info =
+  gwas_ancest_info |&gt;
+  select(STUDY_ACCESSION,
+         BROAD_ANCESTRAL_CATEGORY,
+         COUNTRY_OF_RECRUITMENT) |&gt;
+  distinct() |&gt;
+  group_by(STUDY_ACCESSION) |&gt;
+  summarise(
+    BROAD_ANCESTRAL_CATEGORY = paste(
+      unique(
+        unlist(strsplit(BROAD_ANCESTRAL_CATEGORY, split = &quot;\\|&quot;))
+      ),
+      collapse = &quot;|&quot;
+    ),
+    COUNTRY_OF_RECRUITMENT = paste(
+      unique(
+        unlist(strsplit(COUNTRY_OF_RECRUITMENT, split = &quot;\\|&quot;))
+      ),
+      collapse = &quot;|&quot;
+    )
+  )
+
+gwas_study_info =
+  left_join(gwas_study_info,
+            gwas_ancest_info,
+            by = &quot;STUDY_ACCESSION&quot;
+  )</code></pre>
+</div>
+<div
+id="step-4-extract-information-required-to-get-paper-text-abstracts"
+class="section level3">
+<h3>Step 4: Extract information required to get paper text &amp;
+abstracts</h3>
+<pre class="r"><code>gwas_study_info &lt;-
+  gwas_study_info |&gt;
+  #filter(COHORT != &quot;&quot;) |&gt;
+  select(PUBMED_ID,
+         COHORT,
+         DATE,
+         BROAD_ANCESTRAL_CATEGORY,
+         COUNTRY_OF_RECRUITMENT) |&gt;
+  distinct() |&gt;
+  group_by(PUBMED_ID,
+           DATE,
+           BROAD_ANCESTRAL_CATEGORY,
+           COUNTRY_OF_RECRUITMENT) |&gt;
+  summarise(
+    COHORT = paste(
+      unique(
+        unlist(strsplit(COHORT, split = &quot;\\|&quot;))
+      ),
+      collapse = &quot;|&quot;
+    )
+  )</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;PUBMED_ID&#39;, &#39;DATE&#39;,
+&#39;BROAD_ANCESTRAL_CATEGORY&#39;. You can override using the `.groups` argument.</code></pre>
+<pre class="r"><code>pmids = gwas_study_info$PUBMED_ID
+cohort = gwas_study_info$COHORT
+date = gwas_study_info$DATE
+country = gwas_study_info$COUNTRY_OF_RECRUITMENT
+ancestry = gwas_study_info$BROAD_ANCESTRAL_CATEGORY
+
+# how many papers without cohort information
+gwas_study_info |&gt; 
+  filter(COHORT == &quot;&quot;) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 4006</code></pre>
+<pre class="r"><code># papers for which there is cohort information
+gwas_study_info |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 1626</code></pre>
+</div>
+<div id="just-take-a-sample" class="section level3">
+<h3>Just take a sample:</h3>
+<pre class="r"><code># Example PMIDs
+rows_with_cohort = which(gwas_study_info$COHORT != &quot;&quot;)
+rows_without_cohort = which(gwas_study_info$COHORT == &quot;&quot;)
+
+rows = 
+  c(rows_with_cohort, 
+    sample(rows_without_cohort, length(rows_with_cohort))
+    )
+
+pmids = pmids[rows]
+
+cohorts = cohort[rows]
+names(cohorts) = pmids
+
+date = date[rows]
+names(date) = pmids
+
+country = country[rows]
+names(country) = pmids
+
+ancestry = ancestry[rows]
+names(ancestry) = pmids</code></pre>
+</div>
+</div>
+<div id="getting-cohort-names" class="section level2">
+<h2>Getting cohort names</h2>
+<pre class="r"><code># this xlsx was built from looking at acrynyms / cohort names in the gwas catalog
+# and finding the corresponding full names / details of cohorts
+
+cohort_names &lt;- readxl::read_xlsx(here::here(&quot;data/cohort/cohort_desc.xlsx&quot;),
+                                 sheet = 1)</code></pre>
+<pre><code>New names:
+• `` -&gt; `...13`</code></pre>
+<pre class="r"><code>cohort_full_names = cohort_names$full_name[!is.na(cohort_names$full_name)]
+cohort_full_names &lt;- str_trim(cohort_full_names)
+cohort_full_names &lt;- iconv(cohort_full_names, to = &quot;UTF-8&quot;)
+cohort_full_names &lt;- gsub(&quot;[\u00A0\r\n]&quot;, &quot; &quot;, cohort_full_names)  # replace non-breaking spaces, CR, LF with space
+cohort_full_names &lt;- str_squish(cohort_full_names)  # trims and removes extra spaces
+# sort by length of name (longest first) to match longest names first
+cohort_full_names &lt;- cohort_full_names[order(-nchar(cohort_full_names))]
+cohort_full_names &lt;- cohort_full_names[cohort_full_names != &quot;Not Reported&quot;]
+
+
+cohort_abbr_names = cohort_names$cohort[!is.na(cohort_names$cohort)]
+cohort_abbr_names &lt;- str_trim(cohort_abbr_names)
+cohort_abbr_names &lt;- iconv(cohort_abbr_names, to = &quot;UTF-8&quot;)
+cohort_abbr_names &lt;- gsub(&quot;[\u00A0\r\n]&quot;, &quot; &quot;, cohort_abbr_names)  # replace non-breaking spaces, CR, LF with space
+cohort_abbr_names &lt;- str_squish(cohort_abbr_names)  # trims and removes extra spaces
+# remove abbreviations that are too short
+cohort_abbr_names &lt;- cohort_abbr_names[nchar(cohort_abbr_names) &gt;= 4]
+small_abbr_to_keep &lt;- c(&quot;C4D&quot;, 
+                        &quot;BBJ&quot;, 
+                        &quot;UKB&quot;, 
+                        &quot;MVP&quot;, 
+                        &quot;TWB&quot;, 
+                        &quot;QBB&quot;,
+                        &quot;MEC&quot;
+                        )
+cohort_abbr_names &lt;- unique(c(cohort_abbr_names, 
+                              small_abbr_to_keep
+                              ))
+cohort_abbr_names &lt;- cohort_abbr_names[!grepl(&quot;?&quot;, cohort_abbr_names)]
+# sort by length of name (longest first) to match longest names first
+cohort_abbr_names &lt;- cohort_abbr_names[order(-nchar(cohort_abbr_names))]</code></pre>
+</div>
+</div>
+<div id="relevant-abstract-text" class="section level1">
+<h1>Relevant abstract text</h1>
+<div id="get-abstracts-from-entrez" class="section level2">
+<h2>Get abstracts from Entrez</h2>
+<pre class="r"><code>set_entrez_key(Sys.getenv(&#39;NCBI_API_KEY&#39;))
+
+get_pubmed_abstracts &lt;- function(pmids, 
+                                 batch_size = 200, 
+                                 verbose = TRUE) {
+  
+  n &lt;- length(pmids)
+  
+  abstracts &lt;- setNames(rep(&quot;MISSING&quot;, 
+                            n), 
+                        pmids
+                        )  # initialize result
+  
+  # Split PMIDs into batches
+  batches &lt;- split(pmids, 
+                   ceiling(seq_along(pmids)/batch_size)
+                   )
+  
+  for(i in seq_along(batches)) {
+    
+    batch_pmids &lt;- batches[[i]]
+    
+    if(verbose) message(sprintf(&quot;Fetching batch %d of %d (%d PMIDs)...&quot;, 
+                                i, 
+                                length(batches), 
+                                length(batch_pmids)
+                                )
+                        )
+    
+    # Fetch XML
+    xml_data &lt;- entrez_fetch(db = &quot;pubmed&quot;, 
+                             id = paste(batch_pmids, 
+                                        collapse = &quot;,&quot;), 
+                             rettype = &quot;xml&quot;, 
+                             parsed = FALSE
+                             )
+    
+    doc &lt;- read_xml(xml_data)
+    articles &lt;- xml_find_all(doc, &quot;.//PubmedArticle&quot;)
+    
+    for(article in articles) {
+      
+      pmid_node &lt;- xml_find_first(article, 
+                                  &quot;.//PMID&quot;)
+      
+      pmid &lt;- xml_text(pmid_node)
+      
+      abstract_nodes &lt;- xml_find_all(article, 
+                                     &quot;.//AbstractText&quot;)
+      
+      if(length(abstract_nodes) &gt; 0) {
+        abstracts[pmid] &lt;- paste(xml_text(abstract_nodes), 
+                                 collapse = &quot; &quot;)
+      }
+    }
+  }
+  
+  return(abstracts)
+}
+
+pmids = unique(pmids)
+abstracts &lt;- get_pubmed_abstracts(pmids)
+
+pmids &lt;- pmids[abstracts != &quot;MISSING&quot;]
+date &lt;- date[abstracts != &quot;MISSING&quot;]
+cohort &lt;- cohort[abstracts != &quot;MISSING&quot;]
+abstracts &lt;- abstracts[abstracts != &quot;MISSING&quot;]
+
+# Loop through abstracts and write each to a file
+for (i in seq_along(abstracts)) {
+  file_name &lt;- paste0(here::here(&quot;output/abstracts/&quot;), pmids[i], &quot;.txt&quot;)
+  writeLines(abstracts[i], file_name)
+}</code></pre>
+<div id="check-what-abstracts-are-missing" class="section level3">
+<h3>Check: What abstracts are missing?</h3>
+<pre class="r"><code>abstract_files &lt;- list.files(here::here(&quot;output/abstracts/&quot;), 
+                             pattern = &quot;*.txt&quot;, 
+                             full.names = TRUE
+                             )
+
+pmids_with_abstracts = gsub(&quot;\\.txt$&quot;, &quot;&quot;, abstract_files)
+
+all_pmids = gwas_study_info$PUBMED_ID |&gt; unique()
+
+missing_abstracts = setdiff(all_pmids,
+                             pmids_with_abstracts)
+
+print(&quot;Number of missing abstracts:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of missing abstracts:&quot;</code></pre>
+<pre class="r"><code>length(missing_abstracts)</code></pre>
+<pre><code>[1] 4511</code></pre>
+<pre class="r"><code>library(openalexR)</code></pre>
+<pre><code>openalexR v2.0.0 introduces breaking changes.
+See NEWS.md for details.
+
+To suppress this message, add `openalexR.message = suppressed` to your .Renviron file.</code></pre>
+<pre class="r"><code># get information on these papers from openAlex
+oa_example &lt;- 
+oa_fetch(entity = &quot;works&quot;,
+         pmid = missing_abstracts,
+         abstract = TRUE)</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2134783591, W1994664175.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2134783591&quot;, &quot;W1994664175&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2054153086, W2064041354.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2054153086&quot;, &quot;W2064041354&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2166431807.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2166431807&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2109529720, W2135456872.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2109529720&quot;, &quot;W2135456872&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2165019590, W1993904263.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2165019590&quot;, &quot;W1993904263&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2141642891, W2152157708, W2170326618.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2141642891&quot;, &quot;W2152157708&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W1934392702, W2126864982, W1985742486.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W1934392702&quot;, &quot;W2126864982&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2109130469, W2039310245, W2041144936, W2113463873.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2109130469&quot;, &quot;W2039310245&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2112848098, W1980725116, W2095821741, W2108525019.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2112848098&quot;, &quot;W1980725116&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2145210308, W1966831629, W2159532900.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2145210308&quot;, &quot;W1966831629&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2145707775, W2063993913, W2149637146.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2145707775&quot;, &quot;W2063993913&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2040547343, W2101605059, W1993588417, W2091808830.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2040547343&quot;, &quot;W2101605059&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2080077971, W2079712106.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2080077971&quot;, &quot;W2079712106&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W1999690368.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W1999690368&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2065692954, W2165238174.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2065692954&quot;, &quot;W2165238174&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2100242214.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2100242214&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2045017910, W2100825937, W2165084094, W2135176038.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2045017910&quot;, &quot;W2100825937&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2143625465, W2147452548, W2049330354, W2117667316.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2143625465&quot;, &quot;W2147452548&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2035310463, W2136376873.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2035310463&quot;, &quot;W2136376873&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2135665336, W2004429375, W2132559433, W2158740417, W2105369704, W2159227882.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2135665336&quot;, &quot;W2004429375&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2108305936.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2108305936&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2135403800.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2135403800&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2115779804, W2117505014, W2127034229, W1984568232.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2115779804&quot;, &quot;W2117505014&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2148749248, W1602867585, W2108356100, W2087005537.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2148749248&quot;, &quot;W1602867585&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2152748843.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2152748843&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2101357408, W1992891812, W2078675213, W2003751484, W2015410907, W2155276106, W2154340576, W2046600562.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2101357408&quot;, &quot;W1992891812&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2171315731, W2088182134, W2105786909, W1687266585.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2171315731&quot;, &quot;W2088182134&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2002715948, W2028546773, W2095936660, W2082423183, W2142907734, W2148977592.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2002715948&quot;, &quot;W2028546773&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2018046598, W2142283589.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2018046598&quot;, &quot;W2142283589&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2227148039, W2197792425, W2105096699.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2227148039&quot;, &quot;W2197792425&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2243398804, W2107139378, W2244701831.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2243398804&quot;, &quot;W2107139378&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2233221674, W2262279506, W2564640632, W2183868793, W2188742158, W2293438364, W2189635544, W2266228206.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2233221674&quot;, &quot;W2262279506&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2411709723, W2325541602, W2341676109, W2322578512, W2295479254, W2333739416.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2411709723&quot;, &quot;W2325541602&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2464448281, W2465667391, W2336130565, W2339358896, W2462494405.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2464448281&quot;, &quot;W2465667391&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2477863367, W2519483107, W2504181072, W2509403461.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2477863367&quot;, &quot;W2519483107&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2557527880, W2561088732, W2560318205.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2557527880&quot;, &quot;W2561088732&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2586698568.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2586698568&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2601822003, W2593282276.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2601822003&quot;, &quot;W2593282276&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2592518050, W2617316722, W2612427157, W2623056867, W2613022045, W2734534935, W2722517739, W2702170325, W2612200829.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2592518050&quot;, &quot;W2617316722&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2765253743, W2593940628, W2768987398.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2765253743&quot;, &quot;W2593940628&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2780232486, W2788540749, W2635658300, W2779204423.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2780232486&quot;, &quot;W2788540749&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2791863121, W2790053519.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2791863121&quot;, &quot;W2790053519&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2738082385, W2619003201, W2802079625, W2802484183.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2738082385&quot;, &quot;W2619003201&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2806504012, W2807295499, W2808886822.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2806504012&quot;, &quot;W2807295499&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2886497950, W2891085289, W2887040813.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2886497950&quot;, &quot;W2891085289&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2894662039, W2896468934.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2894662039&quot;, &quot;W2896468934&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2791854743, W2903533144, W2904891280, W2902554187, W2903416893, W2901268166, W2742705741, W2905221341.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2791854743&quot;, &quot;W2903533144&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2910684629.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2910684629&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2916749909, W2917263971, W2917444392, W2918113141.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2916749909&quot;, &quot;W2917263971&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2950375827, W2944046200.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2950375827&quot;, &quot;W2944046200&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2947278243, W2945877977, W2948055130, W2949800402.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2947278243&quot;, &quot;W2945877977&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2960372990, W2970474312.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2960372990&quot;, &quot;W2970474312&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2986932567, W2981477552, W2979994192, W2977833465, W2978880955, W2956245605, W2982511147.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2986932567&quot;, &quot;W2981477552&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2995971356, W2995738534.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2995971356&quot;, &quot;W2995738534&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W2999230481, W2988793804, W2984805909.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W2999230481&quot;, &quot;W2988793804&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3018522922, W3013248105.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3018522922&quot;, &quot;W3013248105&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3036779511, W3035152464, W3024294833, W3009825875, W3018118540, W3027724762, W3034638407.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3036779511&quot;, &quot;W3035152464&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3040251959.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3040251959&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3092894050, W3082058008, W3093044960, W3088087046.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3092894050&quot;, &quot;W3082058008&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3094181094, W3094435518, W3109183357.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3094181094&quot;, &quot;W3094435518&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3115151307, W3128471417, W3049150590.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3115151307&quot;, &quot;W3128471417&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3128153416, W3131963404, W3120099202.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3128153416&quot;, &quot;W3131963404&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3147448391.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3147448391&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3162259891, W3165249197.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3162259891&quot;, &quot;W3165249197&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3172294552, W3136918134, W3176639233.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3172294552&quot;, &quot;W3136918134&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3182807823, W3195015166.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3182807823&quot;, &quot;W3195015166&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3197290161, W3202494027, W3135990307, W2948656458, W3203354976.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3197290161&quot;, &quot;W3202494027&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W3202518185, W4229334951, W3096966615.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W3202518185&quot;, &quot;W4229334951&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4226286160, W4205105460, W4205756350, W3204914697.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4226286160&quot;, &quot;W4205105460&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4213416315, W4210780562, W3194462435.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4213416315&quot;, &quot;W4210780562&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4223520055, W4223591189, W4220729480, W4214884216, W4220661916, W4220996951.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4223520055&quot;, &quot;W4223591189&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4280552086, W4229455035, W2976906159, W4224938995, W4281672760, W4282940533.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4280552086&quot;, &quot;W4229455035&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4289637440, W4285733805.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4289637440&quot;, &quot;W4285733805&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4298138773, W4292259454.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4298138773&quot;, &quot;W4292259454&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4306888850, W4308101961, W4293843054, W4307114719, W3200584904, W4303184032.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4306888850&quot;, &quot;W4308101961&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4312019552, W4311025052, W4313528573.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4312019552&quot;, &quot;W4311025052&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4304695497, W4318979117, W4318775835.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4304695497&quot;, &quot;W4318979117&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4324045019, W4323043273.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4324045019&quot;, &quot;W4323043273&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4353055381, W4376959222, W4375859145, W4376642583, W4378472172, W4377038143, W4367600445.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4353055381&quot;, &quot;W4376959222&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4382394400, W4381185249, W4379599680, W4379877956, W4380628026.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4382394400&quot;, &quot;W4381185249&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4386332807, W4386087061, W4387335128, W4385701286.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4386332807&quot;, &quot;W4386087061&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4390345401, W4388541037, W4388591912, W4387805440.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4390345401&quot;, &quot;W4388541037&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4391925503, W4390979516.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4391925503&quot;, &quot;W4390979516&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4394924136, W4395667837.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4394924136&quot;, &quot;W4395667837&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4396578590, W4396721881, W4396749278.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4396578590&quot;, &quot;W4396721881&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4391823610.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4391823610&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4409283610, W4408243820, W4409781760, W4404995179.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4409283610&quot;, &quot;W4408243820&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre><code>Warning in oa_request(oa_query(filter = filter_i, multiple_id = multiple_id, : 
+The following work(s) have truncated lists of authors: W4411428667, W4411442413.
+Query each work separately by its identifier to get full list of authors.
+For example:
+  lapply(c(&quot;W4411428667&quot;, &quot;W4411442413&quot;), \(x) oa_fetch(identifier = x))
+Details at https://docs.openalex.org/api-entities/authors/limitations.</code></pre>
+<pre class="r"><code>oa_example |&gt;
+  select(doi, abstract) |&gt;
+  distinct()</code></pre>
+<pre><code># A tibble: 4,469 × 2
+   doi                                     abstract                             
+   &lt;chr&gt;                                   &lt;chr&gt;                                
+ 1 https://doi.org/10.1038/nature05911     &lt;NA&gt;                                 
+ 2 https://doi.org/10.1126/science.1109557 Age-related macular degeneration (AM…
+ 3 https://doi.org/10.1038/nature05616     &lt;NA&gt;                                 
+ 4 https://doi.org/10.1126/science.1135245 The inflammatory bowel diseases Croh…
+ 5 https://doi.org/10.1126/science.1142358 New strategies for prevention and tr…
+ 6 https://doi.org/10.1126/science.1142382 Identifying the genetic variants tha…
+ 7 https://doi.org/10.1038/nature05887     &lt;NA&gt;                                 
+ 8 https://doi.org/10.1126/science.1142364 The molecular mechanisms involved in…
+ 9 https://doi.org/10.1056/nejmoa072366    Modern genotyping platforms permit a…
+10 https://doi.org/10.1038/ng2032          &lt;NA&gt;                                 
+# ℹ 4,459 more rows</code></pre>
+</div>
+</div>
+<div id="read-in-abstracts-from-files" class="section level2">
+<h2>Read in abstracts from files</h2>
+<pre class="r"><code>abstracts &lt;- sapply(abstract_files,
+                    function(file) {
+                      readLines(file, warn = FALSE) |&gt; 
+                        paste(collapse = &quot; &quot;)
+                    }
+                    )
+
+pmids = pmids_with_abstracts 
+cohort = cohort[pmids]
+date = date[pmids]
+country = country[pmids]</code></pre>
+</div>
+<div id="extract-sentences-from-abstracts-with-cohort-names"
+class="section level2">
+<h2>Extract sentences from abstracts with cohort names</h2>
+<pre class="r"><code>extract_cohort_sentences &lt;- function(text_vector, 
+                                     cohort_names, 
+                                     ignore_case) {
+  
+  
+  results &lt;- lapply(seq_along(text_vector), function(i) {
+    
+    abstract &lt;- text_vector[i]
+    # Split abstract into sentences
+    sentences &lt;- unlist(tokenize_sentences(abstract))
+
+    # For each sentence, find all matching cohort names
+    lapply(seq_along(sentences), function(s) {
+      
+      sentence &lt;- sentences[s]
+      
+      # Identify cohort names present in this sentence
+      matched_cohorts &lt;- cohort_names[str_detect(sentence, 
+                                                 regex(cohort_names, 
+                                                       ignore_case = ignore_case))]
+
+      data.frame(
+        abstract_id = i,
+        sentence_id = s,
+        sentence = sentence,
+        has_cohort = length(matched_cohorts) &gt; 0,
+        COHORT = if (length(matched_cohorts) &gt; 0) str_flatten(unique(matched_cohorts), collapse = &quot;|&quot;, na.rm = T) else &quot;&quot;,
+        stringsAsFactors = FALSE
+      )
+    }) |&gt; bind_rows()
+  })
+
+  bind_rows(results)
+}
+
+cohort_sentences_df &lt;- extract_cohort_sentences(abstracts,
+                                                cohort_full_names,
+                                                ignore_case = TRUE
+                                                )
+
+cohort_sentences_df_p2 = extract_cohort_sentences(abstracts,
+                                                  cohort_abbr_names,
+                                                  ignore_case = FALSE
+                                                  )
+
+cohort_sentences_df =
+  bind_rows(cohort_sentences_df,
+            cohort_sentences_df_p2
+            )
+
+cohort_sentences_df = 
+  cohort_sentences_df |&gt;
+  distinct()</code></pre>
+</div>
+<div
+id="correct-for-the-over-representation-of-sentences-without-cohort-names"
+class="section level2">
+<h2>Correct for the over-representation of sentences without cohort
+names</h2>
+<pre class="r"><code># set the ratio of sentences with/without cohort names
+# ratio = 1
+# 
+# # number of sentences with cohort names
+# n_tp_sentences = nrow(cohort_sentences_df |&gt;
+#                       filter(COHORT != &quot;&quot;)
+#                       )
+
+# cohort_sentences_df  =
+#   cohort_sentences_df |&gt;
+#   mutate(has_cohort = ifelse(COHORT == &quot;&quot;, FALSE, TRUE)) |&gt;
+#   group_by(has_cohort) |&gt;
+#   slice_sample(n = ratio*n_tp_sentences,
+#                replace = FALSE
+#                ) 
+
+filtered_cohort_sentences_df =
+  cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;)
+
+control_cohort_sentences_df &lt;-
+cohort_sentences_df |&gt;
+  filter(grepl(&quot;cohort|consortium|study|population|registry|biobank|corsortia&quot;, 
+               sentence, 
+               ignore.case = TRUE)
+         ) |&gt;
+  slice_sample(n = 1000)
+
+filtered_cohort_sentences_df =
+  bind_rows(filtered_cohort_sentences_df,
+            control_cohort_sentences_df
+            ) |&gt;
+  distinct()
+
+filtered_cohort_sentences_df =
+  filtered_cohort_sentences_df |&gt;
+  group_by(abstract_id, sentence_id, sentence) |&gt;
+  summarise(
+    COHORT = str_flatten(unique(COHORT), collapse = &quot;|&quot;, na.rm = T)
+  ) |&gt;
+  ungroup()</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;abstract_id&#39;, &#39;sentence_id&#39;. You can
+override using the `.groups` argument.</code></pre>
+<pre class="r"><code>#abstract_ids = cohort_sentences_df$abstract_id |&gt; unique() |&gt; sort()
+
+# pmids = pmids[abstract_ids]
+# abstracts = abstracts[abstract_ids]
+# date = date[abstract_ids]
+# cohort = cohort[abstract_ids]</code></pre>
+</div>
+<div id="prepare-data-in-doccano-json-format" class="section level2">
+<h2>Prepare data in Doccano JSON format</h2>
+<pre class="r"><code># file path for intermediate json file output
+json_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.json&quot;)
+
+# file path for final jsonl file output
+jsonl_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.jsonl&quot;)
+
+convert_to_doccano_json_sentence_level &lt;- function(pmids,
+                                                   date,
+                                                   cohorts,
+                                                   cohort_sentences_df) {
+  
+  # set up json list
+  doccano_list &lt;- list()
+  example_id &lt;- 1
+
+  for(current_sentence in cohort_sentences_df$sentence) {
+
+      # Filter cohort sentences that match this sentence (safe matching)
+      df &lt;- cohort_sentences_df |&gt;
+             dplyr::filter(sentence == current_sentence) 
+      
+      # abstract_id &lt;- df$abstract_id
+      # matched_cohort &lt;- df$COHORT
+      
+      for (i in seq_len(nrow(df))) {
+        
+        matched_cohort &lt;- df$COHORT[i]
+        abstract_id &lt;- df$abstract_id[i]
+        
+        #browser()
+      
+        if(matched_cohort == &quot;&quot;){
+        
+          doccano_list[[example_id]] &lt;- list(
+          text = current_sentence,
+          pubmed_id = pmids[abstract_id],
+          date = date[abstract_id],
+          gwas_cat_cohort_label = cohorts[abstract_id],
+          label = list()
+          )
+        
+        } else {
+        
+        # Find the location of all matches of the cohort name in the sentence
+        if(grepl(&quot;\\|&quot;, matched_cohort)) {
+           
+           # If multiple cohort names, separate
+           matched_cohort &lt;- unlist(
+                                    strsplit(matched_cohort, 
+                                             split = &quot;\\|&quot;)
+                                    )
+        
+           match_locations &lt;- list()
+        
+           for(current_matched_cohort in matched_cohort){
+          
+               matches &lt;- str_locate_all(current_sentence,
+                                         fixed(current_matched_cohort, 
+                                               ignore_case = TRUE)
+                                         )[[1]]
+          
+               match_locations &lt;- append(match_locations, 
+                                         list(matches)
+                                         )
+          
+           }
+        
+           # Combine all match locations into a single matrix
+           matches &lt;- do.call(rbind, match_locations)
+        
+        }  else {
+        
+           matches &lt;- str_locate_all(current_sentence,
+                                     fixed(matched_cohort, 
+                                           ignore_case = TRUE)
+                                     )[[1]]
+      
+      }
+      
+      # Convert matches to 0-based indexing (for doccano)
+      matches[, &quot;start&quot;] &lt;- matches[, &quot;start&quot;] - 1  
+      
+      # Turn match locations into entity list
+      entities &lt;- list()
+      
+      for(k in seq_len(nrow(matches))) {
+              entities &lt;- append(entities, list(list(
+                start_offset = matches[k, &quot;start&quot;],
+                end_offset = matches[k, &quot;end&quot;],
+                label = &quot;COHORT&quot;
+              )))
+      }
+      
+      # Create Doccano JSON entry
+      doccano_list[[example_id]] &lt;- list(
+        # id = example_id,
+        text = current_sentence,
+        pubmed_id = pmids[abstract_id],
+        date = date[abstract_id],
+        gwas_cat_cohort_label = cohorts[abstract_id],
+        label = entities
+      )
+      
+      }
+      }
+
+      example_id &lt;- example_id + 1
+  }
+  
+  
+# Suppose each element of json_list has &#39;labels&#39; as a list of named lists
+  doccano_list &lt;- lapply(doccano_list, function(x) {
+  x$label &lt;- lapply(x$label, function(l) {
+    # convert named list to vector/list format [start, end, label]
+    c(l$start_offset, l$end_offset, l$label)
+  })
+  x
+})
+
+  return(doccano_list)
+}
+
+
+
+
+# Create JSON as a list
+json_list &lt;- convert_to_doccano_json_sentence_level(pmids,
+                                                    date,
+                                                    cohort,
+                                                    filtered_cohort_sentences_df)
+
+
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+
+json_data &lt;- fromJSON(json_file,
+                      simplifyVector = FALSE)
+
+# Open connection to JSONL file
+con &lt;- file(jsonl_file, &quot;w&quot;)
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+
+# Close connection
+close(con)
+
+cat(&quot;JSONL saved to:&quot;, jsonl_file, &quot;\n&quot;)</code></pre>
+<pre><code>JSONL saved to: /Users/ibeasley/code/genomics_ancest_disease_dispar/output/doccano/abstracts_with_cohort_info.jsonl </code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.1 (2023-06-16)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.6.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+ [1] openalexR_2.0.1  tokenizers_0.3.0 jsonlite_2.0.0   xml2_1.4.0      
+ [5] rentrez_1.2.4    stringi_1.8.7    dplyr_1.1.4      readxl_1.4.5    
+ [9] stringr_1.5.2    workflowr_1.7.1 
+
+loaded via a namespace (and not attached):
+ [1] compiler_4.3.1    renv_1.0.3        promises_1.3.3    tidyselect_1.2.1 
+ [5] Rcpp_1.1.0        git2r_0.36.2      callr_3.7.6       later_1.4.4      
+ [9] jquerylib_0.1.4   yaml_2.3.10       fastmap_1.2.0     here_1.0.1       
+[13] R6_2.6.1          SnowballC_0.7.1   generics_0.1.4    curl_7.0.0       
+[17] knitr_1.50        XML_3.99-0.19     tibble_3.3.0      rprojroot_2.1.0  
+[21] bslib_0.9.0       pillar_1.11.1     rlang_1.1.6       utf8_1.2.6       
+[25] cachem_1.1.0      httpuv_1.6.16     xfun_0.53         getPass_0.2-4    
+[29] fs_1.6.6          sass_0.4.10       cli_3.6.5         withr_3.0.2      
+[33] magrittr_2.0.4    ps_1.9.1          digest_0.6.37     processx_3.8.6   
+[37] rstudioapi_0.17.1 lifecycle_1.0.4   vctrs_0.6.5       data.table_1.17.8
+[41] evaluate_1.0.5    glue_1.8.0        whisker_0.4.1     cellranger_1.1.0 
+[45] rmarkdown_2.30    httr_1.4.7        tools_4.3.1       pkgconfig_2.0.3  
+[49] htmltools_0.5.8.1</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
