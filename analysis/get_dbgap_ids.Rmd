@@ -405,6 +405,14 @@ dbgap_text <-
   filter(dbgap_extracted != "") 
 
 dbgap_text =
+  dbgap_text |>
+  group_by(pmcid) |>
+  summarise(dbgap_extracted = str_flatten(unique(dbgap_extracted),
+                                          collapse = "|",
+                                          na.rm = TRUE)
+            )
+
+dbgap_text =
   left_join(dbgap_text,
             pmid_to_pmcid |> rename(pmcid = pmcids,
                                     pmid = pmids),
@@ -418,6 +426,26 @@ comparison_df =
     by = c("pmid")
   )
 
+# overlaps
+comparison_df |>
+  filter(dbgap_annotation != "" &
+         dbgap_extracted != ""
+         ) |> 
+  nrow()
 
+# only in annotation
+comparison_df |>
+  filter(dbgap_annotation != "" &
+         (is.na(dbgap_extracted) | dbgap_extracted == "")
+         ) |> 
+  nrow()
+
+# only in extracted
+comparison_df |>
+  filter((is.na(dbgap_annotation) | dbgap_annotation == "") &
+         dbgap_extracted != ""
+         ) |> 
+  nrow()
+  
 
 ```
