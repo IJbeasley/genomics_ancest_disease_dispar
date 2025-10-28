@@ -162,6 +162,197 @@ converted_ids <-
 data.table::fread(here::here("output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv")
 )
 
+convert_xml_text <- function(xml_content,
+                             text #output text file
+                             ){
+  
+    for(section in 1:xml_length(xml_content)){
+
+    section_node = xml_child(xml_content, section)
+
+    if(length(xml_path(xml_find_all(section_node,
+                                    ".//*[.//title and .//p]"
+                                    )
+                       )
+            ) == 0
+       )
+      {
+
+      # Get section name:
+      section_name = xml_text(xml_find_all(section_node, 
+                                           ".//title"))
+      
+      section_name = str_squish(section_name)
+      
+      if(!rlang::is_empty(section_name)) {
+         text = c(text, paste0("\n\n", section_name, "\n"))
+      }
+
+      # Get paragraphs
+      para_nodes = xml_find_all(section_node, ".//p")
+      para_texts = xml_text(para_nodes)
+      para_texts = str_squish(para_texts)
+      
+      
+      if(!rlang::is_empty(para_texts)) {
+        text = c(text, paste0("\n", 
+                              para_texts, 
+                              "\n")
+                 )
+      }
+      
+      if(rlang::is_empty(section_name) && 
+         rlang::is_empty(para_texts)) {
+        
+        all_node_text <- xml_text(section_node)
+        
+        if(!rlang::is_empty(all_node_text)){
+        
+        text = c(text, paste0("\n", 
+                              all_node_text, 
+                              "\n")
+                 )
+        
+        }
+      }
+      
+      label <- xml_text(xml_find_all(section_node, 
+                                     ".//label"))
+      
+      href <- xml_attr(xml_find_all(section_node, 
+                                    ".//media"), 
+                       "href")
+      
+      if(!rlang::is_empty(label) && !rlang::is_empty(href)) {
+        
+        text = c(text, paste0("\n", label, ". ", href, "\n"))
+        
+      }
+      
+      
+
+    } else {
+
+    for(subsection in 1:xml_length(section_node)){
+
+    subsection_node = xml_child(section_node,
+                                subsection
+                                )
+    
+    if(length(xml_children(subsection_node)) == 0){
+      
+      if(xml_name(subsection_node) == "title"){
+        
+        text = c(text, 
+               paste0("\n\n", 
+                      xml_text(subsection_node), 
+                      "\n")
+               )
+        
+      } else {
+      
+      text = c(text, 
+               paste0("\n", 
+                      xml_text(subsection_node), 
+                      "\n")
+               )
+      
+      }
+      
+      next
+      
+    }
+                
+
+    # Get section name:
+    subsection_name = xml_text(xml_find_all(subsection_node, 
+                                            ".//title")
+                               )
+    
+    subsection_name = str_squish(subsection_name)
+    
+    if(!rlang::is_empty(subsection_name)) {
+    # Add spaces around section titles
+    text = c(text, paste0("\n\n", 
+                          subsection_name, 
+                          "\n")
+             )
+    }
+
+    # Get paragraphs
+    para_nodes = xml_find_all(subsection_node, 
+                              ".//p")
+    
+    para_texts = xml_text(para_nodes)
+    para_texts = str_squish(para_texts)
+    
+    if(!rlang::is_empty(para_texts)) {
+    # Add spaces around paragraphs
+    text = c(text, paste0("\n", 
+                          para_texts, 
+                          "\n")
+             )
+    }
+    
+    if(rlang::is_empty(subsection_name) &&
+         rlang::is_empty(para_texts)) {    
+    
+        all_node_text <- xml_text(subsection_node)
+        
+        if(!rlang::is_empty(all_node_text)){
+        
+        text = c(text, paste0("\n", 
+                              all_node_text, 
+                              "\n")
+                 )
+        
+        }
+      }
+            
+    }
+}
+  }
+  
+  return(text)
+  
+}
+
+extract_app_text <- function(xml_back, 
+                             text){
+  
+  # Add separator for appendices section
+  text <- c(text, "\n\n=== APPENDICES ===\n")
+  
+  #browser()
+  
+  for(node_id in 1:xml_length(xml_back)){
+    
+    node = xml_child(xml_back, 
+                     node_id)
+    
+    #print(node)
+    
+    if(xml_name(node) == "app-group" & 
+       length(xml_find_all(node, ".//sec")) > 0) {
+      
+      app_node = xml_find_all(node, ".//sec")
+      
+      text = convert_xml_text(app_node, text)
+      
+    } else if(xml_name(node) == "ref-list") {
+      
+      next 
+      
+    } else {
+      
+      text = convert_xml_text(node, 
+                              text)
+    }
+  }
+  
+  return(text)
+}
+
 
 download_pmc_text <- function(pmcid, 
                               out_dir = here::here("output/fulltexts/europepmc")
@@ -185,107 +376,22 @@ download_pmc_text <- function(pmcid,
   # Get text body xml content
   #browser()
   xml_body = xml_child(xml_content, "body")
+  xml_back = xml_child(xml_content, "back")
+  #browser()
   
   # Build text file
   # By converting xml structure into sections and subsections
   text = c()
-  for(section in 1:xml_length(xml_body)){
-
-    section_node = xml_child(xml_body, section)
-
-    if(sum(
-            xml_length(xml_find_all(section_node,
-                                    ".//*[.//title and .//p]"))
-            ) == 0
-       )
-      {
-
-      # Get section name:
-      section_name = xml_text(xml_find_all(section_node, ".//title"))
-      section_name = str_squish(section_name)
-      if(!rlang::is_empty(section_name)) {
-         text = c(text, paste0("\n\n", section_name, "\n"))
-      }
-
-      # Get paragraphs
-      para_nodes = xml_find_all(section_node, ".//p")
-      para_texts = xml_text(para_nodes)
-      para_texts = str_squish(para_texts)
-      
-      
-      if(!rlang::is_empty(para_texts)) {
-        text = c(text, paste0("\n", para_texts, "\n"))
-      }
-      
-      if(rlang::is_empty(section_name) && 
-         rlang::is_empty(para_texts)) {
-        
-        all_node_text <- xml_text(section_node)
-        
-        if(!rlang::is_empty(all_node_text)){
-        
-        text = c(text, paste0("\n", all_node_text, "\n"))
-        
-        }
-      }
-      
-      label <- xml_text(xml_find_all(section_node, 
-                                     ".//label"))
-      href <- xml_attr(xml_find_all(section_node, 
-                                    ".//media"), 
-                       "href")
-      
-      if(!rlang::is_empty(label) && !rlang::is_empty(href)) {
-        
-        text = c(text, paste0("\n", label, ". ", href, "\n"))
-        
-      }
-      
-      
-
-    } else {
-
-    for(subsection in 1:xml_length(section_node)){
-
-    subsection_node = xml_child(section_node,
-                                subsection
-                                )
-
-    # Get section name:
-    subsection_name = xml_text(xml_find_all(subsection_node, ".//title"))
-    subsection_name = str_squish(subsection_name)
-    if(!rlang::is_empty(subsection_name)) {
-    # Add spaces around section titles
-    text = c(text, paste0("\n\n", subsection_name, "\n"))
-    }
-
-    # Get paragraphs
-    para_nodes = xml_find_all(subsection_node, ".//p")
-    para_texts = xml_text(para_nodes)
-    para_texts = str_squish(para_texts)
-    
-    if(!rlang::is_empty(para_texts)) {
-    # Add spaces around paragraphs
-    text = c(text, paste0("\n", para_texts, "\n"))
-    }
-    
-    if(rlang::is_empty(subsection_name) &&
-         rlang::is_empty(para_texts)) {    
-    
-        all_node_text <- xml_text(section_node)
-        
-        if(!rlang::is_empty(all_node_text)){
-        
-        text = c(text, paste0("\n", all_node_text, "\n"))
-        
-        }
-      }
-            
-    }
-}
-  }
+  text = convert_xml_text(xml_body,
+                          text
+                          )
   
-  # if Nat Genet article
+  text = c(text, "\n\n")
+  text = extract_app_text(xml_back,
+                          text
+                          )
+  
+    # if Nat Genet article
   if(grepl("Nature genetics", 
         xml_text(xml_find_all(xml_content, 
                               ".//journal-title")),
@@ -321,7 +427,6 @@ download_pmc_text <- function(pmcid,
                  )
       }
       
-      
       # Extract caption
       caption = xml_text(xml_find_all(figure_node, 
                                       ".//caption//p"))
@@ -335,49 +440,9 @@ download_pmc_text <- function(pmcid,
       
     }
     
-    # Find all tables
-    xml_tables <- xml_find_all(xml_content,
-                               ".//table-wrap")
-    
-    if(length(xml_tables) != 0){
-      
-      text = c(text, "\n\nTables:\n")
-      
     }
-    
-    for(nodes in 1:length(xml_tables)){
-      
-      table_node = xml_tables[nodes]
-      
-      # Extract label:
-      label <- xml_text(xml_find_all(table_node, 
-                                     ".//label"))
-      
-       if(!rlang::is_empty(label)){
-        
-        text = c(text,
-                 paste0("\n",label, "\n")
-                 )
-      }
-      
-      # Extract caption
-      caption = xml_text(xml_find_all(table_node, 
-                                      ".//caption//p"))
-      
-      if(!rlang::is_empty(caption)){
-        
-        text = c(text,
-                 paste0("\n", 
-                        caption, "\n")
-        )
-      }
-      
-    }
-    
-    
-    
-  }
-
+  
+  
   # --- Save ---
   text_full <- paste(text, collapse = " ")
 
