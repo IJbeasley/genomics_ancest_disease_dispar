@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree3df4096aa7693c669469c94ef3cb12954f01b243targetblank3df4096a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7d504e3db75bc28e18a04e156a746e10a41d3faatargetblank7d504e3a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/3df4096aa7693c669469c94ef3cb12954f01b243" target="_blank">3df4096</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7d504e3db75bc28e18a04e156a746e10a41d3faa" target="_blank">7d504e3</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree3df4096aa7693c669469c94ef3cb12954f01b243targetblank3df4096a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7d504e3db75bc28e18a04e156a746e10a41d3faatargetblank7d504e3a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/3df4096aa7693c669469c94ef3cb12954f01b243" target="_blank">3df4096</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7d504e3db75bc28e18a04e156a746e10a41d3faa" target="_blank">7d504e3</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -581,9 +581,6 @@ Ignored files:
     Ignored:    renv/
     Ignored:    venv/
 
-Untracked files:
-    Untracked:  analysis/specific_aims_stats.Rmd
-
 Unstaged changes:
     Modified:   .gitignore
     Modified:   analysis/correcting_cohort_names.Rmd
@@ -591,7 +588,6 @@ Unstaged changes:
     Modified:   analysis/gbd_data_plots.Rmd
     Modified:   analysis/group_cancer_diseases.Rmd
     Modified:   analysis/gwas_to_gbd.Rmd
-    Modified:   analysis/index.Rmd
     Modified:   analysis/level_1_disease_group_non_cancer.Rmd
     Modified:   analysis/level_2_disease_group.Rmd
     Modified:   analysis/map_trait_to_icd10.Rmd
@@ -640,6 +636,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/7d504e3db75bc28e18a04e156a746e10a41d3faa/analysis/get_full_text.Rmd" target="_blank">7d504e3</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-27
+</td>
+<td>
+More fixing of download full text
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/16f4c191dd3ff8d584744a999026381e72bc72b6/docs/get_full_text.html" target="_blank">16f4c19</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2025-10-27
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -837,6 +867,197 @@ class="section level1">
 data.table::fread(here::here(&quot;output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv&quot;)
 )
 
+convert_xml_text &lt;- function(xml_content,
+                             text #output text file
+                             ){
+  
+    for(section in 1:xml_length(xml_content)){
+
+    section_node = xml_child(xml_content, section)
+
+    if(length(xml_path(xml_find_all(section_node,
+                                    &quot;.//*[.//title and .//p]&quot;
+                                    )
+                       )
+            ) == 0
+       )
+      {
+
+      # Get section name:
+      section_name = xml_text(xml_find_all(section_node, 
+                                           &quot;.//title&quot;))
+      
+      section_name = str_squish(section_name)
+      
+      if(!rlang::is_empty(section_name)) {
+         text = c(text, paste0(&quot;\n\n&quot;, section_name, &quot;\n&quot;))
+      }
+
+      # Get paragraphs
+      para_nodes = xml_find_all(section_node, &quot;.//p&quot;)
+      para_texts = xml_text(para_nodes)
+      para_texts = str_squish(para_texts)
+      
+      
+      if(!rlang::is_empty(para_texts)) {
+        text = c(text, paste0(&quot;\n&quot;, 
+                              para_texts, 
+                              &quot;\n&quot;)
+                 )
+      }
+      
+      if(rlang::is_empty(section_name) &amp;&amp; 
+         rlang::is_empty(para_texts)) {
+        
+        all_node_text &lt;- xml_text(section_node)
+        
+        if(!rlang::is_empty(all_node_text)){
+        
+        text = c(text, paste0(&quot;\n&quot;, 
+                              all_node_text, 
+                              &quot;\n&quot;)
+                 )
+        
+        }
+      }
+      
+      label &lt;- xml_text(xml_find_all(section_node, 
+                                     &quot;.//label&quot;))
+      
+      href &lt;- xml_attr(xml_find_all(section_node, 
+                                    &quot;.//media&quot;), 
+                       &quot;href&quot;)
+      
+      if(!rlang::is_empty(label) &amp;&amp; !rlang::is_empty(href)) {
+        
+        text = c(text, paste0(&quot;\n&quot;, label, &quot;. &quot;, href, &quot;\n&quot;))
+        
+      }
+      
+      
+
+    } else {
+
+    for(subsection in 1:xml_length(section_node)){
+
+    subsection_node = xml_child(section_node,
+                                subsection
+                                )
+    
+    if(length(xml_children(subsection_node)) == 0){
+      
+      if(xml_name(subsection_node) == &quot;title&quot;){
+        
+        text = c(text, 
+               paste0(&quot;\n\n&quot;, 
+                      xml_text(subsection_node), 
+                      &quot;\n&quot;)
+               )
+        
+      } else {
+      
+      text = c(text, 
+               paste0(&quot;\n&quot;, 
+                      xml_text(subsection_node), 
+                      &quot;\n&quot;)
+               )
+      
+      }
+      
+      next
+      
+    }
+                
+
+    # Get section name:
+    subsection_name = xml_text(xml_find_all(subsection_node, 
+                                            &quot;.//title&quot;)
+                               )
+    
+    subsection_name = str_squish(subsection_name)
+    
+    if(!rlang::is_empty(subsection_name)) {
+    # Add spaces around section titles
+    text = c(text, paste0(&quot;\n\n&quot;, 
+                          subsection_name, 
+                          &quot;\n&quot;)
+             )
+    }
+
+    # Get paragraphs
+    para_nodes = xml_find_all(subsection_node, 
+                              &quot;.//p&quot;)
+    
+    para_texts = xml_text(para_nodes)
+    para_texts = str_squish(para_texts)
+    
+    if(!rlang::is_empty(para_texts)) {
+    # Add spaces around paragraphs
+    text = c(text, paste0(&quot;\n&quot;, 
+                          para_texts, 
+                          &quot;\n&quot;)
+             )
+    }
+    
+    if(rlang::is_empty(subsection_name) &amp;&amp;
+         rlang::is_empty(para_texts)) {    
+    
+        all_node_text &lt;- xml_text(subsection_node)
+        
+        if(!rlang::is_empty(all_node_text)){
+        
+        text = c(text, paste0(&quot;\n&quot;, 
+                              all_node_text, 
+                              &quot;\n&quot;)
+                 )
+        
+        }
+      }
+            
+    }
+}
+  }
+  
+  return(text)
+  
+}
+
+extract_app_text &lt;- function(xml_back, 
+                             text){
+  
+  # Add separator for appendices section
+  text &lt;- c(text, &quot;\n\n=== APPENDICES ===\n&quot;)
+  
+  #browser()
+  
+  for(node_id in 1:xml_length(xml_back)){
+    
+    node = xml_child(xml_back, 
+                     node_id)
+    
+    #print(node)
+    
+    if(xml_name(node) == &quot;app-group&quot; &amp; 
+       length(xml_find_all(node, &quot;.//sec&quot;)) &gt; 0) {
+      
+      app_node = xml_find_all(node, &quot;.//sec&quot;)
+      
+      text = convert_xml_text(app_node, text)
+      
+    } else if(xml_name(node) == &quot;ref-list&quot;) {
+      
+      next 
+      
+    } else {
+      
+      text = convert_xml_text(node, 
+                              text)
+    }
+  }
+  
+  return(text)
+}
+
 
 download_pmc_text &lt;- function(pmcid, 
                               out_dir = here::here(&quot;output/fulltexts/europepmc&quot;)
@@ -860,107 +1081,22 @@ download_pmc_text &lt;- function(pmcid,
   # Get text body xml content
   #browser()
   xml_body = xml_child(xml_content, &quot;body&quot;)
+  xml_back = xml_child(xml_content, &quot;back&quot;)
+  #browser()
   
   # Build text file
   # By converting xml structure into sections and subsections
   text = c()
-  for(section in 1:xml_length(xml_body)){
-
-    section_node = xml_child(xml_body, section)
-
-    if(sum(
-            xml_length(xml_find_all(section_node,
-                                    &quot;.//*[.//title and .//p]&quot;))
-            ) == 0
-       )
-      {
-
-      # Get section name:
-      section_name = xml_text(xml_find_all(section_node, &quot;.//title&quot;))
-      section_name = str_squish(section_name)
-      if(!rlang::is_empty(section_name)) {
-         text = c(text, paste0(&quot;\n\n&quot;, section_name, &quot;\n&quot;))
-      }
-
-      # Get paragraphs
-      para_nodes = xml_find_all(section_node, &quot;.//p&quot;)
-      para_texts = xml_text(para_nodes)
-      para_texts = str_squish(para_texts)
-      
-      
-      if(!rlang::is_empty(para_texts)) {
-        text = c(text, paste0(&quot;\n&quot;, para_texts, &quot;\n&quot;))
-      }
-      
-      if(rlang::is_empty(section_name) &amp;&amp; 
-         rlang::is_empty(para_texts)) {
-        
-        all_node_text &lt;- xml_text(section_node)
-        
-        if(!rlang::is_empty(all_node_text)){
-        
-        text = c(text, paste0(&quot;\n&quot;, all_node_text, &quot;\n&quot;))
-        
-        }
-      }
-      
-      label &lt;- xml_text(xml_find_all(section_node, 
-                                     &quot;.//label&quot;))
-      href &lt;- xml_attr(xml_find_all(section_node, 
-                                    &quot;.//media&quot;), 
-                       &quot;href&quot;)
-      
-      if(!rlang::is_empty(label) &amp;&amp; !rlang::is_empty(href)) {
-        
-        text = c(text, paste0(&quot;\n&quot;, label, &quot;. &quot;, href, &quot;\n&quot;))
-        
-      }
-      
-      
-
-    } else {
-
-    for(subsection in 1:xml_length(section_node)){
-
-    subsection_node = xml_child(section_node,
-                                subsection
-                                )
-
-    # Get section name:
-    subsection_name = xml_text(xml_find_all(subsection_node, &quot;.//title&quot;))
-    subsection_name = str_squish(subsection_name)
-    if(!rlang::is_empty(subsection_name)) {
-    # Add spaces around section titles
-    text = c(text, paste0(&quot;\n\n&quot;, subsection_name, &quot;\n&quot;))
-    }
-
-    # Get paragraphs
-    para_nodes = xml_find_all(subsection_node, &quot;.//p&quot;)
-    para_texts = xml_text(para_nodes)
-    para_texts = str_squish(para_texts)
-    
-    if(!rlang::is_empty(para_texts)) {
-    # Add spaces around paragraphs
-    text = c(text, paste0(&quot;\n&quot;, para_texts, &quot;\n&quot;))
-    }
-    
-    if(rlang::is_empty(subsection_name) &amp;&amp;
-         rlang::is_empty(para_texts)) {    
-    
-        all_node_text &lt;- xml_text(section_node)
-        
-        if(!rlang::is_empty(all_node_text)){
-        
-        text = c(text, paste0(&quot;\n&quot;, all_node_text, &quot;\n&quot;))
-        
-        }
-      }
-            
-    }
-}
-  }
+  text = convert_xml_text(xml_body,
+                          text
+                          )
   
-  # if Nat Genet article
+  text = c(text, &quot;\n\n&quot;)
+  text = extract_app_text(xml_back,
+                          text
+                          )
+  
+    # if Nat Genet article
   if(grepl(&quot;Nature genetics&quot;, 
         xml_text(xml_find_all(xml_content, 
                               &quot;.//journal-title&quot;)),
@@ -996,7 +1132,6 @@ download_pmc_text &lt;- function(pmcid,
                  )
       }
       
-      
       # Extract caption
       caption = xml_text(xml_find_all(figure_node, 
                                       &quot;.//caption//p&quot;))
@@ -1010,49 +1145,9 @@ download_pmc_text &lt;- function(pmcid,
       
     }
     
-    # Find all tables
-    xml_tables &lt;- xml_find_all(xml_content,
-                               &quot;.//table-wrap&quot;)
-    
-    if(length(xml_tables) != 0){
-      
-      text = c(text, &quot;\n\nTables:\n&quot;)
-      
     }
-    
-    for(nodes in 1:length(xml_tables)){
-      
-      table_node = xml_tables[nodes]
-      
-      # Extract label:
-      label &lt;- xml_text(xml_find_all(table_node, 
-                                     &quot;.//label&quot;))
-      
-       if(!rlang::is_empty(label)){
-        
-        text = c(text,
-                 paste0(&quot;\n&quot;,label, &quot;\n&quot;)
-                 )
-      }
-      
-      # Extract caption
-      caption = xml_text(xml_find_all(table_node, 
-                                      &quot;.//caption//p&quot;))
-      
-      if(!rlang::is_empty(caption)){
-        
-        text = c(text,
-                 paste0(&quot;\n&quot;, 
-                        caption, &quot;\n&quot;)
-        )
-      }
-      
-    }
-    
-    
-    
-  }
-
+  
+  
   # --- Save ---
   text_full &lt;- paste(text, collapse = &quot; &quot;)
 
@@ -1082,9 +1177,12 @@ for(pmcid in pmcids){
     #           &quot;: &quot;, result$error)
     # }
   }
-}
-
-# How many texts saved? 
+}</code></pre>
+<pre><code>Warning in 1:xml_length(xml_content): numerical expression has 10 elements:
+only the first used</code></pre>
+<pre><code>Warning in 1:xml_length(xml_content): numerical expression has 4 elements: only
+the first used</code></pre>
+<pre class="r"><code># How many texts saved? 
 length(list.files(here::here(&quot;output/fulltexts/europepmc&quot;),
                   pattern = &quot;\\.txt$&quot;)
        )</code></pre>
@@ -1253,7 +1351,7 @@ sentences_df =
 
 # number of pubmed ids with dbgap / ega ids found
 sentences_df$pmcid |&gt; unique() |&gt; length()</code></pre>
-<pre><code>[1] 26</code></pre>
+<pre><code>[1] 50</code></pre>
 <pre class="r"><code>data.table::fwrite(sentences_df,
                    here::here(&quot;output/gwas_cat/gwas_study_dbgap_ega_sentences.csv&quot;)
                    )</code></pre>
@@ -1298,7 +1396,13 @@ not_found_dbgap_ids &lt;-
 sort(found_dbgap_ids[!found_dbgap_ids %in% mapped_dbgap_ids])
 
 not_found_dbgap_ids</code></pre>
-<pre><code>[1] &quot;phs001478.v1.p1&quot;</code></pre>
+<pre><code> [1] &quot;phs000001&quot;       &quot;phs000101&quot;       &quot;phs000187&quot;       &quot;phs000196&quot;      
+ [5] &quot;phs000248&quot;       &quot;phs000292&quot;       &quot;phs000304&quot;       &quot;phs000315&quot;      
+ [9] &quot;phs000368&quot;       &quot;phs000383.v1.p1&quot; &quot;phs000386.v3.p2&quot; &quot;phs000394&quot;      
+[13] &quot;phs000397&quot;       &quot;phs000404&quot;       &quot;phs000421&quot;       &quot;phs000454&quot;      
+[17] &quot;phs000517.v2.p1&quot; &quot;phs000615&quot;       &quot;phs000620.v1.p1&quot; &quot;phs000675&quot;      
+[21] &quot;phs000761.v1.p1&quot; &quot;phs000799.v1.p1&quot; &quot;phs000869&quot;       &quot;phs000912.v1.p1&quot;
+[25] &quot;phs001478.v1.p1&quot; &quot;phs001649.v1.p1&quot; &quot;phs001984.v1.p1&quot; &quot;phs003308.v1.p1&quot;</code></pre>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
