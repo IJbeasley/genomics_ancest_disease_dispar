@@ -39,11 +39,11 @@ print(length(all_pmids))
 
 ```
 
-# Get dbGAP ids for pubmed ids
+# Get dbGaP ids for pubmed ids
 
 ## Extract internal dbGAP ids
 
-```{r get-dbgap-ids}
+```{r get-dbgap-ids, eval = F}
 
 get_internal_dbgap_ids = function(pubmed_id) {
 
@@ -75,9 +75,24 @@ purrr::map(all_pmids,
 
 ```
 
+### Save dbGaP id mapping
+
+```{r save-dbgap-ids, eval = F}
+
+data.table::fwrite(pubmed_dbgap_mapping,
+                   here::here("output/gwas_cohorts/gwas_study_dbgap_ids.csv")
+                   )
+
+```
+
 ### Percentage of studies with dbGAP ids
 
 ```{r percent-with-dbgap-ids}
+
+# load previously saved mapping
+pubmed_dbgap_mapping <- data.table::fread(
+  here::here("output/gwas_cohorts/gwas_study_dbgap_ids.csv")
+)
 
 n_with_dbgap = pubmed_dbgap_mapping |>
   dplyr::filter(DBGAP_ID != "") |>
@@ -87,23 +102,19 @@ percent_with_dbgap = n_with_dbgap / nrow(pubmed_dbgap_mapping) * 100
 
 percent_with_dbgap
 
-```
-
-## Save dbGAP id mapping
-
-```{r save-dbgap-ids}
-
-data.table::fwrite(pubmed_dbgap_mapping,
-                   here::here("output/gwas_cohorts/gwas_study_dbgap_ids.csv")
-                   )
+# a lot of internal dbgap ids are not able be retrieve study accessions
+# sad
+# ? perhaps because they are old dbgap versions? 
 
 ```
 
 ## Extract dbGAP study accessions
 
-```{r extract-dbgap-accessions}
+```{r extract-dbgap-accessions, warning=FALSE, message=FALSE, eval = F}
 
 dbgap_ids = pubmed_dbgap_mapping$DBGAP_ID
+
+dbgap_ids = dbgap_ids[dbgap_ids != ""]
 
 dbgap_ids = dbgap_ids |>
   strsplit(",") |>
@@ -136,6 +147,16 @@ dbgap_accession_mapping <-
              ) |>
   dplyr::bind_rows()
 
+pubmed_dbgap_mapping =
+  pubmed_dbgap_mapping |>
+  tidyr::separate_longer_delim(cols = "DBGAP_ID", 
+                               delim = ",")
+
+dbgap_accession_mapping = 
+  dbgap_accession_mapping |>
+  tidyr::separate_longer_delim(cols = "INTERNAL_DBGAP_ID", 
+                               delim = ",")
+
 dbgap_accession_mapping = 
 left_join(pubmed_dbgap_mapping, 
      dbgap_accession_mapping,
@@ -143,17 +164,54 @@ left_join(pubmed_dbgap_mapping,
      ) 
 
 
+
+```
+
+### Save dbGaP accession mapping
+
+```{r save-dbgap-accessions, eval = F}
+
   data.table::fwrite(
     dbgap_accession_mapping,
      here::here("output/gwas_cohorts/gwas_study_dbgap_accessions.csv")
                      )
   
+
 ```
 
+## Percentage of studies with dbGaP accessions 
 
-# Do the reverse - dbgap to pubmed
+```{r percent-with-dbgap-accessions}
 
-```{r dbgap-to-pubmed}
+# load previously saved mapping
+dbgap_accession_mapping <- data.table::fread(
+  here::here("output/gwas_cohorts/gwas_study_dbgap_accessions.csv")
+)
+
+# compress to one row per pubmed id
+dbgap_accession_mapping =
+  dbgap_accession_mapping |>
+  group_by(PUBMED_ID) |>
+  summarise(DBGAP_ACCESSION = str_flatten(unique(DBGAP_ACCESSION),
+                                         collapse = ",",
+                                         na.rm = TRUE),
+            DBGAP_ID = str_flatten(unique(DBGAP_ID),
+                                         collapse = ",",
+                                         na.rm = TRUE)
+            )
+
+n_with_dbgap_accession = dbgap_accession_mapping |>
+  dplyr::filter(DBGAP_ACCESSION != "") |>
+  nrow()
+
+percent_with_dbgap_accession = n_with_dbgap_accession / nrow(pubmed_dbgap_mapping) * 100
+
+percent_with_dbgap_accession
+```
+
+# Do the reverse - dbGaP to pubmed
+
+```{r dbgap-to-pubmed, eval = F}
 
 dbgap_to_pubmed_id <- function(dbgap_accession) {
   
@@ -195,7 +253,6 @@ dbgap_accessions <-
     dbgap_accession_mapping$DBGAP_ACCESSION[dbgap_accession_mapping$DBGAP_ACCESSION != ""]
     )
 
-
 dbgap_accessions <- unlist(strsplit(dbgap_accessions, ","))
 
 dbgap_accessions <- unique(dbgap_accessions)
@@ -215,7 +272,7 @@ dbgap_to_pubmed_mapping |>
 
 dbgap_accession_mapping =
   dbgap_accession_mapping |>
-  mutate(dbgap_accession_mapping = as.character(DBGAP_ACCESSION)) 
+  mutate(DBGAP_ACCESSION = as.character(DBGAP_ACCESSION)) 
 
 dbgap_to_pubmed_mapping =
   dbgap_to_pubmed_mapping |>
@@ -248,9 +305,119 @@ combined_dbgap_pubmed_mapping =
   combined_dbgap_pubmed_mapping |>
   arrange(PUBMED_ID)
 
+combined_dbgap_pubmed_mapping =
+  combined_dbgap_pubmed_mapping |>
+  mutate(DBGAP_ACCESSION = stringr::str_remove_all(pattern = "^,|,$", 
+                                                   DBGAP_ACCESSION),
+         DBGAP_ID = stringr::str_remove_all(pattern = "^,|,$", 
+                                            DBGAP_ID)
+         )
+
+combined_dbgap_pubmed_mapping =
+  combined_dbgap_pubmed_mapping |>
+  group_by(PUBMED_ID) |>
+  summarise(
+    DBGAP_ACCESSION = str_flatten(unique(
+                                 unlist(strsplit(DBGAP_ACCESSION, ","))
+                                       ),
+                                 collapse = ",",
+                                 na.rm = TRUE),
+    DBGAP_ID = str_flatten(unique(
+                                 unlist(strsplit(DBGAP_ID, ","))
+                                 ),
+                                 collapse = ",",
+                                 na.rm = TRUE)
+    )
+  
+```
+
+## Save complete dbGaP to pubmed mapping
+
+```{r save-complete-dbgap-pubmed-mapping, eval = F}
+
 data.table::fwrite(
     combined_dbgap_pubmed_mapping,
      here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
                      )
+
+```
+
+## Percentage now of studies with dbGaP accessions
+
+```{r percent-with-complete-dbgap-accessions}
+
+# load previously saved mapping
+combined_dbgap_pubmed_mapping <- data.table::fread(
+  here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
+)
+
+n_studies_with_dbgap =
+combined_dbgap_pubmed_mapping |>
+  filter(!(DBGAP_ACCESSION == "" & DBGAP_ID == "")) |>
+  nrow()
+
+n_studies_with_dbgap / nrow(pubmed_dbgap_mapping) * 100
+
+```
+
+
+# Compare dbgap retrieved via extracting full text vs via entrez
+
+```{r compare-dbgap-sources}
+
+combined_dbgap_pubmed_mapping <- data.table::fread(
+  here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
+)
+
+combined_dbgap_pubmed_mapping =
+  combined_dbgap_pubmed_mapping |>
+  select(pmid = PUBMED_ID,
+         dbgap_annotation = DBGAP_ACCESSION
+         ) |>
+  distinct()
+
+combined_dbgap_pubmed_mapping = 
+  combined_dbgap_pubmed_mapping |>
+  filter(!is.na(dbgap_annotation) & dbgap_annotation != "") |>
+  summarise(dbgap_annotation = str_flatten(unique(dbgap_annotation),
+                                             collapse = "|",
+                                             na.rm = TRUE),
+            .by = pmid
+            )
+
+dbgap_text <- data.table::fread(
+                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
+)
+
+pmid_to_pmcid = data.table::fread(
+  here::here("output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv")
+)
+
+dbgap_text <- data.table::fread(
+                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
+)
+
+dbgap_text <-
+  dbgap_text |>
+  select(dbgap_extracted = dbgap_id,
+         pmcid
+         ) |>
+  filter(dbgap_extracted != "") 
+
+dbgap_text =
+  left_join(dbgap_text,
+            pmid_to_pmcid |> rename(pmcid = pmcids,
+                                    pmid = pmids),
+            by = "pmcid"
+            ) 
+
+comparison_df =
+  full_join(
+    combined_dbgap_pubmed_mapping,
+    dbgap_text,
+    by = c("pmid")
+  )
+
+
 
 ```
