@@ -1,0 +1,65 @@
+---
+title: "Stats for specific aims"
+author: "Isobel Beasley"
+date: "2025-10-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Proportion of published papers in the GWAS catalog that include cohort information 
+
+```{r, message=FALSE, warning=FALSE}
+
+gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ tolower(gsub(" ", "_", .x)))
+
+# how many published studies (i.e. number of unique pubmed ids)
+
+n_published_studies <- gwas_study_info |>
+  dplyr::filter(!is.na(pubmed_id)) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print(n_published_studies)
+
+# how many published studies include cohort information? 
+
+n_studies_with_cohort_info <- gwas_study_info |>
+  dplyr::mutate(cohort = stringr::str_remove_all(pattern ="(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
+                                                 cohort)) |> 
+  dplyr::filter(cohort != "") |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print(n_studies_with_cohort_info)
+
+100 *n_studies_with_cohort_info / n_published_studies
+
+```
+
+### Percentage of cohort information that includes 'other' or 'multiple'
+
+```{r}
+
+studies_with_other_or_multiple_cohort_info <- gwas_study_info |>
+  dplyr::mutate(cohort = stringr::str_remove_all(pattern = "(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
+                                                 cohort)) |> 
+  dplyr::filter(grepl("other|multiple", tolower(cohort))) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print(studies_with_other_or_multiple_cohort_info)
+
+100 * studies_with_other_or_multiple_cohort_info / n_studies_with_cohort_info 
+
+```
+
+
