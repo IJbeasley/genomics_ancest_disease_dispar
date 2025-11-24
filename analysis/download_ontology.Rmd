@@ -585,25 +585,67 @@ writeLines(injury_descendants, here::here("output/trait_ontology/efo_0000546_des
 
 ```
 
-# Sociological / environmental factors
+# Medical proceedure terms (http://www.ebi.ac.uk/efo/EFO_0002571)
 
-```{r}
+```{r medical_proceedure_terms, eval = F}
 
-enviro_factors <- c(
-  "income",
-"socioeconomic status",
-"encounter with health service related to socioeconomic and psychosocial circumstances" ,
-"townsend deprivation index",
-"household income",
-"social deprivation",
-"economic and social preference",
-"social deprivation",
-"physical activity",
-"exercise",
-"family relationship",
-"cannabis use",
-"alcohol drinking"
-)
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0002571/descendants"
+
+medical_proceedure_descendants <- c()
+
+repeat {
+  res <- GET(url)
+  stop_for_status(res)
+  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
+  
+  medical_proceedure_descendants <- c(medical_proceedure_descendants, data$`_embedded`$terms$label)
+  
+  # check if there is a next page
+  if (!is.null(data$`_links`$`next`$href)) {
+    url <- data$`_links`$`next`$href
+  } else {
+    break
+  }
+}
+
+length(medical_proceedure_descendants)
+
+medical_proceedure_descendants[1:5]
+
+writeLines(medical_proceedure_descendants, here::here("output/trait_ontology/efo_0002571_descendants.txt"))
+
+
+```
+
+
+# Surgical procedure terms (http://purl.obolibrary.org/obo/MAXO_0000004)
+
+```{r surgical_proceedure_terms, eval = F}
+
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/maxo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMAXO_0000004/descendants"
+
+surgical_proceedure_descendants <- c()
+
+repeat {
+  res <- GET(url)
+  stop_for_status(res)
+  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
+  
+  surgical_proceedure_descendants <- c(surgical_proceedure_descendants, data$`_embedded`$terms$label)
+  
+  # check if there is a next page
+  if (!is.null(data$`_links`$`next`$href)) {
+    url <- data$`_links`$`next`$href
+  } else {
+    break
+  }
+}
+
+length(surgical_proceedure_descendants)
+
+surgical_proceedure_descendants[1:5]
+
+writeLines(surgical_proceedure_descendants, here::here("output/trait_ontology/maxo_0000004_descendants.txt"))
 
 ```
 
