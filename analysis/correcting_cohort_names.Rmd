@@ -36,6 +36,91 @@ gwas_study_info <- gwas_study_info |>
 mutate(COHORT = str_replace_all(COHORT, "\\| ", "|")) |>
   mutate(COHORT = str_replace_all(COHORT, " \\|", "|"))
 
+# some use commas instead of | to designate multiple cohorts
+gwas_study_info <- gwas_study_info |>
+    mutate(COHORT = str_replace_all(COHORT, ", ", "|")) 
+
+```
+
+# Remove uninformative labels
+
+```{r remove_uninformative_cohort_names}
+# making "multiple" designation to be the same
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                   "(\\(Multiple cohorts\\))|(\\(multiple\\))|Multiple",
+                                  "multiple")) 
+
+
+# number of cohorts listed as 'multiple'
+gwas_study_info |> 
+  filter(grepl("multiple", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n())
+
+# remove cohorts listed as multiple
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "multiple",
+                                          string = COHORT)
+         )
+
+
+# making others be the same  
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Other", "other")) |> 
+  mutate(COHORT = str_replace_all(COHORT, "OTHER", "other")) |>
+  mutate(COHORT = str_replace_all(COHORT, "others", "other")) 
+
+# number of cohorts listed as other
+gwas_study_info |> 
+  filter(grepl("other", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+gwas_study_info |>
+  filter(grepl("other", COHORT)) |> 
+  nrow()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "(^other$)|(^other\\|)|(\\|other$)",
+                                          string = COHORT)
+         ) |>
+  mutate(COHORT = stringr::str_replace_all(pattern = "\\|other\\|",
+                                          string = COHORT,
+                                          replacement = "|")
+         )
+
+# not reported: 
+gwas_study_info |> 
+  filter(grepl("NR", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+
+gwas_study_info |> 
+  filter(grepl("NR", COHORT)) |>
+  nrow()
+
+gwas_study_info = 
+gwas_study_info |>
+  dplyr::mutate(COHORT = stringr::str_remove_all(pattern ="(^NR$)|(^NR\\|)|(\\|NR$)", 
+                                                 string = COHORT)) |>
+    mutate(COHORT = stringr::str_replace_all(pattern = "(\\|NR\\|)",
+                                          string = COHORT,
+                                          replacement = "|")
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_remove_all(pattern = "\\|$",
+                                 string = COHORT))
+
 ```
 
 # Accounting for some discrepancies in cohort names across studies 
@@ -54,6 +139,7 @@ unique(all_cohorts) |> length()
 ## Accounting for some discrepancies in cohort names across studies 
 
 ```{r}
+
 # Correct for discrepancies within same paper
 gwas_study_info <- gwas_study_info |>
   mutate(COHORT = str_replace_all(COHORT, "AWI-Gen", "AWI-GEN")) |> # PUBMED ID :40229280
@@ -62,22 +148,6 @@ gwas_study_info <- gwas_study_info |>
   mutate(COHORT = str_replace_all(COHORT, "Estonian Biobank", "EB")) |> # PUBMED ID: 39500877
   mutate(COHORT = str_replace_all(COHORT, "AWIGEN", "AWI-GEN"))  # 40229280
 
-# making other be the same  
-gwas_study_info <- gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "Other", "other")) |> 
-  mutate(COHORT = str_replace_all(COHORT, "OTHER", "other")) |>
-  mutate(COHORT = str_replace_all(COHORT, "others", "other")) 
-
-# making "multiple" designation to be the same
-gwas_study_info <- gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, 
-                                   "(\\(Multiple cohorts\\))|(\\(multiple\\))|Multiple",
-                                  "multiple")) 
-
-
-# some use commas instead of | to designate multiple cohorts
-gwas_study_info <- gwas_study_info |>
-    mutate(COHORT = str_replace_all(COHORT, ", ", "|")) 
 
 # Makes TwinsUK consistent
 gwas_study_info <- gwas_study_info |>
@@ -485,6 +555,17 @@ unique(all_cohorts) |> length()
 
 # Discrepancies corrected across papers (Not checked but likely):
 
+## ABCD study
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "ABCD study", 
+                                  "ABCD"))
+
+```
+
 ## canSCAD example: 
 
 ```{r}
@@ -561,7 +642,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-# BioMe
+## BioMe
 
 ```{r}
 gwas_study_info = gwas_study_info |>
@@ -1106,7 +1187,122 @@ gwas_study_info |>
 
 ```
 
+# Fix combined names in specific studies
+
+## BBJGARP www.ncbi.nlm.nih.gov/pubmed/34450027 -> BBJ|GARP
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 34450027,
+                         str_replace_all(COHORT, "BBJGARP", "BBJ|GARP"),
+                         COHORT
+  )
+  )
+
+```
+
+## 	CHSeMERGE -> CHS|eMERGE
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 35551307,
+                         str_replace_all(COHORT, "CHSeMERGE", "CHS|eMERGE"),
+                         COHORT
+  )
+  )
+
+```
+
+## CKB23andMe -> CKB|23andMe
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 34586374,
+                         str_replace_all(COHORT, "CKB23andMe", "CKB|23andMe"),
+                         COHORT
+  )
+  )
+
+```
+
+## FinnGenBBJ -> FinnGen|BBJ
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 40050615,
+                         str_replace_all(COHORT, "FinnGenBBJ", "FinnGen|BBJ"),
+                         COHORT
+  )
+  )
+
+```
+
+## 	UKBEB -> UKB|EB
+
+```{r}
+
+
+```
+
+## WEHFinnGen -> WEH|FinnGen
+
+## WGHSQIMR -> WGHS|QIMR
+
+
+
+
+
 # Specific studies 
+
+## Mount Sinai -> BioMe (34604815)
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 34604815,
+                         str_replace_all(COHORT, "Mount Sinai", "BioMe"),
+                         COHORT
+  )
+  )
+
+```
+
+## BHS_b -> BHS (40181193)
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 40181193,
+                         str_replace_all(COHORT, "BHS_b", "BHS"),
+                         COHORT
+  )
+  )
+
+```
+
+
+## LOLIPO -> LOLIPOP (3405983)
+
+## B-PROOF -> BPROOF
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "B-PROOF", "BPROOF")
+  )
+
+```
 
 ## European NAFLD Registry Metacohort
 
@@ -1220,7 +1416,10 @@ gwas_study_info =
   gwas_study_info |>
   mutate(COHORT = str_replace_all(COHORT,
                                   'The ""European NAFLD Registry"" Metacohort',
-                                  'European NAFLD Registry Metacohort'))
+                                  'European NAFLD Registry Metacohort')) |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'The "European NAFLD Registry" Metacohort',
+                                  'European NAFLD Registry Metacohort'))  
 
 ```
 
@@ -1366,6 +1565,10 @@ Mayo-VDB|
 
 
 ```{r, eval = F}
+
+# Stanford_ADRC
+
+# CROATIA
 
 # Raine Study -- ? Raine
 
