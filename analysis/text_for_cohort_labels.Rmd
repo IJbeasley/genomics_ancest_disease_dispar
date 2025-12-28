@@ -66,7 +66,6 @@ gwas_study_info =
   dplyr::filter(DISEASE_STUDY == T) |>
   dplyr::select(-COHORT)
 
-
 ```
 
 ### Step 2: Get cohort information
@@ -215,7 +214,11 @@ names(ancestry) = pmids
 # and finding the corresponding full names / details of cohorts
 
 cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
-                                 sheet = 1)
+                                 sheet = 1) |>
+  mutate(across(everything(), 
+                ~stringr::str_replace_all(.x,
+                                          pattern = "\u00A0",
+                                          replacement = " "))) 
 
 
 cohort_full_names = cohort_names$full_name[!is.na(cohort_names$full_name)]
@@ -246,10 +249,18 @@ small_abbr_to_keep <- c("C4D",
 cohort_abbr_names <- unique(c(cohort_abbr_names, 
                               small_abbr_to_keep
                               ))
-cohort_abbr_names <- cohort_abbr_names[!grepl("?", cohort_abbr_names)]
+cohort_abbr_names <- cohort_abbr_names[!str_detect(pattern = "\\?", cohort_abbr_names)]
 # sort by length of name (longest first) to match longest names first
 cohort_abbr_names <- cohort_abbr_names[order(-nchar(cohort_abbr_names))]
 
+
+# add cohort names from GWAS catalog not yet added to data-dictionary
+gwas_cat_cohorts = gwas_study_info_cohort$COHORT
+gwas_cat_cohorts = unlist(strsplit(gwas_cat_cohorts, "\\|"))
+gwas_cat_cohorts = gwas_cat_cohorts[!(gwas_cat_cohorts %in% c("", "other", "multiple"))]
+
+cohort_abbr_names = unique(cohort_abbr_names,
+                           gwas_cat_cohorts)
 
 ```
 
@@ -346,7 +357,8 @@ abstract_files <- list.files(here::here("output/abstracts/"),
 
 pmids_with_abstracts = gsub("\\.txt$", "", abstract_files)
 
-all_pmids = gwas_study_info$PUBMED_ID |> unique()
+all_pmids = gwas_study_info$PUBMED_ID |> 
+            unique()
 
 missing_abstracts = setdiff(all_pmids,
                              pmids_with_abstracts)
@@ -354,17 +366,17 @@ missing_abstracts = setdiff(all_pmids,
 print("Number of missing abstracts:")
 length(missing_abstracts)
 
-library(openalexR)
-
-# get information on these papers from openAlex
-oa_example <- 
-oa_fetch(entity = "works",
-         pmid = missing_abstracts,
-         abstract = TRUE)
-
-oa_example |>
-  select(doi, abstract) |>
-  distinct()
+# library(openalexR)
+# 
+# # get information on these papers from openAlex
+# oa_example <- 
+# oa_fetch(entity = "works",
+#          pmid = missing_abstracts,
+#          abstract = TRUE)
+# 
+# oa_example |>
+#   select(doi, abstract) |>
+#   distinct()
 
 ```
 
