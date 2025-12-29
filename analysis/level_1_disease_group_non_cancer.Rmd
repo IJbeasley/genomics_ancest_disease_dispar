@@ -15,7 +15,7 @@ editor_options:
 # Set up
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = F)
 ```
 
 ```{r required_fns, message = F, warning= F}
@@ -168,23 +168,7 @@ gwas_study_info = gwas_study_info |>
 
 # Disease cause grouping
 
-## Contact dermatitis
 
-```{r}
-
-pattern <- vec_to_grep_pattern("contact dermatitis due to nickel")
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = pattern,
-                          "contact dermatitis"
-         ))
-
-
-
-```
 
 # Disease complication
 
@@ -740,61 +724,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-### Congenital heart disease/s
 
-```{r congenital_heart_disease}
-
-congenital_heart_disease_terms <- c(
-  "heart septal defect",  
-  "atrial heart septal defect",
-  
-  "congenital left-sided heart lesions",
-  "congenital right-sided heart lesions",
-  
-  "congenital anomaly of the great arteries", # equiv = "Congenital malformation of great arteries, unspecified"
-  
-  # malformation of cardiac septum, 
-    "abnormal cardiac septum morphology",
-    "atrioventricular canal defect"
-)
-  
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005207/descendants"
-
-congenital_heart_disease_terms <- c(congenital_heart_disease_terms,
-                                  get_descendants(url)
-                                  ) |>
-  unique()
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(congenital_heart_disease_terms),
-                          "congenital heart disease"
-         )
-  )
-
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0024239/descendants"
-
-more_congenital_heart_disease_terms <- get_descendants(url)
-
-congenital_heart_disease_terms <- c(congenital_heart_disease_terms,
-                                  more_congenital_heart_disease_terms
-                                  ) |>
-  unique() |>
-  str_length_sort()
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(congenital_heart_disease_terms),
-                          "congenital anomaly of cardiovascular system"
-         )
-  )
-
-```
 
 
 ### Abnormal cardiovascular system morphology
@@ -1109,41 +1039,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Astigmatism
-
-```{r astigmatism}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("corneal astigmatism"),
-                          "astigmatism"
-         ))
-
-```
-
-## Asthma
-
-```{r asthma}
-
-gwas_study_info = gwas_study_info |>
-      mutate(l1_all_disease_terms  = 
-           stringr::str_replace_all(l1_all_disease_terms,
-                            vec_to_grep_pattern(c("atopic asthma", "chronic obstructive asthma")),
-                            "asthma"
-           )) |>
-    mutate(l1_all_disease_terms  = 
-           stringr::str_replace_all(l1_all_disease_terms,
-                            vec_to_grep_pattern(c("childhood onset asthma",
-                                                    "adult onset asthma",
-                                                    "aspirin-induced asthma"
-                                                  )
-                            ),
-                            "asthma"
-           ))
-
-```
-
 
 
 ## Autoimmune pancreatitis
@@ -1160,22 +1055,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Bipolar disorder
 
-```{r bipolar_disorder}
-
-gwas_study_info = gwas_study_info |> 
-    mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern(
-                            c("bipolar ii disorder",
-                              "bipolar i disorder"
-                              )
-                            ),
-                          "bipolar disorder"
-         ))
-
-```
 
 
 ## Cataract
@@ -1196,21 +1076,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Celiac disease
 
-```{r celiac_disease}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = vec_to_grep_pattern("refractory celiac disease"),
-                                   "celiac disease"
-                          )  
-        )
-
-
-```
 
 ## Charcot-marie-tooth disease type 1a
 
@@ -1259,18 +1125,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Chronic rhinosinusitis 
 
-```{r chronic_rhinosinusitis}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("chronic rhinosinusitis with nasal polyps"),
-                          "chronic rhinosinusitis"
-         ))
-
-```
 
 ## Cholecystitis
 
@@ -1305,18 +1160,7 @@ gwas_study_info = gwas_study_info |>
 
 
 
-## Creutzfeldt jacob disease
 
-```{r creutzfeldt_jacob_disease}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("sporadic creutzfeld jacob disease"),
-                          "creutzfeldt jacob disease"
-         ))
-
-```
 
 ## Delirium
 
@@ -1331,27 +1175,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Dental caries
 
-```{r dental_caries}
-
-
-dental_caries_terms <- c("pit and fissure surface dental caries",
-                         "smooth surface dental caries",
-                         "primary dental caries",
-                         "enamel caries",
-                         "permanent dental caries"
-                         )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(dental_caries_terms),
-                          "dental caries"
-         )
-)
-
-```
 
 ## Dermatitis
 
@@ -1384,18 +1208,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Drug allergy
 
-```{r drug_allergy}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("beta-lactam allergy"),
-                          "drug allergy"
-         ))
-
-```
 
 ## Diabetic eye disease
 
@@ -1468,40 +1281,8 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Food allergy
-
-```{r food_allergy}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                                  vec_to_grep_pattern(
-                                    c("peanut allergy",
-                                      "milk allergy",
-                                      "egg allergy",
-                                      "wheat allergic reaction"
-                                     )),
-                          "food allergy"
-         ))
-```
-
-## Glaucoma
-
-```{r glaucoma}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005041/descendants"
-
-glaucoma_terms <- get_descendants(url)
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(glaucoma_terms),
-                          "glaucoma"
-         ))
 
 
-```
 
 ## Gout
 
@@ -1518,24 +1299,7 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
-## Graft vs host disease
 
-```{r graft_vs_host_disease}
-
-graft_vs_host_terms <- c("chronic graft versus host disease",
-                         "chronic graft vs. host disease",
-                         "acute graft versus host disease",
-                         "acute graft vs. host disease"
-                         )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern(graft_vs_host_terms),
-                          "graft versus host disease"
-         ))
-
-```
 
 
 
@@ -1623,29 +1387,7 @@ gwas_study_info = gwas_study_info |>
   
 ```
 
-## Idiopathic generalized epilepsy
 
-```{r idiopathic_generalized_epilepsy}
-
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F36803009/descendants"
-
-idiopathic_generalized_epilepsy_terms <- get_descendants(url)
-
-idiopathic_generalized_epilepsy_terms = stringr::str_remove_all(
-                                        idiopathic_generalized_epilepsy_terms, 
-                                        " \\(disorder\\)$"
-                                        )
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(idiopathic_generalized_epilepsy_terms),
-                          "idiopathic generalized epilepsy"
-         ))
-
-
-```
 
 ## Inborn errors of metabolism
 
@@ -1675,23 +1417,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Infertility (female & male)
 
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("tubal factor infertility"),
-                          "female infertility"
-                          )) |>
-  mutate(l1_all_disease_terms  = 
-                  stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("azoospermia"),
-                          "male infertility"
-                          )  )
-
-```
 
 
 
@@ -1721,23 +1447,6 @@ gwas_study_info = gwas_study_info |>
 
 
 
-## Juvenile idiopathic arthritis
-
-```{r juvenile_idiopathic_arthritis_onset_group}
-
-jia_terms <- c("systemic juvenile idiopathic arthritis",
-                "oligoarticular juvenile idiopathic arthritis",
-                "polyarticular juvenile idiopathic arthritis"
-                )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-        stringr::str_replace_all(l1_all_disease_terms,
-                         vec_to_grep_pattern(jia_terms),
-                         "juvenile idiopathic arthritis")
-        )
-
-```
 
 ## Chronic kidney disease 
 
@@ -1759,68 +1468,12 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Laryngitis
-
-```{r laryngitis}
-
-laryngitis_terms <- c("acute laryngitis",
-                      "chronic laryngitis"
-                      )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(laryngitis_terms),
-                          "laryngitis"
-         ))
 
 
-```
-
-## Lewy body dementia
-
-```{r lewy_body_dementia}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("lewy body attribute"),
-                          "lewy body dementia"
-         ))
 
 
-```
 
-## Migraine 
 
-```{r migraine}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern(
-                            c("migraine with aura",
-                              "migraine without aura",
-                              "migraine disorder"
-                              )
-                            ),
-                          "migraine"
-         ))
-
-```
-
-## Multiple sclerosis
-
-```{r multiple_sclerosis}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("relapsing-remitting multiple sclerosis"),
-                          "multiple sclerosis"
-         ))
-
-```
 
 
 ## Penile disorder
@@ -1879,18 +1532,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Hereditary hemochromatosis
 
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("hereditary hemochromatosis type 1"),
-                          "hereditary hemochromatosis"
-         ))
-
-```
 
 ## Mineral metabolism disease
 
@@ -1909,54 +1551,11 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Myasthenia gravis
-
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("late-onset myasthenia gravis"),
-                          "myasthenia gravis"
-         ))
 
 
-```
 
-## Neuromyelitis optica 
 
-```{r}
 
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern(
-                            c("aquaporin-4 antibody positive neuromyelitis optica",
-                              "aquaporin-4 antibody negative neuromyelitis optica",
-                              "aqp4-igg-positive neuromyelitis optica",
-                              "aqp4-igg-negative neuromyelitis optica"
-                            )
-                          ),
-                          "neuromyelitis optica"
-         ))
-
-```
-
-## Neurofibromatosis
-
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern(
-                            c("neurofibromatosis type 1",
-                              "neurofibromatosis type 2")
-                          ),
-                          "neurofibromatosis"
-         ))
-
-```
 
 ## Non-alcoholic fatty liver disease (NAFLD)
 
@@ -1976,39 +1575,10 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
-## Obesity
-
-```{r obesity}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = 
-                                    vec_to_grep_pattern(
-                                      c("morbid obesity",
-                                         "metabolically healthy obesity"
-                                        )
-                                      ),
-                                   "obesity"
-                          )  
-        )
-
-```
 
 
-## Obsessive-compulsive disorder
 
-```{r obsessive_compulsive_disorder}
 
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("obsessive-compulsive trait"),
-                          "obsessive-compulsive disorder"
-         ))
-
-```
 
 ## Orofacial cleft
 
@@ -2051,18 +1621,7 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
-## Osteonecrosis
 
-```{r osteonecrosis}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("idiopathic osteonecrosis of the femoral head"),
-                          "osteonecrosis"
-         ))
-
-```
 
 ## Ovarian dysfunction
 
@@ -2169,38 +1728,9 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Pulmonary fibrosis
-
-```{r pulmonary_fibrosis}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("idiopathic pulmonary fibrosis"),
-                          "pulmonary fibrosis"
-         ))
-
-```
-
-## Psoriasis
-
-```{r}
-
-psoriasis_terms <- c("psoriasis vulgaris",
-                      "psoriasis area and severity index",
-                      "cutaneous psoriasis",
-                      "psoriatic arthritis",
-                     "parapsoriasis")
 
 
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(psoriasis_terms),
-                          "psoriasis")
-  )
 
-```
 
 
 ## Psychosis
@@ -2234,50 +1764,11 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
-## Rheumatoid arthritis
 
-```{r}
 
-ra_terms <- c("acpa-positive rheumatoid arthritis",
-               "acpa-negative rheumatoid arthritis",
-              "adult-onset stills disease")
 
-gwas_study_info = 
-gwas_study_info |> 
- mutate(l1_all_disease_terms  = 
-          stringr::str_replace_all(l1_all_disease_terms,
-                                  pattern = vec_to_grep_pattern(ra_terms),
-                                   "rheumatoid arthritis"
-                          )  
-        )
 
-```
 
-## Schizoaffective disorder
-
-```{r schizoaffective_disorder}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("schizoaffective disorder-bipolar type"),
-                          "schizoaffective disorder")
-         )
-
-```
-
-## Schizophrenia
-
-```{r schizophrenia}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("treatment refractory schizophrenia"),
-                          "schizophrenia")
-         )
-
-```
 
 ## Sciatica
 
@@ -2292,18 +1783,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Scoliosis
-
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("adolescent idiopathic scoliosis"),
-                          "scoliosis")
-         )
-
-```
 
 ## Sickle cell disease 
 
@@ -2318,23 +1797,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Sleep apnea 
-
-```{r}
-
-sleep_apnea_terms <- c("sleep apnea during non-rem sleep",
-                      "sleep apnea during rem sleep",
-                      "obstructive sleep apnea")
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(sleep_apnea_terms),
-                          "sleep apnea")
-  )
-
-
-```
 
 ## Staphylococcus aureus infection
 
@@ -2382,18 +1844,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Type 1 diabetes
-
-```{r}
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          vec_to_grep_pattern("latent autoimmune diabetes in adults"),
-                          "type 1 diabetes mellitus"
-         ))
-
-```
 
 ## Thrombocytopenia
 
@@ -2432,21 +1882,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Uveitis
 
-```{r uveitis}
-
-uveitis_terms <- c("anterior uveitis"
-                   )
-
-gwas_study_info = gwas_study_info |>
-  mutate(l1_all_disease_terms  = 
-         stringr::str_replace_all(l1_all_disease_terms,
-                          pattern = vec_to_grep_pattern(uveitis_terms),
-                          "uveitis"
-         ))
-
-```
 
 ## Vitamin b deficiency
 
