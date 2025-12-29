@@ -143,6 +143,7 @@ gwas_study_info =
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
 unique(all_cohorts) |> length()
 
 ```
@@ -214,6 +215,7 @@ gwas_study_info = gwas_study_info |>
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
 unique(all_cohorts) |> length()
 
 ```
@@ -267,6 +269,7 @@ gwas_study_info <- gwas_study_info |>
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
 unique(all_cohorts) |> length()
 
 ```
@@ -499,7 +502,10 @@ gwas_study_info |>
 all_cohorts[grep("steno", tolower(all_cohorts))] |> unique()
 
 gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "Steno Diabetes Center", "Steno"))
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "Steno Diabetes Center", 
+                                  "Steno")
+         )
   
 
 ```
@@ -561,6 +567,7 @@ gwas_study_info = gwas_study_info |>
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
 unique(all_cohorts) |> length()
 
 ```
@@ -613,13 +620,17 @@ gwas_study_info = gwas_study_info |>
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+
 unique_cohort_names = unique(all_cohorts) 
+
 # Convert to lowercase and check duplicates
-dup_groups <- tapply(unique_cohort_names, tolower(unique_cohort_names), I)
+dup_groups <- tapply(unique_cohort_names, 
+                     tolower(unique_cohort_names), 
+                     I)
 
 # Keep only groups with >1 element (i.e., capitalization differences)
 dup_groups[lengths(dup_groups) > 1]
-
 
 ```
 
@@ -701,7 +712,10 @@ gwas_study_info =
 
 gwas_study_info =
   gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "BC58", "B58C"))
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "BC58", 
+                                  "B58C")
+         )
 
 ```
 
@@ -718,7 +732,10 @@ gwas_study_info |>
   tail()
 
 gwas_study_info = gwas_study_info |>
-  mutate(COHORT = str_replace_all(COHORT, "China Kadoorie Biobank", "CKB"))
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "China Kadoorie Biobank", 
+                                  "CKB")
+         )
 
 
 ```
@@ -1170,6 +1187,7 @@ gwas_study_info = gwas_study_info |>
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
 unique(all_cohorts) |> length()
 
 ```
@@ -1395,9 +1413,6 @@ gwas_study_info =
 
 ```
 
-
-
-
 ## The ""European NAFLD Registry"" Metacohort -> European NAFLD Registry (32298765)
 
 ```{r euro_nafld}
@@ -1450,6 +1465,7 @@ gwas_study_info =
 
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
 unique(all_cohorts) |> length()
 
 ```
@@ -1503,13 +1519,30 @@ all_cohorts[all_cohorts %in% not_found_names]) |>
 
 ```{r}
 
+# cohorts used per paper:
+
+
 gwas_study_info =
   gwas_study_info |>
-  select(STUDY_ACCESSION,
+  select(PUBMED_ID,
          DATE,
          COHORT) |>
   distinct()
 
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(COHORT != "",
+                         unlist(str_split(string = COHORT,
+                                          pattern = "\\|")
+                                ),
+                         "")
+         ) |>
+  group_by(PUBMED_ID) |>
+  summarise(COHORT = str_flatten(unique(COHORT), 
+                                 collapse = "|",
+                                 na.rm = T),
+            DATE = unique(DATE))
+  
 data.table::fwrite(gwas_study_info,
                   here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"), 
                   sep = ",")
@@ -1517,7 +1550,6 @@ data.table::fwrite(gwas_study_info,
 ```
 
 # Others to look into: 
-
 
 ```{r, eval = F}
 # in below study, unlisted cohort is combination of two cohorts
