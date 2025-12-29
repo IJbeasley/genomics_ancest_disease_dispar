@@ -15,6 +15,7 @@ editor_options:
 # Set up
 
 ```{r setup, message=FALSE, warning=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE, 
                       message = FALSE, 
                       warning = FALSE
@@ -27,186 +28,778 @@ library(stringr)
 
 ```
 
+## Get data.frame of GWAS traits 
 
-# Overlap ontology terms and GWAS traits
+```{r load_gwas_study_info}
 
-```{r}
+gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
 
-gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+gwas_study_info = 
+  gwas_study_info |>
+  rename_all(~gsub(" ", "_", .x))
 
-# fixing weird terms- where comma is in the term
-# gwas_study_info |> 
-#  mutate(n_commas_trait = stringr::str_count(MAPPED_TRAIT, ", "),
-#         n_commas_uri = stringr::str_count(MAPPED_TRAIT_URI, ",")) |>
-#   filter(n_commas_trait != n_commas_uri)
+gwas_study_info <-
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = tolower(MAPPED_TRAIT),
+         MAPPED_BACKGROUND_TRAIT = tolower(MAPPED_BACKGROUND_TRAIT)
+         )
 
+gwas_study_info  <-
+  gwas_study_info |>
+  mutate(YEAR = lubridate::year(DATE))
+
+```
+
+## Mapping terms for studies with unmapped traits: 
+
+```{r deal_with_unmapped_traits}
+
+# some traits are not mapped:
+print("Before fixing, how many unmapped traits are there?")
+gwas_study_info |>
+  filter(is.na(MAPPED_TRAIT) | MAPPED_TRAIT == "") |>
+  nrow()
+
+# by Zoom, Anomalous atrioventricular excitation
+# -> Anomalous atrioventricular excitation (disorder)
+# http://snomed.info/id/17869006
+unmapped_traits <-
+  data.frame("DISEASE/TRAIT" = "Anomalous atrioventricular excitation (PheCode 426.4)",
+             MAPPED_TRAIT = "anomalous atrioventricular excitation (disorder)",
+             MAPPED_TRAIT_URI = "http://snomed.info/id/17869006",
+             stringsAsFactors = FALSE
+             ) |>
+  rename(`DISEASE/TRAIT` = "DISEASE.TRAIT")
+
+# by Zooma,  Pilocytic astrocytoma -> MONDO_0016691 (http://purl.obolibrary.org/obo/MONDO_0016691)
+unmapped_traits <-
+  unmapped_traits |>
+  add_row(`DISEASE/TRAIT` = "Pilocytic astrocytoma",
+             MAPPED_TRAIT = "pilocytic astrocytoma",
+             MAPPED_TRAIT_URI = "http://purl.obolibrary.org/obo/MONDO_0016691"
+             )
+
+# by Zooma, Pilocytic astrocytoma and optic pathway glioma
+# -> http://purl.obolibrary.org/obo/MONDO_0016167, http://purl.obolibrary.org/obo/MONDO_0016691
+unmapped_traits =
+  unmapped_traits |>
+  add_row(`DISEASE/TRAIT` = "Pilocytic astrocytoma and optic pathway glioma",
+          MAPPED_TRAIT = "optic pathway glioma, pilocytic astrocytoma",
+          MAPPED_TRAIT_URI = "http://purl.obolibrary.org/obo/MONDO_0016167, http://purl.obolibrary.org/obo/MONDO_0016691"
+          )
+
+# by searching ontology lookup service:
+# Leukotriene levels (480.2454_0.351) & Leukotriene levels (337.1632_0.339)
+# -> Fatty Acid Measurement
+# http://purl.obolibrary.org/obo/NCIT_C80157
+unmapped_traits =
+  unmapped_traits |>
+  add_row(`DISEASE/TRAIT` = c("Leukotriene levels (480.2454_0.351)",
+                               "Leukotriene levels (337.1632_0.339)"
+                               ),
+          MAPPED_TRAIT = c("fatty acid measurement",
+                           "fatty acid measurement"
+                           ),
+          MAPPED_TRAIT_URI = c("http://purl.obolibrary.org/obo/NCIT_C80157",
+                               "http://purl.obolibrary.org/obo/NCIT_C80157"
+                               )
+          )
+
+# by searching ontology lookup service:
+# X-11244 levels
+# X-11255 levels 
+# to be mapped to: http://www.ebi.ac.uk/efo/EFO_0004725
+# metabolite measurement
+unmapped_traits =
+  unmapped_traits |>
+  add_row(`DISEASE/TRAIT` = c("X-11244 levels",
+                               "X-11255 levels"
+                               ),
+          MAPPED_TRAIT = c("metabolite measurement",
+                           "metabolite measurement"
+                           ),
+          MAPPED_TRAIT_URI = c("http://www.ebi.ac.uk/efo/EFO_0004725",
+                               "http://www.ebi.ac.uk/efo/EFO_0004725"
+                               )
+          )
+
+# by searching ontology lookup service:
+# N-acetylornithine levels, & N-acetylornithine levels in chronic kidney disease
+# to be mapped to http://www.ebi.ac.uk/efo/EFO_0021538
+# N-acetylornithine measurement
+unmapped_traits =
+  unmapped_traits |>
+  add_row(`DISEASE/TRAIT` = c("N-acetylornithine levels",
+                               "N-acetylornithine levels in chronic kidney disease"
+                               ),
+          MAPPED_TRAIT = c("n-acetylornithine measurement",
+                           "n-acetylornithine measurement"
+                           ),
+          MAPPED_TRAIT_URI = c("http://www.ebi.ac.uk/efo/EFO_0021538",
+                               "http://www.ebi.ac.uk/efo/EFO_0021538"
+                               )
+          )
+
+# by searching ontology lookup service:
+# Scleritis and episcleritis (PheCode 379.1)
+# map to: Scleritis and episcleritis (disorder)
+# http://snomed.info/id/267659002
+unmapped_traits =
+  unmapped_traits |>
+  add_row(`DISEASE/TRAIT` = "Scleritis and episcleritis (PheCode 379.1)",
+          MAPPED_TRAIT = "scleritis and episcleritis (disorder)",
+          MAPPED_TRAIT_URI = "http://snomed.info/id/267659002"
+          )
 
 gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(MAPPED_TRAIT == "",
+                               NA,
+                               MAPPED_TRAIT))
+
+gwas_study_info =
+  gwas_study_info |>
+  rows_patch(unmapped_traits,
+             by = c("DISEASE/TRAIT"),
+             unmatched = "ignore"
+             )
+
+# yay all mapped now
+print("After fixing, how many unmapped traits remain?")
+gwas_study_info |>
+  filter(is.na(MAPPED_TRAIT) | MAPPED_TRAIT == "") |>
+  nrow()
+
+```
+
+## Correcting some MAPPED_TRAIT (MAPPED by GWAS Catalog) terms
+
+### Re-map some traits based on DISEASE/TRAIT
+
+```{r fix_bad_mapping}
+
+# Periodontal disease related phenotype
+# set trait to periodontal disorder
+# rather than periodontal measurement
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("Periodontal disease related phenotype", `DISEASE/TRAIT`),
+                               str_replace_all(pattern = "periodontal measurement",
+                                               replacement = "periodontal disorder",
+                                               MAPPED_TRAIT
+                                               ),
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Periodontal disease related phenotype", `DISEASE/TRAIT`),
+                               str_replace_all(pattern = "http://www.ebi.ac.uk/efo/EFO_0007780",
+                                               replacement = "http://purl.obolibrary.org/obo/MONDO_0002635",
+                                               MAPPED_TRAIT_URI
+                                               ),
+                               MAPPED_TRAIT_URI)
+    )
+
+
+# DISEASE/TRAIT == "Spontaneous preterm birth (preterm delivery)"
+# MAPPED_TRAIT == "delivery measurement"
+# MAPPED_TRAIT_URI == http://www.ebi.ac.uk/efo/EFO_0006922
+
+# make MAPPED_TRAIT to "premature birth"
+# MAPPED_TRAIT_URI to http://www.ebi.ac.uk/efo/EFO_0003917
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("Spontaneous preterm birth \\(preterm delivery\\)", 
+                                     `DISEASE/TRAIT`) & 
+                                MAPPED_TRAIT == "delivery measurement",
+                               "premature birth",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Spontaneous preterm birth \\(preterm delivery\\)", `DISEASE/TRAIT`) & 
+                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0006922",
+                                     "http://www.ebi.ac.uk/efo/EFO_0003917",
+                                     MAPPED_TRAIT_URI)
+           )
+
+## DISEASE/TRAIT == "Sporadic miscarriage"
+## MAPPED_TRAIT == "fertility trait"
+## MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464"
+
+# make MAPPED_TRAIT to "spontaneous abortion"
+# MAPPED_TRAIT_URI to "http://www.ebi.ac.uk/efo/EFO_1001255"
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("Sporadic miscarriage", `DISEASE/TRAIT`) & 
+                                MAPPED_TRAIT == "fertility trait",
+                               "spontaneous abortion",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Sporadic miscarriage", `DISEASE/TRAIT`) & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464",
+                                     "http://www.ebi.ac.uk/efo/EFO_1001255",
+                                     MAPPED_TRAIT_URI)
+           )
+
+# Multiple consecutive miscarriage
+## MAPPED_TRAIT == "fertility trait"
+## MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464"
+
+# make MAPPED_TRAIT to "spontaneous abortion"
+# MAPPED_TRAIT_URI to "http://www.ebi.ac.uk/efo/EFO_1001255"
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("Multiple consecutive miscarriage", `DISEASE/TRAIT`) & 
+                                MAPPED_TRAIT == "fertility trait",
+                               "spontaneous abortion",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Multiple consecutive miscarriage", `DISEASE/TRAIT`) & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464",
+                                     "http://www.ebi.ac.uk/efo/EFO_1001255",
+                                     MAPPED_TRAIT_URI)
+           )
+
+
+## DISEASE/TRAIT == "Post-term birth"
+## MAPPED_TRAIT == "gestational age"
+## MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0005112"
+
+# make MAPPED_TRAIT to "post term pregnancy"
+# MAPPED_TRAIT_URI to "http://www.ebi.ac.uk/efo/EFO_0009681"
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("Post-term birth", `DISEASE/TRAIT`) & 
+                                MAPPED_TRAIT == "gestational age",
+                               "post term pregnancy",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Post-term birth", `DISEASE/TRAIT`) & 
+                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0005112",
+                                     "http://www.ebi.ac.uk/efo/EFO_0009681",
+                                     MAPPED_TRAIT_URI)
+           )
+
+```
+
+### Add some missing MAPPED_BACKGROUND_TRAIT terms
+
+```{r add_missing_background}
+
+# for MAPPED_TRAIT contains "sars-cov-2"
+# set background trait to covid-19
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(grepl("sars-cov-2", MAPPED_TRAIT),
+                                         "covid-19",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(grepl("sars-cov-2", MAPPED_TRAIT),
+                                                "http://purl.obolibrary.org/obo/MONDO_0100096",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# for pubmed id: 32247823
+# set background trait to non-alcoholic steatohepatitis
+# and background trait uri to EFO_1001249
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(PUBMED_ID == 32247823,
+                                         "non-alcoholic steatohepatitis",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(PUBMED_ID == 32247823,
+                                                "http://www.ebi.ac.uk/efo/EFO_1001249",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# Exploratory eye movement dysfunction in schizophrenia
+# set background trait to schizophrenia
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(grepl("Exploratory eye movement dysfunction in schizophrenia", `DISEASE/TRAIT`),
+                                         "schizophrenia",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(grepl("Exploratory eye movement dysfunction in schizophrenia", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/MONDO_0005090",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# for pubmed_id: 21107309
+# set background trait to schizophrenia
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(PUBMED_ID == 21107309,
+                                         "schizophrenia",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(PUBMED_ID == 21107309,
+                                                "http://purl.obolibrary.org/obo/MONDO_0005090",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# if `DISEASE/TRAIT` contains Adverse response to chemotherapy in breast cancer
+# set MAPPED_BACKGROUND_TRAIT to breast cancer
+# http://purl.obolibrary.org/obo/MONDO_0007254
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(grepl("Adverse response to chemotherapy in breast cancer", `DISEASE/TRAIT`),
+                                         "breast cancer",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(grepl("Adverse response to chemotherapy in breast cancer", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/MONDO_0007254",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# for pubmed id: 30188897
+# and DISEASE/TRAIT contains "miscarriages"
+# add spontaneous abortion, http://www.ebi.ac.uk/efo/EFO_1001255
+# as MAPPED_BACKGROUND_TRAIT
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(PUBMED_ID == 30188897 & 
+                                           grepl("miscarriage", `DISEASE/TRAIT`),
+                                         "spontaneous abortion",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(PUBMED_ID == 30188897 & 
+                                                  grepl("miscarriage", `DISEASE/TRAIT`),
+                                                "http://www.ebi.ac.uk/efo/EFO_1001255",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# for pubmed id: 30188897
+# and DISEASE/TRAIT contains "stillbirth"
+# add stillbirth, http://purl.obolibrary.org/obo/NCIT_C49151
+# as MAPPED_BACKGROUND_TRAIT
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(PUBMED_ID == 30188897 & 
+                                           grepl("stillbirth", `DISEASE/TRAIT`),
+                                         "stillbirth",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(PUBMED_ID == 30188897 & 
+                                                  grepl("stillbirth", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/NCIT_C49151",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# if MAPPED_TRAIT == "response to covid-19 vaccine"
+# set MAPPED_BACKGROUND_TRAIT to covid-19
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to covid-19 vaccine",
+                                         "covid-19",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to covid-19 vaccine",
+                                                "http://purl.obolibrary.org/obo/MONDO_0100096",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+
+	
+# if MAPPED_TRAIT == "response to vaccine"
+# and DISEASE/TRAIT contains "smallpox" 
+# set MAPPED_BACKGROUND_TRAIT to smallpox
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                           grepl("smallpox", `DISEASE/TRAIT`),
+                                         "smallpox",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                                  grepl("smallpox", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/DOID_8736",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# if MAPPED_TRAIT == "response to vaccine"
+# and DISEASE/TRAIT contains "influenza"
+# set MAPPED_BACKGROUND_TRAIT to influenza
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                           grepl("influenza", `DISEASE/TRAIT`),
+                                         "influenza",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                                  grepl("influenza", `DISEASE/TRAIT`),
+                                                "http://www.ebi.ac.uk/efo/EFO_0007328",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# if. MAPPED_TRAIT ==  "response to vaccine"
+# and DISEASE/TRAIT contains "hepatitis B"
+# set MAPPED_BACKGROUND_TRAIT to hepatitis B
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                           grepl("hepatitis B|Hepatitis B", `DISEASE/TRAIT`),
+                                         "hepatitis b",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                                  grepl("hepatitis B|Hepatitis B", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/DOID_2043",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+
+# if MAPPED_TRAIT == "response to covid-19 vaccine"
+# and MAPPED_BACKGROUND_TRAIT == ""
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to covid-19 vaccine" &
+                                           (is.na(MAPPED_BACKGROUND_TRAIT) | MAPPED_BACKGROUND_TRAIT == ""),
+                                         "covid-19",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to covid-19 vaccine" &
+                                                  (is.na(MAPPED_BACKGROUND_TRAIT_URI) | MAPPED_BACKGROUND_TRAIT_URI == ""),
+                                                "http://purl.obolibrary.org/obo/MONDO_0100096",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# if MAPPED_TRAIT == "response to vaccine"
+# and MAPPED_BACKGROUND_TRAIT == ""
+# and DISEASE/TRAIT contains "Immune response to smallpox"
+# set MAPPED_BACKGROUND_TRAIT to smallpox
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                           (is.na(MAPPED_BACKGROUND_TRAIT) | MAPPED_BACKGROUND_TRAIT == "") &
+                                           grepl("Immune response to smallpox", `DISEASE/TRAIT`),
+                                         "smallpox",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                                  (is.na(MAPPED_BACKGROUND_TRAIT_URI) | MAPPED_BACKGROUND_TRAIT_URI == "") &
+                                                  grepl("Immune response to smallpox", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/OMIT_0013787",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+# if MAPPED_TRAIT == "response to vaccine"
+# and MAPPED_BACKGROUND_TRAIT == ""
+# and DISEASE/TRAIT contains "Immune response to measles vaccine"
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                           (is.na(MAPPED_BACKGROUND_TRAIT) | MAPPED_BACKGROUND_TRAIT == "") &
+                                           grepl("Immune response to measles vaccine", `DISEASE/TRAIT`),
+                                         "measles",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(MAPPED_TRAIT == "response to vaccine" &
+                                                  (is.na(MAPPED_BACKGROUND_TRAIT_URI) | MAPPED_BACKGROUND_TRAIT_URI == "") &
+                                                  grepl("Immune response to measles vaccine", `DISEASE/TRAIT`),
+                                                "http://purl.obolibrary.org/obo/DOID_8622",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+```
+
+## Replacing * for , inside a MAPPED_TERM 
+
+To ensure splitting MAPPED_TERM column by commas would split distinct traits
+
+```{r fix_splitting_by_commas}
+
+# in MAPPED_BACKGROUND_TRAIT, replace commas with "*" in:
+# migraine without aura, susceptibility to, 4
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(grepl("migraine without aura, susceptibility to, 4", MAPPED_BACKGROUND_TRAIT),
+                                         stringr::str_replace_all(MAPPED_BACKGROUND_TRAIT, 
+                                                                  pattern = "migraine without aura, susceptibility to, 4", 
+                                                                  "migraine without aura* susceptibility to* 4"),
+                                         MAPPED_BACKGROUND_TRAIT)
+         )
+
+# in MAPPED_TRAIT, replace commas with "*" in:
+# migraine without aura, susceptibility to, 4
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("migraine without aura, susceptibility to, 4", MAPPED_TRAIT),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "migraine without aura, susceptibility to, 4", 
+                                                        "migraine without aura* susceptibility to* 4"),
+                               MAPPED_TRAIT)
+         )
+
+# Other MAPPED_TRAIT fixes
+gwas_study_info =
 gwas_study_info |> 
-  rowwise() |>
   mutate(MAPPED_TRAIT = case_when(
                          # osteoarthritis, hip ... http://www.ebi.ac.uk/efo/EFO_1000786
                          grepl("EFO_1000786", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "osteoarthritis, hip", 
-                                                                                           "hip osteoarthritis"),
+                                                                                           "osteoarthritis* hip"),
                          
                          # 	osteoarthritis, hand ... http://www.ebi.ac.uk/efo/EFO_1000789
                          grepl("EFO_1000789", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "osteoarthritis, hand", 
-                                                                                           "hand osteoarthritis"),
+                                                                                           "osteoarthritis* hand"
+                                                                                           ),
+                         # osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
+                         grepl("EFO_0004616", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "osteoarthritis, knee", 
+                                                                                           "osteoarthritis* knee"),
                          
                          # 	osteoarthritis, spine ... http://www.ebi.ac.uk/efo/EFO_1000787
                          grepl("EFO_1000787", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "osteoarthritis, spine", 
-                                                                                           "spine osteoarthritis"),
+                                                                                           "osteoarthritis* spine"),
                          
                          # 	Hepatitis, Alcoholic, http://www.ebi.ac.uk/efo/EFO_1001345
                          grepl("EFO_1001345", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
-                                                                                           pattern = "Hepatitis, Alcoholic", 
-                                                                                           "Alcoholic Hepatitis"),
+                                                                                           pattern = "hepatitis, alcoholic", 
+                                                                                           "hepatitis* alcoholic"),
                          
                          # psoriasis 14, pustular http://purl.obolibrary.org/obo/MONDO_0013626
                          grepl("MONDO_0013626", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                              pattern = "psoriasis 14, pustular", 
-                                                                                             "pustular psoriasis 14"),
+                                                                                             "psoriasis 14* pustular"),
                          
                          # hypertension, pregnancy-induced http://purl.obolibrary.org/obo/MONDO_0024664
                          grepl("MONDO_0024664", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                              pattern = "hypertension, pregnancy-induced", 
-                                                                                             "pregnancy-induced hypertension"),
+                                                                                             "hypertension* pregnancy-induced"),
                          
                          # renal agenesis, unilateral http://purl.obolibrary.org/obo/MONDO_0019636
                          grepl("MONDO_0019636", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                              pattern = "renal agenesis, unilateral", 
-                                                                                             "unilateral renal agenesis"),
+                                                                                             "renal agenesis* unilateral"),
                          
                          # 	Cholecystitis, Acute http://www.ebi.ac.uk/efo/EFO_1001289
                          grepl("EFO_1001289", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
-                                                                                           pattern = "Cholecystitis, Acute", 
-                                                                                           "Acute Cholecystitis"),
+                                                                                           pattern = "cholecystitis, acute", 
+                                                                                           "cholecystitis* acute"),
                          # 	Genital neoplasm, female http://www.ebi.ac.uk/efo/EFO_1001331
-                         grepl("EFO_1001331", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Genital neoplasm, female", "female reproductive organ cancer"),
+                         grepl("EFO_1001331", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "genital neoplasm, female", 
+                                                                                           "genital neoplasm* female"),
                          # 	Anemia, Hemolytic, Autoimmune http://www.ebi.ac.uk/efo/EFO_1001264
-                          grepl("EFO_1001264", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, pattern = "Anemia, Hemolytic, Autoimmune", "autoimmune haemolytic anemia"),
+                          grepl("EFO_1001264", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                            pattern = "anemia, hemolytic, autoimmune",
+                                                                                            "anemia* hemolytic* autoimmune"),
+                         grepl("EFO_1002020", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                          pattern = "polyarticular juvenile idiopathic arthritis, rheumatoid factor negative", 
+                                                                                          "polyarticular juvenile idiopathic arthritis* rheumatoid factor negative"),
+                         # http://www.ebi.ac.uk/efo/EFO_0007294, hand, foot and mouth disease, 
+                         grepl("EFO_0007294", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                          pattern = "hand, foot and mouth disease", 
+                                                                                          "hand* foot and mouth disease"),
+                         # neural tube defects, susceptibility to, http://purl.obolibrary.org/obo/MONDO_0020705
+                         grepl("MONDO_0020705", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                             pattern = "neural tube defects, susceptibility to", 
+                                                                                             "neural tube defects* susceptibility to"),
+                         # self-reported traits
+                         grepl("EFO_0009803|EFO_0009822|EFO_0009803|EFO_0009817|EFO_0009822|EFO_0009819|EFO_0009823|EFO_0009824", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                          pattern = ", self-reported$", 
+                                                                                          "* self-reported"),
+                         # Hodgkins lymphoma, mixed cellularity http://www.ebi.ac.uk/efo/EFO_1002031
+                         grepl("EFO_1002031", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                          pattern = "hodgkins lymphoma, mixed cellularity", 
+                                                                                          "hodgkins lymphoma* mixed cellularity"),
+                         # encephalopathy, acute, infection-induced, http://purl.obolibrary.org/obo/MONDO_0000166
+                         grepl("MONDO_0000166", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                             pattern = "encephalopathy, acute, infection-induced", 
+                                                                                             "encephalopathy* acute* infection-induced"),
+                         # Diarrhea, Infantile http://www.ebi.ac.uk/efo/EFO_1001306
+                         grepl("EFO_1001306", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                                                                                           pattern = "diarrhea, infantile", 
+                                                                                           "diarrhea* infantile"),
+                         
                          TRUE ~ MAPPED_TRAIT
                          )
-  ) |>
-  ungroup()
-
-# osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(
-                         grepl("EFO_0004616", MAPPED_TRAIT_URI),
-                         stringr::str_replace_all(MAPPED_TRAIT, pattern = "osteoarthritis, knee", "knee osteoarthritis"),
-                         MAPPED_TRAIT
-  )
   ) 
 
-# rheumatoid factor-negative juvenile idiopathic arthritis
-# polyarticular juvenile idiopathic arthritis, rheumatoid factor negative
-# http://www.ebi.ac.uk/efo/EFO_1002020
+
+# in MAPPED_TRAIT, replace commas with "*" in:
+# chromosome, telomeric region length
+# fractures, ununited
+# osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
+# localized superficial swelling, mass, or lump
+# cys-gly, oxidized measurement
 gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_1002020", MAPPED_TRAIT_URI),
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("chromosome, telomeric region length", MAPPED_TRAIT),
                                stringr::str_replace_all(MAPPED_TRAIT, 
-                                                        pattern = "polyarticular juvenile idiopathic arthritis, rheumatoid factor negative", 
-                                                        "rheumatoid factor-negative juvenile idiopathic arthritis"),
+                                                        pattern = "chromosome, telomeric region length", 
+                                                        "chromosome* telomeric region length"),
                                MAPPED_TRAIT)
-         )
-
-# http://www.ebi.ac.uk/efo/EFO_0007294, hand, foot and mouth disease,
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_0007294", MAPPED_TRAIT_URI),
+         ) |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("fractures, ununited", MAPPED_TRAIT),
                                stringr::str_replace_all(MAPPED_TRAIT, 
-                                                        pattern = "hand, foot and mouth disease", 
-                                                        "hand foot and mouth disease"),
+                                                        pattern = "fractures, ununited", 
+                                                        "fractures* ununited"),
                                MAPPED_TRAIT)
-         )
-
-# susceptibility to migriane without aura http://purl.obolibrary.org/obo/MONDO_0011847 
-
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("MONDO_0011847", MAPPED_TRAIT_URI),
-                               stringr::str_replace_all(MAPPED_TRAIT, pattern = "migraine without aura, susceptibility to, 4", "migraine without aura"),
-                               MAPPED_TRAIT)
-         )
-
-# 	neural tube defects, susceptibility to, http://purl.obolibrary.org/obo/MONDO_0020705
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("MONDO_0020705", MAPPED_TRAIT_URI),
+         ) |>
+  mutate(MAPPED_TRAIT =                          # osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
+                         ifelse(grepl("EFO_0004616", MAPPED_TRAIT_URI),
+                                stringr::str_replace_all(MAPPED_TRAIT, 
+                                                         pattern = "osteoarthritis, knee", 
+                                                         "osteoarthritis* knee"),
+                                MAPPED_TRAIT)
+         ) |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("localized superficial swelling, mass, or lump", MAPPED_TRAIT),
                                stringr::str_replace_all(MAPPED_TRAIT, 
-                                                        pattern = "neural tube defects, susceptibility to", 
-                                                        "neural tube defects"),
+                                                        pattern = "localized superficial swelling, mass, or lump", 
+                                                        "localized superficial swelling* mass* or lump"),
                                MAPPED_TRAIT)
-         )
-
-# infantile diarrhea
-# Diarrhea, Infantile http://www.ebi.ac.uk/efo/EFO_1001306
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_1001306", MAPPED_TRAIT_URI),
+         ) |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("cys-gly, oxidized measurement", MAPPED_TRAIT),
                                stringr::str_replace_all(MAPPED_TRAIT, 
-                                                        pattern = "Diarrhea, Infantile", 
-                                                        "infantile diarrhea"),
+                                                        pattern = "cys-gly, oxidized measurement", 
+                                                        "cys-gly* oxidized measurement"),
                                MAPPED_TRAIT)
          )
 
-# self reported traits 
+```
+
+### Fix by the number of commas 
+
+```{r extra_fix_splitting_by_commas}
+
+# fixing weird terms- where comma is in the term
+
+# count number of separating commas in 
+# MAPPED_TRAIT, MAPPED_TRAIT_URI, MAPPED_BACKGROUND_TRAIT, MAPPED_BACKGROUND_TRAIT_URI
 gwas_study_info =
 gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_0009803|EFO_0009822|EFO_0009803|EFO_0009817|EFO_0009822|EFO_0009819|EFO_0009823|EFO_0009824", MAPPED_TRAIT_URI),
-                               stringr::str_replace_all(MAPPED_TRAIT, 
-                                                        pattern = ", self-reported$", 
-                                                        " self-reported"),
-                               MAPPED_TRAIT)
-         )
+  mutate(n_commas_trait = str_count(MAPPED_TRAIT, ", (?![^()]*\\))"),
+                                    #", "),
+         n_commas_trait_uri = str_count(MAPPED_TRAIT_URI, ", (?![^()]*\\))"),
+         n_commas_bg_trait = str_count(MAPPED_BACKGROUND_TRAIT, ", (?![^()]*\\))"),
+         n_commas_bg_trait_uri = str_count(MAPPED_BACKGROUND_TRAIT_URI, ", (?![^()]*\\))")
+                                          # ", ")
+         ) |>
+  # select(contains("n_commas"), 
+  #        MAPPED_TRAIT, MAPPED_TRAIT_URI, 
+  #        MAPPED_BACKGROUND_TRAIT, MAPPED_BACKGROUND_TRAIT_URI
+  #        ) |>
+  distinct()
 
-
-# Hodgkins lymphoma, mixed cellularity http://www.ebi.ac.uk/efo/EFO_1002031
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("EFO_1002031", MAPPED_TRAIT_URI),
-                               stringr::str_replace_all(MAPPED_TRAIT, pattern = "Hodgkins lymphoma, mixed cellularity", "Hodgkins lymphoma mixed cellularity"),
-                               MAPPED_TRAIT)
-         )
-
-# encephalopathy, acute, infection-induced, http://purl.obolibrary.org/obo/MONDO_0000166
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("MONDO_0000166", MAPPED_TRAIT_URI),
-                               stringr::str_replace_all(MAPPED_TRAIT, 
-                                                        pattern = "encephalopathy, acute, infection-induced", 
-                                                        "encephalopathy acute infection-induced"),
-                               MAPPED_TRAIT)
-         )
-
-
+# if n_commas_trait >= 1, n_commas_trait_uri == 0,
+# replace comma in MAPPED_TRAIT with "*"
 gwas_study_info = 
   gwas_study_info |>
-  mutate(MAPPED_TRAIT = stringr::str_replace_all(MAPPED_TRAIT, 
-                                                 "^level of .+, mitochondrial in blood$", "blood protein amount")
+  mutate(MAPPED_TRAIT = ifelse(n_commas_trait >= 1 & 
+                                  n_commas_trait_uri == 0,
+                                stringr::str_replace_all(MAPPED_TRAIT, 
+                                                         pattern = ", ", 
+                                                         "* "),
+                                MAPPED_TRAIT)
          )
 
+# now that's been correct, recalculate number of commas
+gwas_study_info = 
+  gwas_study_info |>
+    mutate(n_commas_trait = str_count(MAPPED_TRAIT, ", (?![^()]*\\))"),
+                                    #", "),
+         n_commas_trait_uri = str_count(MAPPED_TRAIT_URI, ", (?![^()]*\\))"),
+         n_commas_bg_trait = str_count(MAPPED_BACKGROUND_TRAIT, ", (?![^()]*\\))"),
+         n_commas_bg_trait_uri = str_count(MAPPED_BACKGROUND_TRAIT_URI, ", (?![^()]*\\))")
+                                          # ", ")
+         ) 
 
+
+# check the number of commas in MAPPED_TRAIT is always equal to number of commas in MAPPED_TRAIT_URI
+# and the number of commas in MAPPED_BACKGROUND_TRAIT is not equal to number of commas in MAPPED_BACKGROUND_TRAIT_URI
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(match_comma_trait = ifelse(n_commas_trait != n_commas_trait_uri,
+                                   FALSE, 
+                                   TRUE),
+         match_comma_bg_trait = ifelse(n_commas_bg_trait != n_commas_bg_trait_uri,
+                                      FALSE, 
+                                      TRUE)
+         )
+
+gwas_study_info  |>
+  filter(match_comma_trait == FALSE |
+         match_comma_bg_trait == FALSE)
+
+# yay! all match now
 
 
 ```
 
-```{r}
-all_gwas_terms = unique(gwas_study_info$MAPPED_TRAIT)
+# Overlap ontology terms and GWAS traits
 
+## Create data.frame of GWAS traits with one trait per row
+
+```{r gwas_study_info_final_setup}
+
+gwas_study_info =
+  gwas_study_info |>
+  select(
+         `DISEASE/TRAIT`,
+         PUBMED_ID,
+         YEAR, 
+         STUDY_ACCESSION,
+         contains("MAPPED")
+         )
+
+# now split by commas to get each MAPPED_TRAIT on an individual row
+gwas_study_info <-
+gwas_study_info |>
+  tidyr::separate_longer_delim(cols = c("MAPPED_TRAIT", 
+                                        "MAPPED_TRAIT_URI"
+                                        ),
+                               delim = stringr::regex(", (?![^()]*\\))")
+                               ) |>
+  tidyr::separate_longer_delim(cols = c("MAPPED_BACKGROUND_TRAIT", 
+                                        "MAPPED_BACKGROUND_TRAIT_URI"
+                                        ),
+                               delim = stringr::regex(", (?![^()]*\\))")
+  ) |>
+  distinct()
+
+# now replace '*' back to commas
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = stringr::str_replace_all(MAPPED_TRAIT, 
+                                                 pattern = "\\* ", 
+                                                 ", "),
+         MAPPED_BACKGROUND_TRAIT = stringr::str_replace_all(MAPPED_BACKGROUND_TRAIT, 
+                                                          pattern = "\\* ", 
+                                                          ", ")
+         )
+
+
+gwas_study_info <-
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = stringr::str_trim(tolower(MAPPED_TRAIT))) |>
+  mutate(MAPPED_BACKGROUND_TRAIT = stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT))) 
+
+
+```
+
+```{r prep_mapped_trait_terms}
+
+all_gwas_terms = gwas_study_info$MAPPED_TRAIT
 all_gwas_terms = stringr::str_trim(tolower(all_gwas_terms))
+all_gwas_terms = unique(all_gwas_terms)
+
+print("Number of unique GWAS traits")
+length(all_gwas_terms)
+
 ```
 
 ## Disease Overlap (How many GWAS traits fall within disease or disorder terms?)
 
 ### Combine disease terms
 
-```{r}
+```{r combine_disease_terms}
 
 efo_descendants <- readLines(here::here("output/trait_ontology/efo_0000408_descendants.txt"))
 
@@ -222,29 +815,93 @@ disease_measurement_terms <- readLines(here::here("output/trait_ontology/efo_000
 
 disease_typos = c("Alzheimer disease",
                   "late-onset Alzheimers disease",
-                  "age of onset of Alzheimer disease",
                   "Chagas cardiomyopathy",
                   "Parkinson disease",
-                  "Iron deficiency anemia",
-                  "Churg-Strauss syndrome",
-                  "Iridocyclitis",
-                  "Phlebitis" 
+                  "Iron deficiency anemia"
                   )
 
-other <- c("Allergic disease", 
-  "Lewy body dementia",
-  "Lewy body attribute",
- "non-Hodgkins lymphoma",
+biomarker_terms <- c("cardiovascular disease biomarker measurement",
+                     "cancer biomarker measurement",
+                     "diabetes mellitus biomarker",
+                     "osteoarthritis biomarker measurement",
+                     "liver disease biomarker",
+                     "alzheimer's disease biomarker measurement",
+                     "iron deficiency anemia (disorder)"
+                     )
+
+other_disorders <- c(
+           "Allergic disease", 
+           "Churg-Strauss syndrome",
+           "Iridocyclitis",
+           "Phlebitis",
+           "pregnancy induced alloimmunization",
+           "somnambulism",
+           "suicide",
+           "attempted suicide",
+           "suicide behaviour",
+           "suicide ideation measurement",
+           "suicide behaviour measurement",
+           "Lewy body dementia",
+           "Lewy body attribute",
+           "non-Hodgkins lymphoma",
            "Ischemic Stroke",
            "Lung disease",
            "Respiratory System Disease",
-  "Iron deficiency anemia (disorder)",
-  "Alzheimer disease, APOE carrier status",
-  "Alzheimer's disease biomarker measurement",
- "Genital neoplasm, female",
- "HIV-associated neurocognitive disorder",
- "encephalopathy acute infection-induced"
-           )
+           "Alzheimer disease, APOE carrier status",
+           "Genital neoplasm, female",
+           "HIV-associated neurocognitive disorder",
+           "encephalopathy acute infection-induced",
+           "anomalous atrioventricular excitation (disorder)",
+           "scleritis and episcleritis (disorder)",
+           "atopic march",
+           "infection",
+           "neural tube defects, susceptibility to",
+           "migraine without aura, susceptibility to, 4",
+           "hiv mother to child transmission",
+           "hemolysis",
+           "chromosomal aberration",
+           "dna methylation",
+           "gata1 gene mutation",
+           "atropy",
+           "premature birth",
+           "growth delay",
+           "reduced left ventricular ejection fraction",
+           "hepatitis b",
+           "vascular brain injury measurement",
+           "borderline personality disorder symptom",
+           "miscarriage",
+           "emphysema pattern measurement",
+           "emphysema imaging measurement",
+           "persistent staphylococcus aureus carrier status",
+           "intermittent staphylococcus aureus carrier status",
+           "influenza a severity measurement",
+           "pneumonia severity measurement",
+           "hsv2 virologic severity measurement",
+           "opioid overdose severity measurement",
+           "nausea and vomiting of pregnancy severity measurement",
+           "myopic maculopathy severity measurement"
+)
+ 
+ 
+ disease_status_terms <- c(
+ "benign",
+ "remission",
+ "disease recurrence",
+ "complicated disease course",
+ "disease prognosis measurement",
+ "mild disease course",
+ "disease free survival",
+ "progression free survival",
+ "survival time",
+ "overall survival",
+ "illness severity status"
+ )
+
+family_disease_terms <- c("family history of breast cancer",
+                          "family history of cancer",
+                          "family history of prostate cancer",
+                          "family history of upper gastrointestinal cancer",
+                          "family history of uterine fibroids")
 
 disease_terms = c(mondo_descendants,
                   efo_descendants,
@@ -252,52 +909,58 @@ disease_terms = c(mondo_descendants,
                   orphanet_descendants,
                   age_of_onset_descendants,
                   disease_measurement_terms,
+                  family_disease_terms,
                   disease_typos,
-                  other) |>
-                 unique()
+                  biomarker_terms,
+                  disease_status_terms,
+                  other_disorders) |>
+                  unique()
 
 
 disease_terms = stringr::str_trim(tolower(disease_terms))
+disease_terms = unique(disease_terms)
 
-print("Number of terms related to disease or disorder")
+print("Number of ontology terms found related to disease or disorder")
 length(disease_terms)
 
 ```
 
-
+### Find disease terms in GWAS traits
 
 ```{r}
 # Find GWAS traits that fall within disease or disorder terms
-simple_disease_terms = all_gwas_terms[all_gwas_terms %in% disease_terms]
+#simple_disease_terms = all_gwas_terms[all_gwas_terms %in% disease_terms]
+disease_gwas <- all_gwas_terms[all_gwas_terms %in% disease_terms]
 
-# Also search for cases where there are multiple terms separated by commas
-# and one of them is a disease term
-not_simple_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_terms]
+# # Also search for cases where there are multiple terms separated by commas
+# # and one of them is a disease term
+# not_simple_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_terms]
+# 
+# # sometimes there's multiple terms - check if any disease term is in these gwas terms
+# multiple_terms = grep(",", 
+#                       not_simple_disease_terms, value = T)
+# 
+# disease_chunks <- split(disease_terms, ceiling(seq_along(disease_terms) / 100))
+# disease_chunks  <- lapply(disease_chunks, function(x) paste0(x, collapse = "|"))
+# mask <- Reduce(`|`, lapply(disease_chunks, function(x) grepl(x, multiple_terms, ignore.case = T)))
+# additional_disease_gwas <- multiple_terms[mask]
 
-# sometimes there's multiple terms - check if any disease term is in these gwas terms
-multiple_terms = grep(",", not_simple_disease_terms, value = T)
+# disease_gwas = c(all_gwas_terms[all_gwas_terms %in% disease_terms],
+#                  additional_disease_gwas)
 
-disease_chunks <- split(disease_terms, ceiling(seq_along(disease_terms) / 100))
-disease_chunks  <- lapply(disease_chunks, function(x) paste0(x, collapse = "|"))
-mask <- Reduce(`|`, lapply(disease_chunks, function(x) grepl(x, multiple_terms, ignore.case = T)))
-additional_disease_gwas <- multiple_terms[mask]
-
-disease_gwas = c(all_gwas_terms[all_gwas_terms %in% disease_terms],
-                 additional_disease_gwas)
-
-not_disease_terms = not_simple_disease_terms[!not_simple_disease_terms %in% additional_disease_gwas]
+#not_disease_terms = not_simple_disease_terms[!not_simple_disease_terms %in% additional_disease_gwas]
+not_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_gwas]
 
 print("Number of GWAS traits under disease or disorder terms")
-length(all_gwas_terms) - length(not_disease_terms)
+length(disease_gwas)
 
 print("Percentage of GWAS traits under disease or disorder terms")
-round(100 * (length(all_gwas_terms) - length(not_disease_terms)) / length(all_gwas_terms),
+round(100 * (length(disease_gwas)) / length(all_gwas_terms),
       digits = 1)
 
 print("Percentage of GWAS traits not under disease or disorder terms")
 round(100 * length(not_disease_terms) / length(all_gwas_terms),
       digits = 1)
-
 
 not_accounted_for = not_disease_terms 
 
@@ -307,21 +970,27 @@ not_accounted_for = not_disease_terms
 
 ```{r}
 
-
 pheno_abnorm <- readLines(here::here("output/trait_ontology/hp_0000118_descendants.txt"))
 pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
+pheno_abnorm = unique(pheno_abnorm)
 
-# Find terms where all comma-split pieces are in measurement
-pheno_abnorm_gwas <- not_accounted_for[
-  sapply(strsplit(not_accounted_for, ", "), function(parts) {
-    parts <- trimws(parts) # remove extra spaces
-    all(parts %in% pheno_abnorm)
-  })
-]
+pheno_abnorm <- c("abnormal pap smear",
+                  "abnormal result of function studies",
+                  "abnormal result of diagnostic imaging",
+                  pheno_abnorm)
 
-additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+# # Find terms where all comma-split pieces are in measurement
+# pheno_abnorm_gwas <- not_accounted_for[
+#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
+#     parts <- trimws(parts) # remove extra spaces
+#     all(parts %in% pheno_abnorm)
+#   })
+# ]
 
-pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
+#additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+pheno_abnorm_gwas <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+
+#pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
 
 print("Percentage of GWAS traits under phenotype abnormality terms")
 round(100 * length(pheno_abnorm_gwas) / length(all_gwas_terms),
@@ -338,49 +1007,6 @@ length(not_accounted_for)
 
 ```
 
-## Add disease & phenotypic abnormality terms to GWAS study info dataset
-
-```{r disease_terms}
-
-find_disease_terms  <-   function(MAPPED_TRAIT) {
-        # find all disease terms that appear in the trait
-        split_mapped_traits <- stringr::str_split(MAPPED_TRAIT, ", ") |> 
-                               unlist()
-        
-        mapped_disease_terms <- split_mapped_traits[split_mapped_traits %in% disease_terms]
-        mapped_pheno_abnorm_terms <- split_mapped_traits[split_mapped_traits %in% pheno_abnorm]
-        
-        mapped_disease_terms = unique(c(mapped_disease_terms, 
-                                        mapped_pheno_abnorm_terms
-                                        )
-        )
-                                      
-        return(paste0(mapped_disease_terms, collapse = ", "))  # combine multiple matches
-        
-    }
-
-gwas_study_info <- 
-  gwas_study_info |> 
-  dplyr::rowwise() |>
-  dplyr::mutate(
-    disease_terms = 
-      ifelse(stringr::str_trim(tolower(MAPPED_TRAIT)) %in% c(disease_gwas,pheno_abnorm_gwas),
-             find_disease_terms(stringr::str_trim(tolower(MAPPED_TRAIT))),
-             NA)
-  )
-
-gwas_study_info <- 
-  gwas_study_info |>
-  rowwise() |>
-  dplyr::mutate(
-   disease_terms = 
-      ifelse(MAPPED_TRAIT == "",
-             NA,
-            disease_terms)
-  ) |>
-  ungroup()
-
-```
 
 ## Measurement Overlap (how many GWAS traits fall within measurement terms?)
 
@@ -390,31 +1016,196 @@ gwas_study_info <-
 
 measurement <- readLines(here::here("output/trait_ontology/efo_0001444_descendants.txt"))
 total_choles <- readLines(here::here("output/trait_ontology/efo_0004574_descendants.txt"))
-
 measurement <- c(total_choles,
                  measurement) 
 
 measurement <- unique(measurement)
-
 measurement <- c("cerebrospinal fluid composition attribute",
                  "blood protein amount",
+                 "fatty acid measurement",
+                 "obsolete_3,3',5-triiodo-l-thyronine measurement",
+                 "1-(1-enyl-stearoyl)-2-linoleoyl-gpe (p-18:0/18:2), measurement",
+                 "microtubule-associated protein tau",
                  measurement)
 
 measurement = stringr::str_trim(tolower(measurement))
+measurement = unique(measurement)
 ```
+
+### BMI / weight terms / body fat terms
+
+```{r bmi_weight_terms_in_gwas}
+
+bmi_weight_terms <- grep("bmi|body mass index|weight|bmi", measurement, value = T)
+bmi_weight_terms <- grep("fetal|birth|gestational", bmi_weight_terms, value = T, invert = T)
+bmi_weight_terms <- c(bmi_weight_terms, 
+                      "body composition measurement",
+                      "body fat percentage",
+                      "body fat distribution")
+
+measurement <- measurement[!(measurement %in% bmi_weight_terms)]
+
+bmi_weight_gwas = not_accounted_for[not_accounted_for %in% bmi_weight_terms]
+print("Number of GWAS traits under BMI / weight / body fat terms")
+length(bmi_weight_gwas)
+
+print("Percentage of GWAS traits under BMI / weight / body fat terms")
+round(100 * length(bmi_weight_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% bmi_weight_gwas]
+print("Percentage of GWAS traits not accounted for by disease, disorder or BMI / weight / body fat terms")
+
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+
+```
+
+### Lipid / cholesterol measurement terms
+
+```{r lipid_cholesterol_terms_in_gwas}
+
+lipid_cholesterol_terms <- grep("cholesterol|lipid|triglyceride|ldl|hdl|apolipoprotein", 
+                                measurement, 
+                                value = T)
+
+measurement <- measurement[!(measurement %in% lipid_cholesterol_terms)]
+
+lipid_cholesterol_gwas = not_accounted_for[not_accounted_for %in% lipid_cholesterol_terms]
+
+print("Number of GWAS traits under lipid / cholesterol terms")
+length(lipid_cholesterol_gwas)
+
+print("Percentage of GWAS traits under lipid / cholesterol terms")
+round(100 * length(lipid_cholesterol_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% lipid_cholesterol_gwas]
+print("Percentage of GWAS traits not accounted for by disease, disorder or lipid / cholesterol terms")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+```
+
+### Brain measurement terms
+
+```{r brain_measurement_terms_in_gwas}
+
+brain_measurement_terms <- grep("brain|volume", 
+                                measurement, 
+                                value = T)
+
+brain_measurement_terms <- grep("bone|muscle|reticulocyte|erythrocyte|expiratory|platelet|urinary|thyroid|pancreas|kidney|spleen|liver|ventricular|blood", 
+                                brain_measurement_terms, 
+                                value = T, 
+                                invert = T)
+
+
+```
+
+### Blood pressure measurement terms
+
+```{r blood_pressure_terms_in_gwas}
+
+blood_pressure_terms <- grep("blood pressure", 
+                                measurement, 
+                                value = T)
+
+measurement <- measurement[!(measurement %in% blood_pressure_terms)]
+
+blood_pressure_gwas = not_accounted_for[not_accounted_for %in% blood_pressure_terms]
+
+print("Number of GWAS traits under blood pressure terms")
+length(blood_pressure_gwas)
+
+print("Percentage of GWAS traits under blood pressure terms")
+round(100 * length(blood_pressure_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% blood_pressure_gwas]
+
+print("Percentage of GWAS traits not accounted for by disease, disorder or blood pressure terms")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+
+```
+
+### Find seropositivity terms in GWAS traits
+
+```{r seropositivity_terms_in_gwas}
+
+seropositivity_terms <- grep("seropositivity|antibody", measurement, value = T)
+seropositivity_terms <- c(seropositivity_terms,
+                          "foot-and-mouth disease virus seropositivity",
+                          "bacillus phage virus seropositivity")
+
+measurement <- measurement[!(measurement %in% seropositivity_terms)]
+
+seropositivity_gwas = not_accounted_for[not_accounted_for %in% seropositivity_terms]
+
+print("Number of GWAS traits under seropositivity terms")
+length(seropositivity_gwas)
+
+print("Percentage of GWAS traits under seropositivity terms")
+round(100 * length(seropositivity_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% seropositivity_gwas]
+print("Percentage of GWAS traits not accounted for by disease, disorder or seropositivity terms")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+```
+
+### General measurement terms 
 
 ```{r}
 
-# Find terms where all comma-split pieces are in measurement
-measurement_gwas <- not_accounted_for[
-  sapply(strsplit(not_accounted_for, ", "), function(parts) {
-    parts <- trimws(parts)
-    all(parts %in% measurement)
-  })
-]
-additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
+behavior_measurement <- c(
+                    "smoking",
+                    "alcohol consumption",
+                    "alcoholic beverage consumption",
+                    "alcohol exposure",
+                    "behavior",
+                    "farm exposure",
+                    "tobacco",
+                    "cannabis",
+                    "physical activity",
+                    "cognitive function",
+                    "pack-years",
+                    "coffee",
+                    "opioid",
+                    "environment",
+                    "exercise"
+                    )
 
-measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
+behavior_measurement< grep(paste0(behavior_measurement, 
+                                  collapse = "|"), 
+                            measurement,
+                            value = T
+                           )
+
+measurement <- measurement[!(measurement %in% behavior_measurement)]
+
+measurement <- grep("emphysema|eye colour|lifestyle", 
+                    measurement, 
+                    value = T, 
+                    invert = T)
+
+
+# Find terms where all comma-split pieces are in measurement
+# measurement_gwas <- not_accounted_for[
+#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
+#     parts <- trimws(parts)
+#     all(parts %in% measurement)
+#   })
+# ]
+measurement_gwas <- not_accounted_for[not_accounted_for %in% measurement]
+#additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
+
+#measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
 
 print("Number of GWAS traits under measurement terms")
 length(measurement_gwas)
@@ -440,7 +1231,6 @@ length(not_accounted_for)
 ```{r}
 
 go_response = readLines(here::here("output/trait_ontology/go_0050896_descendants.txt"))
-
 efo_response <- readLines(here::here("output/trait_ontology/efo_go_0050896_descendants.txt"))
 
 response <- c(go_response,
@@ -450,21 +1240,24 @@ response <- c(go_response,
 response <- unique(response)
 
 response = stringr::str_trim(tolower(response))
+response = unique(response)
+
 ```
 
 ```{r}
 
 # Find terms where all comma-split pieces are in measurement
-response_gwas <- not_accounted_for[
-  sapply(strsplit(not_accounted_for, ", "), function(parts) {
-    parts <- trimws(parts)
-    all(parts %in% response)
-  })
-]
+# response_gwas <- not_accounted_for[
+#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
+#     parts <- trimws(parts)
+#     all(parts %in% response)
+#   })
+# ]
 
-additional_response <- not_accounted_for[not_accounted_for %in% response]
+response_gwas <- not_accounted_for[not_accounted_for %in% response]
 
-response_gwas  = c(response_gwas, additional_response) |> unique()
+#additional_response <- not_accounted_for[not_accounted_for %in% response]
+#response_gwas  = c(response_gwas, additional_response) |> unique()
 
 print("Percentage of GWAS traits under response terms")
 round(100 * length(response_gwas) / length(all_gwas_terms),
@@ -481,14 +1274,20 @@ length(not_accounted_for)
 
 ```
 
-
-
 ## Mental process
 
 ```{r}
 
 mental <- readLines(here::here("output/trait_ontology/efo_0004323_descendants.txt"))
 mental = stringr::str_trim(tolower(mental))
+mental <- unique(mental)
+mental <- c(mental,
+          "memory performance",
+          "visual memory process attribute",
+          "verbal memory measurement",
+          "executive function measurement",
+          "cognitive function measurement"
+          )
 
 mental_gwas = not_accounted_for[not_accounted_for %in% mental]
 
@@ -513,6 +1312,10 @@ length(not_accounted_for)
 
 behavior <- readLines(here::here("output/trait_ontology/go_0007610_descendants.txt"))
 behavior = stringr::str_trim(tolower(behavior))
+behavior <- unique(behavior)
+behavior <- c(behavior,
+              behavior_measurement,
+              "physical activity")
 
 behavior_gwas = not_accounted_for[not_accounted_for %in% behavior]
 
@@ -536,8 +1339,9 @@ length(not_accounted_for)
 ```{r}
 
 injury <- readLines(here::here("output/trait_ontology/efo_0000546_descendants.txt"))
-
 injury = stringr::str_trim(tolower(injury))
+injury <- c(injury,
+            "fall")
 
 injury_gwas = not_accounted_for[not_accounted_for %in% injury]
 
@@ -554,7 +1358,6 @@ round(100 * length(not_accounted_for) / length(all_gwas_terms),
 print("Number of GWAS traits not accounted for so far")
 length(not_accounted_for)
 
-
 ```
 
 ## Phenotype
@@ -562,8 +1365,31 @@ length(not_accounted_for)
 ```{r}
 
 phenotype <- readLines(here::here("output/trait_ontology/efo_0000651_descendants.txt"))
-
 phenotype = stringr::str_trim(tolower(phenotype))
+phenotype <- unique(c(phenotype,
+                      "aging",
+                      "biological sex",
+                      "comparative body size at age 10, self-reported",
+                      "complex trait",                      
+                      "eye colour measurement",
+                      "strand of hair color",
+                      "high altitude adaptation",
+                      "multiple gestation",
+                      "normal",
+                      "personality trait",
+                      "skin pigmentation",
+                      "personality",
+                      "growth delay",
+                      "sensory perception of taste",
+                      "sensory perception of bitter taste",
+                      "sensory perception of sweet taste",
+                      "sensory perception of smell",
+                      "sensory perception of sound",
+                      "size",
+                      "skin aging",
+                      "sexual dimorphism",
+                      "voice quality trait")
+)
 
 phenotype_gwas = not_accounted_for[not_accounted_for %in% phenotype]
 
@@ -582,7 +1408,229 @@ length(not_accounted_for)
 
 ```
 
+## Medical procedure
+
+```{r}
+
+medical_procedure <- readLines(here::here("output/trait_ontology/efo_0002571_descendants.txt"))
+surgical_procedure <- readLines(here::here("output/trait_ontology/maxo_0000004_descendants.txt"))
+clinical_history <- c("clinical history",
+                      "encounter with health service",
+                      "encounter with health service for adjustment and management of implanted device",
+                      "encounter with health service related to reproduction")
+
+
+
+medical_procedure = stringr::str_trim(tolower(medical_procedure))
+medical_procedure = unique(c(medical_procedure, 
+                             surgical_procedure,
+                             clinical_history,
+                             "braces",
+                             "vaccination",
+                             "hormone replacement therapy",
+                             "cognitive behavioural therapy",
+                             "organ extraction",
+                             "gastric bypass",
+                             "medical procedure",
+                             "number of treatments or medications taken, self-reported",
+                             "treatment",
+                             "test result",
+                             "hospitalisation",
+                             "clinical treatment")
+                           )
+
+
+
+medical_procedure_gwas = not_accounted_for[not_accounted_for %in% medical_procedure]
+
+print("Percentage of GWAS traits under medical procedure terms")
+round(100 * length(medical_procedure_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% medical_procedure_gwas]
+print("Percentage of GWAS traits not accounted for so far")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+print("Number of GWAS traits not accounted for so far")
+length(not_accounted_for)
+
+```
+
+## Environmental factors
+
+```{r}
+
+enviro_factors <- c(
+"diet measurement",
+"economic and social preference",
+"educational attainment",
+"encounter with health service related to socioeconomic and psychosocial circumstances" ,
+"energy intake",
+"environmental factor",
+"family relationship",
+"household income",
+"income",
+"lifestyle measurement",
+"risk factor",
+"self reported educational attainment",
+"social deprivation",
+"social risk factor",
+"socioeconomic status",
+"townsend deprivation index"
+)
+
+
+enviro_factors_gwas = not_accounted_for[not_accounted_for %in% enviro_factors]
+
+print("Percentage of GWAS traits under environmental factor terms")
+round(100 * length(enviro_factors_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% enviro_factors_gwas]
+
+print("Percentage of GWAS traits not accounted for so far")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+print("Number of GWAS traits not accounted for so far")
+length(not_accounted_for)
+
+
+```
+
+## Other
+
+### Biological process 
+
+```{r}
+
+bio_process <- c("pregnancy",
+                 "puberty",
+                 "menopause",
+                 "ovulation",
+                 "positive regulation of ovulation")
+
+bio_process = stringr::str_trim(tolower(bio_process))
+
+bio_process_gwas = not_accounted_for[not_accounted_for %in% bio_process]
+
+print("Percentage of GWAS traits under biological process terms")
+round(100 * length(bio_process_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% bio_process_gwas]
+print("Percentage of GWAS traits not accounted for so far")
+
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+print("Number of GWAS traits not accounted for so far")
+length(not_accounted_for)
+
+
+```
+
+
+### Traditional medicine constitutional types
+
+```{r}
+
+tm_constitution <- c("yu-zhi constitution type",
+                      "sasang constitutional medicine",
+                      "sasang constitutional medicine type",
+                      "hepatonia constitution type",
+                      "pulmotonia constitution type",
+                      "tae-yang",
+                      "tae-eum",
+                      "so-eum",
+                      "so-yang"
+                      )
+
+tm_constitution = stringr::str_trim(tolower(tm_constitution))
+
+tm_constitution_gwas = not_accounted_for[not_accounted_for %in% tm_constitution]
+
+print("Percentage of GWAS traits under traditional medicine constitutional type terms")
+round(100 * length(tm_constitution_gwas) / length(all_gwas_terms),
+      digits = 1)
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% tm_constitution_gwas]
+
+print("Percentage of GWAS traits not accounted for so far")
+round(100 * length(not_accounted_for) / length(all_gwas_terms),
+      digits = 1)
+
+print("Number of GWAS traits not accounted for so far")
+length(not_accounted_for)
+      
+```
+
+### Ancestry-info
+
+```{r}
+
+ancestry_gwas <- "latin or admixed american ancestry"
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% ancestry_gwas]
+
+```
+
+### Cell lines 
+
+```{r}
+
+cell_line_gwas <- "gm11992"
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% cell_line_gwas]
+
+```
+
+
+
 # Add Categories to GWAS Info
+
+## Add disease & phenotypic abnormality terms to GWAS study info dataset
+
+```{r disease_terms}
+
+# find_disease_terms  <-   function(MAPPED_TRAIT) {
+#         # find all disease terms that appear in the trait
+#         # split_mapped_traits <- stringr::str_split(MAPPED_TRAIT, ", ") |> 
+#         #                        unlist()
+#         
+#         mapped_disease_terms <- split_mapped_traits[split_mapped_traits %in% disease_terms]
+#         mapped_pheno_abnorm_terms <- split_mapped_traits[split_mapped_traits %in% pheno_abnorm]
+#         
+#         mapped_disease_terms = unique(c(mapped_disease_terms, 
+#                                         mapped_pheno_abnorm_terms
+#                                         )
+#         )
+#                                       
+#         return(str_flatten(mapped_disease_terms, 
+#                            collapse = ", ",
+#                            na.rm = T))  # combine multiple matches
+#         
+# }
+# 
+disease_or_disorder <- c(disease_gwas,
+                          pheno_abnorm_gwas,
+                          seropositivity_gwas
+                          )
+
+gwas_study_info <- 
+  gwas_study_info |> 
+  dplyr::rowwise() |>
+  dplyr::mutate(
+    disease_terms = 
+      ifelse(MAPPED_TRAIT %in% disease_or_disorder,
+             MAPPED_TRAIT,
+             NA)
+  )
+
+```
+
+## Map GWAS traits to high-level categories
 
 ```{r}
 
@@ -592,12 +1640,20 @@ gwas_study_info |>
                                                          MAPPED_TRAIT == "" ~ NA,
                                                          tolower(MAPPED_TRAIT) %in% disease_gwas ~ "Disease/Disorder",
                                                          tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
+                                                         tolower(MAPPED_TRAIT) %in% seropositivity_gwas ~ "Seropositivity",
+                                                         tolower(MAPPED_TRAIT) %in% bmi_weight_gwas ~ "BMI/Weight/Body Fat Measurement",
+                                                         tolower(MAPPED_TRAIT) %in% lipid_cholesterol_gwas ~ "Lipid/Cholesterol Measurement",
+                                                         tolower(MAPPED_TRAIT) %in% brain_measurement_terms ~ "Brain Measurement",
+                                                         tolower(MAPPED_TRAIT) %in% blood_pressure_gwas ~ "Blood Pressure Measurement",
                                                          tolower(MAPPED_TRAIT) %in% measurement_gwas ~ "Measurement",
                                                          tolower(MAPPED_TRAIT) %in% response_gwas ~ "Response",
                                                          tolower(MAPPED_TRAIT) %in% mental_gwas ~ "Mental Process",
                                                          tolower(MAPPED_TRAIT) %in% behavior_gwas ~ "Behavior",
                                                          tolower(MAPPED_TRAIT) %in% injury_gwas ~ "Injury",
                                                          tolower(MAPPED_TRAIT) %in% phenotype_gwas ~ "Phenotype",
+                                                         tolower(MAPPED_TRAIT) %in% medical_procedure_gwas ~ "Medical Procedure",
+                                                         tolower(MAPPED_TRAIT) %in% enviro_factors_gwas ~ "Environmental Factor",
+                                                         
                                                           TRUE ~ "Other"
                                                           )
                 )
@@ -608,10 +1664,14 @@ gwas_study_info |>
 
 ```{r}
 
-gwas_study_info$MAPPED_BACKGROUND_TRAIT |> unique() -> gwas_background
+gwas_background <- gwas_study_info$MAPPED_BACKGROUND_TRAIT
 
 gwas_background = stringr::str_trim(tolower(gwas_background))
+gwas_background <- unique(gwas_background)
+gwas_background <- gwas_background[gwas_background != ""]
 
+
+print("Number of unique background GWAS traits")
 length(gwas_background)
 
 ```
@@ -620,12 +1680,14 @@ length(gwas_background)
 
 ```{r}
 
-multiple_terms = grep(",", gwas_background, value = T)
-mask <- Reduce(`|`, lapply(disease_terms, function(x) grepl(x, multiple_terms)))
-additional_disease_gwas <- multiple_terms[mask]
+# multiple_terms = grep(",", gwas_background, value = T)
+# mask <- Reduce(`|`, lapply(disease_terms, function(x) grepl(x, multiple_terms)))
+# additional_disease_gwas <- multiple_terms[mask]
 
-disease_gwas = c(gwas_background[gwas_background %in% disease_terms],
-                 additional_disease_gwas)
+# disease_gwas = c(gwas_background[gwas_background %in% disease_terms],
+#                  additional_disease_gwas)
+
+disease_gwas = gwas_background[gwas_background %in% disease_terms]
 
 print("Number of background GWAS traits under disease or disorder terms")
 length(disease_gwas)
@@ -636,32 +1698,9 @@ round(100 * length(disease_gwas) / length(gwas_background),
 
 not_accounted_for = gwas_background[!gwas_background %in% disease_gwas]
 
-```
-
-```{r background_trait_disease_terms}
-
-gwas_study_info <- 
-  gwas_study_info |>
-  rowwise() |>
-  dplyr::mutate(
-    background_disease_terms = 
-      ifelse(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% c(disease_gwas, pheno_abnorm_gwas),
-             find_disease_terms(stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT))),
-             NA)
-  ) |>
-  ungroup()
-
-
-gwas_study_info <- 
-  gwas_study_info |>
-  rowwise() |>
-  dplyr::mutate(
-    background_disease_terms = 
-      ifelse(MAPPED_BACKGROUND_TRAIT == "",
-             NA,
-             background_disease_terms)
-  ) |>
-  ungroup()
+print("Percentage of background GWAS traits not under disease or disorder terms")
+round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)
 
 ```
 
@@ -670,16 +1709,19 @@ gwas_study_info <-
 ```{r}
 
 # Find terms where all comma-split pieces are in measurement
-pheno_abnorm_gwas <- not_accounted_for[
-  sapply(strsplit(not_accounted_for, ", "), function(parts) {
-    parts <- trimws(parts) # remove extra spaces
-    all(parts %in% pheno_abnorm)
-  })
-]
+# pheno_abnorm_gwas <- not_accounted_for[
+#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
+#     parts <- trimws(parts) # remove extra spaces
+#     all(parts %in% pheno_abnorm)
+#   })
+# ]
 
-additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
+# additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
 
-pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
+# pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
+
+pheno_abnorm_gwas  = pheno_abnorm_gwas
+
 
 print("Percentage of background GWAS traits under phenotype abnormality terms")
 round(100 * length(pheno_abnorm_gwas) / length(gwas_background),
@@ -691,8 +1733,40 @@ print("Percentage of background GWAS traits not accounted for so far")
 round(100 * length(not_accounted_for) / length(gwas_background),
       digits = 1)
 
-print("Number of background GWAS traits not accounted for by so far")
+print("Number of background GWAS traits not accounted for so far")
 length(not_accounted_for)
+
+```
+
+## Add disease & phenotypic abnormality terms to GWAS study info dataset
+
+```{r background_trait_disease_terms}
+
+disease_or_disorder <- c(disease_gwas,
+                          pheno_abnorm_gwas
+  )
+
+gwas_study_info <- 
+  gwas_study_info |>
+  rowwise() |>
+  dplyr::mutate(
+    background_disease_terms = 
+      ifelse(MAPPED_BACKGROUND_TRAIT %in% disease_or_disorder,
+             MAPPED_BACKGROUND_TRAIT,
+             NA)
+  ) |>
+  ungroup()
+
+# gwas_study_info <- 
+#   gwas_study_info |>
+#   rowwise() |>
+#   dplyr::mutate(
+#     background_disease_terms = 
+#       ifelse(MAPPED_BACKGROUND_TRAIT == "",
+#              NA,
+#              background_disease_terms)
+#   ) |>
+#   ungroup()
 
 ```
 
@@ -700,17 +1774,18 @@ length(not_accounted_for)
 
 ```{r}
 
-measurement_gwas <- not_accounted_for[
-  sapply(strsplit(not_accounted_for, ", "), function(parts) {
-    parts <- trimws(parts) # remove extra spaces
-    all(parts %in% measurement)
-  })
-]
+# measurement_gwas <- not_accounted_for[
+#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
+#     parts <- trimws(parts) # remove extra spaces
+#     all(parts %in% measurement)
+#   })
+# ]
 
-additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
+# additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
 
-measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
+# measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
 
+measurement_gwas  = measurement[measurement %in% not_accounted_for]
 
 not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
 
@@ -729,16 +1804,18 @@ length(not_accounted_for)
 ```{r}
 
 # Find terms where all comma-split pieces are in measurement
-response_gwas <- not_accounted_for[
-  sapply(strsplit(not_accounted_for, ", "), function(parts) {
-    parts <- trimws(parts)
-    all(parts %in% response)
-  })
-]
+# response_gwas <- not_accounted_for[
+#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
+#     parts <- trimws(parts)
+#     all(parts %in% response)
+#   })
+# ]
 
-additional_response <- not_accounted_for[not_accounted_for %in% response]
+# additional_response <- not_accounted_for[not_accounted_for %in% response]
+# 
+# response_gwas  = c(response_gwas, additional_response) |> unique()
 
-response_gwas  = c(response_gwas, additional_response) |> unique()
+response_gwas  = response[response %in% not_accounted_for]
 
 not_accounted_for = not_accounted_for[!not_accounted_for %in% response_gwas]
 
@@ -759,8 +1836,24 @@ round(100 * length(not_accounted_for) / length(gwas_background),
 
 ```
 
-## Background trait categories 
+## Medical procedure traits
 
+```{r}
+
+medical_procedure_gwas = medical_procedure[medical_procedure %in% not_accounted_for]
+
+not_accounted_for = not_accounted_for[!not_accounted_for %in% medical_procedure_gwas]
+
+print("Percentage of background GWAS traits not accounted for by disease, measurement, response or medical procedure terms")
+round(100 * length(not_accounted_for) / length(gwas_background),
+      digits = 1)
+
+print("Number of background GWAS traits not accounted for by disease, measurement, response or medical procedure terms")
+length(not_accounted_for)
+
+```
+
+## Background trait categories 
 
 ```{r}
 
@@ -774,6 +1867,7 @@ gwas_study_info |>
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% measurement_gwas ~ "Measurement",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% response_gwas ~ "Response",
+                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% medical_procedure_gwas ~ "Medical Procedure",
                                       TRUE ~ "Other")
                 )
 
@@ -795,13 +1889,45 @@ gwas_study_info =
 gwas_study_info |>
   dplyr::rowwise() |>
   dplyr::mutate(DISEASE_STUDY = 
-                   ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
-                          MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
-                          BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder" | 
-                          BACKGROUND_TRAIT_CATEGORY == "Phenotypic Abnormality",
-                          T, F )
+                   case_when(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
+                             MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
+                             MAPPED_TRAIT_CATEGORY == "Seropositivity" |
+                             BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder" | 
+                             BACKGROUND_TRAIT_CATEGORY == "Phenotypic Abnormality" ~ T,
+                             T ~ F )
                 ) |>
   dplyr::ungroup() 
+
+gwas_study_info |> 
+  group_by(DISEASE_STUDY, 
+           MAPPED_TRAIT_CATEGORY, 
+           BACKGROUND_TRAIT_CATEGORY) |> 
+  summarise(n = n()) 
+
+# Number of papers with at least one disease study
+gwas_study_info |> 
+  group_by(PUBMED_ID) |> 
+  summarise(DISEASE_STUDY = any(DISEASE_STUDY == T)) |> 
+  group_by(DISEASE_STUDY) |> 
+  summarise(n = n())
+# ~ 60% of papers have at least one disease study
+
+gwas_study_info |> 
+  group_by(PUBMED_ID, YEAR) |> 
+  summarise(DISEASE_STUDY = any(DISEASE_STUDY == T)) |> 
+  group_by(YEAR) |>
+  summarise(n_disease_studies = sum(DISEASE_STUDY == T),
+            n_total_studies = n()) |>
+  mutate(percentage_disease_studies = 100 * n_disease_studies / n_total_studies) |>
+  ggplot(aes(x= YEAR, 
+             y= percentage_disease_studies)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Percentage of papers with at least one disease GWAS over time",
+       x = "Year",
+       y = "Percentage of papers with at least one disease GWAS") +
+  theme_bw() + 
+  lims(y = c(0,100))
 
 ```
 
@@ -832,8 +1958,10 @@ combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
     c(MAPPED_TRAIT_1, MAPPED_TRAIT_2) |>
     unique()
   
-  combined_mapped_disease_terms = paste0(all_mapped_disease_terms, 
-                                         collapse = ", ")
+  combined_mapped_disease_terms = str_flatten(all_mapped_disease_terms, 
+                                         collapse = ", ",
+                                         na.rm = T
+                                         )
   
   return(combined_mapped_disease_terms)
   
@@ -887,7 +2015,7 @@ gwas_study_info = gwas_study_info |>
 
 ### Fix some specific mis-categorizations
 
-```{r}
+```{r, eval=FALSE}
 
 # Fixing fractures, ununited as injury 
 gwas_study_info = gwas_study_info |>
@@ -941,16 +2069,22 @@ gwas_study_info =
 
 ### Fixing some specific missing disease terms
 
-```{r}
+```{r, eval = F}
 # spine osteoarthritis was not being picked up as a disease term
 gwas_study_info = 
   gwas_study_info |>
     mutate(disease_terms = ifelse(grepl("spine osteoarthritis", MAPPED_TRAIT),
-                                        paste0("spine psteoarthritis", disease_terms, collapse = ","),
+                                        str_flatten("spine opsteoarthritis", 
+                                               disease_terms, 
+                                               collapse = ",",
+                                               na.rm = T),
                                         disease_terms)
     ) |>
       mutate(all_disease_terms = ifelse(grepl("spine osteoarthritis", MAPPED_TRAIT),
-                                        paste0("spine psteoarthritis", all_disease_terms, collapse = ","),
+                                        str_flatten("spine psteoarthritis", 
+                                                    all_disease_terms, 
+                                                    collapse = ",",
+                                                    na.rm = T),
                                         all_disease_terms)
     )
 
@@ -958,11 +2092,17 @@ gwas_study_info =
 gwas_study_info = 
   gwas_study_info |>
     mutate(disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
-                                        paste0("liver disease", disease_terms, collapse = ","),
+                                        str_flatten("liver disease", 
+                                                    disease_terms, 
+                                                    collapse = ",",
+                                                    na.rm = T),
                                         disease_terms)
     ) |>
       mutate(all_disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
-                                        paste0("liver disease", all_disease_terms, collapse = ","),
+                                        str_flatten("liver disease", 
+                                                    all_disease_terms, 
+                                                    collapse = ",",
+                                                    na.rm = T),
                                         all_disease_terms)
     )
 
@@ -970,11 +2110,17 @@ gwas_study_info =
 gwas_study_info = 
   gwas_study_info |>
     mutate(disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
-                                        paste0("liver disease", disease_terms, collapse = ","),
+                                        str_flatten("liver disease", 
+                                               disease_terms, 
+                                               collapse = ",",
+                                               na.rm = T),
                                         disease_terms)
     ) |>
       mutate(all_disease_terms = ifelse(grepl("liver disease biomarker", MAPPED_TRAIT),
-                                        paste0("liver disease", all_disease_terms, collapse = ","),
+                                        str_flatten("liver disease", 
+                                                    all_disease_terms, 
+                                                    collapse = ",",
+                                                    na.rm = T),
                                         all_disease_terms)
     )
 
@@ -992,11 +2138,17 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = 
   gwas_study_info |>
     mutate(background_disease_terms= ifelse(grepl("Growth delay", MAPPED_BACKGROUND_TRAIT),
-                                        paste0("growth delay", background_disease_terms, collapse = ","),
+                                        str_flatten("growth delay", 
+                                                    background_disease_terms, 
+                                                    collapse = ",",
+                                                    na.rm = T),
                                         background_disease_terms)
     ) |> 
       mutate(all_disease_terms = ifelse(grepl("Growth delay", MAPPED_BACKGROUND_TRAIT),
-                                        paste0("growth delay", all_disease_terms, collapse = ","),
+                                        str_flatten("growth delay", 
+                                                    all_disease_terms, 
+                                                    collapse = ",",
+                                                    na.rm = T),
                                         all_disease_terms)
     )
 
