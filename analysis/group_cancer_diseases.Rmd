@@ -35,7 +35,9 @@ source(here::here("code/get_term_descendants.R"))
 
 ```{r setup_2, message = FALSE, warning= FALSE}
 
-gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered_v2.csv"))
+# gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered_v2.csv"))
+
+gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_simplified.csv"))
 
 ```
 
@@ -541,7 +543,9 @@ gwas_study_info = gwas_study_info |>
     mutate(collected_all_disease_terms =
          ifelse(collected_all_disease_terms == "female reproductive organ cancer" & 
                  grepl("benign", `DISEASE/TRAIT`, ignore.case = T),
-                 "benign neoplasm",
+                 str_replace_all(collected_all_disease_terms,
+                                 "female reproductive organ cancer", 
+                                 "benign neoplasm"),
                  collected_all_disease_terms
          )
          )
@@ -585,7 +589,9 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms =
          ifelse(collected_all_disease_terms == "gallbladder neoplasm" & 
                 `DISEASE/TRAIT` == "Gallbladder adenomyomatosis",
-                 "benign neoplasm",
+                 str_replace_all(collected_all_disease_terms, 
+                                 "gallbladder neoplasm",
+                                 "benign neoplasm"),
                  collected_all_disease_terms
          )
          )
@@ -2596,16 +2602,16 @@ gwas_study_info = gwas_study_info |>
          ))
 
 # UKBB malignant melanoma of skin
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(collected_all_disease_terms == "melanoma" &
-                grepl("UKBB", COHORT, ignore.case = T) &
-                grepl("malignant melanoma", `DISEASE/TRAIT`, ignore.case = T),
-                stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("melanoma"),
-                          "malignant melanoma of skin"),
-                collected_all_disease_terms
-         ))
+# gwas_study_info = gwas_study_info |>
+#   mutate(collected_all_disease_terms  = 
+#          ifelse(collected_all_disease_terms == "melanoma" &
+#                 grepl("UKBB", COHORT, ignore.case = T) &
+#                 grepl("malignant melanoma", `DISEASE/TRAIT`, ignore.case = T),
+#                 stringr::str_replace_all(collected_all_disease_terms,
+#                           vec_to_grep_pattern("melanoma"),
+#                           "malignant melanoma of skin"),
+#                 collected_all_disease_terms
+#          ))
 
 # cutaneous melanoma in title
 gwas_study_info = gwas_study_info |>
@@ -3042,7 +3048,7 @@ head(freq_sorted, 10)
 ```{r}
 
 fwrite(gwas_study_info,
-      here::here("output/gwas_cat/gwas_study_info_group.csv")
+      here::here("output/gwas_cat/gwas_study_cancer_group.csv")
          )
 
 ```
