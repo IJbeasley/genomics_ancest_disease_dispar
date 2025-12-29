@@ -633,3 +633,85 @@ upset_plot_data <-list_to_matrix(upset_plot_data,
                                                   cohort_full_names,
                                                   ignore_case = TRUE
   )
+
+
+
+############## Figure 4a. #####################
+  # Figure 4a.
+
+  library(ggplot2)
+  library(dplyr)
+  library(data.table)
+
+  {
+    abstract_files <- list.files(here::here("output/abstracts/"),
+                                 pattern = "*.txt",
+                                 full.names = FALSE
+    )
+
+    n_abstracts = length(abstract_files)
+
+    # number of full texts (Euopean PMC)
+
+    full_euro_text_files <- list.files(here::here("output/fulltexts/europepmc/"),
+                                       pattern = "*.txt",
+                                       full.names = FALSE
+    )
+
+    n_euro_full_texts = length(full_euro_text_files)
+
+    n_ncbi_full_texts = 829 + 4
+
+    gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+
+    gwas_study_info =
+      gwas_study_info |>
+      filter(DISEASE_STUDY == T)
+
+    total_pubs = gwas_study_info$PUBMED_ID |>
+      unique() |>
+      length()
+
+    data_sources_counts <-
+      data.frame(
+        location = c("Abstract\n(NCBI PMC)",
+                     "Full text\n(Europe PMC)",
+                     "Full text\n(NCBI PMC)"),
+        n_files = c(n_abstracts,
+                    n_euro_full_texts,
+                    n_ncbi_full_texts)
+      )
+
+  }
+
+
+  plot =
+    data_sources_counts |>
+    ggplot(aes(x= location, y=n_files)) +
+    geom_bar(stat="identity", fill="steelblue") +
+    theme_bw(base_size = 20) +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    geom_hline(yintercept = total_pubs,
+               linetype = "dashed",
+               color = "red",
+               linewidth = 1) +
+    annotate("text",
+             x = Inf,
+             y = total_pubs,
+             label = paste0("GWAS catalog published studies of disease: ", total_pubs),
+             hjust = 1.1, vjust = -0.5,
+             color = "red", size = 5) +
+    labs(#title="Number of files by source",
+      x="Text mining source",
+      y="Number of publications") +
+    ylim(0, 5000)
+
+
+  ggsave(
+    here::here("figures/text_mining_sources.pdf"),
+    plot,
+    width = 7,
+    height = 5,
+    device = cairo_pdf
+  )
