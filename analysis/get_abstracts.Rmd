@@ -1,0 +1,134 @@
+---
+title: "Downloading abstracts for GWAS Catalog papers"
+author: "Isobel Beasley"
+date: "2025-12-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Relevant abstract text 
+
+```{r}
+
+library(dplyr)
+library(rentrez)
+
+```
+
+## Get only disease studies, and select relevant columns
+
+```{r gwas_cat_load_preprocess}
+
+## Step 1: 
+# get only disease studies
+# gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+# gwas_study_info =
+#   gwas_study_info |>
+#   dplyr::filter(DISEASE_STUDY == T) |>
+#   dplyr::select(-COHORT)
+
+```
+
+## Extract information required to get paper text & abstracts
+
+```{r gwas_cat_extract_info}
+
+gwas_study_info <-
+  gwas_study_info |>
+  #filter(COHORT != "") |>
+  select(PUBMED_ID) |>
+  distinct()
+
+pmids = gwas_study_info$PUBMED_ID
+
+print("Number of unique pubmed ids for disease studies:")
+pmids |> length()
+
+```
+
+## Get abstracts from Entrez
+
+```{r get_abstracts_entrez, eval = FALSE}
+
+set_entrez_key(Sys.getenv('NCBI_API_KEY'))
+
+get_pubmed_abstracts <- function(pmids, 
+                                 batch_size = 200, 
+                                 verbose = TRUE) {
+  
+  n <- length(pmids)
+  
+  abstracts <- setNames(rep("MISSING", 
+                            n), 
+                        pmids
+                        )  # initialize result
+  
+  # Split PMIDs into batches
+  batches <- split(pmids, 
+                   ceiling(seq_along(pmids)/batch_size)
+                   )
+  
+  for(i in seq_along(batches)) {
+    
+    batch_pmids <- batches[[i]]
+    
+    if(verbose) message(sprintf("Fetching batch %d of %d (%d PMIDs)...", 
+                                i, 
+                                length(batches), 
+                                length(batch_pmids)
+                                )
+                        )
+    
+    # Fetch XML
+    xml_data <- entrez_fetch(db = "pubmed", 
+                             id = paste(batch_pmids, 
+                                        collapse = ","), 
+                             rettype = "xml", 
+                             parsed = FALSE
+                             )
+    
+    doc <- read_xml(xml_data)
+    articles <- xml_find_all(doc, ".//PubmedArticle")
+    
+    for(article in articles) {
+      
+      pmid_node <- xml_find_first(article, 
+                                  ".//PMID")
+      
+      pmid <- xml_text(pmid_node)
+      
+      abstract_nodes <- xml_find_all(article, 
+                                     ".//AbstractText")
+      
+      if(length(abstract_nodes) > 0) {
+        abstracts[pmid] <- paste(xml_text(abstract_nodes), 
+                                 collapse = " ")
+      }
+    }
+  }
+  
+  return(abstracts)
+}
+
+pmids = unique(pmids)
+abstracts <- get_pubmed_abstracts(pmids)
+
+pmids <- pmids[abstracts != "MISSING"]
+abstracts <- abstracts[abstracts != "MISSING"]
+
+# Loop through abstracts and write each to a file
+for (i in seq_along(abstracts)) {
+  file_name <- paste0(here::here("output/abstracts/"), pmids[i], ".txt")
+  writeLines(abstracts[i], file_name)
+}
+
+```
+
