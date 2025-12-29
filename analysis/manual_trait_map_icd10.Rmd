@@ -5,6 +5,8 @@ date: "2025-10-03"
 output: html_document
 ---
 
+## Set up 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -25,13 +27,35 @@ library(stringr)
 
 phecodes <- fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
 
+icd_desc_map =
+  phecodes |>
+  select(icd10_code = ICD10, 
+         icd_description = ICD_DESCRIPTION
+         )
+
+icd_desc_map =
+  icd_desc_map |>
+  distinct()
+
+# if more than one ICD10 code per phecode, collapse into a single row
+icd_desc_map =
+  icd_desc_map |>
+group_by(icd10_code) |>
+  summarise(icd_description = 
+            str_flatten(unique(icd_description),
+                        collapse = "; ", 
+                        na.rm = T))
+
+
 ```
 
 Manual mapping completed using: WHO ICD-10 2019 https://icd.who.int/browse10/2019
 
 # Manual mapping of GWAS traits to ICD 10
 
-```{r create_manual_mapping_table}
+Not evaluated now that the manual mapping has been completed, but kept here for record.
+
+```{r create_manual_mapping_table, eval = F}
 
 collected_all_disease_terms = c("alcoholic liver cirrhosis",
                                 "alcoholic pancreatitis",
@@ -785,36 +809,38 @@ to_add = data.frame(collected_all_disease_terms,
 to_add = to_add |>
   rename(mapped_trait = collected_all_disease_terms)
 
+
+```
+
+
+# Get ICD-10 Descriptions 
+
+```{r}
+
+to_add = 
+  readxl::read_xlsx(here::here("data/icd/manual_disease_icd10_mappings.xlsx")
+)
+
 # Expand multiple ICD codes into rows
 to_add_expanded <- to_add |>
   mutate(icd10_code = str_split(icd10_code, ",\\s*")) |>
   tidyr::unnest(icd10_code)
 
+to_add_expanded <-
+  to_add_expanded |>
+  select(-icd_description)
 
-icd_desc_map =
-  phecodes |>
-  select(icd10_code = ICD10, 
-         icd_description = ICD_DESCRIPTION
-         )
+```
 
-icd_desc_map =
-  icd_desc_map |>
-  distinct()
 
-# if more than one ICD10 code per phecode, collapse into a single row
-icd_desc_map =
-  icd_desc_map |>
-group_by(icd10_code) |>
-  summarise(icd_description = 
-            str_flatten(unique(icd_description),
-                        collapse = "; ", 
-                        na.rm = T))
+```{r join_with_icd_descriptions}
 
 
 # Join with phecodes to get descriptions
 to_add_expanded <- to_add_expanded |>
-  left_join(icd_desc_map |> select(icd10_code, 
-                                   icd_description),
+  left_join(icd_desc_map |> 
+              select(icd10_code, 
+              icd_description),
             by = c("icd10_code"))
 
 # if ICD10 code O26.6, then icd_description
@@ -980,6 +1006,139 @@ to_add_expanded <- to_add_expanded |>
                                   "Multiple system atrophy, cerebellar type [MSA-C]",
                                   icd_description))
 
+
+icd_descriptions_df <- data.frame(
+  icd10_code = c("L30",
+                 "F05",
+                 "F11",
+                 "F12",
+                 "F13",
+                 "F14",
+                 "F15",
+                 "F16",
+                 "F17",
+                 "F18",
+                 "F19",
+                 "A97",
+                 "C44",
+                 "C80.9",
+                 "O14",
+                 "G45",
+                 "E12.0",
+                 "E12.4",
+                 "E12.6",
+                 "O36",
+                 "O68",
+                 "O98.7",
+                 "R73",
+                 "A56.1",
+                 "A63",
+                 "B15",
+                 "B20",
+                 "B21",
+                 "B23.1",
+                 "C94.6",
+                 "D31",
+                 "E01",
+                 "E03",
+                 "E04",
+                 "Z35",
+                 "D37",
+                 "D38",
+                 "K22.7",
+                 "M73.1",
+                 "N73",
+                 "Z11.4",
+                 "Z20.6",
+                 "N74.8",
+                 "F41",
+                 "Z82.4",
+                 "D47",
+                 "D48",
+                 "B23",
+                 "N43",
+                 "M79.7",
+                 "Z88",
+                 "I62",
+                 "C21",
+                 "C26",
+                 "B22",
+                 "D43",
+                 "K74",
+                 "N39"
+                 ),
+  icd_description = c("Other dermatitis", 
+                      "Delirium, not induced by alcohol and other psychoactive substances",
+                      "Mental and behavioural disorders due to use of opioids",
+                      "Mental and behavioural disorders due to use of cannabinoids",
+                      "Mental and behavioural disorders due to use of sedatives or hypnotics",
+                      "Mental and behavioural disorders due to use of cocaine",
+                      "Mental and behavioural disorders due to use of other stimulants, including caffeine",
+                      "Mental and behavioural disorders due to use of hallucinogens",
+                      "Mental and behavioural disorders due to use of tobacco",
+                      "Mental and behavioural disorders due to use of volatile solvents",
+                      "Mental and behavioural disorders due to multiple drug use and use of other psychoactive substances",
+                      "Dengue",
+                      "Other malignant neoplasms of skin",
+                      "Malignant neoplasm, primary site unspecified",
+                      "Pre-eclampsia",
+                      "Transient cerebral ischaemic attacks and related syndromes",
+                      "Malnutrition-related diabetes mellitus, with coma",
+                      "Malnutrition-related diabetes mellitus, with neurological complications",
+                      "Malnutrition-related diabetes mellitus, with other specified complications",
+                      "Maternal care for other known or suspected fetal problems",
+                      "Labour and delivery complicated by fetal stress [distress]",
+                      "Human immunodeficiency virus [HIV] disease complicating pregnancy, childbirth and the puerperium",
+                      "Elevated blood glucose level",
+                      "Chlamydial infection of pelviperitoneum and other genitourinary organs",
+                      "Other predominantly sexually transmitted diseases, not elsewhere classified",
+                      "Acute hepatitis A",
+                      "Human immunodeficiency virus [HIV] disease resulting in infectious and parasitic diseases",
+                      "Human immunodeficiency virus [HIV] disease resulting in malignant neoplasms",
+                      "HIV disease resulting in (persistent) generalized lymphadenopathy",
+                      "Myelodysplastic and myeloproliferative disease, not elsewhere classified",
+                      "Benign neoplasm of eye and adnexa",
+                      "Iodine-deficiency-related thyroid disorders and allied conditions",
+                      "Other hypothyroidism",
+                      "Other nontoxic goitre",
+                      "Supervision of high-risk pregnancy",
+                      "Neoplasm of uncertain or unknown behaviour of oral cavity and digestive organs",
+                      "Neoplasm of uncertain or unknown behaviour of middle ear and respiratory and intrathoracic organs",
+                      "Barrett oesophagus",
+                      "Syphilitic bursitis",
+                      "Other female pelvic inflammatory diseases",
+                      "Special screening examination for human immunodeficiency virus [HIV]",
+                      "Contact with and exposure to human immunodeficiency virus [HIV]",
+                      "Female pelvic inflammatory disorders in other diseases classified elsewhere",
+                      "Other anxiety disorders",
+                      "Family history of ischaemic heart disease and other diseases of the circulatory system",
+                      "Other neoplasms of uncertain or unknown behaviour of lymphoid, haematopoietic and related tissue",
+"Neoplasm of uncertain or unknown behaviour of other and unspecified sites",
+"Human immunodeficiency virus [HIV] disease resulting in other conditions",
+"Hydrocele and spermatocele",
+"Fibromyalgia",
+"Personal history of allergy to drugs, medicaments and biological substances",
+"Other nontraumatic intracranial haemorrhage",
+"Malignant neoplasm of anus and anal canal",
+"Malignant neoplasm of other and ill-defined digestive organs",
+"Human immunodeficiency virus [HIV] disease resulting in other specified diseases",
+"Neoplasm of uncertain or unknown behaviour of meninges",
+"Fibrosis and cirrhosis of liver",
+"Other disorders of urinary system"
+                      )
+)
+
+to_add_expanded <-
+  to_add_expanded |>
+  rows_patch(icd_descriptions_df, by = "icd10_code")
+
+
+```
+
+# Save ICD-10 to trait/disease mapping file
+
+```{r save_icd10_mappings}
+
 # Collapse back into one row per disease
 to_add_with_desc <- to_add_expanded |>
   group_by(mapped_trait) |>
@@ -992,7 +1151,6 @@ to_add_with_desc <- to_add_expanded |>
 to_add_with_desc = 
   to_add_with_desc |>
   arrange(mapped_trait)
-
 
 to_add_with_desc |>
   writexl::write_xlsx(here::here("data/icd/manual_disease_icd10_mappings.xlsx"))
