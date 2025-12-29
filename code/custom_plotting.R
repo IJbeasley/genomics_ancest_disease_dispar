@@ -11,7 +11,6 @@ ancestry_colors <- c(
   "Other" = "#F781BF",
   "Multiple" = "#999999",
   "Not reported" = "black"
-
 )
 
 
@@ -105,14 +104,14 @@ group_ancestry_fn = function(study_ancest){
 # Set up custom theme for ggplots
 custom_theme <-
   list(
-    theme_bw() +
+    theme_bw(base_size = 20) +
       theme(
         panel.border = element_blank(),
         axis.line = element_line(),
-        text = element_text(size = 16),
-        legend.position = "bottom",
-        strip.background = element_blank(),
-        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+        #text = element_text(size = 16),
+        legend.position = "right",
+        strip.background = element_blank()
+        #axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
       )
   )
 
