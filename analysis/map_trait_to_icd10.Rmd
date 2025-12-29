@@ -1,4 +1,3 @@
----
 title: "Mapping GWAS traits to ICD 10"
 author: "Isobel Beasley"
 date: "2025-09-26"
@@ -1554,6 +1553,43 @@ arrange(desc(n))
 
 ### Prepare / fix disease mappings 
 
+### Fixing where single number is mapped as a range:
+
+```{r}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = sub("^([^-]+)-\\1$", "\\1", icd10_code))
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "C50-C50.9",
+    replacement = "C50"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F30-F39.9",
+    replacement = "F30"
+    )
+  )
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F99-F99.9",
+    replacement = "F99"
+    )
+  )
+
+```
+
 #### Fixing multiple ICD10 codes missing commas
 
 ```{r prepare_disease_mappings}
@@ -1575,6 +1611,244 @@ disease_mapping =
     replacement = "G47.8, G47.9"
     )
   )
+
+```
+
+#### Correcting for letters after numbers in ICD-10 codes
+
+```{r}
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "J09.X",
+    replacement = "J09"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "G40.A",
+    replacement = "G40"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "G20.A1",
+    replacement = "G20"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "G20.C",
+    replacement = "G20"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F32.A",
+    replacement = "F32"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "S06.0X",
+    replacement = "S06.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "S06.0XA",
+    replacement = "S06.0"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "S06.0A",
+    replacement = "S06.0"
+    )
+    ) 
+
+```
+
+#### Correcting ranges created by UMLS codes:
+
+```{r correct_umls_ranges}
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "A15-A19.9|A15-A19",
+    replacement = paste0("A", 15:19, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "A50-A64.9|A50-A64",
+    replacement = paste0("A", 50:64, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "B20-B24.9",
+    replacement = paste0("B", 20:24, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "C60-C63.9|C60-C63",
+    replacement = paste0("C", 60:63, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "D80-D89",
+    replacement = paste0("D", 80:89, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E00-E07.9|E00-E07",
+    replacement = paste0("E0", 0:7, collapse = ", ")
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E08-E13",
+    replacement = "E08, E09, E10, E11, E12, E13"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "F30-F39",
+    replacement = paste0("F", 30:39, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "G00-G99.9|G00-G99",
+    replacement = paste0(
+                  paste0("G0", 0:9, collapse = ", "),
+                  paste0("G", 10:99, collapse = ", "),
+                  collapse = ","
+    )
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I20-I25.9|I20-I25",
+    replacement = paste0("I", 20:25, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I60-I69.9|I60-I69",
+    replacement = paste0("I", 60:69, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "K40-K46.9|K40-K46",
+    replacement = paste0("K", 40:46, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "L00-L08.9|L00-L08",
+    replacement = paste0("L0", 0:8, collapse = ", ")
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "L00-L99.9|L00-L99",
+    replacement = paste0(paste0("L0", 0:9, collapse = ", "),
+                         paste0("L", 10:99, collapse = ", "),
+                         collapse = ","
+    )
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N20-N23.9|N20-N23",
+    replacement = paste0("N", 20:23, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "X71-X83",
+    replacement = paste0("X", 71:83, collapse = ", ")
+    )
+    ) 
+
 
 ```
 
@@ -2390,6 +2664,24 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
+    pattern = "U80",
+    replacement = "U82"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "W44.9",
+    replacement = "W44"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
     pattern = "Z86.79",
     replacement = "Z86.7"
     )
@@ -2427,7 +2719,7 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
-    pattern = "Z87.891.",
+    pattern = "Z87.828.",
     replacement = "Z87.8"
     )
     ) 
@@ -2436,19 +2728,13 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
-    pattern = "W44.9",
-    replacement = "W44"
+    pattern = "Z87.891.",
+    replacement = "Z87.8"
     )
     ) 
 
-disease_mapping = 
-  disease_mapping |> 
-    mutate(icd10_code = str_replace_all(
-    icd10_code,
-    pattern = "U80",
-    replacement = "U82"
-    )
-    ) 
+
+
 
 disease_mapping =
   disease_mapping |>
