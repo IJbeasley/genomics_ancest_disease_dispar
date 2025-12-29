@@ -67,9 +67,9 @@ disease_mapping <- gwas_study_info |>
   select(`DISEASE/TRAIT`, 
          collected_all_disease_terms, 
          PUBMED_ID,
+         YEAR,
          STUDY_ACCESSION) |>
   distinct()
-
 
 disease_mapping =
   disease_mapping |>
@@ -77,7 +77,6 @@ disease_mapping =
 
 print("Number of unique disease trait & study pairs")
 nrow(disease_mapping)
-
 
 diseases <- stringr::str_split(pattern = ", ",
                                gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |>
@@ -2926,7 +2925,11 @@ gwas_study_info =
 
 disease_mapping = 
   disease_mapping |> 
-  arrange(collected_all_disease_terms, icd10_code)
+  arrange(YEAR,
+          PUBMED_ID,
+          STUDY_ACCESSION,
+          collected_all_disease_terms, 
+          icd10_code)
 
 fwrite(disease_mapping,
        here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
