@@ -1295,153 +1295,10 @@ disease_mapping =
              manual_icd10_map,
              unmatched = "ignore")
 
-```
-
-## Additional manual mapping 
-
-```{r additional_manual_mappings, eval = F}
-
 disease_mapping =
   disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "toxicity" & 
-                            grepl("Anthracycline-induced cardiotoxicity|Trastuzumab-induced cardiotoxicity", `DISEASE/TRAIT`, ignore.case = T),
-                            "I42.7, T45.1",
-                             icd10_code)) |>
-mutate(icd10_code_origin = 
-         ifelse(collected_all_disease_terms == "toxicity" & 
-                  grepl("Anthracycline-induced cardiotoxicity|Trastuzumab-induced cardiotoxicity", `DISEASE/TRAIT`, ignore.case = T),
-                "Manual Mapping (from DISEASE/TRAIT)",
-                icd10_code_origin)
-         )
-
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "toxicity" & 
-                            grepl("Induration at the injection site after COVID-19", `DISEASE/TRAIT`, ignore.case = T),
-                            "R23.4",
-                             icd10_code)) |>
-  mutate(collected_all_disease_terms = 
-           ifelse(collected_all_disease_terms == "toxicity" & 
-                    grepl("Induration at the injection site after COVID-19", `DISEASE/TRAIT`, ignore.case = T),
-                  "induration of skin",
-                  collected_all_disease_terms)) |>
-  mutate(icd10_code_origin =
-           ifelse(collected_all_disease_terms == "induration of skin",
-                  "Manual Mapping (from DISEASE/TRAIT)",
-                  icd10_code_origin)
-         )
-
-
-# N64.5
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "toxicity" & 
-                            grepl("Induration \\(>= grade 2\\) in breast cancer treated with radiotherapy", 
-                                  `DISEASE/TRAIT`, ignore.case = T),
-                            "N64.5",
-                             icd10_code)) |>
-  mutate(collected_all_disease_terms = 
-           ifelse(collected_all_disease_terms == "toxicity" & 
-                    grepl("Induration \\(>= grade 2\\) in breast cancer treated with radiotherapy", 
-                          `DISEASE/TRAIT`, ignore.case = T),
-                  "induration of breast",
-                  collected_all_disease_terms)) |>
-  mutate(icd10_code_origin =
-           ifelse(collected_all_disease_terms == "induration of breast",
-                  "Manual Mapping (from DISEASE/TRAIT)",
-                  icd10_code_origin)
-         )
-
-
-# T45.1
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "toxicity" & 
-                            grepl("Nivolumab-induced immune-related adverse events in cancer|Response to immune checkpoint inhibitors in melanoma", 
-                                  `DISEASE/TRAIT`, ignore.case = T),
-                            "T45.1",
-                             icd10_code)) |>
-  mutate(icd10_code_origin =
-           ifelse(collected_all_disease_terms == "toxicity" & 
-                    grepl("Nivolumab-induced immune-related adverse events in cancer|Response to immune checkpoint inhibitors in melanoma", 
-                          `DISEASE/TRAIT`, ignore.case = T),
-                  "Manual Mapping (from DISEASE/TRAIT)",
-                  icd10_code_origin)
-         )
-
-
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "toxicity" & 
-                            grepl("Methotrexate-related central neurotoxicity in children treated for acute lymphoblastic leukemia", 
-                                  `DISEASE/TRAIT`, ignore.case = T),
-                            "G92, T45.1",
-                             icd10_code)) |>
-  mutate(icd10_code_origin =
-           ifelse(collected_all_disease_terms == "toxicity" & 
-                    grepl("Methotrexate-related central neurotoxicity in children treated for acute lymphoblastic leukemia", 
-                          `DISEASE/TRAIT`, ignore.case = T),
-                  "Manual Mapping (from DISEASE/TRAIT)",
-                  icd10_code_origin)
-         )
-
-## if DISEASE/TRAIT == 	Abnormalities of forces of labour
-## and collected_all_disease_terms == abnormal delivery
-## if icd10_code is missing, map to
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "abnormal delivery" & 
-                            grepl("^Abnormalities of forces of labour$", 
-                                  `DISEASE/TRAIT`, 
-                                  ignore.case = T) &
-                            icd10_code == "",
-                            "O62",
-                             icd10_code)) |>
-  mutate(icd10_code_origin = 
-         ifelse(collected_all_disease_terms == "abnormal delivery" & 
-                  grepl("^Abnormalities of forces of labour$", 
-                        `DISEASE/TRAIT`, 
-                        ignore.case = T),
-                "Manual Mapping (from DISEASE/TRAIT)",
-                icd10_code_origin)
-         )
-
-## if DISEASE/TRAIT == Ischemic heart disease
-## and collected_all_disease_terms == heart disease
-## if icd10_code is missing, map to "I20-I21.6, I21.9-I25.9, Z82.4-Z82.49"
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "heart disease" & 
-                            grepl("^Ischemic heart disease$", 
-                                  `DISEASE/TRAIT`, 
-                                  ignore.case = T) &
-                            icd10_code == "",
-                            "I20-I21.6, I21.9-I25.9, Z82.4-Z82.49",
-                             icd10_code)) |>
-  mutate(icd10_code_origin = 
-         ifelse(collected_all_disease_terms == "heart disease" & 
-                  grepl("^Ischemic heart disease$", 
-                        `DISEASE/TRAIT`, 
-                        ignore.case = T),
-                "Manual Mapping (from DISEASE/TRAIT)",
-                icd10_code_origin)
-         )
-
-
-# if collected_all_disease_terms == "heart disease"
-# and icd10_code is missing
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "heart disease" &
-                            icd10_code == "",
-                            "C34",
-                             icd10_code)) |>
-  mutate(icd10_code_origin = 
-         ifelse(collected_all_disease_terms == "heart disease" &
-                  icd10_code == "C34",
-                "Manual Mapping (collected_all_disease_terms)",
-                icd10_code_origin)
-         )
+  mutate(icd10_code = stringr::str_remove_all(string = icd10_code,
+                                              pattern = ", $"))
 
 ```
 
@@ -1532,7 +1389,6 @@ disease_mapping |>
   nrow()
 
 ```
-
 
 # How was ICD-10 code inferred?
 
@@ -1727,8 +1583,32 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
+    pattern = "C00-C97.9",
+    replacement = paste0(
+                  paste0("C0", 0:9, collapse = ", "),
+                  ", ",
+                  paste0("C", 10:97, collapse = ", "),
+                  collapse = ","
+    )
+    )
+    )
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
     pattern = "C60-C63.9|C60-C63",
     replacement = paste0("C", 60:63, collapse = ", ")
+    )
+    ) 
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "D10-D36.9",
+    replacement = paste0("D", 10:36, collapse = ", ")
     )
     ) 
 
@@ -1764,6 +1644,33 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
+    pattern = "E10-E14.9",
+    replacement = "E10, E11, E12, E13, E14"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E27.1-E27.4",
+    replacement = "E27.1, E27.2, E27.3, E27.4"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "E70-E90.9",
+    replacement = paste0("E", 70:90, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
     pattern = "F30-F39",
     replacement = paste0("F", 30:39, collapse = ", ")
     )
@@ -1776,9 +1683,37 @@ disease_mapping =
     pattern = "G00-G99.9|G00-G99",
     replacement = paste0(
                   paste0("G0", 0:9, collapse = ", "),
+                  ", ",
                   paste0("G", 10:99, collapse = ", "),
                   collapse = ","
     )
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "H40-H42.9|H40-H42",
+    replacement = paste0("H", 40:42, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I00-I02.9|I00-I02",
+    replacement = paste0("I0", 0:2, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I10-I15.9",
+    replacement = paste0("I", 10:15, collapse = ", ")
     )
     ) 
 
@@ -1797,6 +1732,19 @@ disease_mapping =
     icd10_code,
     pattern = "I60-I69.9|I60-I69",
     replacement = paste0("I", 60:69, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "J00-J99.9|J00-J99",
+    replacement = paste0(paste0("J0", 0:9, collapse = ", "),
+                         ", ",
+                         paste0("J", 10:99, collapse = ", "),
+                         collapse = ","
+    )
     )
     ) 
 
@@ -1825,6 +1773,7 @@ disease_mapping =
     icd10_code,
     pattern = "L00-L99.9|L00-L99",
     replacement = paste0(paste0("L0", 0:9, collapse = ", "),
+                         ", ",
                          paste0("L", 10:99, collapse = ", "),
                          collapse = ","
     )
@@ -1835,8 +1784,62 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
+    pattern = "N10-N16",
+    replacement = paste0("N", 10:16, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N17-N19.9",
+    replacement = paste0("N", 17:19, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N18.3-N18.9",
+    replacement = paste0("N18.", 3:9, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
     pattern = "N20-N23.9|N20-N23",
     replacement = paste0("N", 20:23, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N60-N64.9",
+    replacement = paste0("N", 60:64, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "N60-N65",
+    replacement = paste0("N", 60:65, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "O00-O08.9|O00-O08",
+    replacement = paste0("O0", 0:8, collapse = ", ")
     )
     ) 
 
