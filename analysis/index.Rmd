@@ -17,18 +17,15 @@ editor_options:
 
 <br>
 
-## Disease burden statistics
 
--   [Global Burden of Disease Study data - DALYs, deaths etc.](gbd_data_plots.html)
-
-    Global Burden of Disease Study (GBD) global statistics on incidence, prevalence, DALYs (Disability-Adjusted Life Years) and PAF (population Attributable Fraction) for diseases and risk factors.
     
 <br>  
 
-## Disease/trait labels 
+# Find GWAS studies of Lancet Commission Priority Diseases
 
 ```{r include = FALSE}
 
+# function to find and print out number of traits
 n_unique_traits <- function(trait_col){
   
   trait_col = stringr::str_split(pattern = ", ", 
@@ -46,21 +43,35 @@ n_unique_traits <- function(trait_col){
 
 ```
 
-### Categorize GWAS catalogy traits into disease, response etc.
+## Identify GWAS studies of diseases in general
+
+I find GWAS Catalog studies that of diseases, by looking for disease-related EFO ontology mapped terms in the 'MAPPED_TRAIT' column of the GWAS Catalog metadata. I categorize traits into disease, response, measurement etc. using the EFO ontology.
 
 -   [Download trait ontology information](download_ontology.html)
 
 -   [Categorising GWAS traits into disease, response, measurement etc.](trait_ontology_categorization.html)
 
-```{r, echo=FALSE}
+```{r trait_ontology, echo=FALSE}
 
 gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_cat.csv"))
+
+gwas_study_info <-
+  gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T)
+
+print("Number of pubmed ids studying at least one disease")
+gwas_study_info |>
+  dplyr::pull(PUBMED_ID) |>
+  unique() |>
+  length()
 
 n_unique_traits(gwas_study_info$all_disease_terms)
 
 ```
 
-### Harmonizing disease trait labels 
+## Mapping traits to ICD 10 Codes 
+
+Next, for GWAS studies of disease I harmonise disease trait labels to reduce redundancy due to typos, synonyms etc.
 
 -   [Harmonising disease trait labels - typos, synonyms etc.](disease_trait_terms_simplify.html)
 
@@ -72,31 +83,11 @@ n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
 ```
 
--   [Excluding infectious diseases](grouping_infectious_diseases.html)
-
-```{r, echo=FALSE}
-
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered.csv"))
-
-n_unique_traits(gwas_study_info$collected_all_disease_terms)
-
-```
-
-- [Filtering of non-disease, symptom phenotypes etc.](other_disease_filtering.html)
-
-```{r, echo=FALSE}
-
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_disease_trait_filtered_v2.csv"))
-
-n_unique_traits(gwas_study_info$collected_all_disease_terms)
-
-```
-
 -   [Grouping cancer disease traits (removing disease subtypes etc)](group_cancer_diseases.html)
 
 ```{r, echo=FALSE}
 
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_group.csv"))
+gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_cancer_group.csv"))
 
 n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
@@ -106,30 +97,32 @@ n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
 ```{r, echo=FALSE}
 
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_group_v2.csv"))
+gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_all_group.csv"))
 
 n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
 ```
 
-### Mapping traits to ICD 10 Codes 
+### Now: Mapping traits to ICD 10 Codes 
 
--  [Manually mapped traits - from WHO ICD-10 2019](manual_trait_map_icd10.html)
+Then, I map the harmonised disease trait labels to ICD-10 codes, by the following step-wise procedure:
+1. Where available, extract author provided ICD-10 Codes in GWAS Catalog DISEASE/TRAIT metadata
+2. Where available, extract author provided PheCodes in GWAS Catalog DISEASE/TRAIT metadata
+3. Where author provided PheCodes are available, map PheCode to ICD-10 codes using PheWAS map, and manually confirmed PheCode to ICD-10cm mappings (from https://phenomics.va.ornl.gov/phecodemap/).
+4. If author provided ICD-10 or PheCodes are not available, match `DISEASE/TRAIT` labels to ICD-10 and PheCode code descriptions
+4. Remap remaining unmapped traits are manually mapped with the help of ICD-10 codes of studies of the same disease, and the WHO ICD-10 2019 index (https://icd.who.int/browse10/2019). 
+
+The final map of disease traits to ICD-10 codes is produce
 
 -  [Mapping all traits to ICD-10 codes - automatic + manual method](map_trait_to_icd10.html)
 
--   [Grouping disease traits to match Global Burden of Disease Study Groupings](level_2_disease_group.html)
-
-```{r, echo=FALSE}
-
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
-
-n_unique_traits(gwas_study_info$l2_all_disease_terms)
-
-```
-
+-  [Manually mapped traits - from WHO ICD-10 2019](manual_trait_map_icd10.html)
 
 <br>
+
+## Get Lancet Commission Priority Diseases
+
+- [Matching GWAS traits to GBD causes / diseases](gwas_to_gbd.html)
 
 
 ## Cohort labels 
@@ -146,9 +139,11 @@ Allowing us to deal with overlapping samples.
 
 ### Text mining stratergies (for labelling other cohorts)
 
--  [Getting + initial labelling of abstracts from GWAS Catalog studies](test_for_cohort_labels.html)
+- [Get abstracts from GWAS Catalog](get_abstracts.html)
 
 -  [Getting + initial analysis of full-text of GWAS Catalog articles](get_full_text.html)
+
+-  [Getting + initial labelling of abstracts from GWAS Catalog studies](test_for_cohort_labels.html)
 
 ### Other investigations 
 
@@ -170,20 +165,38 @@ Allowing us to deal with overlapping samples.
 
 
 <br>
+<br>
 
-## Paper citation metrics
+# Investigation analyses
 
--  [iCite - citation metrics for GWAS Catalog Papers](icite_rcr.html)
+## Disease burden statistics
 
-    Replicating Reales & Wallace, 2023 - sharing gwas data results in more citations
+-   [Global Burden of Disease Study data - DALYs, deaths etc.](gbd_data_plots.html)
+
+    Global Burden of Disease Study (GBD) global statistics on incidence, prevalence, DALYs (Disability-Adjusted Life Years) and PAF (population Attributable Fraction) for diseases and risk factors.
+
 
 <br>
 <br>
 
 ## Archived / not currently being used:
 
--   [Harmonising trait labels](collapse_traits.html)
+### Paper citation metrics
+
+-  [iCite - citation metrics for GWAS Catalog Papers](icite_rcr.html)
+
+    Replicating Reales & Wallace, 2023 - sharing gwas data results in more citations
+
+### Old grouping / filtering disease traits pages:
+
+-   [Excluding infectious diseases](grouping_infectious_diseases.html)
+
+- [Filtering of non-disease, symptom phenotypes etc.](other_disease_filtering.html)
+
+-   [Grouping cancer disease traits (removing disease subtypes etc)](level_1_disease_group_cancer.html)
 
 -   [Grouping non-cancer disease traits (removing disease subtypes etc)](level_1_disease_group_non_cancer.html)
+
+-   [Match GWAS studies to Global Burden of Disease Study Groupings](level_2_disease_group.html)
 
 
