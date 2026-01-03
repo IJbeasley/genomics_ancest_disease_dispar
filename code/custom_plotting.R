@@ -133,3 +133,44 @@ add_final_totals <- function(ancestry_df){
 
 
 }
+
+# Add final totals, for reversed axis:
+add_final_totals_reversed <- function(ancestry_df){
+
+  min_date = ancestry_df |>
+             ungroup() |>
+             pull(DATE) |>
+             min()
+
+  ancestry_df_totals = ancestry_df |>
+    dplyr::group_by(ancestry_group) |>
+    slice_max(order_by = ancest_cumsum, n = 1, with_ties = F) |>
+    #dplyr::summarise(ancest_cumsum = max(ancest_cumsum), .groups = "drop") |>
+    dplyr::mutate(DATE = min_date) |>
+    dplyr::ungroup()
+
+  ancestry_df = bind_rows(ancestry_df,
+                          ancestry_df_totals)
+
+  max_date = ancestry_df |>
+    ungroup() |>
+    pull(DATE) |>
+    max()
+
+  #max_date = lubridate::rollforward(max_date)
+
+  # add a O tally
+  start_tally =
+  ancestry_df |>
+    select(ancestry_group) |>
+    distinct() |>
+    mutate(ancest_cumsum = 0,
+           DATE = max_date)
+
+  ancestry_df = bind_rows(start_tally,
+                          ancestry_df)
+
+
+  return(ancestry_df)
+
+}
