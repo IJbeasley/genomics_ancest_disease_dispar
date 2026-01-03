@@ -745,6 +745,13 @@ disease_mapping =
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, "Biological Sibling: ")) |>
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, "Biological Mother: "))
 
+# illnesses of father - 
+disease_mapping =
+  disease_mapping |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, "Illnesses of father - ")) |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, "Illnesses of mother - ")) |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, "Illnesses of siblings - "))
+
 ```
 
 
@@ -1117,11 +1124,35 @@ disease_trait_umls  <-
   distinct() |>
   mutate(icd10_code_origin = "UMLS term match")
 
+
  disease_mapping <-
   disease_mapping |>
   mutate(`DISEASE/TRAIT` = tolower(`DISEASE/TRAIT`)) |>
   rows_patch(disease_trait_umls,
              by = "DISEASE/TRAIT")
+ 
+ 
+# remove pubmed id: 27197191
+# in this one, disease/trait = "cancer", but specific cancers tested
+# are listed in collected_all_disease_terms - so will only
+# match collected_all_disease_terms later (not disease/trait terms)
+
+ disease_mapping  = 
+  disease_mapping  |>
+  mutate(
+    icd10_code  = ifelse(PUBMED_ID == 27197191,
+           NA,
+           icd10_code
+           )
+         ) |>
+  mutate(
+   icd10_code_origin = ifelse(PUBMED_ID == 27197191,
+          NA,
+          icd10_code_origin
+          ) 
+  )
+ 
+
 
 ```
 
@@ -1597,6 +1628,23 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
+    pattern = "C00-D48.9",
+    replacement = paste0(
+                  paste0("C0", 0:9, collapse = ", "),
+                  ", ",
+                  paste0("C", 10:90, collapse = ", "),
+                  ", ",
+                  paste0("D", 0:9, collapse = ", "),
+                  ", ",
+                  paste0("D", 10:48, collapse = ", "),
+                  collapse = ",")
+    )
+    )
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
     pattern = "C60-C63.9|C60-C63",
     replacement = paste0("C", 60:63, collapse = ", ")
     )
@@ -1761,6 +1809,15 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
+    pattern = "K70-K77.9|K70-K77",
+    replacement = paste0("K", 70:77, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
     pattern = "L00-L08.9|L00-L08",
     replacement = paste0("L0", 0:8, collapse = ", ")
     )
@@ -1777,6 +1834,64 @@ disease_mapping =
                          paste0("L", 10:99, collapse = ", "),
                          collapse = ","
     )
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M00-M25.9",
+    replacement = paste0(paste0("M0", 0:9, collapse = ", "),
+                         ", ",
+                         paste0("M", 10:25, collapse = ", "),
+                         collapse = ","
+    )
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M15-M19",
+    replacement = paste0("M", 15:19, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M15-M19",
+    replacement = paste0("M", 15:19, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M30-M36",
+    replacement = paste0("M", 30:36, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M45-M49.9|M45-M49",
+    replacement = paste0("M", 45:49, collapse = ", ")
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "M60-M79.9",
+    replacement = paste0("M", 60:79, collapse = ", ")
     )
     ) 
 
@@ -3211,6 +3326,10 @@ gwas_study_info =
 ### Save disease map
 
 ```{r save_disease_mapping}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = sub("^([^-]+)-\\1$", "\\1", icd10_code))
 
 disease_mapping = 
   disease_mapping |> 
