@@ -174,9 +174,173 @@ gwas_study_info |>
 
 ## Correcting some MAPPED_TRAIT (MAPPED by GWAS Catalog) terms
 
+## Add to DISEASE/TRAIT
+
+```{r add_to_disease_trait}
+
+# pubmed id: 35240980
+# DISEASE/TRAIT == "Cognitive impairment among children born extremely preterm"
+gwas_study_info =
+  gwas_study_info |>
+  mutate(`DISEASE/TRAIT` = ifelse(PUBMED_ID == 35240980,
+                                "Cognitive impairment among children born extremely preterm",
+                                `DISEASE/TRAIT`)
+         )
+
+# study accession: GCST90624363
+# DISEASE/TRAIT == "Lyme borreliosis"
+gwas_study_info =
+  gwas_study_info |>
+  mutate(`DISEASE/TRAIT` = ifelse(STUDY_ACCESSION == "GCST90624363",
+                                "Lyme borreliosis",
+                                `DISEASE/TRAIT`)
+         )
+
+# pubmed id: 38509478
+# Nausea and vomiting during pregnancy
+gwas_study_info =
+  gwas_study_info |>
+  mutate(`DISEASE/TRAIT` = ifelse(PUBMED_ID == 38509478,
+                                "Nausea and vomiting during pregnancy",
+                                `DISEASE/TRAIT`)
+         )
+
+```
+
 ### Re-map some traits based on DISEASE/TRAIT
 
 ```{r fix_bad_mapping}
+
+## pubmed id: 34737426
+# mapped_trait = benign neoplasm
+# but should be cervical carcinoma, 	EFO_0001061
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 34737426 & 
+                                MAPPED_TRAIT == "benign neoplasm",
+                               "cervical carcinoma",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 34737426 & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/MONDO_0021230",
+                                     "http://www.ebi.ac.uk/efo/EFO_0001061",
+                                     MAPPED_TRAIT_URI)
+           )
+
+# Capecitabine-induced hand-foot syndrome in breast or colorectal cancer
+
+  gwas_study_info =
+      gwas_study_info  |>
+  mutate(
+    MAPPED_TRAIT = 
+      ifelse(grepl("Capecitabine-induced hand-foot syndrome in breast or colorectal cancer", `DISEASE/TRAIT`),
+         "breast cancer, colorectal cancer, hand-foot syndrome",
+         MAPPED_TRAIT
+         ),
+    MAPPED_TRAIT_URI = 
+      ifelse(grepl("Capecitabine-induced hand-foot syndrome in breast or colorectal cancer", `DISEASE/TRAIT`),
+         "http://purl.obolibrary.org/obo/MONDO_0007254, http://purl.obolibrary.org/obo/MONDO_0005575, http://purl.obolibrary.org/obo/MONDO_0700048",
+         MAPPED_TRAIT_URI
+         )
+  )
+  
+
+# STUDY ACCESSION: GCST90043814
+# MAPPED_TRAIT == "disease" 
+# replace with otitis media
+# EFO_0004992
+  
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST90043814" & 
+                                MAPPED_TRAIT == "disease",
+                               "otitis media",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST90043814" & 
+                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0000408",
+                                     "http://www.ebi.ac.uk/efo/EFO_0004992",
+                                     MAPPED_TRAIT_URI)
+           )
+
+# GCST90244761
+# remove MAPPED_BACKGROUND_TRAIT and MAPPED_BACKGROUND_TRAIT_URI
+# (which were just 'disease')
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(STUDY_ACCESSION == "GCST90244761",
+                                         "",
+                                         MAPPED_BACKGROUND_TRAIT)
+         ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST90244761",
+                                                "",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
+
+
+# GCST001789
+# replace MAPPED_TRAIT from "bronchopulmonary dysplasia"
+# to "blood high density lipoprotein particle diameter"
+# and MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/CMO_0002692"
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST001789" & 
+                                MAPPED_TRAIT == "bronchopulmonary dysplasia",
+                               "blood high density lipoprotein particle diameter",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST001789" & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/MONDO_0019091",
+                                     "http://purl.obolibrary.org/obo/CMO_0002692",
+                                     MAPPED_TRAIT_URI)
+           )
+  
+# GCST011663
+# replace MAPPED_TRAIT from "decreased susceptibility to bacterial infection"
+# to "tuberculosis"
+# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST011663" & 
+                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
+                               "tuberculosis",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST011663" & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/NCIT_C142500",
+                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
+                                     MAPPED_TRAIT_URI)
+           )
+
+
+# GCST004690
+# replace MAPPED_TRAIT from "decreased susceptibility to bacterial infection"
+# to "tuberculosis"
+# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
+# MAPPED_BACKGROUND_TRAIT to "hiv infection" 
+# MAPPED_BACKGROUND_TRAIT_URI to "http://purl.obolibrary.org/obo/NCIT_C3108"
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST004690" & 
+                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
+                               "tuberculosis",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST004690" & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/NCIT_C142500",
+                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
+                                     MAPPED_TRAIT_URI)
+           ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT = ifelse(STUDY_ACCESSION == "GCST004690",
+                                           "hiv infection",
+                                           MAPPED_BACKGROUND_TRAIT)
+           ) |>
+    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST004690",
+                                                "http://purl.obolibrary.org/obo/NCIT_C3108",
+                                                MAPPED_BACKGROUND_TRAIT_URI)
+           )
 
 # Periodontal disease related phenotype
 # set trait to periodontal disorder
