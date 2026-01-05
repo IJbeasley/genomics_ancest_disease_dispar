@@ -1290,6 +1290,105 @@ disease_mapping <-
 
 # Manual mapping of GWAS traits to ICD 10
 
+## hepatitis B, where related to vaccine respone
+
+Map to chronic hepatitis B, and acute hepatitis B
+
+```{r}
+
+# collected_all_disease_terms = "hepatitis b"
+# & disease/trait contains "hepatitis B vaccine"
+disease_mapping =
+  disease_mapping |>
+  mutate(
+    icd10_code = ifelse(
+      collected_all_disease_terms == "hepatitis b" &
+        str_detect(tolower(`DISEASE/TRAIT`), "hepatitis b vaccine"),
+      "B16.0, B16.1, B16.2, B16.9, B18.0, B18.1, B18.2, B18.8, B18.9",
+      icd10_code
+    )
+  ) |>
+  mutate(
+    icd10_code_origin = ifelse(
+      collected_all_disease_terms == "hepatitis b" &
+        str_detect(tolower(`DISEASE/TRAIT`), "hepatitis b vaccine"),
+      "Manual Mapping (collected_all_disease_terms + DISEASE/TRAIT)",
+      icd10_code_origin
+    )
+  )
+
+```
+
+## influenza a (h1n1) -> J10
+
+```{r}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(
+    icd10_code = ifelse(
+      collected_all_disease_terms == "influenza a (h1n1)",
+      "J10",
+      icd10_code
+    )
+  ) |>
+  mutate(
+    icd10_code_origin = ifelse(
+      collected_all_disease_terms == "influenza a (h1n1)",
+      "Manual Mapping (collected_all_disease_terms)",
+      icd10_code_origin
+    )
+  )
+
+```
+
+## suicide -> X60-X84
+
+```{r}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(
+    icd10_code = ifelse(
+      collected_all_disease_terms == "suicide",
+      paste0("X", 60:84, collapse = ", "), 
+      icd10_code
+    )
+  ) |>
+  mutate(
+    icd10_code_origin = ifelse(
+      collected_all_disease_terms == "suicide",
+      "Manual Mapping (collected_all_disease_terms)",
+      icd10_code_origin
+    )
+  )
+
+```
+
+## osteoarthritis of hand -> M19.0 
+
+```{r}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(
+    icd10_code = ifelse(
+      collected_all_disease_terms == "osteoarthritis of hand",
+      "M19.0",
+      icd10_code
+    )
+  ) |>
+  mutate(
+    icd10_code_origin = ifelse(
+      collected_all_disease_terms == "osteoarthritis of hand",
+      "Manual Mapping (collected_all_disease_terms)",
+      icd10_code_origin
+    )
+  )
+
+
+```
+
 ```{r create_manual_mapping_table}
 
 manual_icd10_map <-
@@ -1440,7 +1539,7 @@ arrange(desc(n))
 
 ### Prepare / fix disease mappings 
 
-### Fixing where single number is mapped as a range:
+#### Fixing where single number is mapped as a range
 
 ```{r}
 
@@ -1504,13 +1603,14 @@ disease_mapping =
 #### Correcting for letters after numbers in ICD-10 codes
 
 ```{r}
-
+# ICD-10 cm conversion to ICD-10 WHO
+# from here: https://seer.cancer.gov/tools/conversion/2026/ICD10CM-to-ICD10.FY2026.pdf
 disease_mapping = 
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
-    pattern = "J09.X",
-    replacement = "J09"
+    pattern = "D3A.8",
+    replacement = "D36.7"
     )
     ) 
 
@@ -1518,8 +1618,8 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
-    pattern = "G40.A",
-    replacement = "G40"
+    pattern = "F32.A",
+    replacement = "F32"
     )
     ) 
 
@@ -1545,10 +1645,30 @@ disease_mapping =
   disease_mapping |> 
     mutate(icd10_code = str_replace_all(
     icd10_code,
-    pattern = "F32.A",
-    replacement = "F32"
+    pattern = "G40.A",
+    replacement = "G40"
     )
     ) 
+
+# resistant hypertension to hypertension codes
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "I1A.0",
+    replacement = "I10, I11, I12, I13, I15"
+    )
+    ) 
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "J09.X",
+    replacement = "J09"
+    )
+    ) 
+
 
 disease_mapping = 
   disease_mapping |> 
@@ -1579,7 +1699,7 @@ disease_mapping =
 
 ```
 
-#### Correcting ranges created by UMLS codes:
+#### Correcting ranges created by UMLS codes
 
 ```{r correct_umls_ranges}
 
@@ -1791,6 +1911,21 @@ disease_mapping =
     replacement = paste0(paste0("J0", 0:9, collapse = ", "),
                          ", ",
                          paste0("J", 10:99, collapse = ", "),
+                         collapse = ","
+    )
+    )
+    ) 
+
+
+
+disease_mapping = 
+  disease_mapping |> 
+    mutate(icd10_code = str_replace_all(
+    icd10_code,
+    pattern = "K00-K93.9|K00-K93",
+    replacement = paste0(paste0("K0", 0:9, collapse = ", "),
+                         ", ",
+                         paste0("K", 10:93, collapse = ", "),
                          collapse = ","
     )
     )
