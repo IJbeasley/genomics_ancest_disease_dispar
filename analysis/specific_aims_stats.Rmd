@@ -9,42 +9,260 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Proportion of published papers in the GWAS catalog that include cohort information 
+# Number of papers - for 15 conditions
 
-```{r, message=FALSE, warning=FALSE}
+```{r n_total_papers, message=FALSE, warning=FALSE}
 
-gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
+#gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
 
 gwas_study_info = gwas_study_info |>
   dplyr::rename_with(~ tolower(gsub(" ", "_", .x)))
 
 # how many published studies (i.e. number of unique pubmed ids)
-
 n_published_studies <- gwas_study_info |>
   dplyr::filter(!is.na(pubmed_id)) |>
   dplyr::pull(pubmed_id) |>
   unique() |>
   length()
 
+print("Number of published studies in GWAS Catalog:")
 print(n_published_studies)
 
-# how many published studies include cohort information? 
 
-n_studies_with_cohort_info <- gwas_study_info |>
-  dplyr::mutate(cohort = stringr::str_remove_all(pattern ="(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
-                                                 cohort)) |> 
-  dplyr::filter(cohort != "") |>
+```
+
+# Proportion of published papers in the GWAS catalog that include cohort information 
+
+```{r prop_cohort_info}
+
+gwas_cohort <- data.table::fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
+
+gwas_cohort = gwas_cohort |>
+  dplyr::filter(PUBMED_ID %in% unique(gwas_study_info$pubmed_id))
+
+# how many published studies include cohort information? 
+n_studies_with_cohort_info <- gwas_cohort |>
+  dplyr::filter(COHORT != "") |>
+  dplyr::pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+print("Number of published studies with cohort information:")
+print(n_studies_with_cohort_info)
+
+print("Proportion of published studies with cohort information:")
+100 * n_studies_with_cohort_info / n_published_studies
+
+```
+
+# Proportion of studies with abstracts
+
+```{r prop_abstracts}
+
+downloaded_abstracts <-
+ list.files("output/abstracts") |> 
+  stringr::str_remove_all(".txt$") 
+
+n_studies_with_abstracts <-
+gwas_study_info |>
+  dplyr::filter(pubmed_id %in% downloaded_abstracts) |>
   dplyr::pull(pubmed_id) |>
   unique() |>
   length()
 
-print(n_studies_with_cohort_info)
+print("Number of published studies with abstracts downloaded:")
+print(n_studies_with_abstracts)
 
-100 *n_studies_with_cohort_info / n_published_studies
+print("Proportion of published studies with abstracts downloaded:")
+100 * n_studies_with_abstracts / n_published_studies
+
+print("Number of published studies without abstracts downloaded:")
+print(n_published_studies - n_studies_with_abstracts)
 
 ```
 
-### Percentage of cohort information that includes 'other' or 'multiple'
+# Proportion of studies with full text: 
+
+```{r prop_full_text}
+
+downloaded_fulltexts <-
+list.files(c(here::here("output/fulltexts/ncbi_cloud"),
+              here::here("output/fulltexts/europe_pmc")
+             )
+) |>
+  stringr::str_remove_all(".xml")
+
+convert_pmid_df <- data.table::fread(here::here("data/europe_pmc/PMID_PMCID_DOI.csv"))
+
+downloaded_fulltexts <-
+convert_pmid_df |>
+  dplyr::filter(PMCID %in% downloaded_fulltexts) |>
+  dplyr::pull(PMID) |> 
+  unique() 
+
+n_studies_with_fulltext <-
+gwas_study_info |>
+  dplyr::filter(pubmed_id %in% downloaded_fulltexts) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print("Number of published studies with full text downloaded:")
+print(n_studies_with_fulltext)
+
+print("Proportion of published studies with full text downloaded:")
+100 * n_studies_with_fulltext / n_published_studies
+
+print("Number of published studies without full text downloaded:")
+print(n_published_studies - n_studies_with_fulltext)
+
+```
+
+# Overlap between studies with cohort info and full text 
+
+```{r overlap_cohort_fulltext}
+
+cohort_pubmed_ids <-
+gwas_cohort |>
+  dplyr::filter(COHORT != "") |>
+  dplyr::pull(PUBMED_ID) |>
+  unique() 
+
+fulltext_pubmed_ids <- downloaded_fulltexts
+
+n_studies_with_cohort_and_fulltext <-
+length(intersect(cohort_pubmed_ids, fulltext_pubmed_ids))
+
+print("Number of published studies with cohort information and full text downloaded:")
+print(n_studies_with_cohort_and_fulltext)
+
+print("Proportion of published studies with cohort information that also have full text downloaded:")
+100 * n_studies_with_cohort_and_fulltext / n_studies_with_cohort_info
+
+print("Proportion of published studies with full text downloaded that also have cohort information:")
+100 * n_studies_with_cohort_and_fulltext / n_studies_with_fulltext
+
+print("Proportion of published studies with cohort information or full text downloaded:")
+n_studies_with_cohort_or_fulltext <-
+length(union(cohort_pubmed_ids, fulltext_pubmed_ids))
+
+100 * n_studies_with_cohort_or_fulltext / n_published_studies
+
+```
+
+# Proportion of studies with dbGAP information (Europe PMC)
+
+```{r dbgap_info}
+
+dbgap_info <-
+data.table::fread(here::here("data/europe_pmc/dbgap.csv")) 
+
+all_pmids <- gwas_study_info$pubmed_id |> unique()
+
+pmids_with_dbgap_info <-
+dbgap_info |>
+  dplyr::filter(EXTID %in% all_pmids) 
+
+# check no different with pmcids
+all_pmcids <-
+convert_pmid_df |>
+  dplyr::filter(PMID %in% gwas_study_info$pubmed_id) |>
+  dplyr::pull(PMCID)
+
+all_pmcids <- all_pmcids[all_pmcids != ""]
+
+pmcids_with_dbgap_info <-
+dbgap_info |>
+  dplyr::filter(PMCID %in% all_pmcids) 
+
+n_studies_with_dbgap_info <-
+  bind_rows(pmids_with_dbgap_info,
+            pmcids_with_dbgap_info)  %>%
+  dplyr::select(EXTID, PMCID) %>%
+  dplyr::distinct() |>
+  dplyr::pull(EXTID) |>
+  unique() |>
+  length()
+
+print("Number of published studies with dbGAP information:")
+print(n_studies_with_dbgap_info)
+
+print("Proportion of published studies with dbGAP information:")
+100 * n_studies_with_dbgap_info / n_published_studies
+
+```
+
+# Proportion of studies with EGA information (Europe PMC)
+
+```{r ega_info}
+
+fread(here::here("data/europe_pmc/ega.csv")) -> ega_info
+
+all_pmids <- gwas_study_info$pubmed_id |> unique()
+
+pmids_with_ega_info <-
+ega_info |>
+  dplyr::filter(EXTID %in% all_pmids) |>
+  dplyr::pull(EXTID) 
+
+n_studies_with_ega_info <-
+pmids_with_ega_info |>
+  unique() |>
+  length()
+
+print("Number of published studies with EGA information:")
+print(n_studies_with_ega_info)
+
+print("Proportion of published studies with EGA information:")
+100 * n_studies_with_ega_info / n_published_studies
+
+```
+
+# Overlap in dbgap and full text
+
+```{r overlap_dbgap_fulltext}
+
+dbgap_pubmed_ids <-
+  bind_rows(pmids_with_dbgap_info,
+            pmcids_with_dbgap_info)  %>%
+  dplyr::select(EXTID, PMCID) %>%
+  dplyr::distinct() |>
+  dplyr::pull(EXTID) |>
+  unique()
+  
+n_studies_with_dbgap_and_fulltext <-
+length(intersect(dbgap_pubmed_ids, fulltext_pubmed_ids))
+
+print("Number of published studies with dbGAP information and full text downloaded:")
+print(n_studies_with_dbgap_and_fulltext)
+
+print("Proportion of published studies with dbGAP information that also have full text downloaded:")
+100 * n_studies_with_dbgap_and_fulltext / n_studies_with_dbgap_info
+
+print("Proportion of published studies with full text downloaded that also have dbGAP information:")
+100 * n_studies_with_dbgap_and_fulltext / n_studies_with_fulltext
+
+print("Proportion of published studies with dbGAP information or full text downloaded:")
+n_studies_with_dbgap_or_fulltext <-
+length(union(dbgap_pubmed_ids, fulltext_pubmed_ids))
+
+100 * n_studies_with_dbgap_or_fulltext / n_published_studies
+
+print("Proportion of published studies that have dbGAP, cohort information or full text downloaded:")
+n_studies_with_dbgap_cohort_or_fulltext <-
+length(Reduce(union, list(dbgap_pubmed_ids,
+                                 cohort_pubmed_ids,
+                                 fulltext_pubmed_ids
+                                 )
+                      )
+       )
+
+100 * n_studies_with_dbgap_cohort_or_fulltext / n_published_studies
+
+```
+
+# Percentage of cohort information that includes 'other' or 'multiple'
 
 ```{r}
 
@@ -56,9 +274,12 @@ studies_with_other_or_multiple_cohort_info <- gwas_study_info |>
   unique() |>
   length()
 
+print("Number of published studies with 'other' or 'multiple' cohort information:")
 print(studies_with_other_or_multiple_cohort_info)
 
+print("Proportion of published studies with 'other' or 'multiple' cohort information:")
 100 * studies_with_other_or_multiple_cohort_info / n_studies_with_cohort_info 
+
 
 ```
 
