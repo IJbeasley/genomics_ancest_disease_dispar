@@ -193,3 +193,18 @@ cdc_meta_data |>
   geom_bar(stat="identity") +
   facet_wrap(~icd_10_codes_group) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+black_rate_summary =
+cdc_meta_data |>
+  filter(single_race_6 == "Black or African American") |>
+  select(age_adjusted_rate,
+         icd_10_codes_group)
+
+white_rate_summary =
+cdc_meta_data |>
+  filter(single_race_6 == "White") |>
+  select(age_adjusted_rate,
+         icd_10_codes_group)
+
+age_adj_rate_ratio =  as.numeric(black_rate_summary$age_adjusted_rate) /
+  as.numeric(white_rate_summary$age_adjusted_rate)
