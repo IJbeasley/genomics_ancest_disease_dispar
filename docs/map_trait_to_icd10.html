@@ -371,7 +371,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2026-01-05
+<strong>Last updated:</strong> 2026-01-12
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -503,15 +503,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree78cdca8677df33ba04c3130afac32a76276ad65btargetblank78cdca8a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed031c86c05173796a8c5a60f6787662659949abftargetblankd031c86a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/78cdca8677df33ba04c3130afac32a76276ad65b" target="_blank">78cdca8</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d031c86c05173796a8c5a60f6787662659949abf" target="_blank">d031c86</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree78cdca8677df33ba04c3130afac32a76276ad65btargetblank78cdca8a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed031c86c05173796a8c5a60f6787662659949abftargetblankd031c86a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -521,7 +521,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/78cdca8677df33ba04c3130afac32a76276ad65b" target="_blank">78cdca8</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d031c86c05173796a8c5a60f6787662659949abf" target="_blank">d031c86</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -545,6 +545,8 @@ Ignored files:
     Ignored:    data/RCDCFundingSummary_01042026.xlsx
     Ignored:    data/cdc/
     Ignored:    data/cohort/
+    Ignored:    data/epmc/
+    Ignored:    data/europe_pmc/
     Ignored:    data/gbd/.DS_Store
     Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
     Ignored:    data/gbd/IHME-GBD_2023_DATA-73cc01fd-1.csv
@@ -571,10 +573,7 @@ Ignored files:
     Ignored:    data/icd/semiautomatic_ICD-pheno.txt
     Ignored:    data/icd/semiautomatic_ICD-pheno_UKB_subset.txt
     Ignored:    data/icd/umls-2025AA-mrconso.zip
-    Ignored:    data/icd/~$lancet_conditions_icd10.xlsx
-    Ignored:    data/icd/~$phecode_to_icd10_manual_mapping.xlsx
     Ignored:    figures/
-    Ignored:    human_dictionary/
     Ignored:    output/.DS_Store
     Ignored:    output/abstracts/
     Ignored:    output/doccano/
@@ -591,13 +590,11 @@ Ignored files:
 
 Unstaged changes:
     Modified:   analysis/disease_inves_by_ancest.Rmd
-    Modified:   analysis/get_full_text.Rmd
     Modified:   analysis/gwas_to_gbd.Rmd
     Modified:   analysis/index.Rmd
     Modified:   analysis/missing_cohort_info.Rmd
     Modified:   analysis/replication_ancestry_bias.Rmd
     Modified:   analysis/text_for_cohort_labels.Rmd
-    Modified:   code/test_extract_cdc_meta.R
 
 </code></pre>
 <p>
@@ -642,6 +639,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/d031c86c05173796a8c5a60f6787662659949abf/analysis/map_trait_to_icd10.Rmd" target="_blank">d031c86</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-01-12
+</td>
+<td>
+Update initial trait categorisation
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/7da0beda005c326be681684046fa8c7fc088154b/docs/map_trait_to_icd10.html" target="_blank">7da0bed</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-01-05
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1708,13 +1739,22 @@ disease_mapping =
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, &quot;\\s*\\(pleiotropy\\)&quot;))
 
 # removing &#39;(multi-trait analysis)&#39;
-
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          &quot;\\s*\\(multi-trait analysis\\)&quot;))
 
 # remove &#39;SNP x SNP interaction&#39;
 disease_mapping =
   disease_mapping |&gt;
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
-                                          &quot;\\s*\\(SNP x SNP interaction\\)&quot;))</code></pre>
+                                          &quot;\\s*\\(SNP x SNP interaction\\)&quot;))
+
+
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          &quot;\\(case-control set 1\\)|\\(case-control set 2\\)|\\(case-control set 3\\)&quot;))</code></pre>
 </div>
 <div id="removing-study-related-phenotype-ids" class="section level4">
 <h4>Removing study related phenotype IDs</h4>
@@ -1725,6 +1765,13 @@ disease_mapping =
                                           &quot;\\s*\\(UKB data field \\d+\\)&quot;)) |&gt;
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
                                           &quot;\\s*\\(UKB data field \\d+_\\d+\\)&quot;))
+
+
+# remove phesant recoding
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          &quot;, PHESANT recoding$|: PHESANT recoding$&quot;))
 
 
 # removing Phecode references (e.g. (Phecode 250.2))
@@ -1760,6 +1807,13 @@ disease_mapping =
   disease_mapping |&gt;
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
                                           &quot;\\(adjusted for APOE e4 dosage\\)&quot;))
+
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          &quot;\\(adjusted for sex\\)|\\(adjusted for age\\)|\\(adjusted for age, sex\\)&quot;))
+
+
 
 # remove &#39;(maternal):&#39; &amp; &#39;(paternal):
 disease_mapping =
@@ -2181,6 +2235,36 @@ disease_trait_umls  &lt;-
 </div>
 </div>
 </div>
+<div id="manual-mapping-of-gwas-traits-to-icd-10"
+class="section level1">
+<h1>Manual mapping of GWAS traits to ICD 10</h1>
+<div
+id="behaviour-of-cancer-tumour-uncertain-whether-benign-or-malignant---d37-d48"
+class="section level3">
+<h3>behaviour of cancer tumour: uncertain whether benign or malignant
+-&gt; D37-D48</h3>
+<pre class="r"><code># collected_all_disease_terms = &quot;hepatitis b&quot;
+# &amp; disease/trait contains &quot;hepatitis B vaccine&quot;
+disease_mapping =
+  disease_mapping |&gt;
+  mutate(
+    icd10_code = ifelse(
+        str_detect(tolower(`DISEASE/TRAIT`), 
+                   &quot;behaviour of cancer tumour: uncertain whether benign or malignant&quot;),
+      paste0(&quot;D&quot;, 37:48, collapse = &quot;, &quot;),
+      icd10_code
+    )
+    ) |&gt;
+    mutate(
+    icd10_code_origin = ifelse(
+        str_detect(tolower(`DISEASE/TRAIT`), 
+                   &quot;behaviour of cancer tumour: uncertain whether benign or malignant&quot;),
+      &quot;Manual Mapping (DISEASE/TRAIT)&quot;,
+      icd10_code_origin
+    )
+  )</code></pre>
+</div>
+</div>
 <div id="get-icd10-codes-by-matching-collected_all_disease_terms-terms"
 class="section level1">
 <h1>Get ICD10 codes by matching <code>collected_all_disease_terms</code>
@@ -2211,16 +2295,17 @@ disease_mapping =
     group_by(icd10_code_origin) |&gt; 
     summarise(n = n(), 
               percent = n()/n_studies *100)</code></pre>
-<pre><code># A tibble: 7 × 3
-  icd10_code_origin                                       n percent
-  &lt;chr&gt;                                               &lt;int&gt;   &lt;dbl&gt;
-1 ICD Description Match (DISEASE/TRAIT)                3945    8.59
-2 ICD Description Match (collected_all_disease_terms)  9583   20.9 
-3 Phecode Phenotype Match (DISEASE/TRAIT)               572    1.25
-4 Study PheCode (Manual Mapping)                        875    1.91
-5 Study PheCode Mapping                                6766   14.7 
-6 Study Provided                                       3940    8.58
-7 UMLS term match                                      4804   10.5 </code></pre>
+<pre><code># A tibble: 8 × 3
+  icd10_code_origin                                       n  percent
+  &lt;chr&gt;                                               &lt;int&gt;    &lt;dbl&gt;
+1 ICD Description Match (DISEASE/TRAIT)                3945  8.59   
+2 ICD Description Match (collected_all_disease_terms)  9579 20.9    
+3 Manual Mapping (DISEASE/TRAIT)                          1  0.00218
+4 Phecode Phenotype Match (DISEASE/TRAIT)               572  1.25   
+5 Study PheCode (Manual Mapping)                        875  1.91   
+6 Study PheCode Mapping                                6766 14.7    
+7 Study Provided                                       3940  8.58   
+8 UMLS term match                                      4817 10.5    </code></pre>
 <pre class="r"><code>matched =
   disease_mapping |&gt;
   filter(icd10_code != &quot;&quot;) |&gt;
@@ -2263,17 +2348,18 @@ rows_patch(matched_phenotypes,
     group_by(icd10_code_origin) |&gt; 
     summarise(n = n(), 
               percent = n()/n_studies *100)</code></pre>
-<pre><code># A tibble: 8 × 3
-  icd10_code_origin                                         n percent
-  &lt;chr&gt;                                                 &lt;int&gt;   &lt;dbl&gt;
-1 ICD Description Match (DISEASE/TRAIT)                  3945    8.59
-2 ICD Description Match (collected_all_disease_terms)    9583   20.9 
-3 Phecode Phenotype Match (DISEASE/TRAIT)                 572    1.25
-4 Phecode Phenotype Match (collected_all_disease_terms)  2200    4.79
-5 Study PheCode (Manual Mapping)                          875    1.91
-6 Study PheCode Mapping                                  6766   14.7 
-7 Study Provided                                         3940    8.58
-8 UMLS term match                                        4804   10.5 </code></pre>
+<pre><code># A tibble: 9 × 3
+  icd10_code_origin                                         n  percent
+  &lt;chr&gt;                                                 &lt;int&gt;    &lt;dbl&gt;
+1 ICD Description Match (DISEASE/TRAIT)                  3945  8.59   
+2 ICD Description Match (collected_all_disease_terms)    9579 20.9    
+3 Manual Mapping (DISEASE/TRAIT)                            1  0.00218
+4 Phecode Phenotype Match (DISEASE/TRAIT)                 572  1.25   
+5 Phecode Phenotype Match (collected_all_disease_terms)  2196  4.78   
+6 Study PheCode (Manual Mapping)                          875  1.91   
+7 Study PheCode Mapping                                  6766 14.7    
+8 Study Provided                                         3940  8.58   
+9 UMLS term match                                        4817 10.5    </code></pre>
 <pre class="r"><code>matched =
   disease_mapping |&gt;
   filter(icd10_code != &quot;&quot;) |&gt;
@@ -2321,12 +2407,12 @@ disease_mapping &lt;-
              by = &quot;collected_all_disease_terms&quot;)</code></pre>
 </div>
 </div>
-<div id="manual-mapping-of-gwas-traits-to-icd-10"
+<div id="manual-mapping-of-gwas-traits-to-icd-10-1"
 class="section level1">
 <h1>Manual mapping of GWAS traits to ICD 10</h1>
 <div id="hepatitis-b-where-related-to-vaccine-respone"
-class="section level2">
-<h2>hepatitis B, where related to vaccine respone</h2>
+class="section level3">
+<h3>hepatitis B, where related to vaccine respone</h3>
 <p>Map to chronic hepatitis B, and acute hepatitis B</p>
 <pre class="r"><code># collected_all_disease_terms = &quot;hepatitis b&quot;
 # &amp; disease/trait contains &quot;hepatitis B vaccine&quot;
@@ -2349,8 +2435,8 @@ disease_mapping =
     )
   )</code></pre>
 </div>
-<div id="influenza-a-h1n1---j10" class="section level2">
-<h2>influenza a (h1n1) -&gt; J10</h2>
+<div id="influenza-a-h1n1---j10" class="section level3">
+<h3>influenza a (h1n1) -&gt; J10</h3>
 <pre class="r"><code>disease_mapping =
   disease_mapping |&gt;
   mutate(
@@ -2368,8 +2454,8 @@ disease_mapping =
     )
   )</code></pre>
 </div>
-<div id="suicide---x60-x84" class="section level2">
-<h2>suicide -&gt; X60-X84</h2>
+<div id="suicide---x60-x84" class="section level3">
+<h3>suicide -&gt; X60-X84</h3>
 <pre class="r"><code>disease_mapping =
   disease_mapping |&gt;
   mutate(
@@ -2387,8 +2473,8 @@ disease_mapping =
     )
   )</code></pre>
 </div>
-<div id="osteoarthritis-of-spine---m47" class="section level2">
-<h2>osteoarthritis of spine -&gt; M47</h2>
+<div id="osteoarthritis-of-spine---m47" class="section level3">
+<h3>osteoarthritis of spine -&gt; M47</h3>
 <pre class="r"><code>disease_mapping =
   disease_mapping |&gt;
   mutate(
@@ -2406,8 +2492,8 @@ disease_mapping =
     )
   )</code></pre>
 </div>
-<div id="osteoarthritis-of-hand---m19.0" class="section level2">
-<h2>osteoarthritis of hand -&gt; M19.0</h2>
+<div id="osteoarthritis-of-hand---m19.0" class="section level3">
+<h3>osteoarthritis of hand -&gt; M19.0</h3>
 <pre class="r"><code>disease_mapping =
   disease_mapping |&gt;
   mutate(
@@ -2424,6 +2510,9 @@ disease_mapping =
       icd10_code_origin
     )
   )</code></pre>
+</div>
+<div id="more-manual-mappings-from-excel-sheet" class="section level3">
+<h3>More manual mappings from Excel sheet</h3>
 <pre class="r"><code>manual_icd10_map &lt;-
   readxl::read_xlsx(here::here(&quot;data/icd/manual_disease_icd10_mappings.xlsx&quot;))
 
@@ -2462,6 +2551,7 @@ disease_mapping =
   disease_mapping |&gt;
   mutate(icd10_code = stringr::str_remove_all(string = icd10_code,
                                               pattern = &quot;, $&quot;))</code></pre>
+</div>
 <div id="how-many-diseases-are-not-mapped-yet-4" class="section level3">
 <h3>How many diseases are not mapped yet?</h3>
 <pre class="r"><code># disease_mapping =
@@ -2479,7 +2569,6 @@ not_found_diseases &lt;- not_found_diseases[not_found_diseases != &quot;&quot;]
 
 print(length(not_found_diseases))</code></pre>
 <pre><code>[1] 588</code></pre>
-</div>
 </div>
 </div>
 <div id="inferring-icd10-codes-from-similar-study-icd10-codes"
@@ -2557,19 +2646,19 @@ arrange(desc(n))</code></pre>
 <pre><code># A tibble: 14 × 2
    icd10_code_origin                                                n
    &lt;chr&gt;                                                        &lt;int&gt;
- 1 UMLS term match (collected_all_disease_terms)                11013
- 2 ICD Description Match (collected_all_disease_terms)           9583
+ 1 UMLS term match (collected_all_disease_terms)                11007
+ 2 ICD Description Match (collected_all_disease_terms)           9579
  3 Study PheCode Mapping                                         6762
- 4 UMLS term match                                               4785
+ 4 UMLS term match                                               4798
  5 ICD Description Match (DISEASE/TRAIT)                         3945
  6 Study Provided                                                3940
- 7 Phecode Phenotype Match (collected_all_disease_terms)         2200
+ 7 Phecode Phenotype Match (collected_all_disease_terms)         2196
  8 Manual Mapping (collected_all_disease_terms)                  1264
  9 Study PheCode (Manual Mapping)                                 875
 10 Inferred from similar studies                                  826
 11 Phecode Phenotype Match (DISEASE/TRAIT)                        572
 12 &lt;NA&gt;                                                           132
-13 Manual Mapping (DISEASE/TRAIT)                                  20
+13 Manual Mapping (DISEASE/TRAIT)                                  21
 14 Manual Mapping (collected_all_disease_terms + DISEASE/TRAIT)     3</code></pre>
 </div>
 <div id="saving-disease-mapping" class="section level1">
@@ -4524,7 +4613,7 @@ Session information
 <pre class="r"><code>sessionInfo()</code></pre>
 <pre><code>R version 4.3.1 (2023-06-16)
 Platform: aarch64-apple-darwin20 (64-bit)
-Running under: macOS 15.6.1
+Running under: macOS 15.7.3
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
