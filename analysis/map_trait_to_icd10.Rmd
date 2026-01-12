@@ -662,13 +662,23 @@ disease_mapping =
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, "\\s*\\(pleiotropy\\)"))
 
 # removing '(multi-trait analysis)'
-
+disease_mapping =
+  disease_mapping |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          "\\s*\\(multi-trait analysis\\)"))
 
 # remove 'SNP x SNP interaction'
 disease_mapping =
   disease_mapping |>
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
                                           "\\s*\\(SNP x SNP interaction\\)"))
+
+
+disease_mapping =
+  disease_mapping |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          "\\(case-control set 1\\)|\\(case-control set 2\\)|\\(case-control set 3\\)"))
+
 
 
 ```
@@ -684,6 +694,13 @@ disease_mapping =
                                           "\\s*\\(UKB data field \\d+\\)")) |>
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
                                           "\\s*\\(UKB data field \\d+_\\d+\\)"))
+
+
+# remove phesant recoding
+disease_mapping =
+  disease_mapping |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          ", PHESANT recoding$|: PHESANT recoding$"))
 
 
 # removing Phecode references (e.g. (Phecode 250.2))
@@ -725,6 +742,13 @@ disease_mapping =
   disease_mapping |>
   mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
                                           "\\(adjusted for APOE e4 dosage\\)"))
+
+disease_mapping =
+  disease_mapping |>
+  mutate(`DISEASE/TRAIT` = str_remove_all(`DISEASE/TRAIT`, 
+                                          "\\(adjusted for sex\\)|\\(adjusted for age\\)|\\(adjusted for age, sex\\)"))
+
+
 
 # remove '(maternal):' & '(paternal):
 disease_mapping =
@@ -1151,8 +1175,35 @@ disease_trait_umls  <-
           icd10_code_origin
           ) 
   )
- 
 
+```
+
+# Manual mapping of GWAS traits to ICD 10
+
+### behaviour of cancer tumour: uncertain whether benign or malignant -> D37-D48
+
+```{r}
+
+# collected_all_disease_terms = "hepatitis b"
+# & disease/trait contains "hepatitis B vaccine"
+disease_mapping =
+  disease_mapping |>
+  mutate(
+    icd10_code = ifelse(
+        str_detect(tolower(`DISEASE/TRAIT`), 
+                   "behaviour of cancer tumour: uncertain whether benign or malignant"),
+      paste0("D", 37:48, collapse = ", "),
+      icd10_code
+    )
+    ) |>
+    mutate(
+    icd10_code_origin = ifelse(
+        str_detect(tolower(`DISEASE/TRAIT`), 
+                   "behaviour of cancer tumour: uncertain whether benign or malignant"),
+      "Manual Mapping (DISEASE/TRAIT)",
+      icd10_code_origin
+    )
+  )
 
 ```
 
@@ -1290,7 +1341,7 @@ disease_mapping <-
 
 # Manual mapping of GWAS traits to ICD 10
 
-## hepatitis B, where related to vaccine respone
+### hepatitis B, where related to vaccine respone
 
 Map to chronic hepatitis B, and acute hepatitis B
 
@@ -1319,7 +1370,7 @@ disease_mapping =
 
 ```
 
-## influenza a (h1n1) -> J10
+### influenza a (h1n1) -> J10
 
 ```{r}
 
@@ -1342,7 +1393,7 @@ disease_mapping =
 
 ```
 
-## suicide -> X60-X84
+### suicide -> X60-X84
 
 ```{r}
 
@@ -1365,7 +1416,7 @@ disease_mapping =
 
 ```
 
-## osteoarthritis of spine -> M47
+### osteoarthritis of spine -> M47
 
 ```{r}
 
@@ -1388,7 +1439,7 @@ disease_mapping =
 
 ```
 
-## osteoarthritis of hand -> M19.0 
+### osteoarthritis of hand -> M19.0 
 
 ```{r}
 
@@ -1411,6 +1462,8 @@ disease_mapping =
 
 
 ```
+
+### More manual mappings from Excel sheet
 
 ```{r create_manual_mapping_table}
 
