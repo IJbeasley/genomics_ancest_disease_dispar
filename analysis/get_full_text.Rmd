@@ -18,6 +18,7 @@ library(xml2)
 library(stringr)
 library(here)
 library(dplyr)
+library(data.table)
 
 ```
 
@@ -27,14 +28,18 @@ library(dplyr)
 
 ```{r get_pmids}
 
+# gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
 
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+## Step 1: 
+# get only relevant disease studies
+# gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
 
 gwas_study_info = gwas_study_info |>
   dplyr::rename_with(~ gsub(" ", "_", .x))
 
-gwas_study_info <- gwas_study_info |>
-  filter(DISEASE_STUDY == TRUE)
+# gwas_study_info <- gwas_study_info |>
+#   dplyr::filter(DISEASE_STUDY == TRUE)
 
 pmids <- unique(gwas_study_info$PUBMED_ID)
 
@@ -47,115 +52,264 @@ length(pmids)
 ## Convert Pubmed IDs to PMCIDs
 
 ```{r pmid_to_pmcid}
+# get PMID to PMCID mapping using Europe PMC file:
+convert_pmid_df <- fread(here::here("data/europe_pmc/PMID_PMCID_DOI.csv"))
 
+convert_pmid_df <- convert_pmid_df |>
+  dplyr::rename(pmcids = PMCID
+                ) |>
+  dplyr::mutate(pmcids = ifelse(is.na(pmcids),
+                                "",
+                                pmcids
+                                )
+                )
+
+convert_pmid_df =
+  convert_pmid_df |>
+  select(-DOI)
+
+convert_pmid_df <-
+  convert_pmid_df |>
+  dplyr::filter(!is.na(PMID))
+
+converted_ids = 
+  convert_pmid_df |>
+  filter(PMID %in% pmids)
+
+dim(converted_ids)
+length(pmids)
+
+converted_ids |>
+  filter(pmcids == "") |>
+  dim()
 
 # convert PMID to PMCID
-convert_pmid_to_pmcid <- function(pmid_vec,
-                                  tool = "myTool",
-                                  email = "you@example.com",
-                                  format = "json",
-                                  batch_size = 100,
-                                  sleep_time = 1) {
-
-  base_url <- "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
-
-  batches <- split(pmid_vec,
-                   ceiling(seq_along(pmid_vec) / batch_size))
-  #browser()
-
-  pmcid_list = purrr::map(batches,
-             function(pmid_vec) {
-
-
-               ids_param <- paste(pmid_vec,
-                                  collapse = ",")
-
-               query <- list(ids = ids_param,
-                             idtype = "pmid",
-                             tool = tool,
-                             email = email,
-                             format = format
-                             )
-
-               resp <- httr::GET(base_url,
-                                 query = query)
-
-               httr::stop_for_status(resp)
-
-               content_text <- httr::content(resp,
-                                             as = "text",
-                                             encoding = "UTF-8")
-
-               # Handle cases where records might be empty or missing pmcid
-               parsed <- jsonlite::fromJSON(content_text,
-                                            flatten = TRUE)
-
-               parsed$records[is.na(parsed$records)] = ""
-
-               pmcid <- parsed$records |>
-                        pull(pmcid)
-
-               Sys.sleep(sleep_time)
-
-               return(pmcid)
-             }
-  )
-
- pmcid_list = unlist(pmcid_list)
- names(pmcid_list) <- pmid_vec
- return(pmcid_list)
-}
-
-pmcids <- convert_pmid_to_pmcid(pmids)
-
-get_pmcid_europepmc <- function(pmid_vec) {
-  base_url <- "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-  
-  purrr::map_dfr(pmid_vec, function(pmid) {
-    query <- list(
-      query = paste0("ext_id:", pmid),
-      format = "json"
-    )
-    resp <- httr::GET(base_url, query = query)
-    if (httr::status_code(resp) != 200) {
-      return(tibble(pmid = pmid, 
-                    pmcid = NA_character_))
-    }
-    
-    dat <- jsonlite::fromJSON(httr::content(resp, 
-                                            as = "text", 
-                                            encoding = "UTF-8"))
-    
-    if (length(dat$resultList$result) == 0) {
-      return(tibble(pmid = pmid, pmcid = NA_character_))
-    }
-    
-    pmcid <- dat$resultList$result$pmcid
-    tibble(pmid = pmid, pmcid = pmcid)
-  })
-}
-
-pmids_missing = names(pmcids[pmcids == ""])
-
-get_pmcid_europepmc(pmids_missing) -> pmcid_europepmc_df
-
-converted_ids <-
-data.frame(pmids = names(pmcids),
-           pmcids = pmcids
-           ) 
-
-data.table::fwrite(converted_ids,
-                   here::here("output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv")
-                   )
-
-# How many missing? 
-sum(pmcids == "")
+# convert_pmid_to_pmcid <- function(pmid_vec,
+#                                   tool = "myTool",
+#                                   email = "you@example.com",
+#                                   format = "json",
+#                                   batch_size = 50,
+#                                   sleep_time = 1) {
+# 
+#   base_url <- "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
+# 
+#   batches <- split(pmid_vec,
+#                    ceiling(seq_along(pmid_vec) / batch_size))
+#   #browser()
+# 
+#   pmcid_list = purrr::map(batches,
+#              function(pmid_vec) {
+# 
+# 
+#                ids_param <- paste(pmid_vec,
+#                                   collapse = ",")
+# 
+#                query <- list(ids = ids_param,
+#                              idtype = "pmid",
+#                              tool = tool,
+#                              email = email,
+#                              format = format
+#                              )
+# 
+#                resp <- httr::GET(base_url,
+#                                  query = query)
+# 
+#                httr::stop_for_status(resp)
+# 
+#                content_text <- httr::content(resp,
+#                                              as = "text",
+#                                              encoding = "UTF-8")
+# 
+#                # Handle cases where records might be empty or missing pmcid
+#                parsed <- jsonlite::fromJSON(content_text,
+#                                             flatten = TRUE)
+# 
+#                parsed$records[is.na(parsed$records)] = ""
+# 
+#                pmcid <- parsed$records |>
+#                         pull(pmcid)
+# 
+#                Sys.sleep(sleep_time)
+# 
+#                return(pmcid)
+#              }
+#   )
+# 
+#  pmcid_list = unlist(pmcid_list)
+#  names(pmcid_list) <- pmid_vec
+#  return(pmcid_list)
+# }
+# 
+# pmcids <- convert_pmid_to_pmcid(pmids)
+# 
+# get_pmcid_europepmc <- function(pmid_vec) {
+#   base_url <- "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+#   
+#   purrr::map_dfr(pmid_vec, function(pmid) {
+#     query <- list(
+#       query = paste0("ext_id:", pmid),
+#       format = "json"
+#     )
+#     resp <- httr::GET(base_url, query = query)
+#     if (httr::status_code(resp) != 200) {
+#       return(tibble(pmid = pmid, 
+#                     pmcid = NA_character_))
+#     }
+#     
+#     dat <- jsonlite::fromJSON(httr::content(resp, 
+#                                             as = "text", 
+#                                             encoding = "UTF-8"))
+#     
+#     if (length(dat$resultList$result) == 0) {
+#       return(tibble(pmid = pmid, pmcid = NA_character_))
+#     }
+#     
+#     pmcid <- dat$resultList$result$pmcid
+#     tibble(pmid = pmid, pmcid = pmcid)
+#   })
+# }
+# 
+# pmids_missing = names(pmcids[pmcids == ""])
+# 
+# get_pmcid_europepmc(pmids_missing) -> pmcid_europepmc_df
+# 
+# converted_ids <-
+# data.frame(pmids = names(pmcids),
+#            pmcids = pmcids
+#            ) 
+# 
+# # checked using pmids to pmcs conversion from europe pmc webservice
+# # can map 38367033 -> PMC12560237
+# converted_ids <- converted_ids |>
+#   mutate(pmcids = ifelse(pmids == "38367033", 
+#                          "PMC12560237", 
+#                          pmcids
+#                          )
+#          )
+# 
+# data.table::fwrite(converted_ids,
+#                    here::here("output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv")
+#                    )
+# 
+# # How many missing? 
+# sum(pmcids == "")
+# 
+# pmcids <- pmcids[pmcids != ""]
 
 ```
 
-# Download + clean full texts from European PMC
+# Download full texts from European PMC
 
-```{r download_full_texts}
+```{r get_pmcids}
+
+pmcids <-
+converted_ids$pmcids |>
+  unique()
+
+pmcids <- pmcids[pmcids != ""]
+
+length(pmcids)
+
+print("Percentage of pmids with pmcid:")
+round(100 * length(pmcids) / length(pmids), digits = 2)
+
+```
+
+```{r download_xml, eval = F}
+
+download_pmc_text <- function(pmcid, 
+                              out_dir = here::here("output/fulltexts/europe_pmc/")
+                              ) {
+
+
+  url_xml <- paste0("https://www.ebi.ac.uk/",
+                    "europepmc/webservices/rest/",
+                    pmcid,
+                    "/fullTextXML"
+                    )
+  
+  resp <- GET(url_xml)
+  
+  # MED/20708005
+  
+  # ---- Fallback URL ----
+  if(status_code(resp) != 200){
+    
+    #print(paste0("Trying alternative URL for ", pmcid))
+    
+    url_xml <- paste0("https://europepmc.org/",
+                       "oai.cgi?verb=GetRecord",
+                       "&metadataPrefix=pmc",
+                       "&identifier=oai:europepmc.org:",
+                       pmcid)
+    
+    resp <- GET(url_xml)
+  
+  }
+  
+  # ---- Fail if still bad ----
+  if(status_code(resp) != 200){
+    
+  #message("Failed to fetch XML for ", pmcid)
+  
+  return(NULL)
+    
+  }
+  
+  # ---- Parse XML ----
+  xml_content <- read_xml(
+    content(resp, 
+            as = "text", 
+            encoding = "UTF-8")
+  )
+  
+  xml_content <- read_xml(content(resp,
+                                  as = "text",
+                                  encoding = "UTF-8")
+                          )
+  
+  article_node = xml_find_first(xml_content, 
+                               "//*[local-name() = 'article']"
+                               )
+  
+   if (is.na(article_node)) {
+    message("No <article> node found for ", pmcid)
+     
+    return(NULL)
+   }
+  
+    # --- Save ---
+  write_xml(article_node, 
+            paste0(out_dir, pmcid, ".xml")
+            )
+  
+} 
+
+
+for(article in pmcids[pmcids != ""]){
+
+download_pmc_text(article)
+
+}
+
+```
+
+
+```{r downloaded_european_full_texts}
+
+print("Number of downloaded full text files")
+print("From European PMC:")
+
+n_euro_pmc <- length(list.files(here::here("output/fulltexts/europe_pmc/"),
+                  pattern = "\\.xml$")
+       )
+
+print("Percentage of pmids with full text from European PMC:")
+round(100 * n_euro_pmc / length(pmids), digits = 2)
+
+```
+
+```{r download_full_texts, eval = F}
 
 converted_ids <-
 data.table::fread(here::here("output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv")
@@ -348,9 +502,6 @@ extract_app_text <- function(xml_back,
                               text)
     }
   }
-  
-  return(text)
-}
 
 
 download_pmc_text <- function(pmcid, 
@@ -488,9 +639,17 @@ length(list.files(here::here("output/fulltexts/europepmc"),
 # available in XML and plain text for text mining purposes.
 aws s3 cp s3://pmc-oa-opendata/author_manuscript/txt/metadata/txt/author_manuscript.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
 
-# get list of pmcids with full text - non-commerical use
+# get list of pmcids with full text - non-commercial use
 # oa_noncomm 
 aws s3 cp s3://pmc-oa-opendata/oa_noncomm/txt/metadata/txt/oa_noncomm.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+
+# get list of pmcids with full text, commercial list
+# oa_comm
+aws s3 cp s3://pmc-oa-opendata/oa_comm/txt/metadata/txt/oa_comm.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+
+# get list of pmcids with full text, commercial list
+# oa_other
+aws s3 cp s3://pmc-oa-opendata/oa_other/txt/metadata/txt/oa_other.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
 
 ```
 
@@ -499,13 +658,13 @@ aws s3 cp s3://pmc-oa-opendata/oa_noncomm/txt/metadata/txt/oa_noncomm.filelist.t
 ```{r identify_full_texts}
 
 europeanpmc_full_texts <- 
-list.files(here::here("output/fulltexts/europepmc"),
-                  pattern = "\\.txt$"
+list.files(here::here("output/fulltexts/europe_pmc"),
+                  pattern = "\\.xml"
            )
 
 # get pmcids of these files
 europeanpmc_full_texts <-
-  gsub("\\.txt$", 
+  gsub("\\.xml$", 
        "", 
        europeanpmc_full_texts
        ) 
@@ -518,192 +677,306 @@ europeanpmc_full_texts <-
 
 left_over_pmcids = pmcids[!pmcids %in% europeanpmc_full_texts]
 
+print("Number of remaining pmcids without full text:")
 length(left_over_pmcids)
 
 author_manu = data.table::fread(here::here("output/fulltexts/aws_locations/author_manuscript.filelist.txt"))
+
 oa_noncomm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_noncomm.filelist.txt"))
+
+oa_comm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_comm.filelist.txt"))
 
 author_manu_to_get <-
 author_manu |>
-  filter(PMID %in% names(left_over_pmcids))
+  dplyr::filter(AccessionID %in% left_over_pmcids)
 
+print("Number of papers to download in Author Manuscripts section:")
 nrow(author_manu_to_get)
 
 oa_noncomm_to_get = 
 oa_noncomm |>
-  filter(PMID %in% names(left_over_pmcids)) 
+#  dplyr::filter(PMID %in% names(left_over_pmcids)) 
+  dplyr::filter(AccessionID %in% left_over_pmcids)
 
-nrow(oa_noncomm_to_get)
+oa_comm_to_get = 
+oa_comm |>
+#  dplyr::filter(PMID %in% names(left_over_pmcids)) 
+  dplyr::filter(AccessionID %in% left_over_pmcids)
 
-not_available = names(left_over_pmcids)[!names(left_over_pmcids) %in% 
-                                          c(oa_noncomm_to_get$PMID, 
-                                            author_manu_to_get$PMID)]
+print("Number of papers to download in Open Access PMC section:")
+nrow(oa_noncomm_to_get) + nrow(oa_comm_to_get)
 
+oa_noncomm_to_get <-
+  oa_noncomm_to_get |>
+  dplyr::filter(!c(AccessionID %in% author_manu_to_get$AccessionID))
+
+oa_ncomm_to_get <-
+  oa_noncomm_to_get |>
+  dplyr::filter(!c(AccessionID %in% author_manu_to_get$AccessionID))
+
+not_available = left_over_pmcids[!c(left_over_pmcids %in% 
+                                          c(oa_noncomm_to_get$AccessionID, 
+                                            oa_comm_to_get$AccessionID,
+                                            author_manu_to_get$AccessionID)
+                                          )]
+
+print("Number of papers without full text available in NCBI Cloud Service:")
 length(not_available)
 
 file_paths = 
 c(oa_noncomm_to_get$Key,
+  oa_comm_to_get$Key,
   author_manu_to_get$Key)
 
-# percentage not avaliable, from all:
-100 * length(not_available) / length(pmcids)
+file_paths <- str_replace_all(file_paths,
+                              pattern = "txt",
+                              replacement = "xml")
+
+# percentage not available, from all papers
+100 * length(not_available) / length(pmids)
 
 ```
 
 ## Download remaining full texts from NCBI Cloud Service
 
-```{r download_remaining_full_texts}
+```{r download_remaining_full_texts, eval = F}
 
-# download all the available ones:
-writeLines(file_paths, here::here("output/fulltexts/aws_locations/selected_paths.txt"))
-system("xargs -a output/fulltexts/aws_locations/selected_paths.txt -I {} aws s3 cp s3://pmc-oa-opendata/{} output/fulltexts/ncbi_cloud/ --no-sign-request")
-
-# for (i in seq_along(file_paths)) {
-#   
-#   system(
-#   paste(
-#   "aws s3 cp",
-#   paste0("s3://pmc-oa-opendata/", file_paths[i]),
-#   here::here("output/fulltexts/ncbi_cloud/"),
-#   "--no-sign-request"
-#   )
-#   )
-# }
-
-```
-
-# Get dbGaP ids / EGA sentences 
-
-```{r get_dbgap_ids}
-
-library(tokenizers)
-
-all_full_texts = 
-c(
-  list.files(here::here("output/fulltexts/europepmc"),
-             pattern = "\\.txt$",
-             full.names = TRUE
-           ),
-  list.files(here::here("output/fulltexts/ncbi_cloud"),
-             pattern = "\\.txt$",
-             full.names = TRUE)
+writeLines(
+  file_paths,
+  here::here("output/fulltexts/aws_locations/selected_paths.txt")
 )
 
-# get pmcids of these files
-all_pmcids <-
-  all_full_texts |>
-  gsub(pattern = ".*/", replacement = "") |>
-  gsub(pattern = "\\.txt$", replacement = "") 
-
-get_grep_sentences <- function(file_path,
-                               grep_pattern) {
-
-  txt_in <- readLines(file_path,
-                      warn = FALSE,
-                      encoding = "UTF-8")
-
-  sentences <- unlist(tokenize_sentences(txt_in))
-
-  dbgap_sentences = sentences[grepl(grep_pattern, sentences)]
-
-  return(dbgap_sentences)
-}
-
-# get dbgap ids
-# get EGA ids
-# get JGAS
-# get PRJEB / PRJNA ids
-grep_pattern <- "phs\\d+|EGAC\\d+|EGAD\\d+|EGAF\\d+|JGAS\\d+|JGAD\\d+|PRJEB\\d+|PRJNA\\d+" 
-
-pmcid_dbgap_sentences <- 
-purrr::map(all_full_texts,
-           ~get_grep_sentences(.x, 
-                               grep_pattern = grep_pattern
-                               )
-           ) 
-
-names(pmcid_dbgap_sentences) <- all_pmcids
-
-keep_pmcid_dbgap_sentences <-
-  purrr::discard(
-pmcid_dbgap_sentences,
-~rlang::is_empty(.x)
-) 
-
-# Convert to data frame
-sentences_df <- 
-  purrr::imap(keep_pmcid_dbgap_sentences,
-              ~data.frame(pmcid = .y,
-                          sentence = unique(.x),
-                        stringsAsFactors = FALSE)
-              )|>
-  dplyr::bind_rows()
-
-# Extract all dbGaP IDs from the sentences
-sentences_df <- sentences_df |>
-  mutate(
-    dbgap_id = str_extract_all(sentence, "phs\\d+(\\.v\\d+)?(\\.p\\d+)?"),
-    ega_id = str_extract_all(sentence, "EGA[CDFS]\\d+"),
-    jgas_id = str_extract_all(sentence, "JGAS\\d+|JGAD"),
-    prj_id = str_extract_all(sentence, "PRJEB\\d+|PRJNA\\d+")
+system(
+  paste(
+    "xargs -I {} aws s3 cp",
+    "s3://pmc-oa-opendata/{}",
+    shQuote(here::here("output/fulltexts/ncbi_cloud/")),
+    "--no-sign-request",
+    "<",
+    shQuote(here::here("output/fulltexts/aws_locations/selected_paths.txt"))
   )
-             
-sentences_df = 
-  sentences_df |>
-  distinct()
-
-# number of pubmed ids with dbgap / ega ids found
-sentences_df$pmcid |> unique() |> length()
-
-data.table::fwrite(sentences_df,
-                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
-                   )
+)
 
 ```
 
+# Download PDFs using Open Access information from Open Alex
 
-### Are there any dbgap ids not in our cohort description mapping?
+### PMIDs that couldn't be converted to PMCIDs
 
-```{r new_dbgap_ids}
+```{r eval=FALSE}
 
-sentences_df <- data.table::fread(
-                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
+# old getting dois:
+entrez_info <-
+entrez_summary(db="pubmed", 
+               id=not_convertable_pmids)
+
+dois <-
+entrez_info |>
+  purrr::map(function(x) {
+    
+    x$articleids |> 
+      filter(idtype == "doi") |> 
+      pull(value)
+  }
 )
 
-cohort_dbgap_mapping <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
-                                 sheet = 1)
+```
 
-current_dbgap_ids =
-  cohort_dbgap_mapping |>
-  pull(dbGaP) |>
-  strsplit(",") |>
-  unlist() |>
-  str_trim() |>
-  unique()
+```{r open_alex_full_text}
 
-old_dbgap_ids = 
-  cohort_dbgap_mapping |>
-  pull(old_dbGaP) |>
-  strsplit(",") |>
-  unlist() |>
-  str_trim() |>
-  unique()
+library(openalexR)
 
-mapped_dbgap_ids = c(current_dbgap_ids,
-                      old_dbgap_ids
-                      )
+convert_pmid_df <- fread(here::here("data/europe_pmc/PMID_PMCID_DOI.csv"))
 
-found_dbgap_ids =
-sentences_df$dbgap_id |>
-  strsplit("\\|") |>
-  unlist() |>
-  unique()
+not_convertable_pmids <- converted_ids |> 
+                         filter(pmcids == "") |> 
+                         pull(PMID)
 
-not_found_dbgap_ids <- 
-sort(found_dbgap_ids[!found_dbgap_ids %in% mapped_dbgap_ids])
+doi_information <-
+convert_pmid_df |>
+  filter(PMID %in% not_convertable_pmids)
 
-not_found_dbgap_ids |> length()
+doi_information |>
+  filter(DOI == "")
 
-not_found_dbgap_ids[1:5]
+doi_information$PMID |> unique() |> length()
+
+length(not_convertable_pmids)
+
+# get open alex works for pmids
+open_alex_works <- oa_fetch(
+  doi = unique(doi_information$DOI),
+  entity = "works",
+  options = list(select = c("doi", 
+                            "open_access"))
+)
+
+# no best open access location: 
+open_alex_works |> 
+  filter(is.na(oa_url)) |>
+  nrow()
+
+# pdf link available:
+open_alex_works |> 
+  filter(grepl("pdf", oa_url)) |>
+  nrow()
+
+to_download_pdfs <-
+open_alex_works |> 
+  filter(grepl(".pdf", oa_url)) |>
+  pull(oa_url)
+
+  writeLines(
+    to_download_pdfs,
+    here::here("output/fulltexts/pdfs/pdf_links_to_download.txt"))
+
+```
+
+```{bash download_pdfs_1, eval = F}
+
+cd output/fulltexts/pdfs
+
+while read -r url; do
+  curl -O "$url"
+done < pdf_links_to_download.txt
+
+```
+
+### PMCIDs not found in Author Manuscripts or Open Access sections
+
+```{r, eval=FALSE}
+
+doi_information <-
+convert_pmid_df |>
+  filter(PMCID %in% not_available)
+
+doi_information |>
+  filter(DOI == "")
+
+doi_information <-
+  doi_information |>
+  filter(DOI != "")
+
+# get open alex works for pmcids
+open_alex_works <- oa_fetch(
+  doi = doi_information$DOI,
+  entity = "works",
+  options = list(select = c(#"title",
+                            "doi", 
+                            "open_access"
+                            ))
+)
+
+# no best open access location: 
+open_alex_works |> 
+  filter(is.na(oa_url)) |>
+  nrow()
+
+# pdf link available:
+open_alex_works |> 
+  filter(grepl("pdf", oa_url)) |>
+  nrow()
+
+to_download_pdfs <-
+open_alex_works |> 
+  filter(grepl(".pdf", oa_url)) |>
+  pull(oa_url)
+
+  writeLines(
+    to_download_pdfs,
+    here::here("output/fulltexts/pdfs/pdf_links_to_download_pt2.txt"))
+
+```
+
+```{bash download_pdfs_2, eval = F}
+
+cd output/fulltexts/pdfs
+
+while read -r url; do
+  curl -O "$url"
+done < pdf_links_to_download_pt2.txt
+
+```
+
+# Test: not used - Europe PMC Author Manuscripts
+
+```{bash get_filelists, eval = FALSE}
+
+curl -s https://europepmc.org/ftp/manuscripts/ \
+  | grep -o 'author_manuscript_txt[^"]*\.filelist\.txt' \
+  | sort -u \
+  | while read -r file; do
+      curl -O "https://europepmc.org/ftp/manuscripts/$file"
+    done
+
+```
+
+```{r europe_pmc_author_manuscripts, eval = F}
+
+all_file_lists <- list.files(here::here("data/epmc"))
+
+author_manu_epmc <- all_file_lists |>
+                    purrr::map(function(file_name) {
+                      
+                      file_path = here::here("data/epmc",
+                                             file_name
+                                             )
+                      
+                      df <- fread(file_path)
+                      
+                      return(df)
+                    }
+                    ) |>
+                    bind_rows()
+
+author_manu_epmc |>
+  filter(AccessionID %in% not_available)
+
+author_manu_epmc |>
+  filter(PMID %in% not_avaliable_pmids)
+
+author_manu_epmc |>
+  filter(PMID %in% pmids)
+
+author_manu_epmc |>
+  filter(PMID %in% not_convertable_pmids)
+
+```
+
+# Test: not used - Download with ftp service, where avaliable
+
+```{r download_ftp_service, eval = F}
+
+# not_available
+not_convertable_pmids <- converted_ids |> 
+                         filter(pmcids == "") |> 
+                         pull(PMID)
+
+all_tgz_links = c()
+
+for(article_id in "PMC2613843"){
+
+url <- paste0("https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id=",
+              article_id)
+  
+resp <- GET(url)
+
+xml_data <- xml_child(content(resp), "records")
+
+tgz_link <- xml_find_first(xml_data, 
+                           ".//link[@format='tgz']/@href")
+tgz_link <- xml_text(tgz_link)
+
+if (is.na(tgz_link)) {
+  
+  print("No tar.gz link found.")
+  
+} else {
+  
+  all_tgz_links <- append(all_tgz_links, 
+                          tgz_link)
+  
+}
+}
 
 ```
