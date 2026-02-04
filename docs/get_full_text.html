@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreec0dc6760053de22b45055b991671970554bb729btargetblankc0dc676a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree456acb16d7261637745421cca458b31e182c2d6btargetblank456acb1a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/c0dc6760053de22b45055b991671970554bb729b" target="_blank">c0dc676</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/456acb16d7261637745421cca458b31e182c2d6b" target="_blank">456acb1</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreec0dc6760053de22b45055b991671970554bb729btargetblankc0dc676a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree456acb16d7261637745421cca458b31e182c2d6btargetblank456acb1a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/c0dc6760053de22b45055b991671970554bb729b" target="_blank">c0dc676</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/456acb16d7261637745421cca458b31e182c2d6b" target="_blank">456acb1</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -664,6 +664,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/456acb16d7261637745421cca458b31e182c2d6b/analysis/get_full_text.Rmd" target="_blank">456acb1</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-04
+</td>
+<td>
+Fixing percentage downloaded stats
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/55f6763ea5459cb04c11a0ccc0977beb4f63ce33/docs/get_full_text.html" target="_blank">55f6763</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-04
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1068,6 +1102,11 @@ API. Thus, can only be applied to papers with PMCIDs.</p>
 download_pmc_text &lt;- function(pmcid, 
                               out_dir = here::here(&quot;output/fulltexts/europe_pmc/&quot;)
                               ) {
+  
+  # check if file already exists
+  if(file.exists(paste0(out_dir, pmcid, &quot;.xml&quot;))){
+    return(TRUE)
+  }
 
 
   url_xml &lt;- paste0(&quot;https://www.ebi.ac.uk/&quot;,
@@ -1133,17 +1172,26 @@ for(article in pmcids[pmcids != &quot;&quot;]){
 download_pmc_text(article)
 
 }</code></pre>
-<pre class="r"><code>print(&quot;Number of downloaded full text files from European PMC:&quot;)</code></pre>
-<pre><code>[1] &quot;Number of downloaded full text files from European PMC:&quot;</code></pre>
-<pre class="r"><code>n_euro_pmc &lt;- length(list.files(here::here(&quot;output/fulltexts/europe_pmc/&quot;),
+<pre class="r"><code>euro_pmcids &lt;-list.files(here::here(&quot;output/fulltexts/europe_pmc/&quot;),
                   pattern = &quot;\\.xml$&quot;)
+
+euro_pmcids &lt;- gsub(&quot;\\.xml$&quot;, 
+       &quot;&quot;, 
+       euro_pmcids
        )
-print(n_euro_pmc)</code></pre>
-<pre><code>[1] 524</code></pre>
+
+euro_pmcids &lt;- pmcids[pmcids %in% euro_pmcids]
+
+n_euro_pmc &lt;- length(euro_pmcids)
+
+print(&quot;Number of downloaded full text files from European PMC:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of downloaded full text files from European PMC:&quot;</code></pre>
+<pre class="r"><code>print(n_euro_pmc)</code></pre>
+<pre><code>[1] 428</code></pre>
 <pre class="r"><code>print(&quot;Percentage of pmids with full text from European PMC:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids with full text from European PMC:&quot;</code></pre>
 <pre class="r"><code>round(100 * n_euro_pmc / length(pmids), digits = 2)</code></pre>
-<pre><code>[1] 63.82</code></pre>
+<pre><code>[1] 52.13</code></pre>
 </div>
 <div id="download-full-texts-from-ncbi-cloud-service"
 class="section level1">
@@ -1248,17 +1296,17 @@ c(oa_noncomm_to_get$Key,
 
 file_paths &lt;- str_replace_all(file_paths,
                               pattern = &quot;txt&quot;,
-                              replacement = &quot;xml&quot;)</code></pre>
+                              replacement = &quot;xml&quot;)
+
+writeLines(
+  file_paths,
+  here::here(&quot;output/fulltexts/aws_locations/selected_paths.txt&quot;)
+)</code></pre>
 </div>
 <div id="download-remaining-full-texts-from-ncbi-cloud-service"
 class="section level2">
 <h2>Download remaining full texts from NCBI Cloud Service</h2>
-<pre class="r"><code>writeLines(
-  file_paths,
-  here::here(&quot;output/fulltexts/aws_locations/selected_paths.txt&quot;)
-)
-
-system(
+<pre class="r"><code>system(
   paste(
     &quot;xargs -I {} aws s3 cp&quot;,
     &quot;s3://pmc-oa-opendata/{}&quot;,
@@ -1275,22 +1323,22 @@ system(
 #                                           )]
 
 # get list of pmcids already retrieved
-pmcids_retrieved &lt;- 
-list.files(c(here::here(&quot;output/fulltexts/europe_pmc&quot;),
+ncbi_pmcids_retrieved &lt;- 
+list.files(c(#here::here(&quot;output/fulltexts/europe_pmc&quot;),
              here::here(&quot;output/fulltexts/ncbi_cloud/&quot;)
              ),
              pattern = &quot;\\.xml$&quot;
 )
 
-pmcids_retrieved &lt;-
+ncbi_pmcids_retrieved &lt;-
   gsub(&quot;\\.xml$&quot;, 
        &quot;&quot;, 
-       pmcids_retrieved
+       ncbi_pmcids_retrieved
        )
 
 pmids_retrieved &lt;-
 converted_ids  |&gt;
-  filter(pmcids %in% pmcids_retrieved) |&gt;
+  filter(pmcids %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |&gt;
   pull(PMID)
 
 all_pmids &lt;- unique(gwas_study_info$PUBMED_ID)
@@ -1299,11 +1347,11 @@ not_available &lt;- all_pmids[!c(all_pmids %in% pmids_retrieved)]
 
 print(&quot;Percentage of pmids with full text from NCBI Cloud Service:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids with full text from NCBI Cloud Service:&quot;</code></pre>
-<pre class="r"><code>100 * (n_euro_pmc - length(not_available)) / length(pmids)</code></pre>
-<pre><code>[1] 32.52132</code></pre>
+<pre class="r"><code>100 * (length(all_pmids) - n_euro_pmc - length(not_available)) / length(all_pmids)</code></pre>
+<pre><code>[1] 16.56516</code></pre>
 <pre class="r"><code>print(&quot;Percentage of pmids without full text from either European PMC or NCBI Cloud Service:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids without full text from either European PMC or NCBI Cloud Service:&quot;</code></pre>
-<pre class="r"><code>100 * length(not_available) / length(pmids)</code></pre>
+<pre class="r"><code>100 * length(not_available) / length(all_pmids)</code></pre>
 <pre><code>[1] 31.30329</code></pre>
 </div>
 </div>
