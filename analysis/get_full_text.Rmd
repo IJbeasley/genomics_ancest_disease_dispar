@@ -57,8 +57,8 @@ gwas_study_info <- gwas_study_info |>
 
 print("Number of disease studies to get full texts for:")
 
-pmids <- unique(gwas_study_info$PUBMED_ID)
-length(pmids)
+all_pmids <- unique(gwas_study_info$PUBMED_ID)
+length(all_pmids)
 
 ```
 
@@ -83,7 +83,7 @@ convert_pmid_df <-
 
 converted_ids = 
   convert_pmid_df |>
-  filter(PMID %in% pmids)
+  filter(PMID %in% all_pmids)
 
 data.table::fwrite(converted_ids,
                    here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")
@@ -100,7 +100,7 @@ head(converted_ids)
 
 print("Dimensions of pmid to pmcid mapping data.frame:")
 dim(converted_ids)
-length(pmids)
+length(all_pmids)
 
 print("All pmids are in this data.frame, but some don't have pmcid mapping")
 
@@ -122,7 +122,7 @@ print("Number of pmids with pmcid mapping:")
 length(pmcids)
 
 print("Percentage of pmids with pmcid:")
-round(100 * length(pmcids) / length(pmids), digits = 2)
+round(100 * length(pmcids) / length(all_pmids), digits = 2)
 
 ```
 
@@ -130,7 +130,7 @@ round(100 * length(pmcids) / length(pmids), digits = 2)
 
 Requires PMCIDS to download full text xmls from Europe PMC Restful API. Thus, can only be applied to papers with PMCIDs.
 
-```{r download_europe_xml}
+```{r download_europe_xml, eval = F}
 
 # Function to download full text xml from Europe PMC Restful API
 download_pmc_text <- function(pmcid, 
@@ -178,11 +178,6 @@ download_pmc_text <- function(pmcid,
             encoding = "UTF-8")
   )
   
-  xml_content <- read_xml(content(resp,
-                                  as = "text",
-                                  encoding = "UTF-8")
-                          )
-  
   article_node = xml_find_first(xml_content, 
                                "//*[local-name() = 'article']"
                                )
@@ -229,7 +224,7 @@ print("Number of downloaded full text files from European PMC:")
 print(n_euro_pmc)
 
 print("Percentage of pmids with full text from European PMC:")
-round(100 * n_euro_pmc / length(pmids), digits = 2)
+round(100 * n_euro_pmc / length(all_pmids), digits = 2)
 
 ```
 
@@ -275,7 +270,7 @@ europeanpmc_full_texts <-
 
 ```
 
-## Get NCBI download paths for remaining full texts (where avaliable)
+## Get NCBI download paths for remaining full texts (where available)
 
 ```{r get_full_text_paths}
 
@@ -320,7 +315,7 @@ oa_comm |>
                 PMID %in% not_converted_pmids)
 
 oa_comm_to_get <-
-  oa_noncomm_to_get |>
+  oa_comm_to_get |>
   dplyr::filter(!c(PMID %in% author_manu_to_get$PMID)) |>
   dplyr::filter(!c(PMID %in% oa_noncomm_to_get$PMID))
 
@@ -388,8 +383,6 @@ pmids_retrieved <-
 converted_ids  |>
   filter(pmcids %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |>
   pull(PMID)
-
-all_pmids <- unique(gwas_study_info$PUBMED_ID)
 
 not_available <- all_pmids[!c(all_pmids %in% pmids_retrieved)] 
 
@@ -882,7 +875,7 @@ length(list.files(here::here("output/fulltexts/wiley/"),
 
 TDM policy: https://bmjgroup.com/text-and-data-mining-tdm-policy/
 
-```{r download_bmj_full_texts, eval = F}
+```{r download_bmj_full_texts}
 
 bmj_doi_patterns <- "10.1136/gutjnl|10.1136/jmedgenet"
 
@@ -917,7 +910,7 @@ Policies: https://www.cambridge.org/core/services/open-research/text-and-data-mi
 - Can carry out TDM on any Cambridge Core content you have lawful access to
 - Contact openresearch@cambridge.org about getting xml content
 
-```{r cambridge_full_texts, eval = F}
+```{r cambridge_full_texts}
 
 cambridge_doi_patterns <- "10.1017"
 
@@ -979,7 +972,6 @@ oxford_htmls <- list.files(here::here("output/fulltexts/oxford_academic/html/"),
 
 print("Number of downloaded full text files (html) from Oxford Academic:")
 length(oxford_htmls)
-
 
 ```
 
@@ -1245,6 +1237,58 @@ length(diabetes_links)
 
 ```
 
+# Total number of downloaded full texts
+
+```{r final_full_text_stats}
+
+full_text_files <-
+  list.files(here::here("output/fulltexts"), 
+             recursive = T, 
+             pattern = "\\.html$|\\.xml$") 
+
+full_text_files <- basename(full_text_files) |> 
+  stringr::str_remove_all("\\.html$|\\.xml$") |>
+  unique()
+
+# convert pmcids to pmids 
+converted_fulltext_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% full_text_files) |>
+  pull(PMID) |>
+  unique() 
+
+full_text_files  <- c(full_text_files, 
+                      converted_fulltext_pmcids)
+
+full_text_pmids <- grep("PMC", 
+                        full_text_files, 
+                        invert = T, 
+                        value = T)
+
+full_text_pmids = unique(full_text_pmids)
+
+print("Number of PMIDs with full texts downloaded:")
+sum(all_pmids %in% full_text_files)
+
+print("% of total PMIDs with full texts downloaded:")
+100 * sum(all_pmids %in% full_text_files) / length(all_pmids)
+
+```
+
+## Number of papers to manually review
+
+The papers I can't get full texts for automatically (either through Europe PMC, NCBI Cloud Service, or publisher TDM policies) will need to be manually reviewed to identify study cohorts. 
+
+```{r papers_to_review}
+
+print("Number of PMIDs without full texts downloaded (to manually review):")
+n_manual_review = length(all_pmids) - sum(all_pmids %in% full_text_files)
+n_manual_review
+
+print("Assuming 10 minutes per paper to review, total time (hours):")
+n_manual_review * 10 / 60
+
+```
 
 # Testing: 
 
@@ -1451,7 +1495,7 @@ author_manu_epmc |>
   filter(AccessionID %in% not_available)
 
 author_manu_epmc |>
-  filter(PMID %in% not_avaliable_pmids)
+  filter(PMID %in% not_available_pmids)
 
 author_manu_epmc |>
   filter(PMID %in% pmids)
@@ -1461,7 +1505,7 @@ author_manu_epmc |>
 
 ```
 
-## Test: not used - Download with ftp service, where avaliable
+## Test: not used - Download with ftp service, where available
 
 ```{r download_ftp_service, eval = F}
 
