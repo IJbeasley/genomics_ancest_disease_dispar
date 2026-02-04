@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree456acb16d7261637745421cca458b31e182c2d6btargetblank456acb1a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreee7de25db6e6ce6c588bf1e6cabae5116a3b688c1targetblanke7de25da">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/456acb16d7261637745421cca458b31e182c2d6b" target="_blank">456acb1</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/e7de25db6e6ce6c588bf1e6cabae5116a3b688c1" target="_blank">e7de25d</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree456acb16d7261637745421cca458b31e182c2d6btargetblank456acb1a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreee7de25db6e6ce6c588bf1e6cabae5116a3b688c1targetblanke7de25da"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/456acb16d7261637745421cca458b31e182c2d6b" target="_blank">456acb1</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/e7de25db6e6ce6c588bf1e6cabae5116a3b688c1" target="_blank">e7de25d</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -664,6 +664,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/e7de25db6e6ce6c588bf1e6cabae5116a3b688c1/analysis/get_full_text.Rmd" target="_blank">e7de25d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-04
+</td>
+<td>
+Adding totals + to manually review
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/5c9d397a1a0a58405c84e4cfd2ca305bae7f066e/docs/get_full_text.html" target="_blank">5c9d397</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-04
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1019,8 +1053,8 @@ gwas_study_info &lt;- gwas_study_info |&gt;
 
 print(&quot;Number of disease studies to get full texts for:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of disease studies to get full texts for:&quot;</code></pre>
-<pre class="r"><code>pmids &lt;- unique(gwas_study_info$PUBMED_ID)
-length(pmids)</code></pre>
+<pre class="r"><code>all_pmids &lt;- unique(gwas_study_info$PUBMED_ID)
+length(all_pmids)</code></pre>
 <pre><code>[1] 821</code></pre>
 </div>
 <div id="convert-pubmed-ids-to-pmcids" class="section level2">
@@ -1043,7 +1077,7 @@ convert_pmid_df &lt;-
 
 converted_ids = 
   convert_pmid_df |&gt;
-  filter(PMID %in% pmids)
+  filter(PMID %in% all_pmids)
 
 data.table::fwrite(converted_ids,
                    here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;)
@@ -1065,7 +1099,7 @@ print(&quot;Head of pmid to pmcid mapping data.frame:&quot;)</code></pre>
 <pre><code>[1] &quot;Dimensions of pmid to pmcid mapping data.frame:&quot;</code></pre>
 <pre class="r"><code>dim(converted_ids)</code></pre>
 <pre><code>[1] 821   3</code></pre>
-<pre class="r"><code>length(pmids)</code></pre>
+<pre class="r"><code>length(all_pmids)</code></pre>
 <pre><code>[1] 821</code></pre>
 <pre class="r"><code>print(&quot;All pmids are in this data.frame, but some don&#39;t have pmcid mapping&quot;)</code></pre>
 <pre><code>[1] &quot;All pmids are in this data.frame, but some don&#39;t have pmcid mapping&quot;</code></pre>
@@ -1090,7 +1124,7 @@ print(&quot;Number of pmids with pmcid mapping:&quot;)</code></pre>
 <pre><code>[1] 648</code></pre>
 <pre class="r"><code>print(&quot;Percentage of pmids with pmcid:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids with pmcid:&quot;</code></pre>
-<pre class="r"><code>round(100 * length(pmcids) / length(pmids), digits = 2)</code></pre>
+<pre class="r"><code>round(100 * length(pmcids) / length(all_pmids), digits = 2)</code></pre>
 <pre><code>[1] 78.93</code></pre>
 </div>
 </div>
@@ -1144,11 +1178,6 @@ download_pmc_text &lt;- function(pmcid,
             encoding = &quot;UTF-8&quot;)
   )
   
-  xml_content &lt;- read_xml(content(resp,
-                                  as = &quot;text&quot;,
-                                  encoding = &quot;UTF-8&quot;)
-                          )
-  
   article_node = xml_find_first(xml_content, 
                                &quot;//*[local-name() = &#39;article&#39;]&quot;
                                )
@@ -1190,7 +1219,7 @@ print(&quot;Number of downloaded full text files from European PMC:&quot;)</code
 <pre><code>[1] 428</code></pre>
 <pre class="r"><code>print(&quot;Percentage of pmids with full text from European PMC:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids with full text from European PMC:&quot;</code></pre>
-<pre class="r"><code>round(100 * n_euro_pmc / length(pmids), digits = 2)</code></pre>
+<pre class="r"><code>round(100 * n_euro_pmc / length(all_pmids), digits = 2)</code></pre>
 <pre><code>[1] 52.13</code></pre>
 </div>
 <div id="download-full-texts-from-ncbi-cloud-service"
@@ -1231,10 +1260,10 @@ europeanpmc_full_texts &lt;-
        ) </code></pre>
 </div>
 <div
-id="get-ncbi-download-paths-for-remaining-full-texts-where-avaliable"
+id="get-ncbi-download-paths-for-remaining-full-texts-where-available"
 class="section level2">
 <h2>Get NCBI download paths for remaining full texts (where
-avaliable)</h2>
+available)</h2>
 <pre class="r"><code>left_over_pmcids = pmcids[!pmcids %in% europeanpmc_full_texts]
 
 print(&quot;Number of remaining pmcids without full text:&quot;)</code></pre>
@@ -1280,7 +1309,7 @@ oa_comm |&gt;
                 PMID %in% not_converted_pmids)
 
 oa_comm_to_get &lt;-
-  oa_noncomm_to_get |&gt;
+  oa_comm_to_get |&gt;
   dplyr::filter(!c(PMID %in% author_manu_to_get$PMID)) |&gt;
   dplyr::filter(!c(PMID %in% oa_noncomm_to_get$PMID))
 
@@ -1288,7 +1317,7 @@ oa_comm_to_get &lt;-
 print(&quot;Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:&quot;</code></pre>
 <pre class="r"><code>nrow(oa_comm_to_get)</code></pre>
-<pre><code>[1] 0</code></pre>
+<pre><code>[1] 4</code></pre>
 <pre class="r"><code>file_paths = 
 c(oa_noncomm_to_get$Key,
   oa_comm_to_get$Key,
@@ -1340,8 +1369,6 @@ pmids_retrieved &lt;-
 converted_ids  |&gt;
   filter(pmcids %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |&gt;
   pull(PMID)
-
-all_pmids &lt;- unique(gwas_study_info$PUBMED_ID)
 
 not_available &lt;- all_pmids[!c(all_pmids %in% pmids_retrieved)] 
 
@@ -1815,10 +1842,11 @@ bmj_links &lt;-
        doi_information$DOI,
        value = TRUE)
 
-print(&quot;Number of papers potentially can get from BMJ:&quot;)
-length(bmj_links)
-
-# download html content from webpage
+print(&quot;Number of papers potentially can get from BMJ:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of papers potentially can get from BMJ:&quot;</code></pre>
+<pre class="r"><code>length(bmj_links)</code></pre>
+<pre><code>[1] 4</code></pre>
+<pre class="r"><code># download html content from webpage
 # save to output/fulltexts/bmj</code></pre>
 <pre class="r"><code>print(&quot;Number of downloaded full text files (html) from BMJ:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of downloaded full text files (html) from BMJ:&quot;</code></pre>
@@ -1848,10 +1876,11 @@ cambridge_links &lt;-
        doi_information$DOI,
        value = TRUE)
 
-print(&quot;Number of papers potentially can get from Cambridge:&quot;)
-length(cambridge_links)
-
-# obtain html content from webpage</code></pre>
+print(&quot;Number of papers potentially can get from Cambridge:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of papers potentially can get from Cambridge:&quot;</code></pre>
+<pre class="r"><code>length(cambridge_links)</code></pre>
+<pre><code>[1] 1</code></pre>
+<pre class="r"><code># obtain html content from webpage</code></pre>
 <pre class="r"><code>print(&quot;Number of downloaded full text files (html) from Cambridge:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of downloaded full text files (html) from Cambridge:&quot;</code></pre>
 <pre class="r"><code>length(list.files(here::here(&quot;output/fulltexts/cambridge&quot;),
@@ -2116,6 +2145,58 @@ print(&quot;Number of papers potentially can get from Diabetes:&quot;)</code></p
 <pre class="r"><code>length(diabetes_links)</code></pre>
 <pre><code>[1] 12</code></pre>
 </div>
+<div id="total-number-of-downloaded-full-texts" class="section level1">
+<h1>Total number of downloaded full texts</h1>
+<pre class="r"><code>full_text_files &lt;-
+  list.files(here::here(&quot;output/fulltexts&quot;), 
+             recursive = T, 
+             pattern = &quot;\\.html$|\\.xml$&quot;) 
+
+full_text_files &lt;- basename(full_text_files) |&gt; 
+  stringr::str_remove_all(&quot;\\.html$|\\.xml$&quot;) |&gt;
+  unique()
+
+# convert pmcids to pmids 
+converted_fulltext_pmcids &lt;-
+  converted_ids |&gt;
+  filter(pmcids %in% full_text_files) |&gt;
+  pull(PMID) |&gt;
+  unique() 
+
+full_text_files  &lt;- c(full_text_files, 
+                      converted_fulltext_pmcids)
+
+full_text_pmids &lt;- grep(&quot;PMC&quot;, 
+                        full_text_files, 
+                        invert = T, 
+                        value = T)
+
+full_text_pmids = unique(full_text_pmids)
+
+print(&quot;Number of PMIDs with full texts downloaded:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of PMIDs with full texts downloaded:&quot;</code></pre>
+<pre class="r"><code>sum(all_pmids %in% full_text_files)</code></pre>
+<pre><code>[1] 754</code></pre>
+<pre class="r"><code>print(&quot;% of total PMIDs with full texts downloaded:&quot;)</code></pre>
+<pre><code>[1] &quot;% of total PMIDs with full texts downloaded:&quot;</code></pre>
+<pre class="r"><code>100 * sum(all_pmids %in% full_text_files) / length(all_pmids)</code></pre>
+<pre><code>[1] 91.83922</code></pre>
+<div id="number-of-papers-to-manually-review" class="section level2">
+<h2>Number of papers to manually review</h2>
+<p>The papers I can’t get full texts for automatically (either through
+Europe PMC, NCBI Cloud Service, or publisher TDM policies) will need to
+be manually reviewed to identify study cohorts.</p>
+<pre class="r"><code>print(&quot;Number of PMIDs without full texts downloaded (to manually review):&quot;)</code></pre>
+<pre><code>[1] &quot;Number of PMIDs without full texts downloaded (to manually review):&quot;</code></pre>
+<pre class="r"><code>n_manual_review = length(all_pmids) - sum(all_pmids %in% full_text_files)
+n_manual_review</code></pre>
+<pre><code>[1] 67</code></pre>
+<pre class="r"><code>print(&quot;Assuming 10 minutes per paper to review, total time (hours):&quot;)</code></pre>
+<pre><code>[1] &quot;Assuming 10 minutes per paper to review, total time (hours):&quot;</code></pre>
+<pre class="r"><code>n_manual_review * 10 / 60</code></pre>
+<pre><code>[1] 11.16667</code></pre>
+</div>
+</div>
 <div id="testing" class="section level1">
 <h1>Testing:</h1>
 <div id="other-open-alex-wiley-links" class="section level2">
@@ -2297,7 +2378,7 @@ author_manu_epmc |&gt;
   filter(AccessionID %in% not_available)
 
 author_manu_epmc |&gt;
-  filter(PMID %in% not_avaliable_pmids)
+  filter(PMID %in% not_available_pmids)
 
 author_manu_epmc |&gt;
   filter(PMID %in% pmids)
@@ -2305,9 +2386,9 @@ author_manu_epmc |&gt;
 author_manu_epmc |&gt;
   filter(PMID %in% not_convertable_pmids)</code></pre>
 </div>
-<div id="test-not-used---download-with-ftp-service-where-avaliable"
+<div id="test-not-used---download-with-ftp-service-where-available"
 class="section level2">
-<h2>Test: not used - Download with ftp service, where avaliable</h2>
+<h2>Test: not used - Download with ftp service, where available</h2>
 <pre class="r"><code># not_available
 not_convertable_pmids &lt;- converted_ids |&gt; 
                          filter(pmcids == &quot;&quot;) |&gt; 
