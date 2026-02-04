@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed214580202f46f9078ed0eac3ab5a6ba32eb51d8targetblankd214580a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreec0dc6760053de22b45055b991671970554bb729btargetblankc0dc676a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d214580202f46f9078ed0eac3ab5a6ba32eb51d8" target="_blank">d214580</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/c0dc6760053de22b45055b991671970554bb729b" target="_blank">c0dc676</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed214580202f46f9078ed0eac3ab5a6ba32eb51d8targetblankd214580a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreec0dc6760053de22b45055b991671970554bb729btargetblankc0dc676a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d214580202f46f9078ed0eac3ab5a6ba32eb51d8" target="_blank">d214580</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/c0dc6760053de22b45055b991671970554bb729b" target="_blank">c0dc676</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -664,6 +664,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/c0dc6760053de22b45055b991671970554bb729b/analysis/get_full_text.Rmd" target="_blank">c0dc676</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-04
+</td>
+<td>
+Getting full text from publisher APIs
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/1898c02d1e8373b12af16460f2197a8160222d62/docs/get_full_text.html" target="_blank">1898c02</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-04
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1001,29 +1035,37 @@ print(&quot;Head of pmid to pmcid mapping data.frame:&quot;)</code></pre>
 <pre><code>[1] 821</code></pre>
 <pre class="r"><code>print(&quot;All pmids are in this data.frame, but some don&#39;t have pmcid mapping&quot;)</code></pre>
 <pre><code>[1] &quot;All pmids are in this data.frame, but some don&#39;t have pmcid mapping&quot;</code></pre>
-<pre class="r"><code>print(&quot;Number of pmids without pmcid mapping:&quot;)</code></pre>
+<pre class="r"><code>not_converted_pmids &lt;-
+converted_ids |&gt;
+  filter(pmcids == &quot;&quot;)  |&gt;
+  pull(PMID)
+
+print(&quot;Number of pmids without pmcid mapping:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of pmids without pmcid mapping:&quot;</code></pre>
-<pre class="r"><code>converted_ids |&gt;
-  filter(pmcids == &quot;&quot;) |&gt;
-  dim()</code></pre>
-<pre><code>[1] 173   3</code></pre>
-</div>
-</div>
-<div id="download-full-texts-from-european-pmc" class="section level1">
-<h1>Download full texts from European PMC</h1>
+<pre class="r"><code>length(not_converted_pmids)</code></pre>
+<pre><code>[1] 173</code></pre>
 <pre class="r"><code>pmcids &lt;-
 converted_ids$pmcids |&gt;
   unique()
 
 pmcids &lt;- pmcids[pmcids != &quot;&quot;]
 
-length(pmcids)</code></pre>
+print(&quot;Number of pmids with pmcid mapping:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of pmids with pmcid mapping:&quot;</code></pre>
+<pre class="r"><code>length(pmcids)</code></pre>
 <pre><code>[1] 648</code></pre>
 <pre class="r"><code>print(&quot;Percentage of pmids with pmcid:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids with pmcid:&quot;</code></pre>
 <pre class="r"><code>round(100 * length(pmcids) / length(pmids), digits = 2)</code></pre>
 <pre><code>[1] 78.93</code></pre>
-<pre class="r"><code>download_pmc_text &lt;- function(pmcid, 
+</div>
+</div>
+<div id="download-full-texts-from-european-pmc" class="section level1">
+<h1>Download full texts from European PMC</h1>
+<p>Requires PMCIDS to download full text xmls from Europe PMC Restful
+API. Thus, can only be applied to papers with PMCIDs.</p>
+<pre class="r"><code># Function to download full text xml from Europe PMC Restful API
+download_pmc_text &lt;- function(pmcid, 
                               out_dir = here::here(&quot;output/fulltexts/europe_pmc/&quot;)
                               ) {
 
@@ -1036,12 +1078,8 @@ length(pmcids)</code></pre>
   
   resp &lt;- GET(url_xml)
   
-  # MED/20708005
-  
   # ---- Fallback URL ----
   if(status_code(resp) != 200){
-    
-    #print(paste0(&quot;Trying alternative URL for &quot;, pmcid))
     
     url_xml &lt;- paste0(&quot;https://europepmc.org/&quot;,
                        &quot;oai.cgi?verb=GetRecord&quot;,
@@ -1056,8 +1094,6 @@ length(pmcids)</code></pre>
   # ---- Fail if still bad ----
   if(status_code(resp) != 200){
     
-  #message(&quot;Failed to fetch XML for &quot;, pmcid)
-  
   return(NULL)
     
   }
@@ -1084,7 +1120,7 @@ length(pmcids)</code></pre>
     return(NULL)
    }
   
-    # --- Save ---
+  # --- Save ---
   write_xml(article_node, 
             paste0(out_dir, pmcid, &quot;.xml&quot;)
             )
@@ -1097,15 +1133,14 @@ for(article in pmcids[pmcids != &quot;&quot;]){
 download_pmc_text(article)
 
 }</code></pre>
-<pre class="r"><code>print(&quot;Number of downloaded full text files&quot;)</code></pre>
-<pre><code>[1] &quot;Number of downloaded full text files&quot;</code></pre>
-<pre class="r"><code>print(&quot;From European PMC:&quot;)</code></pre>
-<pre><code>[1] &quot;From European PMC:&quot;</code></pre>
+<pre class="r"><code>print(&quot;Number of downloaded full text files from European PMC:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of downloaded full text files from European PMC:&quot;</code></pre>
 <pre class="r"><code>n_euro_pmc &lt;- length(list.files(here::here(&quot;output/fulltexts/europe_pmc/&quot;),
                   pattern = &quot;\\.xml$&quot;)
        )
-
-print(&quot;Percentage of pmids with full text from European PMC:&quot;)</code></pre>
+print(n_euro_pmc)</code></pre>
+<pre><code>[1] 524</code></pre>
+<pre class="r"><code>print(&quot;Percentage of pmids with full text from European PMC:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of pmids with full text from European PMC:&quot;</code></pre>
 <pre class="r"><code>round(100 * n_euro_pmc / length(pmids), digits = 2)</code></pre>
 <pre><code>[1] 63.82</code></pre>
@@ -1158,6 +1193,10 @@ print(&quot;Number of remaining pmcids without full text:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of remaining pmcids without full text:&quot;</code></pre>
 <pre class="r"><code>length(left_over_pmcids)</code></pre>
 <pre><code>[1] 220</code></pre>
+<pre class="r"><code>print(&quot;+ Number of pmids without pmcid mapping:&quot;)</code></pre>
+<pre><code>[1] &quot;+ Number of pmids without pmcid mapping:&quot;</code></pre>
+<pre class="r"><code>length(not_converted_pmids)</code></pre>
+<pre><code>[1] 173</code></pre>
 <pre class="r"><code>author_manu = data.table::fread(here::here(&quot;output/fulltexts/aws_locations/author_manuscript.filelist.txt&quot;))
 
 oa_noncomm = data.table::fread(here::here(&quot;output/fulltexts/aws_locations/oa_noncomm.filelist.txt&quot;))
@@ -1166,7 +1205,8 @@ oa_comm = data.table::fread(here::here(&quot;output/fulltexts/aws_locations/oa_c
 
 author_manu_to_get &lt;-
 author_manu |&gt;
-  dplyr::filter(AccessionID %in% left_over_pmcids)
+  dplyr::filter(AccessionID %in% left_over_pmcids | 
+                PMID %in% not_converted_pmids)
 
 print(&quot;Number of papers to download in Author Manuscripts section:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers to download in Author Manuscripts section:&quot;</code></pre>
@@ -1174,28 +1214,34 @@ print(&quot;Number of papers to download in Author Manuscripts section:&quot;)</
 <pre><code>[1] 135</code></pre>
 <pre class="r"><code>oa_noncomm_to_get = 
 oa_noncomm |&gt;
-#  dplyr::filter(PMID %in% names(left_over_pmcids)) 
-  dplyr::filter(AccessionID %in% left_over_pmcids)
+  dplyr::filter(AccessionID %in% left_over_pmcids | 
+                PMID %in% not_converted_pmids)
 
-oa_comm_to_get = 
+# remove any overlaps between sections
+oa_noncomm_to_get &lt;-
+  oa_noncomm_to_get |&gt;
+  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID))
+
+print(&quot;Number of additional papers to download in the Non-commericial Open Access PMC section:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of additional papers to download in the Non-commericial Open Access PMC section:&quot;</code></pre>
+<pre class="r"><code>nrow(oa_noncomm_to_get)</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>oa_comm_to_get = 
 oa_comm |&gt;
-#  dplyr::filter(PMID %in% names(left_over_pmcids)) 
-  dplyr::filter(AccessionID %in% left_over_pmcids)
+  dplyr::filter(AccessionID %in% left_over_pmcids |
+                PMID %in% not_converted_pmids)
 
-print(&quot;Number of papers to download in Open Access PMC section:&quot;)</code></pre>
-<pre><code>[1] &quot;Number of papers to download in Open Access PMC section:&quot;</code></pre>
-<pre class="r"><code>nrow(oa_noncomm_to_get) + nrow(oa_comm_to_get)</code></pre>
-<pre><code>[1] 1</code></pre>
-<pre class="r"><code>oa_noncomm_to_get &lt;-
+oa_comm_to_get &lt;-
   oa_noncomm_to_get |&gt;
-  dplyr::filter(!c(AccessionID %in% author_manu_to_get$AccessionID))
+  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID)) |&gt;
+  dplyr::filter(!c(PMID %in% oa_noncomm_to_get$PMID))
 
-oa_ncomm_to_get &lt;-
-  oa_noncomm_to_get |&gt;
-  dplyr::filter(!c(AccessionID %in% author_manu_to_get$AccessionID))
-
-
-file_paths = 
+# remove any overlaps between sections
+print(&quot;Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:&quot;</code></pre>
+<pre class="r"><code>nrow(oa_comm_to_get)</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code>file_paths = 
 c(oa_noncomm_to_get$Key,
   oa_comm_to_get$Key,
   author_manu_to_get$Key)
@@ -2022,259 +2068,10 @@ print(&quot;Number of papers potentially can get from Diabetes:&quot;)</code></p
 <pre class="r"><code>length(diabetes_links)</code></pre>
 <pre><code>[1] 12</code></pre>
 </div>
-<div id="download-text-with-crossref-link-help" class="section level1">
-<h1>Download text with Crossref link help:</h1>
-<pre class="r"><code>downloaded_pmids &lt;- list.files(here::here(&quot;output/fulltexts/&quot;),
-                               recursive = TRUE,
-                               pattern = &quot;\\.xml$&quot;
-                               )
-
-not_available&lt;-
-not_available[!(not_available %in% additional_downloaded_pmids)]
-
-remaining_doi_info &lt;-
-converted_ids |&gt;
-  filter(PMID %in% not_available) |&gt;
-  filter(DOI != &quot;&quot;) |&gt;
-  pull(DOI)
-
-library(rcrossref)
-library(httr)
-
-# Get download links from Crossref
-get_crossref_links &lt;- function(doi) {
-  
-  #browser()
-  
-  # Query Crossref for the article
-  works &lt;- cr_works(dois = doi)
-  
-  # keep links for xml or text-mining 
-  links &lt;- works$data$link[[1]]
-  
-  if(is.null(links)){
-    link_data &lt;- data.frame(doi = doi,
-                            URL = NA,
-                            content.type = NA,
-                            content.version = NA,
-                            intended.application = NA)
-    return(link_data)
-  }
-  
-  links &lt;- 
-  links |&gt;
-    filter(intended.application == &quot;text-mining&quot; | content.type == &quot;application/xml&quot;
-             ) 
-  
-  
-  
-  if(nrow(links) == 0){
-    link_data &lt;- data.frame(doi = doi,
-                            URL = NA,
-                            content.type = NA,
-                            content.version = NA,
-                            intended.application = NA)
-  } else{
-  
-  link_data &lt;- 
-  data.frame(doi = doi,
-             links)
-  
-  }
-
-  return(link_data)
-} 
-
-# remaining_doi_info &lt;- 
-# doi_information |&gt;
-#   filter(!c(DOI %in% paste0(&quot;https://doi.org/&quot;,
-#                             springer_nature_links)
-#             )
-#          ) |&gt;
-#   pull(DOI)
-
-# # add nature links that I couldn&#39;t download before
-# undownloaded_nature_links &lt;- 
-# oa_status_df |&gt;
-#   filter(openaccess == FALSE) |&gt;
-#   pull(doi) 
-  
-# remaining_doi_info &lt;- 
-#   c(remaining_doi_info, 
-#     undownloaded_nature_links
-#     )
-
-length(remaining_doi_info)
-
-remaining_doi_info  &lt;- str_remove_all(remaining_doi_info,
-                                        &quot;https://doi.org/&quot;
-                                        )
-
-link_df &lt;- purrr::map(remaining_doi_info, 
-                      ~get_crossref_links(.x)) |&gt; 
-  bind_rows()
-
-link_df |&gt;
-  filter(!is.na(URL)) |&gt;
-  pull(doi) |&gt;
-  unique() |&gt;
-  length()</code></pre>
-<div id="use-elsevier-api-links-to-download-full-text-xml"
-class="section level2">
-<h2>Use elsevier API links to download full text XML</h2>
-<pre class="r"><code>elsevier_links_to_download &lt;-
-link_df |&gt;
-  filter(grepl(&quot;api.elsevier.com&quot;, URL)
-         ) |&gt;
-  filter(
-  grepl(&quot;xml&quot;, content.type) 
-  ) 
-
-pmids_more_links &lt;- 
-doi_information |&gt;
-  filter(DOI %in% paste0(&quot;https://doi.org/&quot;,
-                        elsevier_links_to_download$doi)
-         ) |&gt;
-  pull(PMID) 
-
-
-# Function to check if article is open access
-# is_open_access &lt;- function(res) {
-#   doc &lt;- content(res)
-#   xml2::xml_ns_strip(doc)
-#   
-#   # Find the open access status element
-#   oa_status &lt;- xml2::xml_find_first(doc, &quot;.//oa-article-status|.//xocs:open-access&quot;)
-#   
-#   if (is.na(oa_status)) {
-#     return(NA)  # Status not found
-#   }
-#   
-#   # Check the attributes
-#   is_oa &lt;- xml2::xml_attr(oa_status, &quot;is-open-access&quot;)
-#   is_archive &lt;- xml2::xml_attr(oa_status, &quot;is-open-archive&quot;)
-#   
-#   # Return TRUE only if is-open-access=&quot;1&quot; or is-open-archive=&quot;1&quot;
-#   return(is_oa == &quot;1&quot; || is_archive == &quot;1&quot;)
-# }
-
-# Function to download full text from Elsevier API link
-download_elsevier_text &lt;- function(url, 
-                                   api_key,
-                                   pmid,
-                                   out_dir = here::here(&quot;output/fulltexts/elsevier/&quot;)) {
-  
-  if(file.exists(paste0(out_dir, pmid, &quot;.xml&quot;))){
-    return(TRUE)
-  }
-  
-  response &lt;- GET(url,
-                  add_headers(&quot;X-ELS-APIKey&quot; = api_key)
-                  )
-  
-  if (status_code(response) != 200) {
-    message(&quot;Failed to fetch XML for &quot;, pmid)
-    return(FALSE)
-    
-  } 
-  
-  # browser()
-  # 
-  # 
-  # if (is_open_access(response)) {
-  #   message(&quot;Article is not open access for &quot;, pmid)
-  #   return(FALSE)
-  # }
-  
-  doc &lt;- content(response)
-  
-  # Option 1: Use xml_ns() to get namespaces and reference them
-  ns &lt;- xml2::xml_ns(doc)
-  original_text &lt;- xml2::xml_find_first(doc, &quot;.//d1:originalText&quot;, ns)
-  
-  # xml_content &lt;- xml2::xml_find_first(content(response), 
-  #                                        &quot;.//originalText&quot;)
-  
-  xml2::write_xml(original_text,
-            paste0(out_dir, pmid, &quot;.xml&quot;)
-  )
-  
-}
-
-purrr::walk2(elsevier_links_to_download$URL,
-               pmids_more_links,
-               ~download_elsevier_text(url = .x,
-                                       api_key = elsevier_api,
-                                       pmid = .y)
-               )
-
-elsevier_links_to_download &lt;-
-link_df |&gt;
-  filter(grepl(&quot;api.elsevier.com&quot;, URL)
-         ) |&gt;
-  filter(
-  grepl(&quot;plain&quot;, content.type) 
-  ) 
-
-pmids_more_links &lt;- 
-doi_information |&gt;
-  filter(DOI %in% paste0(&quot;https://doi.org/&quot;,
-                        elsevier_links_to_download$doi)
-         ) |&gt;
-  pull(PMID) 
-
-download_elsevier_text &lt;- function(url, 
-                                   api_key,
-                                   pmid,
-                                   out_dir = here::here(&quot;output/fulltexts/elsevier/&quot;)) {
-  
-  if(file.exists(paste0(out_dir, pmid, &quot;.xml&quot;))){
-    return(TRUE)
-  }
-  
-  response &lt;- GET(url,
-                  add_headers(&quot;X-ELS-APIKey&quot; = api_key)
-                  )
-  
-  if (status_code(response) != 200) {
-    message(&quot;Failed to fetch text for &quot;, pmid)
-    return(FALSE)
-    
-  }
-  
-  text_content &lt;- content(response, 
-                          as = &quot;text&quot;, 
-                          encoding = &quot;UTF-8&quot;)
-  
-  writeLines(text_content,
-             paste0(out_dir, pmid, &quot;.txt&quot;),
-             useBytes = TRUE)
-  
-}
-
-purrr::walk2(elsevier_links_to_download$URL,
-               pmids_more_links,
-               ~download_elsevier_text(url = .x,
-                                       api_key = elsevier_api,
-                                       pmid = .y)
-               )
-                
-retrieved_pmids &lt;- 
-  list.files(here::here(&quot;output/fulltexts/elsevier/&quot;),
-             pattern = &quot;\\.xml$|\\.txt$&quot;
-             )
-retrieved_pmids &lt;- sub(&quot;\\.xml$|\\.txt$&quot;, &quot;&quot;, retrieved_pmids)
-     
-downloaded_elsevier_dois &lt;-
-doi_information |&gt;
-  filter(PMID %in% retrieved_pmids) |&gt;
-  pull(DOI)
-
-remaining_doi_info &lt;-
-remaining_doi_info[!c(remaining_doi_info %in% downloaded_elsevier_dois)] </code></pre>
-</div>
+<div id="testing" class="section level1">
+<h1>Testing:</h1>
 <div id="other-open-alex-wiley-links" class="section level2">
-<h2>other open alex wiley links</h2>
+<h2>Other open alex wiley links</h2>
 <pre class="r"><code>open_alex_wiley_urls &lt;-
 open_alex_works |&gt; 
   filter(doi %in% paste0(&quot;https://doi.org/&quot;, remaining_doi_info)) |&gt; 
@@ -2297,10 +2094,9 @@ purrr::walk2(open_alex_wiley_urls$oa_url,
                                   pmids = .y)
              )</code></pre>
 </div>
-</div>
 <div id="download-pdfs-using-open-access-information-from-open-alex"
-class="section level1">
-<h1>Download PDFs using Open Access information from Open Alex</h1>
+class="section level2">
+<h2>Download PDFs using Open Access information from Open Alex</h2>
 <div id="pmids-that-couldnt-be-converted-to-pmcids"
 class="section level3">
 <h3>PMIDs that couldn’t be converted to PMCIDs</h3>
@@ -2423,8 +2219,8 @@ done &lt; pdf_links_to_download_pt2.txt
 </div>
 </div>
 <div id="test-not-used---europe-pmc-author-manuscripts"
-class="section level1">
-<h1>Test: not used - Europe PMC Author Manuscripts</h1>
+class="section level2">
+<h2>Test: not used - Europe PMC Author Manuscripts</h2>
 <pre class="bash"><code>
 curl -s https://europepmc.org/ftp/manuscripts/ \
   | grep -o &#39;author_manuscript_txt[^&quot;]*\.filelist\.txt&#39; \
@@ -2462,8 +2258,8 @@ author_manu_epmc |&gt;
   filter(PMID %in% not_convertable_pmids)</code></pre>
 </div>
 <div id="test-not-used---download-with-ftp-service-where-avaliable"
-class="section level1">
-<h1>Test: not used - Download with ftp service, where avaliable</h1>
+class="section level2">
+<h2>Test: not used - Download with ftp service, where avaliable</h2>
 <pre class="r"><code># not_available
 not_convertable_pmids &lt;- converted_ids |&gt; 
                          filter(pmcids == &quot;&quot;) |&gt; 
@@ -2544,6 +2340,7 @@ loaded via a namespace (and not attached):
 [46] tibble_3.3.0        tidyselect_1.2.1    rstudioapi_0.17.1  
 [49] knitr_1.50          xtable_1.8-4        htmltools_0.5.8.1  
 [52] rmarkdown_2.30      compiler_4.3.1      getPass_0.2-4      </code></pre>
+</div>
 </div>
 </div>
 </div>
