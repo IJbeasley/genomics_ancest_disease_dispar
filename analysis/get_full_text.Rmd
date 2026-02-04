@@ -130,12 +130,17 @@ round(100 * length(pmcids) / length(pmids), digits = 2)
 
 Requires PMCIDS to download full text xmls from Europe PMC Restful API. Thus, can only be applied to papers with PMCIDs.
 
-```{r download_europe_xml, eval = F}
+```{r download_europe_xml}
 
 # Function to download full text xml from Europe PMC Restful API
 download_pmc_text <- function(pmcid, 
                               out_dir = here::here("output/fulltexts/europe_pmc/")
                               ) {
+  
+  # check if file already exists
+  if(file.exists(paste0(out_dir, pmcid, ".xml"))){
+    return(TRUE)
+  }
 
 
   url_xml <- paste0("https://www.ebi.ac.uk/",
@@ -207,11 +212,20 @@ download_pmc_text(article)
 
 ```{r downloaded_european_full_texts}
 
+euro_pmcids <-list.files(here::here("output/fulltexts/europe_pmc/"),
+                  pattern = "\\.xml$")
+
+euro_pmcids <- gsub("\\.xml$", 
+       "", 
+       euro_pmcids
+       )
+
+euro_pmcids <- pmcids[pmcids %in% euro_pmcids]
+
+n_euro_pmc <- length(euro_pmcids)
+
 print("Number of downloaded full text files from European PMC:")
 
-n_euro_pmc <- length(list.files(here::here("output/fulltexts/europe_pmc/"),
-                  pattern = "\\.xml$")
-       )
 print(n_euro_pmc)
 
 print("Percentage of pmids with full text from European PMC:")
@@ -323,16 +337,16 @@ file_paths <- str_replace_all(file_paths,
                               pattern = "txt",
                               replacement = "xml")
 
+writeLines(
+  file_paths,
+  here::here("output/fulltexts/aws_locations/selected_paths.txt")
+)
+
 ```
 
 ## Download remaining full texts from NCBI Cloud Service
 
 ```{r download_remaining_full_texts, eval = F}
-
-writeLines(
-  file_paths,
-  here::here("output/fulltexts/aws_locations/selected_paths.txt")
-)
 
 system(
   paste(
@@ -357,22 +371,22 @@ system(
 #                                           )]
 
 # get list of pmcids already retrieved
-pmcids_retrieved <- 
-list.files(c(here::here("output/fulltexts/europe_pmc"),
+ncbi_pmcids_retrieved <- 
+list.files(c(#here::here("output/fulltexts/europe_pmc"),
              here::here("output/fulltexts/ncbi_cloud/")
              ),
              pattern = "\\.xml$"
 )
 
-pmcids_retrieved <-
+ncbi_pmcids_retrieved <-
   gsub("\\.xml$", 
        "", 
-       pmcids_retrieved
+       ncbi_pmcids_retrieved
        )
 
 pmids_retrieved <-
 converted_ids  |>
-  filter(pmcids %in% pmcids_retrieved) |>
+  filter(pmcids %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |>
   pull(PMID)
 
 all_pmids <- unique(gwas_study_info$PUBMED_ID)
@@ -380,10 +394,10 @@ all_pmids <- unique(gwas_study_info$PUBMED_ID)
 not_available <- all_pmids[!c(all_pmids %in% pmids_retrieved)] 
 
 print("Percentage of pmids with full text from NCBI Cloud Service:")
-100 * (n_euro_pmc - length(not_available)) / length(pmids)
+100 * (length(all_pmids) - n_euro_pmc - length(not_available)) / length(all_pmids)
 
 print("Percentage of pmids without full text from either European PMC or NCBI Cloud Service:")
-100 * length(not_available) / length(pmids)
+100 * length(not_available) / length(all_pmids)
 
 ```
 
