@@ -104,16 +104,13 @@ length(pmids)
 
 print("All pmids are in this data.frame, but some don't have pmcid mapping")
 
-print("Number of pmids without pmcid mapping:")
+not_converted_pmids <-
 converted_ids |>
-  filter(pmcids == "") |>
-  dim()
+  filter(pmcids == "")  |>
+  pull(PMID)
 
-```
-
-# Download full texts from European PMC
-
-```{r get_pmcids}
+print("Number of pmids without pmcid mapping:")
+length(not_converted_pmids)
 
 pmcids <-
 converted_ids$pmcids |>
@@ -121,6 +118,7 @@ converted_ids$pmcids |>
 
 pmcids <- pmcids[pmcids != ""]
 
+print("Number of pmids with pmcid mapping:")
 length(pmcids)
 
 print("Percentage of pmids with pmcid:")
@@ -128,8 +126,13 @@ round(100 * length(pmcids) / length(pmids), digits = 2)
 
 ```
 
+# Download full texts from European PMC
+
+Requires PMCIDS to download full text xmls from Europe PMC Restful API. Thus, can only be applied to papers with PMCIDs.
+
 ```{r download_europe_xml, eval = F}
 
+# Function to download full text xml from Europe PMC Restful API
 download_pmc_text <- function(pmcid, 
                               out_dir = here::here("output/fulltexts/europe_pmc/")
                               ) {
@@ -143,12 +146,8 @@ download_pmc_text <- function(pmcid,
   
   resp <- GET(url_xml)
   
-  # MED/20708005
-  
   # ---- Fallback URL ----
   if(status_code(resp) != 200){
-    
-    #print(paste0("Trying alternative URL for ", pmcid))
     
     url_xml <- paste0("https://europepmc.org/",
                        "oai.cgi?verb=GetRecord",
@@ -163,8 +162,6 @@ download_pmc_text <- function(pmcid,
   # ---- Fail if still bad ----
   if(status_code(resp) != 200){
     
-  #message("Failed to fetch XML for ", pmcid)
-  
   return(NULL)
     
   }
@@ -191,7 +188,7 @@ download_pmc_text <- function(pmcid,
     return(NULL)
    }
   
-    # --- Save ---
+  # --- Save ---
   write_xml(article_node, 
             paste0(out_dir, pmcid, ".xml")
             )
@@ -210,12 +207,12 @@ download_pmc_text(article)
 
 ```{r downloaded_european_full_texts}
 
-print("Number of downloaded full text files")
-print("From European PMC:")
+print("Number of downloaded full text files from European PMC:")
 
 n_euro_pmc <- length(list.files(here::here("output/fulltexts/europe_pmc/"),
                   pattern = "\\.xml$")
        )
+print(n_euro_pmc)
 
 print("Percentage of pmids with full text from European PMC:")
 round(100 * n_euro_pmc / length(pmids), digits = 2)
@@ -273,6 +270,9 @@ left_over_pmcids = pmcids[!pmcids %in% europeanpmc_full_texts]
 print("Number of remaining pmcids without full text:")
 length(left_over_pmcids)
 
+print("+ Number of pmids without pmcid mapping:")
+length(not_converted_pmids)
+
 author_manu = data.table::fread(here::here("output/fulltexts/aws_locations/author_manuscript.filelist.txt"))
 
 oa_noncomm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_noncomm.filelist.txt"))
@@ -281,32 +281,38 @@ oa_comm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_comm.f
 
 author_manu_to_get <-
 author_manu |>
-  dplyr::filter(AccessionID %in% left_over_pmcids)
+  dplyr::filter(AccessionID %in% left_over_pmcids | 
+                PMID %in% not_converted_pmids)
 
 print("Number of papers to download in Author Manuscripts section:")
 nrow(author_manu_to_get)
 
 oa_noncomm_to_get = 
 oa_noncomm |>
-#  dplyr::filter(PMID %in% names(left_over_pmcids)) 
-  dplyr::filter(AccessionID %in% left_over_pmcids)
+  dplyr::filter(AccessionID %in% left_over_pmcids | 
+                PMID %in% not_converted_pmids)
+
+# remove any overlaps between sections
+oa_noncomm_to_get <-
+  oa_noncomm_to_get |>
+  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID))
+
+print("Number of additional papers to download in the Non-commericial Open Access PMC section:")
+nrow(oa_noncomm_to_get)
 
 oa_comm_to_get = 
 oa_comm |>
-#  dplyr::filter(PMID %in% names(left_over_pmcids)) 
-  dplyr::filter(AccessionID %in% left_over_pmcids)
+  dplyr::filter(AccessionID %in% left_over_pmcids |
+                PMID %in% not_converted_pmids)
 
-print("Number of papers to download in Open Access PMC section:")
-nrow(oa_noncomm_to_get) + nrow(oa_comm_to_get)
-
-oa_noncomm_to_get <-
+oa_comm_to_get <-
   oa_noncomm_to_get |>
-  dplyr::filter(!c(AccessionID %in% author_manu_to_get$AccessionID))
+  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID)) |>
+  dplyr::filter(!c(PMID %in% oa_noncomm_to_get$PMID))
 
-oa_ncomm_to_get <-
-  oa_noncomm_to_get |>
-  dplyr::filter(!c(AccessionID %in% author_manu_to_get$AccessionID))
-
+# remove any overlaps between sections
+print("Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:")
+nrow(oa_comm_to_get)
 
 file_paths = 
 c(oa_noncomm_to_get$Key,
@@ -1225,267 +1231,10 @@ length(diabetes_links)
 
 ```
 
-# Download text with Crossref link help: 
 
-```{r download_crossref_full_texts, eval = F}
+# Testing: 
 
-downloaded_pmids <- list.files(here::here("output/fulltexts/"),
-                               recursive = TRUE,
-                               pattern = "\\.xml$"
-                               )
-
-not_available<-
-not_available[!(not_available %in% additional_downloaded_pmids)]
-
-remaining_doi_info <-
-converted_ids |>
-  filter(PMID %in% not_available) |>
-  filter(DOI != "") |>
-  pull(DOI)
-
-library(rcrossref)
-library(httr)
-
-# Get download links from Crossref
-get_crossref_links <- function(doi) {
-  
-  #browser()
-  
-  # Query Crossref for the article
-  works <- cr_works(dois = doi)
-  
-  # keep links for xml or text-mining 
-  links <- works$data$link[[1]]
-  
-  if(is.null(links)){
-    link_data <- data.frame(doi = doi,
-                            URL = NA,
-                            content.type = NA,
-                            content.version = NA,
-                            intended.application = NA)
-    return(link_data)
-  }
-  
-  links <- 
-  links |>
-    filter(intended.application == "text-mining" | content.type == "application/xml"
-             ) 
-  
-  
-  
-  if(nrow(links) == 0){
-    link_data <- data.frame(doi = doi,
-                            URL = NA,
-                            content.type = NA,
-                            content.version = NA,
-                            intended.application = NA)
-  } else{
-  
-  link_data <- 
-  data.frame(doi = doi,
-             links)
-  
-  }
-
-  return(link_data)
-} 
-
-# remaining_doi_info <- 
-# doi_information |>
-#   filter(!c(DOI %in% paste0("https://doi.org/",
-#                             springer_nature_links)
-#             )
-#          ) |>
-#   pull(DOI)
-
-# # add nature links that I couldn't download before
-# undownloaded_nature_links <- 
-# oa_status_df |>
-#   filter(openaccess == FALSE) |>
-#   pull(doi) 
-  
-# remaining_doi_info <- 
-#   c(remaining_doi_info, 
-#     undownloaded_nature_links
-#     )
-
-length(remaining_doi_info)
-
-remaining_doi_info  <- str_remove_all(remaining_doi_info,
-                                        "https://doi.org/"
-                                        )
-
-link_df <- purrr::map(remaining_doi_info, 
-                      ~get_crossref_links(.x)) |> 
-  bind_rows()
-
-link_df |>
-  filter(!is.na(URL)) |>
-  pull(doi) |>
-  unique() |>
-  length()
-
-
-```
-
-## Use elsevier API links to download full text XML
-
-```{r download_elsevier_full_texts, eval = F}
-
-elsevier_links_to_download <-
-link_df |>
-  filter(grepl("api.elsevier.com", URL)
-         ) |>
-  filter(
-  grepl("xml", content.type) 
-  ) 
-
-pmids_more_links <- 
-doi_information |>
-  filter(DOI %in% paste0("https://doi.org/",
-                        elsevier_links_to_download$doi)
-         ) |>
-  pull(PMID) 
-
-
-# Function to check if article is open access
-# is_open_access <- function(res) {
-#   doc <- content(res)
-#   xml2::xml_ns_strip(doc)
-#   
-#   # Find the open access status element
-#   oa_status <- xml2::xml_find_first(doc, ".//oa-article-status|.//xocs:open-access")
-#   
-#   if (is.na(oa_status)) {
-#     return(NA)  # Status not found
-#   }
-#   
-#   # Check the attributes
-#   is_oa <- xml2::xml_attr(oa_status, "is-open-access")
-#   is_archive <- xml2::xml_attr(oa_status, "is-open-archive")
-#   
-#   # Return TRUE only if is-open-access="1" or is-open-archive="1"
-#   return(is_oa == "1" || is_archive == "1")
-# }
-
-# Function to download full text from Elsevier API link
-download_elsevier_text <- function(url, 
-                                   api_key,
-                                   pmid,
-                                   out_dir = here::here("output/fulltexts/elsevier/")) {
-  
-  if(file.exists(paste0(out_dir, pmid, ".xml"))){
-    return(TRUE)
-  }
-  
-  response <- GET(url,
-                  add_headers("X-ELS-APIKey" = api_key)
-                  )
-  
-  if (status_code(response) != 200) {
-    message("Failed to fetch XML for ", pmid)
-    return(FALSE)
-    
-  } 
-  
-  # browser()
-  # 
-  # 
-  # if (is_open_access(response)) {
-  #   message("Article is not open access for ", pmid)
-  #   return(FALSE)
-  # }
-  
-  doc <- content(response)
-  
-  # Option 1: Use xml_ns() to get namespaces and reference them
-  ns <- xml2::xml_ns(doc)
-  original_text <- xml2::xml_find_first(doc, ".//d1:originalText", ns)
-  
-  # xml_content <- xml2::xml_find_first(content(response), 
-  #                                        ".//originalText")
-  
-  xml2::write_xml(original_text,
-            paste0(out_dir, pmid, ".xml")
-  )
-  
-}
-
-purrr::walk2(elsevier_links_to_download$URL,
-               pmids_more_links,
-               ~download_elsevier_text(url = .x,
-                                       api_key = elsevier_api,
-                                       pmid = .y)
-               )
-
-elsevier_links_to_download <-
-link_df |>
-  filter(grepl("api.elsevier.com", URL)
-         ) |>
-  filter(
-  grepl("plain", content.type) 
-  ) 
-
-pmids_more_links <- 
-doi_information |>
-  filter(DOI %in% paste0("https://doi.org/",
-                        elsevier_links_to_download$doi)
-         ) |>
-  pull(PMID) 
-
-download_elsevier_text <- function(url, 
-                                   api_key,
-                                   pmid,
-                                   out_dir = here::here("output/fulltexts/elsevier/")) {
-  
-  if(file.exists(paste0(out_dir, pmid, ".xml"))){
-    return(TRUE)
-  }
-  
-  response <- GET(url,
-                  add_headers("X-ELS-APIKey" = api_key)
-                  )
-  
-  if (status_code(response) != 200) {
-    message("Failed to fetch text for ", pmid)
-    return(FALSE)
-    
-  }
-  
-  text_content <- content(response, 
-                          as = "text", 
-                          encoding = "UTF-8")
-  
-  writeLines(text_content,
-             paste0(out_dir, pmid, ".txt"),
-             useBytes = TRUE)
-  
-}
-
-purrr::walk2(elsevier_links_to_download$URL,
-               pmids_more_links,
-               ~download_elsevier_text(url = .x,
-                                       api_key = elsevier_api,
-                                       pmid = .y)
-               )
-                
-retrieved_pmids <- 
-  list.files(here::here("output/fulltexts/elsevier/"),
-             pattern = "\\.xml$|\\.txt$"
-             )
-retrieved_pmids <- sub("\\.xml$|\\.txt$", "", retrieved_pmids)
-     
-downloaded_elsevier_dois <-
-doi_information |>
-  filter(PMID %in% retrieved_pmids) |>
-  pull(DOI)
-
-remaining_doi_info <-
-remaining_doi_info[!c(remaining_doi_info %in% downloaded_elsevier_dois)] 
-                                
-```
-
-## other open alex wiley links
+## Other open alex wiley links
 
 ```{r, eval = F}
 open_alex_wiley_urls <-
@@ -1514,7 +1263,7 @@ purrr::walk2(open_alex_wiley_urls$oa_url,
 
 ```
 
-# Download PDFs using Open Access information from Open Alex
+## Download PDFs using Open Access information from Open Alex
 
 ### PMIDs that couldn't be converted to PMCIDs
 
@@ -1653,7 +1402,7 @@ done < pdf_links_to_download_pt2.txt
 
 ```
 
-# Test: not used - Europe PMC Author Manuscripts
+## Test: not used - Europe PMC Author Manuscripts
 
 ```{bash get_filelists, eval = FALSE}
 
@@ -1698,7 +1447,7 @@ author_manu_epmc |>
 
 ```
 
-# Test: not used - Download with ftp service, where avaliable
+## Test: not used - Download with ftp service, where avaliable
 
 ```{r download_ftp_service, eval = F}
 
