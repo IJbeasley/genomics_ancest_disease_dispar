@@ -1,11 +1,16 @@
 # Break abstract text into sentences using Spacy
 from pydoc import doc
+import scispacy
 import spacy
 from spacy.lang.en import English
 from typing import List
+# load_model = spacy.load("en_core_web_trf")
 #load_model = spacy.load('en_core_web_sm')
-# use the transformer model for better accuracy - although slower
-load_model = spacy.load("en_core_web_trf")
+# let's use the scispacy model for better performance on scientific text
+
+
+load_model = spacy.load("en_core_sci_scibert")
+# use en_core_sci_scibert
 
 # saving sentences to json
 import json
