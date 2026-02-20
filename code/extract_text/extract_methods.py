@@ -34,16 +34,21 @@ def extract_text_from_element(element, parent_tag=None):
         # Add section header with period at the end
         if label_elem is not None or title_elem is not None:
             header_parts = []
-            if label_elem is not None:
-                # Recursively get all text from label
-                label_text = extract_text_from_element(label_elem, current_tag)
-                if label_text:
-                    header_parts.append(label_text.strip())
+            # Skip label (section numbers) for cleaner sentence tokenization
+            # if label_elem is not None:
+            #     # Recursively get all text from label
+            #     label_text = extract_text_from_element(label_elem, current_tag)
+            #     if label_text:
+            #         header_parts.append(label_text.strip())
             if title_elem is not None:
                 # Recursively get all text from title (including nested elements)
                 title_text = extract_text_from_element(title_elem, current_tag)
                 if title_text:
-                    header_parts.append(title_text.strip())
+                    # Remove leading section numbers from title (e.g., "2.1 GWAS" → "GWAS")
+                    import re
+                    title_text = re.sub(r'^(\d+\.)*\d+\s+', '', title_text.strip())
+                    if title_text:  # Only add if there's text left after removing numbers
+                        header_parts.append(title_text)
             
             if header_parts:
                 text_parts.append(' '.join(header_parts) + '. ')
@@ -95,6 +100,10 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = ' '.join(filter(None, para_text_parts))
         para_text = re.sub(r'\s+', ' ', para_text).strip()
         
+        # Remove section numbering at start of sentences (e.g., "2.1", "2.3.1", "2.5.6.7")
+        para_text = re.sub(r'^(\d+\.)+\d*\s*', '', para_text)  # at start of paragraph
+        para_text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', para_text)  # after period
+        
         # Clean up punctuation artifacts from removed citations
         # Remove standalone punctuation like ", ," or ". ,"
         para_text = re.sub(r'([,;.])\s*([,;.])', r'\2', para_text)  # collapse repeated punctuation
@@ -114,8 +123,14 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = re.sub(r'[,;]\s*[–—\-]\s*[,;.]', '.', para_text)  # ", –." or "; –," → "."
         para_text = re.sub(r'[,;]\s*[–—\-]\s*$', '.', para_text)  # ", –" at end → "."
         para_text = re.sub(r'[–—\-]\s*[,;.]', '.', para_text)  # "–." or "–," → "."
-        para_text = re.sub(r'\.{2,}', '.', para_text)  # replace multiple consecutive periods with a single period
         
+        # Replace double (or more) periods with single period
+        para_text = re.sub(r'\.{2,}', '.', para_text)  # ".." or "..." → "."
+        
+        para_text = re.sub(r'\(\s+', '(', para_text)  # Remove space after (
+        para_text = re.sub(r'\s+\)', ')', para_text)  # Remove space before )
+        para_text = re.sub(r'\[\s+', '[', para_text)  # Remove space after [
+        para_text = re.sub(r'\s+\]', ']', para_text)  # Remove space before ]
         
         # Add paragraph with space after it
         if para_text:
