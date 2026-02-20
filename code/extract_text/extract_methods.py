@@ -100,6 +100,10 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = re.sub(r'([,;.])\s*([,;.])', r'\2', para_text)  # collapse repeated punctuation
         para_text = re.sub(r'\s+([,;.])', r'\1', para_text)  # remove space before punctuation
         
+        # Remove incomplete author citations like (Author et al, ) or (Author et al,)
+        # Also handles multiple citations: (Author et al,; Author2 et al, )
+        para_text = re.sub(r'\([A-Z][a-zA-Z\s&,;.]+et al[,;\s.]*\)', '', para_text)
+        
         # Remove empty brackets left by citations: [ ] or [, ] or [ , ] or [, – ]
         # This catches brackets with any combination of spaces, commas, semicolons, dashes
         para_text = re.sub(r'\[\s*[,;–—\-\s]*\s*\]', '', para_text)  # remove empty square brackets
@@ -110,6 +114,8 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = re.sub(r'[,;]\s*[–—\-]\s*[,;.]', '.', para_text)  # ", –." or "; –," → "."
         para_text = re.sub(r'[,;]\s*[–—\-]\s*$', '.', para_text)  # ", –" at end → "."
         para_text = re.sub(r'[–—\-]\s*[,;.]', '.', para_text)  # "–." or "–," → "."
+        para_text = re.sub(r'\.{2,}', '.', para_text)  # replace multiple consecutive periods with a single period
+        
         
         # Add paragraph with space after it
         if para_text:
