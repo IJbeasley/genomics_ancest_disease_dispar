@@ -135,16 +135,37 @@ def find_all_methods_sections(root):
     
     This is useful for files that have both a stub and a full methods section.
     Only returns top-level sections, not their subsections.
+    Filters out author/contributor lists that are incorrectly tagged as methods.
     """
-    found_sections = []
+    candidates = []
     
-    # Helper function to check if a section is inside another section in found_sections
+    # Author/team section keywords to skip (these are not real methods)
+    author_keywords = [
+        'analysis team', 'author', 'contributor', 'writing group',
+        'study group', 'consortium', 'working group', 'steering committee',
+        'acknowledgment', 'funding', 'competing interest', 'conflict of interest'
+    ]
+    
+    # Helper function to check if a section is inside another section in candidates
     def is_subsection_of_found(sec):
-        """Check if sec is a descendant of any section already in found_sections"""
-        for found_sec in found_sections:
+        """Check if sec is a descendant of any section already in candidates"""
+        for found_sec in candidates:
             for descendant in found_sec.iter():
                 if descendant == sec:
                     return True
+        return False
+    
+    # Helper function to check if section is an author/contributor list
+    def is_author_section(sec):
+        """Check if this section is an author or contributor list"""
+        for child in sec:
+            if child.tag.endswith('title'):
+                title_text = ''.join(child.itertext()).strip().lower()
+                # Check if title matches author/team keywords
+                for keyword in author_keywords:
+                    if keyword in title_text:
+                        return True
+                break
         return False
     
     # First try: Look for sections with sec-type="materials|methods" or "materials and methods"
@@ -162,28 +183,9 @@ def find_all_methods_sections(root):
                             continue
                         break
                 else:
-                    # Not in abstract, this is a methods section
-                    if not is_subsection_of_found(sec):
-                        found_sections.append(sec)
-    
-    # Second try: Look for sections with sec-type="methods" (not in abstract)
-    for sec in root.iter():
-        if sec.tag.endswith('sec'):
-            sec_type = sec.get('sec-type')
-            if sec_type and ('material' in sec_type.lower() and 'method' in sec_type.lower()):
-                # Check if in abstract
-                for parent in root.iter():
-                    if parent.tag.endswith('abstract'):
-                        for child in parent.iter():
-                            if child == sec:
-                                break
-                        else:
-                            continue
-                        break
-                else:
-                    # Not in abstract, this is a methods section
-                    if not is_subsection_of_found(sec):
-                        found_sections.append(sec)
+                    # Not in abstract, check if it's an author section
+                    if not is_subsection_of_found(sec) and not is_author_section(sec):
+                        candidates.append(sec)
     
     # Second try: Look for sections with sec-type="methods" (not in abstract)
     methods_candidates = []
@@ -213,12 +215,12 @@ def find_all_methods_sections(root):
                                     break
                     methods_candidates.append((sec, depth))
     
-    # Sort by depth and add to found_sections
+    # Sort by depth and add to candidates
     if methods_candidates:
         methods_candidates.sort(key=lambda x: x[1])
         for sec, depth in methods_candidates:
-            if sec not in found_sections and not is_subsection_of_found(sec):
-                found_sections.append(sec)
+            if sec not in candidates and not is_subsection_of_found(sec) and not is_author_section(sec):
+                candidates.append(sec)
     
     # Third try: Look for sections with title containing "methods" (not in abstract)
     # Common patterns: "Methods", "Materials and Methods", "Methods and Materials"
@@ -235,7 +237,7 @@ def find_all_methods_sections(root):
                     if is_in_abstract:
                         break
             
-            if is_in_abstract or sec in found_sections or is_subsection_of_found(sec):
+            if is_in_abstract or sec in candidates or is_subsection_of_found(sec):
                 continue
             
             # Look for a title child element
@@ -248,10 +250,39 @@ def find_all_methods_sections(root):
                         not title_text.startswith('discussion') and
                         # Avoid subsections like "Statistical methods"
                         len(title_text.split()) <= 6):
-                        found_sections.append(sec)
+                        if not is_author_section(sec):
+                            candidates.append(sec)
                     break  # Only check first title
     
-    return found_sections
+    # Prioritize sections: prefer explicit "Methods Summary" / "Materials and Methods" titles
+    # over generic sec-type="methods" sections that might be author lists
+    def section_priority(sec):
+        """Return priority score (lower is better)"""
+        sec_type = sec.get('sec-type')
+        for child in sec:
+            if child.tag.endswith('title'):
+                title = ''.join(child.itertext()).strip().lower()
+                # Priority 1: Clear methods titles
+                if ('methods summary' in title or 
+                    'materials and methods' in title or
+                    'methods and materials' in title):
+                    return 1
+                # Priority 2: Has sec-type with material+method
+                if sec_type and 'material' in sec_type.lower() and 'method' in sec_type.lower():
+                    return 2
+                # Priority 3: Has sec-type="methods"
+                if sec_type and sec_type.lower() == 'methods':
+                    return 3
+                # Priority 4: Title contains "method"
+                if 'method' in title:
+                    return 4
+                break
+        return 5
+    
+    # Sort by priority
+    candidates.sort(key=section_priority)
+    
+    return candidates
 
 
 def extract_methods_section(xml_file):
