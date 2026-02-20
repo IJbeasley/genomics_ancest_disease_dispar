@@ -127,10 +127,15 @@ def extract_text_from_element(element, parent_tag=None):
         # Replace double (or more) periods with single period
         para_text = re.sub(r'\.{2,}', '.', para_text)  # ".." or "..." → "."
         
-        para_text = re.sub(r'\(\s+', '(', para_text)  # Remove space after (
-        para_text = re.sub(r'\s+\)', ')', para_text)  # Remove space before )
-        para_text = re.sub(r'\[\s+', '[', para_text)  # Remove space after [
-        para_text = re.sub(r'\s+\]', ']', para_text)  # Remove space before ]
+        # Remove extra spaces inside brackets: "( text )" → "(text)"
+        para_text = re.sub(r'\(\s+', '(', para_text)  # "( " → "("
+        para_text = re.sub(r'\s+\)', ')', para_text)  # " )" → ")"
+        para_text = re.sub(r'\[\s+', '[', para_text)  # "[ " → "["
+        para_text = re.sub(r'\s+\]', ']', para_text)  # " ]" → "]"
+        
+        # Final cleanup: normalize any remaining whitespace and trim
+        para_text = re.sub(r'\s+', ' ', para_text).strip()
+        para_text = re.sub(r'\s+([,;.:!?])', r'\1', para_text)  # Remove space before punctuation
         
         # Add paragraph with space after it
         if para_text:
