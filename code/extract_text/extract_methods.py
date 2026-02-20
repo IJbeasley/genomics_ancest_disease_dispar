@@ -118,45 +118,109 @@ def find_methods_section(root):
     Returns the methods section element or None if not found.
     
     Searches for methods section in multiple ways:
-    1. sec-type="methods" attribute
-    2. title text containing "methods" (case-insensitive)
+    1. sec-type="materials|methods" or "materials and methods" attribute
+    2. sec-type="methods" attribute (not in abstract, prefer top-level)
+    3. title text containing "methods" (case-insensitive)
     
     Skips methods sections inside abstracts (these are summaries, not full methods).
     """
-    def is_inside_abstract(element):
-        """Check if an element is inside an abstract tag."""
-        parent = element
-        while parent is not None:
-            parent_tag = parent.tag.split('}')[-1] if '}' in parent.tag else parent.tag
-            if parent_tag == 'abstract':
-                return True
-            # Move up to parent (need to traverse the tree)
-            # Since we're iterating, we'll use a different approach
-            break
+    all_sections = find_all_methods_sections(root)
+    return all_sections[0] if len(all_sections) > 0 else None
+
+
+def find_all_methods_sections(root):
+    """
+    Find ALL top-level methods sections in a JATS XML document.
+    Returns a list of methods section elements (may be empty).
+    
+    This is useful for files that have both a stub and a full methods section.
+    Only returns top-level sections, not their subsections.
+    """
+    found_sections = []
+    
+    # Helper function to check if a section is inside another section in found_sections
+    def is_subsection_of_found(sec):
+        """Check if sec is a descendant of any section already in found_sections"""
+        for found_sec in found_sections:
+            for descendant in found_sec.iter():
+                if descendant == sec:
+                    return True
         return False
     
-    # First try: Look for sections with sec-type="methods" (not in abstract)
+    # First try: Look for sections with sec-type="materials|methods" or "materials and methods"
     for sec in root.iter():
         if sec.tag.endswith('sec'):
             sec_type = sec.get('sec-type')
-            if sec_type and sec_type.lower() == 'methods':
-                # Check if this is inside an abstract by looking at ancestors
-                # Get the path from root to this element
+            if sec_type and ('material' in sec_type.lower() and 'method' in sec_type.lower()):
+                # Check if in abstract
                 for parent in root.iter():
                     if parent.tag.endswith('abstract'):
-                        # Check if sec is a descendant of this abstract
                         for child in parent.iter():
                             if child == sec:
-                                # This sec is inside an abstract, skip it
                                 break
                         else:
                             continue
                         break
                 else:
-                    # Not in an abstract
-                    return sec
+                    # Not in abstract, this is a methods section
+                    if not is_subsection_of_found(sec):
+                        found_sections.append(sec)
     
-    # Second try: Look for sections with title containing "methods" (not in abstract)
+    # Second try: Look for sections with sec-type="methods" (not in abstract)
+    for sec in root.iter():
+        if sec.tag.endswith('sec'):
+            sec_type = sec.get('sec-type')
+            if sec_type and ('material' in sec_type.lower() and 'method' in sec_type.lower()):
+                # Check if in abstract
+                for parent in root.iter():
+                    if parent.tag.endswith('abstract'):
+                        for child in parent.iter():
+                            if child == sec:
+                                break
+                        else:
+                            continue
+                        break
+                else:
+                    # Not in abstract, this is a methods section
+                    if not is_subsection_of_found(sec):
+                        found_sections.append(sec)
+    
+    # Second try: Look for sections with sec-type="methods" (not in abstract)
+    methods_candidates = []
+    for sec in root.iter():
+        if sec.tag.endswith('sec'):
+            sec_type = sec.get('sec-type')
+            if sec_type and sec_type.lower() == 'methods':
+                # Check if in abstract
+                is_in_abstract = False
+                for parent in root.iter():
+                    if parent.tag.endswith('abstract'):
+                        for child in parent.iter():
+                            if child == sec:
+                                is_in_abstract = True
+                                break
+                        if is_in_abstract:
+                            break
+                
+                if not is_in_abstract:
+                    # Count depth (how many sec ancestors)
+                    depth = 0
+                    for parent in root.iter():
+                        if parent.tag.endswith('sec'):
+                            for child in parent.iter():
+                                if child == sec and child != parent:
+                                    depth += 1
+                                    break
+                    methods_candidates.append((sec, depth))
+    
+    # Sort by depth and add to found_sections
+    if methods_candidates:
+        methods_candidates.sort(key=lambda x: x[1])
+        for sec, depth in methods_candidates:
+            if sec not in found_sections and not is_subsection_of_found(sec):
+                found_sections.append(sec)
+    
+    # Third try: Look for sections with title containing "methods" (not in abstract)
     # Common patterns: "Methods", "Materials and Methods", "Methods and Materials"
     for sec in root.iter():
         if sec.tag.endswith('sec'):
@@ -171,7 +235,7 @@ def find_methods_section(root):
                     if is_in_abstract:
                         break
             
-            if is_in_abstract:
+            if is_in_abstract or sec in found_sections or is_subsection_of_found(sec):
                 continue
             
             # Look for a title child element
@@ -184,10 +248,10 @@ def find_methods_section(root):
                         not title_text.startswith('discussion') and
                         # Avoid subsections like "Statistical methods"
                         len(title_text.split()) <= 6):
-                        return sec
+                        found_sections.append(sec)
                     break  # Only check first title
     
-    return None
+    return found_sections
 
 
 def extract_methods_section(xml_file):
@@ -198,7 +262,7 @@ def extract_methods_section(xml_file):
         xml_file: Path to the JATS XML file
         
     Returns:
-        String containing the methods section text, or None if not found
+        String containing the methods section text, or None if not found or if online-only
     """
     try:
         tree = ET.parse(xml_file)
@@ -219,6 +283,49 @@ def extract_methods_section(xml_file):
         
         # Final cleanup: strip trailing whitespace
         methods_text = methods_text.strip()
+        
+        # Check if this is an online-only methods note (Nature journals, etc.)
+        # Only flag if short AND clearly states methods are elsewhere
+        if methods_text and len(methods_text.split()) < 50:
+            lower_text = methods_text.lower()
+            
+            # Strong indicators that methods are NOT in this document
+            # (not just that supplementary info exists)
+            strong_indicators = [
+                'available in the online version',
+                'available at http',
+                'available at https',
+                'available at 10.',  # DOI references like 10.1038/...
+                'available at doi',
+                'online content',
+            ]
+            
+            # Additional check: if it starts with phrases indicating redirection
+            redirection_starts = [
+                'methods and any',
+                'any methods',
+                'methods are available',
+                'methods, including',
+            ]
+            
+            has_strong_indicator = any(indicator in lower_text for indicator in strong_indicators)
+            starts_with_redirection = any(lower_text.startswith(phrase) for phrase in redirection_starts)
+            
+            if has_strong_indicator or starts_with_redirection:
+                # This looks like an online-only stub, but check if there's another methods section
+                # (Some Nature papers have a stub followed by "ONLINE METHODS")
+                all_methods_sections = find_all_methods_sections(root)
+                if len(all_methods_sections) > 1:
+                    # Try the next methods section
+                    for section in all_methods_sections[1:]:
+                        alt_text = extract_text_from_element(section).strip()
+                        if alt_text and len(alt_text.split()) >= 50:
+                            # Found a real methods section
+                            return alt_text
+                
+                # No alternative found, this is truly online-only
+                print("Methods are only available online (not extracted).", file=sys.stderr)
+                return None
         
         return methods_text
         
