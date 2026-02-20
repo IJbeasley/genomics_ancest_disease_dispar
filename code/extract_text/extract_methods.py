@@ -71,6 +71,16 @@ def extract_text_from_element(element, parent_tag=None):
             para_text_parts.append(element.text.strip())
         
         for child in element:
+            # Skip citation references (xref with ref-type="bibr")
+            child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+            if child_tag == 'xref' and child.get('ref-type') == 'bibr':
+                # Skip this citation, but keep any tail text
+                if child.tail:
+                    tail_text = child.tail.strip()
+                    if tail_text:
+                        para_text_parts.append(tail_text)
+                continue
+            
             child_text = extract_text_from_element(child, current_tag)
             if child_text:
                 para_text_parts.append(child_text)
@@ -85,12 +95,41 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = ' '.join(filter(None, para_text_parts))
         para_text = re.sub(r'\s+', ' ', para_text).strip()
         
+        # Clean up punctuation artifacts from removed citations
+        # Remove standalone punctuation like ", ," or ". ,"
+        para_text = re.sub(r'([,;.])\s*([,;.])', r'\2', para_text)  # collapse repeated punctuation
+        para_text = re.sub(r'\s+([,;.])', r'\1', para_text)  # remove space before punctuation
+        
+        # Remove empty brackets left by citations: [ ] or [, ] or [ , ] or [, – ]
+        # This catches brackets with any combination of spaces, commas, semicolons, dashes
+        para_text = re.sub(r'\[\s*[,;–—\-\s]*\s*\]', '', para_text)  # remove empty square brackets
+        para_text = re.sub(r'\(\s*[,;–—\-\s]*\s*\)', '', para_text)  # remove empty round brackets
+        para_text = re.sub(r'\s+', ' ', para_text).strip()  # normalize whitespace again
+        
+        # Clean up trailing punctuation artifacts like ",," or ", –," or "–," at end of sentences
+        para_text = re.sub(r'[,;]\s*[–—\-]\s*[,;.]', '.', para_text)  # ", –." or "; –," → "."
+        para_text = re.sub(r'[,;]\s*[–—\-]\s*$', '.', para_text)  # ", –" at end → "."
+        para_text = re.sub(r'[–—\-]\s*[,;.]', '.', para_text)  # "–." or "–," → "."
+        
         # Add paragraph with space after it
         if para_text:
             text_parts.append(para_text + ' ')
     
     else:
         # For non-section, non-paragraph elements, process normally
+        # Skip citation references entirely
+        if element.tag.endswith('xref') and element.get('ref-type') == 'bibr':
+            return ''  # Return empty string for citations
+        
+        # Skip LaTeX source in tex-math tags (but keep MathML)
+        if element.tag.endswith('tex-math'):
+            return ''  # Return empty string for LaTeX source
+        
+        # Skip graphics/images (we already have text from MathML)
+        tag = element.tag.split('}')[-1] if '}' in element.tag else element.tag
+        if tag in ['graphic', 'inline-graphic']:
+            return ''  # Return empty string for images
+        
         # Get the element's own text
         if element.text:
             text_parts.append(element.text.strip())
