@@ -97,7 +97,14 @@ def extract_text_from_element(element, parent_tag=None):
         
         # Join paragraph parts and normalize internal whitespace
         import re
+        import unicodedata
+        
         para_text = ' '.join(filter(None, para_text_parts))
+        
+        # Normalize unicode
+        para_text = unicodedata.normalize("NFKC", para_text)
+        
+        para_text = para_text.replace('\xa0', ' ')  # Replace non-breaking spaces with regular spaces
         para_text = re.sub(r'\s+', ' ', para_text).strip()
         
         # Remove section numbering at start of sentences (e.g., "2.1", "2.3.1", "2.5.6.7")
@@ -124,9 +131,6 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = re.sub(r'[,;]\s*[–—\-]\s*$', '.', para_text)  # ", –" at end → "."
         para_text = re.sub(r'[–—\-]\s*[,;.]', '.', para_text)  # "–." or "–," → "."
         
-        # Replace double (or more) periods with single period
-        para_text = re.sub(r'\.{2,}', '.', para_text)  # ".." or "..." → "."
-        
         # Remove extra spaces inside brackets: "( text )" → "(text)"
         para_text = re.sub(r'\(\s+', '(', para_text)  # "( " → "("
         para_text = re.sub(r'\s+\)', ')', para_text)  # " )" → ")"
@@ -134,8 +138,14 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = re.sub(r'\s+\]', ']', para_text)  # " ]" → "]"
         
         # Final cleanup: normalize any remaining whitespace and trim
-        para_text = re.sub(r'\s+', ' ', para_text).strip()
         para_text = re.sub(r'\s+([,;.:!?])', r'\1', para_text)  # Remove space before punctuation
+        para_text = re.sub(r'\s+', ' ', para_text).strip()
+        
+        # Replace double (or more) periods with single period
+        para_text = re.sub(r'\.{2,}', '.', para_text)  # ".." or "..." → "."
+        # Replace double (or more) commas with single comma
+        para_text = re.sub(r',{2,}', ',', para_text)  # ",," or ",,," → ","
+        
         
         # Add paragraph with space after it
         if para_text:
@@ -173,7 +183,34 @@ def extract_text_from_element(element, parent_tag=None):
                     text_parts.append(tail_text)
     
     # Join all parts with spaces
-    result = ' '.join(filter(None, text_parts))
+    #result = ' '.join(filter(None, text_parts))
+    result = ' '.join(text_parts)
+    
+    # Final global normalization
+    import re
+    import unicodedata
+    
+    result = unicodedata.normalize("NFKC", result)
+    result = result.replace('\xa0', ' ')
+    result = re.sub(r'\s+', ' ', result).strip()
+    
+    # Fix bracket spacing LAST
+    result = re.sub(r'\(\s+', '(', result)
+    result = re.sub(r'\s+\)', ')', result)
+    
+    # Replace double (or more) periods with single period
+    result = re.sub(r'\.{2,}', '.', result)  # ".." or "..." → "."
+    # Replace double (or more) commas with single comma
+    result = re.sub(r',{2,}', ',', result)  # ",," or ",,," → ","
+    
+    # Remove empty brackets left by citations: [ ] or (, ) or [ , ] or ( , )
+    result = re.sub(r'\[\s*[,;–—\-\s]*\s*\]', '', result)  # remove empty square brackets
+    result = re.sub(r'\(\s*[,;–—\-\s]*\s*\)', '', result)  # remove empty round brackets
+    result = re.sub(r'\s+', ' ', result).strip()  # normalize whitespace again
+    
+    # remove spaces before punctuation
+    result = re.sub(r'\s+([,;.:!?])', r'\1', result)  # remove space before punctuation
+
     return result
 
 
