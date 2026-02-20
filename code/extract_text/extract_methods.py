@@ -275,7 +275,9 @@ def extract_methods_section(xml_file):
             # Check if methods are in supplementary materials
             supplementary_note = check_supplementary_methods(root)
             if supplementary_note:
-                return supplementary_note
+                # Methods are in supplementary files - don't write a file
+                print("Methods are in supplementary materials (not extracted).", file=sys.stderr)
+                return None
             return None
         
         # Extract all text from the methods section
