@@ -4,21 +4,130 @@
 
 library(xml2)
 library(stringr)
+library(stringi)
 
 # helper function to safely check if a value is not empty
-# has_content <- function(x) {
-#   return(!is.null(x) && is.na(x) && length(x) > 0 && nchar(as.character(x)) > 0)
-# }
 has_content <- function(x) {
   !is.null(x) & !is.na(x) & nzchar(trimws(as.character(x)))
 }
 
+remove_intext_citations <- function(x) {
+  if (!has_content(x)) return(x)
+
+  # Remove (Author et al., 2017)
+  x <- str_replace_all(
+    x,
+    "\\(\\s*[^()]*?et al\\.?[^()]*?\\)",
+    ""
+  )
+
+  # Remove (Author & Author, 2017) or malformed versions
+  x <- str_replace_all(
+    x,
+    "\\(\\s*(?:[A-Z][a-z]+(?:\\s*&\\s*[A-Z][a-z]+)+(?:,\\s*(?:n\\.d\\.|\\d{4})?)?\\s*;?\\s*)+\\)",
+    ""
+  )
+
+  # Remove empty parentheses left behind
+  x <- str_replace_all(x, "\\(\\s*\\)", "")
+
+  # Clean up leftover double spaces
+  x <- str_replace_all(x, "\\s{2,}", " ")
+
+  trimws(x)
+}
+
 # Extract text safely from XML node
+# safe_text <- function(node, trim = TRUE) {
+#   if (length(node) == 0 || is.na(node)) {
+#     return("")
+#   }
+#   xml_text(node, trim = trim)
+# }
+normalize_text <- function(x) {
+  if (!has_content(x)) return(x)
+
+  x <- stringi::stri_trans_nfkc(x)
+
+  # Normalize hyphens to ASCII
+  x <- str_replace_all(x, "[‐-‒–—]", "-")
+
+  # Normalize thin spaces
+  x <- str_replace_all(x, "\\p{Zs}", " ")
+
+  # Remove in-text citations
+  x <- remove_intext_citations(x)
+
+  # Collapse whitespace
+  x <- str_replace_all(x, "\\s+", " ")
+
+  trimws(x)
+}
+
 safe_text <- function(node, trim = TRUE) {
   if (length(node) == 0 || is.na(node)) {
     return("")
   }
-  xml_text(node, trim = trim)
+
+  txt <- xml_text(node, trim = trim)
+
+  if (has_content(txt)) {
+    txt <- normalize_text(txt)
+  }
+
+  return(txt)
+}
+
+
+# safe_text <- function(node, trim = TRUE) {
+#   if (length(node) == 0 || is.na(node)) {
+#     return("")
+#   }
+#
+#   txt <- xml_text(node, trim = trim)
+#
+#   # Decode HTML entities
+#   if (has_content(txt)) {
+#     txt <- tryCatch(
+#       xml_text(read_xml(paste0("<root>", txt, "</root>"))),
+#       error = function(e) txt
+#     )
+#   }
+#
+#   return(txt)
+# }
+
+# Strip in-text citation <link> nodes from an XML node (modifies a copy)
+# Wiley encodes numeric citations as <link href="#bibN">N</link> within paragraphs.
+# This removes them at the XML level before text extraction.
+strip_citation_links <- function(node, ns) {
+  if (length(node) == 0 || is.na(node)) return(node)
+
+  # Serialize the node to a string, wrapping with the Wiley namespace so
+  # XPath with the 'd1' prefix works correctly after re-parsing.
+  wiley_ns <- ns[["d1"]]
+  node_xml <- as.character(node)
+
+  # If the serialized node doesn't already declare the namespace, inject it
+  if (!grepl(wiley_ns, node_xml, fixed = TRUE)) {
+    node_xml <- sub("^(<[^>]+)", paste0("\\1 xmlns=\"", wiley_ns, "\""), node_xml)
+  }
+
+  node_doc <- tryCatch(read_xml(node_xml), error = function(e) return(node))
+  node_copy <- xml_find_first(node_doc, "//*")
+
+  # Remove all <link> elements whose href starts with "#bib"
+  bib_links <- xml_find_all(node_copy, ".//*[local-name()='link'][starts-with(@href,'#bib')]")
+  for (lnk in bib_links) {
+    xml_remove(lnk)
+  }
+
+  # Also remove <link> elements referencing footnotes (#fn) if desired;
+  # uncomment the block below to also strip footnote links:
+  # fn_links <- xml_find_all(node_copy, ".//*[local-name()='link'][starts-with(@href,'#fn')]")
+  # for (lnk in fn_links) xml_remove(lnk)
+
+  return(node_copy)
 }
 
 # Extract attribute safely from XML node
@@ -109,7 +218,10 @@ parse_wiley_abstract <- function(doc, ns) {
 
   # Get all paragraphs
   paragraphs <- xml_find_all(abstract_node, ".//d1:p", ns)
-  abstract_text <- paste(sapply(paragraphs, safe_text), collapse = "\n\n")
+  abstract_text <- paste(sapply(paragraphs, function(p) {
+    p_clean <- strip_citation_links(p, ns)
+    safe_text(p_clean)
+  }), collapse = "\n\n")
 
   return(abstract_text)
 }
@@ -143,8 +255,9 @@ parse_wiley_body <- function(doc, ns) {
     # Get paragraphs
     paragraphs <- xml_find_all(section, ".//d1:p", ns)
     para_texts <- sapply(paragraphs, function(p) {
-      # Get text content, preserving some structure
-      safe_text(p, trim = TRUE)
+      # Strip citation <link> nodes before extracting text
+      p_clean <- strip_citation_links(p, ns)
+      safe_text(p_clean, trim = TRUE)
     })
     para_texts <- para_texts[has_content(para_texts)]
 

@@ -103,6 +103,8 @@ def extract_text_from_element(element, parent_tag=None):
         
         # Normalize unicode
         para_text = unicodedata.normalize("NFKC", para_text)
+        import html
+        para_text = html.unescape(para_text)
         
         para_text = para_text.replace('\xa0', ' ')  # Replace non-breaking spaces with regular spaces
         para_text = re.sub(r'\s+', ' ', para_text).strip()
@@ -110,6 +112,9 @@ def extract_text_from_element(element, parent_tag=None):
         # Remove section numbering at start of sentences (e.g., "2.1", "2.3.1", "2.5.6.7")
         para_text = re.sub(r'^(\d+\.)+\d*\s*', '', para_text)  # at start of paragraph
         para_text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', para_text)  # after period
+        
+        # removing et al. citations 
+        #para_text = re.sub(r'\(\s*(?:[^()]*?et al\.[^()]*)\)'), '', para_text)
         
         # Clean up punctuation artifacts from removed citations
         # Remove standalone punctuation like ", ," or ". ,"
@@ -165,6 +170,10 @@ def extract_text_from_element(element, parent_tag=None):
         tag = element.tag.split('}')[-1] if '}' in element.tag else element.tag
         if tag in ['graphic', 'inline-graphic']:
             return ''  # Return empty string for images
+
+        # Skip tables and figures entirely (data tables, not narrative text)
+        if tag in ['table-wrap', 'table', 'fig', 'disp-formula']:
+            return ''  # Return empty string for tables and figures
         
         # Get the element's own text
         if element.text:
@@ -193,6 +202,13 @@ def extract_text_from_element(element, parent_tag=None):
     result = unicodedata.normalize("NFKC", result)
     result = result.replace('\xa0', ' ')
     result = re.sub(r'\s+', ' ', result).strip()
+    
+    # remove et al. citations globally (in case any remain)
+    result = re.sub(r'\(\s*(?:[^()]*?et al[.,;]\s*[^()]*)\)', '', result)
+    result = re.sub(r'\(\s*(?:[^()]*?n.d.\s*[^()]*)\)', '', result)
+    result = re.sub(r'\(\s*[A-Z][A-Za-z-]+(?:\s*&\s*[A-Z][A-Za-z-]+)+\s*,?\s*\)','', result)
+    result = re.sub(r'\(\s*(?:[A-Z][A-Za-z-]+(?:\s*&\s*[A-Z][A-Za-z-]+)?(?:,\s*(?:n\.d\.|\d{4})?)?\s*;?\s*)+\)', '', result)
+    #result = re.sub(r'\(\s*(?:[^()]*?et al\.[^()]*)\)', '', result)
     
     # Fix bracket spacing LAST
     result = re.sub(r'\(\s+', '(', result)
