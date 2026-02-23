@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree1fc02e637303ab5b4cdef842ed0e27637ba408detargetblank1fc02e6a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb4b420ff3f67e4d0314ea8c77f2dd5aeabdab895targetblankb4b420fa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/1fc02e637303ab5b4cdef842ed0e27637ba408de" target="_blank">1fc02e6</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b4b420ff3f67e4d0314ea8c77f2dd5aeabdab895" target="_blank">b4b420f</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree1fc02e637303ab5b4cdef842ed0e27637ba408detargetblank1fc02e6a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb4b420ff3f67e4d0314ea8c77f2dd5aeabdab895targetblankb4b420fa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/1fc02e637303ab5b4cdef842ed0e27637ba408de" target="_blank">1fc02e6</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b4b420ff3f67e4d0314ea8c77f2dd5aeabdab895" target="_blank">b4b420f</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -666,6 +666,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/b4b420ff3f67e4d0314ea8c77f2dd5aeabdab895/analysis/text_for_cohort_labels.Rmd" target="_blank">b4b420f</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-23
+</td>
+<td>
+Fixing adding meta-data to doccanno
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/ceacd1e7483bf53d67c1dfaafd8a21769454b4c9/docs/text_for_cohort_labels.html" target="_blank">ceacd1e</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-23
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1450,12 +1484,6 @@ abstracts &lt;- sapply(abstract_pmids,
                     }
                     )
 
-#pmids = pmids_with_abstracts 
-abstract_cohort = cohort[which(pmids %in% abstract_pmids)]
-abstract_country = country[which(pmids %in% abstract_pmids)]
-abstract_date = date[which(pmids %in% abstract_pmids)]
-abstract_ancestry = ancestry[which(pmids %in% abstract_pmids)]
-
 
 # check lengths of these vectors are the same
 print(&quot;Check lengths of vectors are the same:&quot;)</code></pre>
@@ -1580,7 +1608,10 @@ separate_cohorts &lt;- function(COHORT) {
 
 cohort_sentences_df =
   cohort_sentences_df |&gt;
-  group_by(article_id, sentence_id, sentence) |&gt;
+  group_by(pubmed_id,
+           article_id, 
+           sentence_id, 
+           sentence) |&gt;
   summarise(
     COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
                          collapse = &quot;|&quot;, 
@@ -1588,8 +1619,8 @@ cohort_sentences_df =
     has_cohort = ifelse(any(COHORT != &quot;&quot;), TRUE, FALSE)
   ) |&gt;
   ungroup() </code></pre>
-<pre><code>`summarise()` has grouped output by &#39;article_id&#39;, &#39;sentence_id&#39;. You can
-override using the `.groups` argument.</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;pubmed_id&#39;, &#39;article_id&#39;, &#39;sentence_id&#39;.
+You can override using the `.groups` argument.</code></pre>
 <pre class="r"><code>cohort_sentences_df =
   cohort_sentences_df |&gt;
   mutate(COHORT = str_remove_all(COHORT, 
@@ -1787,10 +1818,13 @@ cohort_context_df = extract_cohort_sentences(abstracts,
 
 cohort_sentences_df &lt;-
 left_join(cohort_sentences_df,
-          cohort_context_df |&gt; select(article_id, 
+          cohort_context_df |&gt; select(pubmed_id,
+                                      article_id, 
                                       sentence_id, 
                                       CONTEXT),
-          by = c(&quot;article_id&quot;, &quot;sentence_id&quot;)
+          by = c(&quot;pubmed_id&quot;,
+                 &quot;article_id&quot;, 
+                 &quot;sentence_id&quot;)
           ) 
 
 print(&quot;Number of sentences with cohort names and/or cohort-related context:&quot;)</code></pre>
@@ -1881,12 +1915,6 @@ filtered_cohort_sentences_df |&gt;
   &lt;lgl&gt;      &lt;int&gt;      &lt;dbl&gt;
 1 FALSE        920       84.3
 2 TRUE         171       15.7</code></pre>
-<pre class="r"><code>abstract_pmids = filtered_cohort_sentences_df$pubmed_id |&gt; unique() </code></pre>
-<pre><code>Warning: Unknown or uninitialised column: `pubmed_id`.</code></pre>
-<pre class="r"><code>abstract_ids &lt;- filtered_cohort_sentences_df$article_id |&gt; unique()
-abstract_date = abstract_date[abstract_ids]
-abstract_cohort = abstract_cohort[abstract_ids]
-abstract_country = abstract_country[abstract_ids]</code></pre>
 </div>
 </div>
 </div>
@@ -1898,11 +1926,8 @@ json_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.json&quot
 # file path for final jsonl file output
 jsonl_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.jsonl&quot;)
 
-convert_to_doccano_json_sentence_level &lt;- function(pmids,
-                                                   date,
-                                                   cohort,
-                                                   country,
-                                                   cohort_sentences_df) {
+
+convert_to_doccano_json_sentence_level &lt;- function(cohort_sentences_df) {
   
   # set up json list
   doccano_list &lt;- list()
@@ -1914,118 +1939,115 @@ convert_to_doccano_json_sentence_level &lt;- function(pmids,
       df &lt;- cohort_sentences_df |&gt;
              dplyr::filter(sentence == current_sentence) 
       
-      # article_id &lt;- df$article_id
-      # matched_cohort &lt;- df$COHORT
-      
       for (i in seq_len(nrow(df))) {
         
         matched_cohort &lt;- df$COHORT[i]
-        article_id &lt;- df$article_id[i]
-        
-        #browser()
+        pubmed_id_val  &lt;- df$pubmed_id[i]
+        date_val       &lt;- df$date[i]
+        cohort_val     &lt;- df$cohort[i]
+        country_val    &lt;- df$country[i]
       
         if(matched_cohort == &quot;&quot;){
         
           doccano_list[[example_id]] &lt;- list(
-          text = current_sentence,
-          pubmed_id = pmids[article_id],
-          date = date[article_id],
-          country = country[article_id],
-          gwas_cat_cohort_label = cohort[article_id],
-          label = list()
+            text = current_sentence,
+            pubmed_id = pubmed_id_val,
+            date = date_val,
+            country = country_val,
+            gwas_cat_cohort_label = cohort_val,
+            label = list()
           )
         
         } else {
         
-        # Find the location of all matches of the cohort name in the sentence
-        if(grepl(&quot;\\|&quot;, matched_cohort)) {
-           
-           # If multiple cohort names, separate
-           matched_cohort &lt;- unlist(
-                                    strsplit(matched_cohort, 
-                                             split = &quot;\\|&quot;)
-                                    )
-        
-           match_locations &lt;- list()
-        
-           for(current_matched_cohort in matched_cohort){
+          # Find the location of all matches of the cohort name in the sentence
+          if(grepl(&quot;\\|&quot;, matched_cohort)) {
+             
+             # If multiple cohort names, separate
+             matched_cohort &lt;- unlist(strsplit(matched_cohort, split = &quot;\\|&quot;))
           
-               matches &lt;- str_locate_all(current_sentence,
-                                         fixed(current_matched_cohort, 
-                                               ignore_case = TRUE)
-                                         )[[1]]
+             match_locations &lt;- list()
           
-               match_locations &lt;- append(match_locations, 
-                                         list(matches)
-                                         )
+             for(current_matched_cohort in matched_cohort){
+            
+                 matches &lt;- str_locate_all(current_sentence,
+                                           fixed(current_matched_cohort, 
+                                                 ignore_case = TRUE)
+                                           )[[1]]
+            
+                 match_locations &lt;- append(match_locations, list(matches))
+             }
           
-           }
-        
-           # Combine all match locations into a single matrix
-           matches &lt;- do.call(rbind, match_locations)
-        
-        }  else {
-        
-           matches &lt;- str_locate_all(current_sentence,
-                                     fixed(matched_cohort, 
-                                           ignore_case = TRUE)
-                                     )[[1]]
-      
-      }
-      
-      # Convert matches to 0-based indexing (for doccano)
-      matches[, &quot;start&quot;] &lt;- matches[, &quot;start&quot;] - 1  
-      
-      # Turn match locations into entity list
-      entities &lt;- list()
-      
-      for(k in seq_len(nrow(matches))) {
-              entities &lt;- append(entities, list(list(
-                start_offset = matches[k, &quot;start&quot;],
-                end_offset = matches[k, &quot;end&quot;],
-                label = &quot;COHORT&quot;
-              )))
-      }
-      
-      # Create Doccano JSON entry
-      doccano_list[[example_id]] &lt;- list(
-        # id = example_id,
-        text = current_sentence,
-        pubmed_id = pmids[article_id],
-        date = date[article_id],
-        country = country[article_id],
-        gwas_cat_cohort_label = cohort[article_id],
-        label = entities
-      )
-      
-      }
+             # Combine all match locations into a single matrix
+             matches &lt;- do.call(rbind, match_locations)
+          
+          } else {
+          
+             matches &lt;- str_locate_all(current_sentence,
+                                       fixed(matched_cohort, 
+                                             ignore_case = TRUE)
+                                       )[[1]]
+          }
+          
+          # Convert matches to 0-based indexing (for doccano)
+          matches[, &quot;start&quot;] &lt;- matches[, &quot;start&quot;] - 1  
+          
+          # Turn match locations into entity list
+          entities &lt;- list()
+          
+          for(k in seq_len(nrow(matches))) {
+            entities &lt;- append(entities, list(list(
+              start_offset = matches[k, &quot;start&quot;],
+              end_offset = matches[k, &quot;end&quot;],
+              label = &quot;COHORT&quot;
+            )))
+          }
+          
+          # Create Doccano JSON entry
+          doccano_list[[example_id]] &lt;- list(
+            text = current_sentence,
+            pubmed_id = pubmed_id_val,
+            date = date_val,
+            country = country_val,
+            gwas_cat_cohort_label = cohort_val,
+            label = entities
+          )
+        }
       }
 
       example_id &lt;- example_id + 1
   }
   
-  
-# Suppose each element of json_list has &#39;labels&#39; as a list of named lists
+  # Convert named list label format to vector format [start, end, label]
   doccano_list &lt;- lapply(doccano_list, function(x) {
-  x$label &lt;- lapply(x$label, function(l) {
-    # convert named list to vector/list format [start, end, label]
-    c(l$start_offset, l$end_offset, l$label)
+    x$label &lt;- lapply(x$label, function(l) {
+      c(l$start_offset, l$end_offset, l$label)
+    })
+    x
   })
-  x
-})
 
   return(doccano_list)
 }
 
 
+# Join metadata onto sentences before passing to function
+meta_data_df &lt;- data.frame(
+  pubmed_id = as.character(pmids), 
+  cohort    = cohort,
+  date      = date,
+  country   = country
+)
+
+filtered_cohort_sentences_df &lt;- left_join(
+  filtered_cohort_sentences_df,
+  meta_data_df,
+  by = &quot;pubmed_id&quot;
+)
+
 # Create JSON as a list
-json_list &lt;- convert_to_doccano_json_sentence_level(pmids = abstract_pmids, #pmids,
-                                                    date = abstract_date,
-                                                    cohort = abstract_cohort,
-                                                    country = abstract_country,
-                                                    filtered_cohort_sentences_df)
-
-
+json_list &lt;- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_cohort_sentences_df
+)
 
 # Write to JSON file
 writeLines(toJSON(json_list,
@@ -2141,12 +2163,7 @@ names(methods_texts) &lt;- sapply(names(methods_texts), function(id) {
 })
 
 # order methods texts by pmids
-methods_texts &lt;- methods_texts[order(names(methods_texts))]
-
-methods_pmids &lt;- names(methods_texts)
-methods_cohort &lt;- cohort[which(pmids %in% methods_pmids)]
-methods_country &lt;- country[which(pmids %in% methods_pmids)]
-methods_date &lt;- date[which(pmids %in% methods_pmids)]</code></pre>
+methods_texts &lt;- methods_texts[order(names(methods_texts))]</code></pre>
 </div>
 <div
 id="extract-sentences-with-cohort-names-or-cohort-related-context-population-ancestry-country-terms-from-methods-sections"
@@ -2174,7 +2191,10 @@ methods_cohort_sentences_df =
 
 methods_cohort_sentences_df =
   methods_cohort_sentences_df |&gt;
-  group_by(article_id, sentence_id, sentence) |&gt;
+  group_by(pubmed_id, 
+           article_id, 
+           sentence_id, 
+           sentence) |&gt;
   summarise(
     COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
                          collapse = &quot;|&quot;, 
@@ -2182,8 +2202,8 @@ methods_cohort_sentences_df =
     has_cohort = ifelse(any(COHORT != &quot;&quot;), TRUE, FALSE)
   ) |&gt;
   ungroup() </code></pre>
-<pre><code>`summarise()` has grouped output by &#39;article_id&#39;, &#39;sentence_id&#39;. You can
-override using the `.groups` argument.</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;pubmed_id&#39;, &#39;article_id&#39;, &#39;sentence_id&#39;.
+You can override using the `.groups` argument.</code></pre>
 <pre class="r"><code>methods_cohort_sentences_df =
   methods_cohort_sentences_df |&gt;
   mutate(COHORT = str_remove_all(COHORT, 
@@ -2376,8 +2396,13 @@ cohort_context_df = extract_cohort_sentences(methods_texts,
 
 methods_cohort_sentences_df &lt;-
 left_join(methods_cohort_sentences_df,
-          cohort_context_df |&gt; select(article_id, sentence_id, CONTEXT),
-          by = c(&quot;article_id&quot;, &quot;sentence_id&quot;)
+          cohort_context_df |&gt; select(pubmed_id, 
+                                      article_id,
+                                      sentence_id,
+                                      CONTEXT),
+          by = c(&quot;pubmed_id&quot;,
+                 &quot;article_id&quot;, 
+                 &quot;sentence_id&quot;)
           ) 
 
 print(&quot;Number of sentences with cohort names and/or cohort-related context:&quot;)</code></pre>
@@ -2451,22 +2476,17 @@ json_file = here::here(&quot;output/doccano/methods_with_cohort_info.json&quot;)
 # file path for final jsonl file output
 jsonl_file = here::here(&quot;output/doccano/methods_with_cohort_info.jsonl&quot;)
 
-
-methods_pmids &lt;- filtered_cohort_sentences_df$pubmed_id |&gt; unique()</code></pre>
-<pre><code>Warning: Unknown or uninitialised column: `pubmed_id`.</code></pre>
-<pre class="r"><code>article_ids &lt;- filtered_cohort_sentences_df$article_id |&gt; unique()
-
-methods_cohort = methods_cohort[article_ids]
-country = country[article_ids]
-date = date[article_ids]
-ancestry = ancestry[article_ids]
+filtered_cohort_sentences_df &lt;- left_join(
+  filtered_cohort_sentences_df,
+  meta_data_df,
+  by = &quot;pubmed_id&quot;
+)
 
 # Create JSON as a list
-json_list &lt;- convert_to_doccano_json_sentence_level(pmids = pmids,
-                                                    date = date,
-                                                    cohort = cohort,
-                                                    country = country,
-                                                    filtered_cohort_sentences_df)
+json_list &lt;- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_cohort_sentences_df
+)
+
 
 # Write to JSON file
 writeLines(toJSON(json_list,
