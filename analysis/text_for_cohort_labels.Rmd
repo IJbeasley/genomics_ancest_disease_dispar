@@ -609,12 +609,6 @@ abstracts <- sapply(abstract_pmids,
                     }
                     )
 
-#pmids = pmids_with_abstracts 
-abstract_cohort = cohort[which(pmids %in% abstract_pmids)]
-abstract_country = country[which(pmids %in% abstract_pmids)]
-abstract_date = date[which(pmids %in% abstract_pmids)]
-abstract_ancestry = ancestry[which(pmids %in% abstract_pmids)]
-
 
 # check lengths of these vectors are the same
 print("Check lengths of vectors are the same:")
@@ -741,7 +735,10 @@ separate_cohorts <- function(COHORT) {
 
 cohort_sentences_df =
   cohort_sentences_df |>
-  group_by(article_id, sentence_id, sentence) |>
+  group_by(pubmed_id,
+           article_id, 
+           sentence_id, 
+           sentence) |>
   summarise(
     COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
                          collapse = "|", 
@@ -906,10 +903,13 @@ cohort_context_df = extract_cohort_sentences(abstracts,
 
 cohort_sentences_df <-
 left_join(cohort_sentences_df,
-          cohort_context_df |> select(article_id, 
+          cohort_context_df |> select(pubmed_id,
+                                      article_id, 
                                       sentence_id, 
                                       CONTEXT),
-          by = c("article_id", "sentence_id")
+          by = c("pubmed_id",
+                 "article_id", 
+                 "sentence_id")
           ) 
 
 print("Number of sentences with cohort names and/or cohort-related context:")
@@ -984,17 +984,6 @@ filtered_cohort_sentences_df |>
   )
 
 ```
-
-```{r get_ids_for_doccano}
-
-abstract_pmids = filtered_cohort_sentences_df$pubmed_id |> unique() 
-abstract_ids <- filtered_cohort_sentences_df$article_id |> unique()
-abstract_date = abstract_date[abstract_ids]
-abstract_cohort = abstract_cohort[abstract_ids]
-abstract_country = abstract_country[abstract_ids]
-
-```
-
 ## Prepare data in Doccano JSON format
 
 ```{r prepare_doccano_json_abstracts}
@@ -1005,11 +994,8 @@ json_file = here::here("output/doccano/abstracts_with_cohort_info.json")
 # file path for final jsonl file output
 jsonl_file = here::here("output/doccano/abstracts_with_cohort_info.jsonl")
 
-convert_to_doccano_json_sentence_level <- function(pmids,
-                                                   date,
-                                                   cohort,
-                                                   country,
-                                                   cohort_sentences_df) {
+
+convert_to_doccano_json_sentence_level <- function(cohort_sentences_df) {
   
   # set up json list
   doccano_list <- list()
@@ -1021,118 +1007,115 @@ convert_to_doccano_json_sentence_level <- function(pmids,
       df <- cohort_sentences_df |>
              dplyr::filter(sentence == current_sentence) 
       
-      # article_id <- df$article_id
-      # matched_cohort <- df$COHORT
-      
       for (i in seq_len(nrow(df))) {
         
         matched_cohort <- df$COHORT[i]
-        article_id <- df$article_id[i]
-        
-        #browser()
+        pubmed_id_val  <- df$pubmed_id[i]
+        date_val       <- df$date[i]
+        cohort_val     <- df$cohort[i]
+        country_val    <- df$country[i]
       
         if(matched_cohort == ""){
         
           doccano_list[[example_id]] <- list(
-          text = current_sentence,
-          pubmed_id = pmids[article_id],
-          date = date[article_id],
-          country = country[article_id],
-          gwas_cat_cohort_label = cohort[article_id],
-          label = list()
+            text = current_sentence,
+            pubmed_id = pubmed_id_val,
+            date = date_val,
+            country = country_val,
+            gwas_cat_cohort_label = cohort_val,
+            label = list()
           )
         
         } else {
         
-        # Find the location of all matches of the cohort name in the sentence
-        if(grepl("\\|", matched_cohort)) {
-           
-           # If multiple cohort names, separate
-           matched_cohort <- unlist(
-                                    strsplit(matched_cohort, 
-                                             split = "\\|")
-                                    )
-        
-           match_locations <- list()
-        
-           for(current_matched_cohort in matched_cohort){
+          # Find the location of all matches of the cohort name in the sentence
+          if(grepl("\\|", matched_cohort)) {
+             
+             # If multiple cohort names, separate
+             matched_cohort <- unlist(strsplit(matched_cohort, split = "\\|"))
           
-               matches <- str_locate_all(current_sentence,
-                                         fixed(current_matched_cohort, 
-                                               ignore_case = TRUE)
-                                         )[[1]]
+             match_locations <- list()
           
-               match_locations <- append(match_locations, 
-                                         list(matches)
-                                         )
+             for(current_matched_cohort in matched_cohort){
+            
+                 matches <- str_locate_all(current_sentence,
+                                           fixed(current_matched_cohort, 
+                                                 ignore_case = TRUE)
+                                           )[[1]]
+            
+                 match_locations <- append(match_locations, list(matches))
+             }
           
-           }
-        
-           # Combine all match locations into a single matrix
-           matches <- do.call(rbind, match_locations)
-        
-        }  else {
-        
-           matches <- str_locate_all(current_sentence,
-                                     fixed(matched_cohort, 
-                                           ignore_case = TRUE)
-                                     )[[1]]
-      
-      }
-      
-      # Convert matches to 0-based indexing (for doccano)
-      matches[, "start"] <- matches[, "start"] - 1  
-      
-      # Turn match locations into entity list
-      entities <- list()
-      
-      for(k in seq_len(nrow(matches))) {
-              entities <- append(entities, list(list(
-                start_offset = matches[k, "start"],
-                end_offset = matches[k, "end"],
-                label = "COHORT"
-              )))
-      }
-      
-      # Create Doccano JSON entry
-      doccano_list[[example_id]] <- list(
-        # id = example_id,
-        text = current_sentence,
-        pubmed_id = pmids[article_id],
-        date = date[article_id],
-        country = country[article_id],
-        gwas_cat_cohort_label = cohort[article_id],
-        label = entities
-      )
-      
-      }
+             # Combine all match locations into a single matrix
+             matches <- do.call(rbind, match_locations)
+          
+          } else {
+          
+             matches <- str_locate_all(current_sentence,
+                                       fixed(matched_cohort, 
+                                             ignore_case = TRUE)
+                                       )[[1]]
+          }
+          
+          # Convert matches to 0-based indexing (for doccano)
+          matches[, "start"] <- matches[, "start"] - 1  
+          
+          # Turn match locations into entity list
+          entities <- list()
+          
+          for(k in seq_len(nrow(matches))) {
+            entities <- append(entities, list(list(
+              start_offset = matches[k, "start"],
+              end_offset = matches[k, "end"],
+              label = "COHORT"
+            )))
+          }
+          
+          # Create Doccano JSON entry
+          doccano_list[[example_id]] <- list(
+            text = current_sentence,
+            pubmed_id = pubmed_id_val,
+            date = date_val,
+            country = country_val,
+            gwas_cat_cohort_label = cohort_val,
+            label = entities
+          )
+        }
       }
 
       example_id <- example_id + 1
   }
   
-  
-# Suppose each element of json_list has 'labels' as a list of named lists
+  # Convert named list label format to vector format [start, end, label]
   doccano_list <- lapply(doccano_list, function(x) {
-  x$label <- lapply(x$label, function(l) {
-    # convert named list to vector/list format [start, end, label]
-    c(l$start_offset, l$end_offset, l$label)
+    x$label <- lapply(x$label, function(l) {
+      c(l$start_offset, l$end_offset, l$label)
+    })
+    x
   })
-  x
-})
 
   return(doccano_list)
 }
 
 
+# Join metadata onto sentences before passing to function
+meta_data_df <- data.frame(
+  pubmed_id = as.character(pmids), 
+  cohort    = cohort,
+  date      = date,
+  country   = country
+)
+
+filtered_cohort_sentences_df <- left_join(
+  filtered_cohort_sentences_df,
+  meta_data_df,
+  by = "pubmed_id"
+)
+
 # Create JSON as a list
-json_list <- convert_to_doccano_json_sentence_level(pmids = abstract_pmids, #pmids,
-                                                    date = abstract_date,
-                                                    cohort = abstract_cohort,
-                                                    country = abstract_country,
-                                                    filtered_cohort_sentences_df)
-
-
+json_list <- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_cohort_sentences_df
+)
 
 # Write to JSON file
 writeLines(toJSON(json_list,
@@ -1252,11 +1235,6 @@ names(methods_texts) <- sapply(names(methods_texts), function(id) {
 # order methods texts by pmids
 methods_texts <- methods_texts[order(names(methods_texts))]
 
-methods_pmids <- names(methods_texts)
-methods_cohort <- cohort[which(pmids %in% methods_pmids)]
-methods_country <- country[which(pmids %in% methods_pmids)]
-methods_date <- date[which(pmids %in% methods_pmids)]
-
 ```
 
 ## Extract sentences with cohort names or cohort-related context (population, ancestry, country terms) from methods sections
@@ -1284,7 +1262,10 @@ methods_cohort_sentences_df =
 
 methods_cohort_sentences_df =
   methods_cohort_sentences_df |>
-  group_by(article_id, sentence_id, sentence) |>
+  group_by(pubmed_id, 
+           article_id, 
+           sentence_id, 
+           sentence) |>
   summarise(
     COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
                          collapse = "|", 
@@ -1440,8 +1421,13 @@ cohort_context_df = extract_cohort_sentences(methods_texts,
 
 methods_cohort_sentences_df <-
 left_join(methods_cohort_sentences_df,
-          cohort_context_df |> select(article_id, sentence_id, CONTEXT),
-          by = c("article_id", "sentence_id")
+          cohort_context_df |> select(pubmed_id, 
+                                      article_id,
+                                      sentence_id,
+                                      CONTEXT),
+          by = c("pubmed_id",
+                 "article_id", 
+                 "sentence_id")
           ) 
 
 print("Number of sentences with cohort names and/or cohort-related context:")
@@ -1501,21 +1487,17 @@ json_file = here::here("output/doccano/methods_with_cohort_info.json")
 # file path for final jsonl file output
 jsonl_file = here::here("output/doccano/methods_with_cohort_info.jsonl")
 
-
-methods_pmids <- filtered_cohort_sentences_df$pubmed_id |> unique()
-article_ids <- filtered_cohort_sentences_df$article_id |> unique()
-
-methods_cohort = methods_cohort[article_ids]
-country = country[article_ids]
-date = date[article_ids]
-ancestry = ancestry[article_ids]
+filtered_cohort_sentences_df <- left_join(
+  filtered_cohort_sentences_df,
+  meta_data_df,
+  by = "pubmed_id"
+)
 
 # Create JSON as a list
-json_list <- convert_to_doccano_json_sentence_level(pmids = pmids,
-                                                    date = date,
-                                                    cohort = cohort,
-                                                    country = country,
-                                                    filtered_cohort_sentences_df)
+json_list <- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_cohort_sentences_df
+)
+
 
 # Write to JSON file
 writeLines(toJSON(json_list,
