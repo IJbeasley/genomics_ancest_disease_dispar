@@ -19,58 +19,339 @@ library(stringr)
 library(readxl)
 library(dplyr)
 library(stringi)
+library(httr)
 library(rentrez)
 library(xml2)
 library(jsonlite)
-
-# Improve sentence recognition
-# library(reticulate)
-
-# Path to the Python inside your venv
-# python_path <- file.path(here::here(), "venv", "bin", "python")  # Mac/Linux
-# Sys.setenv(SPACY_PYTHON = python_path)
-# 
-# use_python(Sys.getenv("SPACY_PYTHON", 
-#                                       unset = "r-spacyr"), required = TRUE)
-# 
-# # Check configuration
-# py_config()
-# 
-# py_module_available("spacy")
-# 
-# library(spacyr)
-# spacy_initialize(model = "en_core_web_sm")
-# library(spacyr)
-# reticulate::virtualenv_create("r-spacyr", python = python_exe)
-# spacy_install(version = "apple")
-# spacy_download_langmodel("en_core_web_sm")
 library(tokenizers)
 
 ```
 
-## Getting required information from GWAS catalog
+# Getting required information from GWAS catalog
 
 ### Step 1: Get only disease studies, and select relevant columns
 
 ```{r gwas_cat_load_preprocess}
 
 ## Step 1: 
-# get only disease studies
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
 
 gwas_study_info = gwas_study_info |>
   dplyr::rename_with(~ gsub(" ", "_", .x))
 
+# filter out infectious diseases
+gwas_study_info <- gwas_study_info |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+# group conditions into broader categories to ensure we have enough papers in each category for sampling
+lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
+                                     sheet = 1) |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+set.seed(500)
+
+training_sample = gwas_study_info |>
+  left_join(lancet_cause_mapping |> select(cause = mapped_gbd_term,
+                                           lancet_condition), 
+            by = "cause",
+            relationship = "many-to-many") |>
+  select(PUBMED_ID,
+         lancet_condition) |>
+  distinct() |>
+  dplyr::group_by(lancet_condition) |>
+  dplyr::slice_sample(prop = 0.25) |>
+  pull(PUBMED_ID) |>
+  unique()
+
+pmids <- training_sample
+
 gwas_study_info =
   gwas_study_info |>
-  dplyr::filter(DISEASE_STUDY == T) |>
-  dplyr::select(-COHORT)
+  filter(PUBMED_ID %in% training_sample) 
+
+print("Number of unique pubmed ids for disease studies:")
+gwas_study_info$PUBMED_ID |> unique() |> length()
 
 ```
 
-### Step 2: Get cohort information
+#### How much overlap with abstracts and full-texts retrieved? 
+
+```{r check_abstract_overlap}
+
+converted_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv"))
+
+full_text_files <-
+  list.files(here::here("output/fulltexts"), 
+             recursive = T, 
+             pattern = "\\.html$|\\.xml$") 
+
+full_text_files <- basename(full_text_files) |> 
+  stringr::str_remove_all("\\.html$|\\.xml$") |>
+  unique()
+
+# convert pmcids to pmids 
+converted_fulltext_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% full_text_files) |>
+  pull(PMID) |>
+  unique() 
+
+full_text_files  <- c(full_text_files, 
+                      converted_fulltext_pmcids)
+
+full_text_pmids <- grep("PMC", 
+                        full_text_files, 
+                        invert = T, 
+                        value = T)
+
+
+print("Number of training sample papers with full text retrieved:")
+sum(training_sample %in% full_text_pmids)
+
+print("Number of unique pubmed ids for disease studies with full text retrieved:")
+gwas_study_info |>
+  filter(PUBMED_ID %in% full_text_pmids) |>
+  select(PUBMED_ID, cause) |>
+  distinct() |>
+  group_by(cause) |>
+  summarise(n = n()) 
+
+```
+
+### Step 2: Get list of terms to use for cohort context matching
+
+#### Source of terms: GWAS Catalog Ancestry Metadata
+
+GWAS ancestry data.frame contains: country of recruitment, ancestry label, population descriptors
+
+```{r gwas_cat_load_ncestry_info}
+
+gwas_ancest_info <-  data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
+                           sep = "\t",
+                           quote = "")
+
+gwas_ancest_info = gwas_ancest_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+```
+
+##### Countries 
+
+```{r get_countries_gwas_cat, eval = F}
+
+countries <- 
+gwas_ancest_info$COUNTRY_OF_RECRUITMENT |>
+  stringr::str_split("\\,") |>
+  unlist() |>
+  str_trim() |>
+  unique() 
+  
+countries <- countries[countries != "NR"]
+countries <- c(countries, 
+               "United States", 
+               "United Kingdom",
+               "Korea",
+               "America",
+               "USA",
+               "United States of America",
+               "Latin America")
+
+
+```
+
+##### Population descriptors
+
+```{r get_population_descriptors_gwas_cat, eval = F}
+
+population_descriptors <- 
+  c(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY, gwas_ancest_info$ADDITIONAL_ANCESTRY_DESCRIPTION) |>
+  str_replace_all("Recruitment in North, Central, and South America, Asia, and Europe", 
+                  "North America, Central America, Asia, Europe") |>
+  #stringr::str_split("\\,|;|heritage:\\|") |>
+  stringr::str_split("\\,|;|heritage:|") |>
+  unlist() |>
+  str_trim() 
+
+# processing population descriptors to remove extra information and get more general terms to match cohort descriptions in abstracts (e.g. "European" instead of "European (non-Finnish)")
+population_descriptors <- population_descriptors |>
+  str_remove_all("\\.$")  |> # Escape the dot to make it literal
+  str_remove_all("^and ") |> 
+  str_remove_all(" \\(founder/genetic isolate\\)$|\\(founder/genetic isolate$") |>
+  #str_remove_all("^[0-9+]% ") |>
+  str_remove_all("^\\d+% ") |>  # \d is shorthand for [0-9]
+  str_remove_all("^[‡†*]+") |> # Remove dagger symbols at start 
+  str_remove_all(" - Korea Association Resource \\(KARE\\)$") |>
+  str_remove_all("or unknown ancestry$|\\(middle eastern$") |>
+  str_remove_all("\\(see Springelkamp 2017\\)") |>
+  str_remove_all("parents & grandparents born in ") |>
+  str_remove_all(" cell lines$| cell line$") |>
+  str_remove_all(" cohort$") |>
+  str_remove_all(" population$") |> 
+  str_remove_all("^Erasmus Rucphen in |^Erasmus Rucphen") |>
+  str_remove_all("^including ") |>
+  str_remove_all("\\(Middle Eastern$") |>
+  unique() 
+
+
+# removing population descriptors that are not valid to match cohort descriptions in abstracts (e.g. "cases", "controls", "Bipolar disorder")
+not_valid_pop_descriptors <- c("NR", "N.R", "Other", "other", "", "unspecified",
+                               "East", "Euopre",
+                               "UKB", "UKBB", "DECODE", "Controls from UKBiobank", "UKBB and deCODE", 
+                               "NHAPC", "GeneID-I", " Family", 
+                               "non-Hispaniic white", "Zimbabweian", "Portugese", "Europen American",
+                               "(see Moffatt et al 2010)", "See Wu J. H", 
+                               "et al. 2013. PMID: 23362303", "See Wu et al 23362303", "23362303",
+                               "See Locke (PubMed 25673413) for BMI and Shungin (PubMed 25673412) for WHR")
+
+disease_descriptors <- grep("cases|Bipolar|controls|Schizophrenia|disorder", 
+                            population_descriptors, 
+                            value = T)
+
+population_descriptors <- population_descriptors[!(population_descriptors %in% 
+                                                     c(not_valid_pop_descriptors,
+                                                       disease_descriptors
+                                                       )
+                                                     )]
+
+```
+
+#### Source of terms: hancestro ontology of human ancestry terms
+
+```{r get_hancestro_terms, eval = F}
+
+# Get all terms in one go (if total < 500)
+response <- GET("https://www.ebi.ac.uk/ols4/api/ontologies/hancestro/terms?size=1000")
+data <- fromJSON(content(response, "text"), flatten = TRUE)
+hancestro_terms <- data$`_embedded`$terms$label
+
+# Remove terms with specific biobanks / datasets in brackets, as these are unlikely to be used in cohort descriptions in abstracts / texts
+hancestro_terms <- str_remove_all(hancestro_terms, 
+                                  " \\(SGDP\\)$| \\(1KGP\\)$| \\(HGDP\\)$| \\(GGVP\\)$")
+
+# Remove obsolete terms
+hancestro_terms <- grep("obsolete|obsolescence", 
+                        hancestro_terms, 
+                        value = TRUE, 
+                        invert = TRUE)
+
+# remove terms with specific regions in brackets, as these are unlikely to be used in cohort descriptions in abstracts / texts
+hancestro_terms <- str_remove_all(hancestro_terms, pattern = "\\(Carmel\\)$|\\(pre1989\\)$|\\(Bergamo\\)$|\\(Negev\\)$|\\(Central\\)|\\(Caucasus\\)")
+
+# replace underscores with spaces
+hancestro_terms <- str_replace_all(hancestro_terms, 
+                                   pattern = "_", 
+                                   replacement = " ")
+
+hancestro_terms <- unique(hancestro_terms)
+
+# specific hancestro terms to exclude: 
+terms_to_exclude <- c("ancestry category",
+                      "ancestry status",
+                      "BFO 0000006",
+                      "Country",
+                      "continent",
+                      "continuant",
+                      "curation status specification",
+                      "denotator type",
+                      "entity",
+                      "ethnicity category",
+                      "ethnicity descriptor",
+                      "geographic location",
+                      "geographic descriptor",
+                      "geography-based population category",
+                      "immaterial entity",
+                      "independent continuant",
+                      "!Kung",
+                      "material entity",
+                      "quality",
+                      "reference population",
+                      "region",
+                      "organization",
+                      "population",
+                      "specifically dependent continuant",
+                      "Thing",
+                      "uncategorised population",
+                      "undefined ancestry population")
+
+hancestro_terms <- hancestro_terms[!c(hancestro_terms %in% terms_to_exclude)]
+
+```
+
+#### ? Other possible sources
+
+Country R packages 
+Population descriptors in: https://pmc.ncbi.nlm.nih.gov/articles/PMC8715140/#sec2
+
+#### Combine sources 
+
+```{r combine_cohort_context_terms, eval = F}
+
+# combine terms from different sources, and add some extra terms based on looking at cohort descriptions in abstracts
+cohort_context_terms <-
+c(countries, hancestro_terms, population_descriptors) |> 
+  unique() |>
+  sort()
+
+# terms to add: 
+cohort_context_terms <- c(cohort_context_terms, 
+                          "Scandinavians",
+                          "Native Hawaiians")
+
+# terms to remove ... "Qatar", "UK", "Taiwan", "Korean"
+cohort_context_terms <- cohort_context_terms[!cohort_context_terms %in% c("Qatar", 
+                                                                          "UK", 
+                                                                          "Taiwan",
+                                                                          "Korean",
+                                                                          "population")]
+
+# replace brackets with \\( & and \\)
+cohort_context_terms <- cohort_context_terms |> 
+  str_replace_all(pattern = "\\(", replacement = "\\\\(") |>
+  str_replace_all(pattern = "\\)", replacement = "\\\\)")
+
+
+
+cohort_context_terms <- c(cohort_context_terms, 
+                          "UK\\b(?! Biobank)",
+                          "UK\\b\\(?! Biobank\\)",
+                          "Qatar\\b\\(?! Biobank\\)",
+                          "Taiwan\\b\\(?! Biobank\\)",
+                          "Korean\\b\\(?! Biobank\\)"
+                          )
+
+# sort by length of term (longest first) to match longest names first
+cohort_context_terms <- cohort_context_terms[order(-nchar(cohort_context_terms))]
+
+
+writeLines(cohort_context_terms, 
+           here::here("output/gwas_cat/ancestry_population_terms.txt"))
+
+```
+
+```{r load_ancestry_population_terms}
+
+cohort_context_terms <- readLines(here::here("output/gwas_cat/ancestry_population_terms.txt"))
+
+print("Number of cohort context terms:")
+length(cohort_context_terms)
+
+```
+
+### Step 3: Get cohort information
 
 ```{r gwas_cat_add_cohort_info}
+
 gwas_study_info_cohort =
   data.table::fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
 
@@ -80,35 +361,51 @@ gwas_study_info_cohort =
 
 gwas_study_info_cohort =
   gwas_study_info_cohort |>
-  select(STUDY_ACCESSION,
+  select(PUBMED_ID,
          COHORT) |>
   distinct()
+
+print("Check adding cohort information has only added columns, not rows:")
+print("Before adding:")
+dim(gwas_study_info)
 
 gwas_study_info =
   left_join(gwas_study_info,
             gwas_study_info_cohort,
-            by = "STUDY_ACCESSION"
+            by = "PUBMED_ID"
   )
+
+print("After adding:")
+dim(gwas_study_info)
+
+
+print("Check adding cohort information has not increaed number of unique pubmed ids:")
+gwas_study_info |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+print("Number of unique pubmed ids for disease studies with cohort info:")
+gwas_study_info |>
+  filter(COHORT != "") |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
 
 ```
 
-### Step 3: Add ancestry/population info
+
+### Step 4: Add ancestry/population info
 
 ```{r gwas_cat_add_ancestry_info}
-gwas_ancest_info <-  data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
-                           sep = "\t",
-                           quote = "")
-
-gwas_ancest_info = gwas_ancest_info |>
-  dplyr::rename_with(~ gsub(" ", "_", .x))
 
 gwas_ancest_info =
   gwas_ancest_info |>
-  select(STUDY_ACCESSION,
+  select(PUBMED_ID,
          BROAD_ANCESTRAL_CATEGORY,
          COUNTRY_OF_RECRUITMENT) |>
   distinct() |>
-  group_by(STUDY_ACCESSION) |>
+  group_by(PUBMED_ID) |>
   summarise(
     BROAD_ANCESTRAL_CATEGORY = paste(
       unique(
@@ -124,16 +421,22 @@ gwas_ancest_info =
     )
   )
 
+print("Check adding ancestry information has only added columns, not rows:")
+print("Before adding:")
+dim(gwas_study_info)
+
 gwas_study_info =
   left_join(gwas_study_info,
             gwas_ancest_info,
-            by = "STUDY_ACCESSION"
+            by = "PUBMED_ID"
   )
+
+print("After adding:")
+dim(gwas_study_info)
 
 ```
 
-
-### Step 4: Extract information required to get paper text & abstracts
+### Step 5: Extract information required to get paper text & abstracts
 
 ```{r gwas_cat_extract_info}
 
@@ -142,12 +445,12 @@ gwas_study_info <-
   #filter(COHORT != "") |>
   select(PUBMED_ID,
          COHORT,
-         DATE,
+         YEAR,
          BROAD_ANCESTRAL_CATEGORY,
          COUNTRY_OF_RECRUITMENT) |>
   distinct() |>
   group_by(PUBMED_ID,
-           DATE,
+           YEAR,
            BROAD_ANCESTRAL_CATEGORY,
            COUNTRY_OF_RECRUITMENT) |>
   summarise(
@@ -159,54 +462,38 @@ gwas_study_info <-
     )
   )
 
-pmids = gwas_study_info$PUBMED_ID
-cohort = gwas_study_info$COHORT
-date = gwas_study_info$DATE
-country = gwas_study_info$COUNTRY_OF_RECRUITMENT
-ancestry = gwas_study_info$BROAD_ANCESTRAL_CATEGORY
+gwas_study_info = 
+  gwas_study_info |>
+  ungroup() |>
+  arrange(PUBMED_ID)
 
-# how many papers without cohort information
+pmids = gwas_study_info$PUBMED_ID
+
+cohort = gwas_study_info$COHORT
+names(cohort) = pmids
+
+date = gwas_study_info$YEAR
+names(date) = pmids
+
+country = gwas_study_info$COUNTRY_OF_RECRUITMENT
+names(country) = pmids
+
+ancestry = gwas_study_info$BROAD_ANCESTRAL_CATEGORY
+names(ancestry) = pmids
+
+print("Number of papers without cohort information:")
 gwas_study_info |> 
   filter(COHORT == "") |>
   nrow()
 
-# papers for which there is cohort information
+print("Number of papers with cohort information:")
 gwas_study_info |>
   filter(COHORT != "") |>
   nrow()
 
 ```
 
-### Just take a sample: 
-
-```{r gwas_cat_sample_pmids, eval = F}
-
-# Example PMIDs
-rows_with_cohort = which(gwas_study_info$COHORT != "")
-rows_without_cohort = which(gwas_study_info$COHORT == "")
-
-rows = 
-  c(rows_with_cohort, 
-    sample(rows_without_cohort, length(rows_with_cohort))
-    )
-
-pmids = pmids[rows]
-
-cohort = cohort[rows]
-names(cohort) = pmids
-
-date = date[rows]
-names(date) = pmids
-
-country = country[rows]
-names(country) = pmids
-
-ancestry = ancestry[rows]
-names(ancestry) = pmids
-
-```
-
-## Getting cohort names 
+### Step 6: Get data dictionary of cohort names 
 
 ```{r get_cohort_names}
 
@@ -218,7 +505,8 @@ cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
   mutate(across(everything(), 
                 ~stringr::str_replace_all(.x,
                                           pattern = "\u00A0",
-                                          replacement = " "))) 
+                                          replacement = " "))
+         ) 
 
 
 cohort_full_names = cohort_names$full_name[!is.na(cohort_names$full_name)]
@@ -229,6 +517,10 @@ cohort_full_names <- str_squish(cohort_full_names)  # trims and removes extra sp
 # sort by length of name (longest first) to match longest names first
 cohort_full_names <- cohort_full_names[order(-nchar(cohort_full_names))]
 cohort_full_names <- cohort_full_names[cohort_full_names != "Not Reported"]
+cohort_full_names <- unique(cohort_full_names)
+
+print("Number of unique cohort full names:")
+length(cohort_full_names)
 
 
 cohort_abbr_names = cohort_names$cohort[!is.na(cohort_names$cohort)]
@@ -236,20 +528,25 @@ cohort_abbr_names <- str_trim(cohort_abbr_names)
 cohort_abbr_names <- iconv(cohort_abbr_names, to = "UTF-8")
 cohort_abbr_names <- gsub("[\u00A0\r\n]", " ", cohort_abbr_names)  # replace non-breaking spaces, CR, LF with space
 cohort_abbr_names <- str_squish(cohort_abbr_names)  # trims and removes extra spaces
+
 # remove abbreviations that are too short
-cohort_abbr_names <- cohort_abbr_names[nchar(cohort_abbr_names) >= 4]
-small_abbr_to_keep <- c("C4D", 
-                        "BBJ", 
-                        "UKB", 
-                        "MVP", 
-                        "TWB", 
-                        "QBB",
-                        "MEC"
-                        )
-cohort_abbr_names <- unique(c(cohort_abbr_names, 
-                              small_abbr_to_keep
-                              ))
-cohort_abbr_names <- cohort_abbr_names[!str_detect(pattern = "\\?", cohort_abbr_names)]
+# cohort_abbr_names <- cohort_abbr_names[nchar(cohort_abbr_names) >= 4]
+# small_abbr_to_keep <- c("C4D", 
+#                         "BBJ", 
+#                         "UKB", 
+#                         "MVP", 
+#                         "TWB", 
+#                         "QBB",
+#                         "MEC",
+#                         "WHI"
+#                         )
+
+# cohort_abbr_names <- unique(c(cohort_abbr_names, 
+#                               small_abbr_to_keep
+#                               ))
+
+cohort_abbr_names <- cohort_abbr_names[!str_detect(pattern = "\\?", 
+                                                   cohort_abbr_names)]
 # sort by length of name (longest first) to match longest names first
 cohort_abbr_names <- cohort_abbr_names[order(-nchar(cohort_abbr_names))]
 
@@ -259,90 +556,73 @@ gwas_cat_cohorts = gwas_study_info_cohort$COHORT
 gwas_cat_cohorts = unlist(strsplit(gwas_cat_cohorts, "\\|"))
 gwas_cat_cohorts = gwas_cat_cohorts[!(gwas_cat_cohorts %in% c("", "other", "multiple"))]
 
-cohort_abbr_names = unique(cohort_abbr_names,
-                           gwas_cat_cohorts)
+cohort_abbr_names = unique(c(cohort_abbr_names,
+                           gwas_cat_cohorts))
+
+# remove small abbreviations that are likely to be false positives
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "DN"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "CHB"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "FG"]
+
+print("Number of unique cohort abbreviation names:")
+length(cohort_abbr_names)
 
 ```
 
-# Relevant abstract text 
+# Get cohort-relevant abstract sentences
 
-## Get abstracts from Entrez
+## Load relevant abstracts
 
-```{r get_abstracts_entrez, eval = FALSE}
+### Convert abstract sections to sentences
 
-set_entrez_key(Sys.getenv('NCBI_API_KEY'))
+```{bash, eval = F}
 
-get_pubmed_abstracts <- function(pmids, 
-                                 batch_size = 200, 
-                                 verbose = TRUE) {
-  
-  n <- length(pmids)
-  
-  abstracts <- setNames(rep("MISSING", 
-                            n), 
-                        pmids
-                        )  # initialize result
-  
-  # Split PMIDs into batches
-  batches <- split(pmids, 
-                   ceiling(seq_along(pmids)/batch_size)
-                   )
-  
-  for(i in seq_along(batches)) {
-    
-    batch_pmids <- batches[[i]]
-    
-    if(verbose) message(sprintf("Fetching batch %d of %d (%d PMIDs)...", 
-                                i, 
-                                length(batches), 
-                                length(batch_pmids)
-                                )
-                        )
-    
-    # Fetch XML
-    xml_data <- entrez_fetch(db = "pubmed", 
-                             id = paste(batch_pmids, 
-                                        collapse = ","), 
-                             rettype = "xml", 
-                             parsed = FALSE
-                             )
-    
-    doc <- read_xml(xml_data)
-    articles <- xml_find_all(doc, ".//PubmedArticle")
-    
-    for(article in articles) {
-      
-      pmid_node <- xml_find_first(article, 
-                                  ".//PMID")
-      
-      pmid <- xml_text(pmid_node)
-      
-      abstract_nodes <- xml_find_all(article, 
-                                     ".//AbstractText")
-      
-      if(length(abstract_nodes) > 0) {
-        abstracts[pmid] <- paste(xml_text(abstract_nodes), 
-                                 collapse = " ")
-      }
-    }
-  }
-  
-  return(abstracts)
-}
+source spacyr_venv/bin/activate
 
-pmids = unique(pmids)
-abstracts <- get_pubmed_abstracts(pmids)
+python3 code/extract_text/spacy_obtain_sentences.py \
+--input_dir output/abstracts \
+--output_dir output/abstracts
 
-pmids <- pmids[abstracts != "MISSING"]
-date <- date[abstracts != "MISSING"]
-cohort <- cohort[abstracts != "MISSING"]
-abstracts <- abstracts[abstracts != "MISSING"]
+```
 
-# Loop through abstracts and write each to a file
-for (i in seq_along(abstracts)) {
-  file_name <- paste0(here::here("output/abstracts/"), pmids[i], ".txt")
-  writeLines(abstracts[i], file_name)
-}
+```{r read_abstracts_from_files}
+
+abstract_files <- list.files(here::here("output/abstracts/"), 
+                             pattern = "*.json", 
+                             full.names = FALSE
+                             ) |>
+                   sort()
+
+abstract_pmids = str_remove_all(abstract_files, "_sentences.json$")
+abstract_pmids = abstract_pmids[abstract_pmids %in% pmids]
+
+
+abstracts <- sapply(abstract_pmids,
+                    function(file) {
+                      json_data <- fromJSON(here::here(paste0("output/abstracts/", file, "_sentences.json")))
+                      
+                      abstract_lines <- json_data[json_data != ""]
+                      
+                      # readLines(here::here(paste0("output/abstracts/",file, ".txt")), 
+                      #           warn = FALSE) |> 
+                      #   paste(collapse = " ")
+                    }
+                    )
+
+#pmids = pmids_with_abstracts 
+abstract_cohort = cohort[which(pmids %in% abstract_pmids)]
+abstract_country = country[which(pmids %in% abstract_pmids)]
+abstract_date = date[which(pmids %in% abstract_pmids)]
+abstract_ancestry = ancestry[which(pmids %in% abstract_pmids)]
+
+
+# check lengths of these vectors are the same
+print("Check lengths of vectors are the same:")
+print(paste("Length of pmids:", length(pmids)))
+print(paste("Length of abstract pmids:", length(abstract_pmids)))
+print(paste("Length of abstracts:", length(abstracts)))
+print(paste("Length of cohort:", length(cohort)))
+print(paste("Length of date:", length(date)))
 
 ```
 
@@ -350,71 +630,39 @@ for (i in seq_along(abstracts)) {
 
 ```{r check_missing_abstracts, warning=FALSE, message=FALSE}
 
-abstract_files <- list.files(here::here("output/abstracts/"), 
-                             pattern = "*.txt", 
-                             full.names = FALSE
-                             )
-
-pmids_with_abstracts = gsub("\\.txt$", "", abstract_files)
-
-all_pmids = gwas_study_info$PUBMED_ID |> 
-            unique()
-
-missing_abstracts = setdiff(all_pmids,
-                             pmids_with_abstracts)
+missing_abstracts = pmids[!(pmids %in% abstract_pmids)] 
 
 print("Number of missing abstracts:")
 length(missing_abstracts)
 
-# library(openalexR)
-# 
-# # get information on these papers from openAlex
-# oa_example <- 
-# oa_fetch(entity = "works",
-#          pmid = missing_abstracts,
-#          abstract = TRUE)
-# 
-# oa_example |>
-#   select(doi, abstract) |>
-#   distinct()
+#pmids <- pmids[pmids %in% abstract_pmids]
 
 ```
 
-## Read in abstracts from files
+## Cohort name matching in abstract sentences
 
-```{r read_abstracts_from_files}
+### Function to extract sentences with cohort names
 
-abstracts <- sapply(abstract_files,
-                    function(file) {
-                      readLines(here::here(paste0("output/abstracts/",file)), 
-                                warn = FALSE) |> 
-                        paste(collapse = " ")
-                    }
-                    )
+```{r fn_extract_cohort_sentences}
 
-pmids = pmids_with_abstracts 
-cohort = cohort[pmids]
-date = date[pmids]
-country = country[pmids]
-
-```
-
-
-## Extract sentences from abstracts with cohort names
-
-```{r extract_cohort_sentences}
-
-extract_cohort_sentences <- function(text_vector, 
+extract_cohort_sentences <- function(abstract_list, 
                                      cohort_names, 
+                                     column_name = "COHORT",
+                                     tokenize = FALSE,
                                      ignore_case) {
   
+  cohort_names_grep <- paste0("\\b", cohort_names, "\\b") # add word boundaries to match whole words only
   
-  results <- lapply(seq_along(text_vector), function(i) {
+  results <- lapply(seq_along(abstract_list), function(i) {
     
-    abstract <- text_vector[i]
+    #abstract <- text_vector[i]
     # Split abstract into sentences
-    sentences <- unlist(tokenize_sentences(abstract))
-
+    if(tokenize) {
+      sentences <- tokenizers::tokenize_sentences(abstract_list[[i]])[[1]]
+    } else {
+      sentences <-  abstract_list[[i]]
+    }
+    
     # For each sentence, find all matching cohort names
     lapply(seq_along(sentences), function(s) {
       
@@ -422,93 +670,303 @@ extract_cohort_sentences <- function(text_vector,
       
       # Identify cohort names present in this sentence
       matched_cohorts <- cohort_names[str_detect(sentence, 
-                                                 regex(cohort_names, 
+                                                 regex(cohort_names_grep, 
                                                        ignore_case = ignore_case))]
-
+      cohort_df <-
       data.frame(
-        abstract_id = i,
+        article_id = i,
         sentence_id = s,
         sentence = sentence,
         has_cohort = length(matched_cohorts) > 0,
-        COHORT = if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else "",
+        #!!column_name = if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else "",
+        #COHORT = if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else "",
         stringsAsFactors = FALSE
       )
+      
+      # Add dynamic column
+      cohort_df[[column_name]] <- if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else ""
+      
+      return(cohort_df)
+      
     }) |> bind_rows()
   })
 
-  bind_rows(results)
+ results <- bind_rows(results)
+ 
+ results$pubmed_id <- names(abstract_list)[results$article_id]
+ 
+ return(results) #returns a df of sentences, with labelled columns for whether they contain cohort names, and which cohort names they contain (if any)
+ # id of sentence, and abstract / article
 }
 
-cohort_sentences_df <- extract_cohort_sentences(abstracts,
+```
+
+### Get cohort relevant sentences 
+
+#### Get cohort name sentences
+
+```{r extract_cohort_sentences_from_abstracts}
+
+# extract sentences with cohort full names (case-insensitive matching, as full names are less likely to be ambiguous)
+cohort_sentences_df_p1 <- extract_cohort_sentences(abstracts,
                                                 cohort_full_names,
                                                 ignore_case = TRUE
                                                 )
 
+# extract sentences with cohort abbreviation names (case-sensitive matching, as abbreviations are more likely to be ambiguous)
 cohort_sentences_df_p2 = extract_cohort_sentences(abstracts,
                                                   cohort_abbr_names,
                                                   ignore_case = FALSE
                                                   )
 
 cohort_sentences_df =
-  bind_rows(cohort_sentences_df,
+  bind_rows(cohort_sentences_df_p1,
             cohort_sentences_df_p2
             )
+
 
 cohort_sentences_df = 
   cohort_sentences_df |>
   distinct()
 
-print("Number of sentences containing likely cohort reference")
+separate_cohorts <- function(COHORT) {
+  
+  if (any(grepl("\\|", COHORT))) {
+    return(unlist(strsplit(COHORT, "\\|")))
+  } else {
+    return(COHORT)
+  }
+  
+}
+
+cohort_sentences_df =
   cohort_sentences_df |>
+  group_by(article_id, sentence_id, sentence) |>
+  summarise(
+    COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
+                         collapse = "|", 
+                         na.rm = T),
+    has_cohort = ifelse(any(COHORT != ""), TRUE, FALSE)
+  ) |>
+  ungroup() 
+
+cohort_sentences_df =
+  cohort_sentences_df |>
+  mutate(COHORT = str_remove_all(COHORT, 
+                               pattern = "\\|$|^\\|"
+                               )
+         ) 
+
+```
+
+#### Distinguishing words between sentences with cohort names, and sentences without cohort names
+
+```{r distinguish_cohort_sentences_abstracts}
+
+# remove stop words and common words that are not informative for cohort context
+removal_words <- c("the", "and", "of", "in", "to", "with", "a",
+                   "for", "on", "by", "is", "are", "was", "were", "each", "all", "had", "have", "it",
+                   "as", "from", "that", "this", "which", "be", "at", "or", "an", "then", "than",  "into",
+                   "if", "not", "only", "both", "same", "after", "across", "between", "out", "up", "any", 
+                   "we", "our", "us", "these", "within", "per",
+                   "used", "using", "use",
+                  "0.01", "0.05", "0.5", "1", "one", "2", "two", "3", "three", "iii",
+                  "4", "5", "6", "p", "8",  "10", "value", "significant", "30",
+                   "i", "r", "wide"
+)
+
+cohort_sentences_words <- 
+cohort_sentences_df |>
+  filter(has_cohort) |>
+  pull(sentence) |>
+  tokenizers::tokenize_words() |>
+  unlist()
+
+cohort_sentence_words_df =
+data.frame(word = cohort_sentences_words) |>
+  filter(!(tolower(word) %in% removal_words)) |>
+  group_by(word) |>
+  summarise(n_in_cohort = n()) |>
+  filter(n_in_cohort > 5)
+
+non_cohort_sentences_words <-
+cohort_sentences_df |>
+  filter(!has_cohort) |>
+  pull(sentence) |>
+  tokenizers::tokenize_words() |>
+  unlist()
+
+# sample down non-cohort sentences words
+set.seed(500)
+non_cohort_sentences_words_sample <- sample(non_cohort_sentences_words, 
+                                              size = length(cohort_sentences_words), 
+                                              replace = FALSE)
+
+non_cohort_sentence_words_df =
+data.frame(word = non_cohort_sentences_words_sample) |>
+  filter(!(tolower(word) %in% removal_words)) |>
+  group_by(word) |>
+  summarise(n_not_cohort = n()) 
+
+
+n_sentences <- cohort_sentences_df |>
   filter(COHORT != "") |>
-  select(abstract_id, sentence_id) |>
+  select(article_id, sentence_id) |>
   distinct() |>
   nrow()
 
-print("Number of abstracts containing likely cohort reference")
-n_abstracts_cohorts =  cohort_sentences_df |>
+
+print("Words more common in sentences with cohort names than sentences without cohort names:")
+left_join(cohort_sentence_words_df,
+          non_cohort_sentence_words_df,
+          by = "word"
+          ) |>
+  mutate(n_not_cohort = ifelse(is.na(n_not_cohort), 0, n_not_cohort)) |>
+  mutate(delta_n = n_in_cohort - n_not_cohort) |>
+  mutate(recall = n_in_cohort / n_sentences) |>
+  arrange(desc(delta_n)) |>
+  head(20)
+
+```
+
+```{r cohort_sentence_summary}
+
+print("Number of abstracts containing probable cohort reference")
+abstracts_cohorts <- cohort_sentences_df |>
   filter(COHORT != "") |>
-  pull(abstract_id) |>
-  unique() |>
+  pull(article_id) |>
+  unique() 
+
+n_abstracts_cohorts =  abstracts_cohorts |>
   length()
 
 print(n_abstracts_cohorts)
-  
-# this is ~30% of papers; 
+
+print("Percentage of sampled abstracts containing probable cohort reference:")
 100 * n_abstracts_cohorts / length(unique(pmids))
+
+print("Number of sentences containing probable cohort reference")
+  cohort_sentences_df |>
+  filter(COHORT != "") |>
+  select(article_id, sentence_id) |>
+  distinct() |>
+  nrow()
+  
+print("Number of entities")
+cohort_sentences_df |>
+  filter(COHORT != "") |>
+  pull(COHORT) |>
+  str_split("\\|") |>
+  unlist() |>
+  length()
+  
+print("Number of unique cohorts referenced (not unique cohort names, but unique strings in the COHORT column):")
+detected_cohorts <- cohort_sentences_df |>
+  filter(COHORT != "") |>
+  pull(COHORT) |>
+  str_split("\\|") |>
+  unlist() 
+
+n_cohorts <- detected_cohorts |>
+  unique()  |>
+  length()
+
+print(n_cohorts)
+
+print("Most common cohort names detected (by number of sentences they are mentioned in):")
+data.frame(cohort = detected_cohorts) |>
+  group_by(cohort) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head(10)
+
+print("Most common cohort names detected (by number of abstracts they are mentioned in):")
+cohort_sentences_df |>
+  filter(COHORT != "") |>
+  select(COHORT, article_id) |>
+  tidyr::separate_rows(COHORT, sep = "\\|") |>
+  distinct() |>
+  group_by(COHORT) |>
+  summarise(n_abstracts = n()) |>
+  arrange(desc(n_abstracts)) |>
+  head(5)
   
 ```
 
-## Correct for the over-representation of sentences without cohort names
+#### Add cohort-related context sentences
 
-```{r correct_overrep_no_cohort}
+```{r extract_cohort_context_sentences_from_abstracts}
 
-# set the ratio of sentences with/without cohort names
-# ratio = 1
-# 
-# # number of sentences with cohort names
-# n_tp_sentences = nrow(cohort_sentences_df |>
-#                       filter(COHORT != "")
-#                       )
-# cohort_sentences_df  =
-#   cohort_sentences_df |>
-#   mutate(has_cohort = ifelse(COHORT == "", FALSE, TRUE)) |>
-#   group_by(has_cohort) |>
-#   slice_sample(n = ratio*n_tp_sentences,
-#                replace = FALSE
-#                ) 
+# extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
+cohort_context_df = extract_cohort_sentences(abstracts,
+                                            cohort_context_terms,
+                                            column_name = "CONTEXT",
+                                            ignore_case = FALSE
+                                            )
+
+cohort_sentences_df <-
+left_join(cohort_sentences_df,
+          cohort_context_df |> select(article_id, 
+                                      sentence_id, 
+                                      CONTEXT),
+          by = c("article_id", "sentence_id")
+          ) 
+
+print("Number of sentences with cohort names and/or cohort-related context:")
+cohort_sentences_df |> 
+  mutate(has_context = ifelse(CONTEXT == "", F, T)) |>
+  group_by(has_cohort, has_context) |> 
+  summarise(n = n())
 
 filtered_cohort_sentences_df =
   cohort_sentences_df |>
-  filter(COHORT != "")
+  filter(COHORT != "" | CONTEXT != "")
+
+print("Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):")
+nrow(filtered_cohort_sentences_df)
+
+```
+
+#### Get other sentences with words that indicate sample or cohort is being discussed
+
+Using this to correct for the over-representation of sentences without cohort names, by identifying well-matched sentences
+
+```{r extract_sample_context_sentences_from_abstracts}
+
+# words that indicate sample or cohort is being discussed:
+sample_terms <- c(
+  # Your original list
+  "ancestry", "biobank", "cases", "cohort", "controls", 
+  "consortium", "consortia", "descent", "founder", 
+  "enrolled", "enrollment", "ethnicity", "heritage",
+  "isolate", "isolated", "individuals", "participants", 
+  "patients", "population", "recruitment", "registry", 
+  "sample", "study", "subjects", "volunteer",
+  
+  # Additional core terms
+  "recruited", "enroll", "ascertained", "volunteers",
+  "probands", "affected", "unaffected", "families", "twins",
+  "cohorts", "populations", "samples", "subgroup", "subset",
+  "subcohort", "demographic", "ethnic", "racial",
+  "admixed", "admixture", "ancestral", "origin",
+  "case-control", "prospective", "genotyped", "sequenced",
+  "meta-analysis", "pooled", "residing", "nationwide",
+  
+  # Useful variants
+  "enrollees", "sampling", "lineage", "self-reported",
+  "self-identified", "replication", "discovery", "validation"
+)
 
 control_cohort_sentences_df <-
 cohort_sentences_df |>
-  filter(grepl("cohort|consortium|study|population|registry|biobank|corsortia", 
+  filter(COHORT == "" & CONTEXT == "") |>
+  filter(grepl(paste(sample_terms, collapse = "|"), 
                sentence, 
                ignore.case = TRUE)
-         ) |>
-  slice_sample(n = 1000)
+         ) #|>
+
+print("Number of sentences without (detected) cohort names or cohort-context but with sample-related context:")
+nrow(control_cohort_sentences_df)
 
 filtered_cohort_sentences_df =
   bind_rows(filtered_cohort_sentences_df,
@@ -516,27 +974,30 @@ filtered_cohort_sentences_df =
             ) |>
   distinct()
 
-filtered_cohort_sentences_df =
-  filtered_cohort_sentences_df |>
-  group_by(abstract_id, sentence_id, sentence) |>
-  summarise(
-    COHORT = str_flatten(unique(COHORT), collapse = "|", na.rm = T)
-  ) |>
-  ungroup()
+print("Percentage of sentences with cohort names vs other cohort-related context")
+total_n_sentences <- nrow(filtered_cohort_sentences_df)
 
-abstract_ids = filtered_cohort_sentences_df$abstract_id |> unique() |> sort()
-
-pmids = pmids[abstract_ids]
-abstracts = abstracts[abstract_ids]
-date = date[abstract_ids]
-cohort = cohort[abstract_ids]
+filtered_cohort_sentences_df |>
+  group_by(has_cohort) |> 
+  summarise(n = n(),
+            percentage = round(100 * n/total_n_sentences, digits = 2)
+  )
 
 ```
 
+```{r get_ids_for_doccano}
+
+abstract_pmids = filtered_cohort_sentences_df$pubmed_id |> unique() 
+abstract_ids <- filtered_cohort_sentences_df$article_id |> unique()
+abstract_date = abstract_date[abstract_ids]
+abstract_cohort = abstract_cohort[abstract_ids]
+abstract_country = abstract_country[abstract_ids]
+
+```
 
 ## Prepare data in Doccano JSON format
 
-```{r prepare_doccano_json}
+```{r prepare_doccano_json_abstracts}
 
 # file path for intermediate json file output
 json_file = here::here("output/doccano/abstracts_with_cohort_info.json")
@@ -560,13 +1021,13 @@ convert_to_doccano_json_sentence_level <- function(pmids,
       df <- cohort_sentences_df |>
              dplyr::filter(sentence == current_sentence) 
       
-      # abstract_id <- df$abstract_id
+      # article_id <- df$article_id
       # matched_cohort <- df$COHORT
       
       for (i in seq_len(nrow(df))) {
         
         matched_cohort <- df$COHORT[i]
-        abstract_id <- df$abstract_id[i]
+        article_id <- df$article_id[i]
         
         #browser()
       
@@ -574,10 +1035,10 @@ convert_to_doccano_json_sentence_level <- function(pmids,
         
           doccano_list[[example_id]] <- list(
           text = current_sentence,
-          pubmed_id = pmids[abstract_id],
-          date = date[abstract_id],
-          country = country[abstract_id],
-          gwas_cat_cohort_label = cohort[abstract_id],
+          pubmed_id = pmids[article_id],
+          date = date[article_id],
+          country = country[article_id],
+          gwas_cat_cohort_label = cohort[article_id],
           label = list()
           )
         
@@ -637,10 +1098,10 @@ convert_to_doccano_json_sentence_level <- function(pmids,
       doccano_list[[example_id]] <- list(
         # id = example_id,
         text = current_sentence,
-        pubmed_id = pmids[abstract_id],
-        date = date[abstract_id],
-        country = country[abstract_id],
-        gwas_cat_cohort_label = cohort[abstract_id],
+        pubmed_id = pmids[article_id],
+        date = date[article_id],
+        country = country[article_id],
+        gwas_cat_cohort_label = cohort[article_id],
         label = entities
       )
       
@@ -664,13 +1125,11 @@ convert_to_doccano_json_sentence_level <- function(pmids,
 }
 
 
-
-
 # Create JSON as a list
-json_list <- convert_to_doccano_json_sentence_level(pmids = pmids,
-                                                    date = date,
-                                                    cohort = cohort,
-                                                    country = country,
+json_list <- convert_to_doccano_json_sentence_level(pmids = abstract_pmids, #pmids,
+                                                    date = abstract_date,
+                                                    cohort = abstract_cohort,
+                                                    country = abstract_country,
                                                     filtered_cohort_sentences_df)
 
 
@@ -699,4 +1158,388 @@ close(con)
 cat("JSONL saved to:", jsonl_file, "\n")
 
 ```
+
+# Get cohort-revelevant methods section sentence extraction
+
+## Convert methods sections to sentences
+
+```{bash, eval = F}
+
+source spacyr_venv/bin/activate
+
+python3 code/extract_text/spacy_obtain_sentences.py \
+--input_dir output/fulltexts/methods_sections \
+--output_dir  output/fulltexts/methods_sentences
+
+```
+
+## Get relevant methods text:
+
+```{r}
+
+methods_sections <- list.files(here::here("output/fulltexts/methods_sentences/"), 
+                             pattern = "*.json", 
+                             full.names = TRUE
+                             )
+
+pmcids_with_methods <- methods_sections |>
+  gsub(pattern = ".*/", replacement = "") |>
+  gsub(pattern = "_methods_sentences\\.json$", replacement = "")
+
+pubmeds_with_methods <- converted_ids |>
+  filter(pmcids %in% pmcids_with_methods) |>
+  pull(PMID)
+
+pubmeds_with_methods <- c(pubmeds_with_methods, 
+                          grep("PMC", pmcids_with_methods, value = TRUE, invert = TRUE)
+                          )
+
+print("Number of papers with methods sections extracted:")
+sum(pubmeds_with_methods %in% pmids)
+
+pmids_methods_to_get <-  pubmeds_with_methods[pubmeds_with_methods %in% pmids]
+
+pmcids_methods_to_get <- converted_ids |>
+  filter(PMID %in% pmids_methods_to_get) |>
+  pull(pmcids)
+
+ids_methods_to_get <- c(pmids_methods_to_get, pmcids_methods_to_get)
+
+ids_methods_to_get <- ids_methods_to_get[ids_methods_to_get != ""]
+
+files_to_get <-
+paste0(ids_methods_to_get, 
+       "_methods_sentences.json") |>
+  sort()
+
+methods_sections_to_get <- methods_sections[basename(methods_sections) %in% files_to_get]
+methods_sections_to_get <- basename(methods_sections_to_get) |> 
+                           gsub(pattern = "_methods_sentences\\.json$", replacement = "")
+
+# read in methods sections for available papers
+methods_texts <- sapply(methods_sections_to_get,
+                    function(id) {
+                      
+                      file <- here::here(paste0("output/fulltexts/methods_sentences/",
+                                                id, 
+                                                "_methods_sentences.json"))
+                      
+                      json_data <- fromJSON(file)
+                      
+                      abstract_lines <- json_data[json_data != ""]
+                      # readLines(file, 
+                      #           warn = FALSE, 
+                      #           encoding = "UTF-8") |>
+                      # paste(collapse = " ")
+                    }
+                    )
+
+# convert pmcids to pubmeds
+names(methods_texts) <- sapply(names(methods_texts), function(id) {
+  if(grepl("^PMC", id)) {
+    pmcid <- id
+    pubmed_id <- converted_ids$PMID[converted_ids$pmcids == pmcid]
+    if(length(pubmed_id) > 0) {
+      return(as.character(pubmed_id))
+    } else {
+      return(NA)
+    }
+  } else {
+    return(id)
+  }
+})
+
+# order methods texts by pmids
+methods_texts <- methods_texts[order(names(methods_texts))]
+
+methods_pmids <- names(methods_texts)
+methods_cohort <- cohort[which(pmids %in% methods_pmids)]
+methods_country <- country[which(pmids %in% methods_pmids)]
+methods_date <- date[which(pmids %in% methods_pmids)]
+
+```
+
+## Extract sentences with cohort names or cohort-related context (population, ancestry, country terms) from methods sections
+
+```{r extract_cohort_sentences_methods}
+
+# extract sentences with cohort full names (case-insensitive matching, as full names are less likely to be ambiguous)
+cohort_sentences_df_p1 <- extract_cohort_sentences(methods_texts,
+                                                cohort_full_names,
+                                                ignore_case = TRUE
+                                                )
+
+# extract sentences with cohort abbreviation names (case-sensitive matching, as abbreviations are more likely to be ambiguous)
+cohort_sentences_df_p2 = extract_cohort_sentences(methods_texts,
+                                                  cohort_abbr_names,
+                                                  ignore_case = FALSE
+                                                  )
+
+methods_cohort_sentences_df = 
+  bind_rows(cohort_sentences_df_p1,
+            cohort_sentences_df_p2
+            ) |>
+  distinct()
+
+
+methods_cohort_sentences_df =
+  methods_cohort_sentences_df |>
+  group_by(article_id, sentence_id, sentence) |>
+  summarise(
+    COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
+                         collapse = "|", 
+                         na.rm = T),
+    has_cohort = ifelse(any(COHORT != ""), TRUE, FALSE)
+  ) |>
+  ungroup() 
+
+methods_cohort_sentences_df =
+  methods_cohort_sentences_df |>
+  mutate(COHORT = str_remove_all(COHORT, 
+                               pattern = "\\|$|^\\|"
+                               )
+         ) 
+
+print("Number of methods sections containing probable cohort reference:")
+methods_cohorts <- methods_cohort_sentences_df |>
+  filter(COHORT != "") |>
+  pull(article_id) |>
+  unique()
+
+methods_cohorts  |> length()
+
+print("Percentage of methods sections containing probable cohort reference:")
+100 * length(methods_cohorts) / length(methods_texts)
+
+
+print("Number of sentences containing probable cohort reference in methods sections")
+  methods_cohort_sentences_df |>
+  filter(COHORT != "") |>
+  select(article_id, sentence_id) |>
+  distinct() |>
+  nrow()
+
+print("Number of entities in methods sections")
+methods_cohort_sentences_df |>
+  filter(COHORT != "") |>
+  pull(COHORT) |>
+  str_split("\\|") |>
+  unlist() |>
+  length()
+
+print("Most common cohort names detected in methods sections:")
+methods_cohort_sentences_df |>
+  filter(COHORT != "") |>
+  select(COHORT, article_id) |>
+  tidyr::separate_rows(COHORT, sep = "\\|") |>
+  distinct() |>
+  group_by(COHORT) |>
+  summarise(n_abstracts = n()) |>
+  arrange(desc(n_abstracts)) |>
+  head(5)
+
+print("Number of cohort names only mentioned in one paper")
+methods_cohort_sentences_df |>
+  filter(COHORT != "") |>
+  select(COHORT, article_id) |>
+  tidyr::separate_rows(COHORT, sep = "\\|") |>
+  distinct() |>
+  group_by(COHORT) |>
+  summarise(n_abstracts = n()) |>
+  filter(n_abstracts == 1) |>
+  nrow()
+
+print("Number of unique cohorts referenced in methods sections (not unique cohort names, but unique strings in the COHORT column):")
+detected_cohorts_methods <- methods_cohort_sentences_df |>
+  filter(COHORT != "") |>
+  pull(COHORT) |>
+  str_split("\\|") |>
+  unlist()
+
+n_cohorts_methods <- detected_cohorts_methods |>
+  unique()  |>
+  length()
+
+print(n_cohorts_methods)
+
+print("Most common cohort names detected in methods sections by number of sentences they are mentioned in:")
+data.frame(cohort = detected_cohorts_methods) |>
+  group_by(cohort) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head(10)
+
+
+# 
+# methods_cohort_sentences_df |>
+#   filter(!c(article_id %in% methods_abstracts_cohorts)) |>
+#   View()
+
+```
+
+## Distinguishing words between sentences with cohort names, and sentences without cohort names in methods sections
+
+```{r distinguish_cohort_sentences_methods}
+
+cohort_sentences_words <- 
+cohort_sentences_df |>
+  filter(has_cohort) |>
+  pull(sentence) |>
+  tokenizers::tokenize_words() |>
+  unlist()
+
+cohort_sentence_words_df =
+data.frame(word = cohort_sentences_words) |>
+  filter(!(tolower(word) %in% removal_words)) |>
+  group_by(word) |>
+  summarise(n_in_cohort = n()) |>
+  filter(n_in_cohort > 5)
+
+non_cohort_sentences_words <-
+cohort_sentences_df |>
+  filter(!has_cohort) |>
+  pull(sentence) |>
+  tokenizers::tokenize_words() |>
+  unlist()
+
+# sample down non-cohort sentences words
+set.seed(500)
+non_cohort_sentences_words_sample <- sample(non_cohort_sentences_words, 
+                                              size = length(cohort_sentences_words), 
+                                              replace = FALSE)
+
+non_cohort_sentence_words_df =
+data.frame(word = non_cohort_sentences_words_sample) |>
+  filter(!(tolower(word) %in% removal_words)) |>
+  group_by(word) |>
+  summarise(n_not_cohort = n()) 
+
+
+print("Words more common in sentences with cohort names than sentences without cohort names:")
+left_join(cohort_sentence_words_df,
+          non_cohort_sentence_words_df,
+          by = "word"
+          ) |>
+  mutate(n_not_cohort = ifelse(is.na(n_not_cohort), 0, n_not_cohort)) |>
+  mutate(delta_n = n_in_cohort - n_not_cohort) |>
+  arrange(desc(delta_n)) |>
+  head(20)
+
+```
+
+## Add cohort-related context sentences to methods sections
+
+```{r extract_cohort_context_sentences_methods}
+
+# extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
+cohort_context_df = extract_cohort_sentences(methods_texts,
+                                            cohort_context_terms,
+                                            column_name = "CONTEXT",
+                                            ignore_case = FALSE
+                                            )
+
+methods_cohort_sentences_df <-
+left_join(methods_cohort_sentences_df,
+          cohort_context_df |> select(article_id, sentence_id, CONTEXT),
+          by = c("article_id", "sentence_id")
+          ) 
+
+print("Number of sentences with cohort names and/or cohort-related context:")
+methods_cohort_sentences_df |> 
+  mutate(has_context = ifelse(CONTEXT == "", F, T)) |>
+  group_by(has_cohort, has_context) |> 
+  summarise(n = n())
+
+filtered_cohort_sentences_df =
+  methods_cohort_sentences_df |>
+  filter(COHORT != "" | CONTEXT != "")
+
+print("Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):")
+nrow(filtered_cohort_sentences_df)
+
+```
+
+## Get other sentences with words that indicate sample or cohort is being discussed
+
+```{r get_sample_context_sentences_methods}
+
+control_cohort_sentences_df <-
+cohort_sentences_df |>
+  filter(COHORT == "" & CONTEXT == "") |>
+  filter(grepl(paste(sample_terms, collapse = "|"), 
+               sentence, 
+               ignore.case = TRUE)
+         ) #|>
+
+print("Number of sentences without (detected) cohort names or cohort-context but with sample-related context:")
+nrow(control_cohort_sentences_df)
+
+filtered_cohort_sentences_df =
+  bind_rows(filtered_cohort_sentences_df,
+            control_cohort_sentences_df
+            ) |>
+  distinct()
+
+print("Percentage of sentences with cohort names vs other cohort-related context")
+total_n_sentences <- nrow(filtered_cohort_sentences_df)
+
+filtered_cohort_sentences_df |>
+  group_by(has_cohort) |> 
+  summarise(n = n(),
+            percentage = round(100 * n/total_n_sentences, digits = 2)
+  )
+
+```
+
+## Prepare data in Doccano JSON format
+
+```{r prepare_doccano_json_methods}
+
+# file path for intermediate json file output
+json_file = here::here("output/doccano/methods_with_cohort_info.json")
+
+# file path for final jsonl file output
+jsonl_file = here::here("output/doccano/methods_with_cohort_info.jsonl")
+
+
+methods_pmids <- filtered_cohort_sentences_df$pubmed_id |> unique()
+article_ids <- filtered_cohort_sentences_df$article_id |> unique()
+
+methods_cohort = methods_cohort[article_ids]
+country = country[article_ids]
+date = date[article_ids]
+ancestry = ancestry[article_ids]
+
+# Create JSON as a list
+json_list <- convert_to_doccano_json_sentence_level(pmids = pmids,
+                                                    date = date,
+                                                    cohort = cohort,
+                                                    country = country,
+                                                    filtered_cohort_sentences_df)
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+
+json_data <- fromJSON(json_file,
+                      simplifyVector = FALSE)
+
+# Open connection to JSONL file
+con <- file(jsonl_file, "w")
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+
+# Close connection
+close(con)
+
+cat("JSONL saved to:", jsonl_file, "\n")
+
+```
+
 
