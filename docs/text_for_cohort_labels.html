@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb4b420ff3f67e4d0314ea8c77f2dd5aeabdab895targetblankb4b420fa">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0ea67c667a119b68fa0167fa3cddf001fd1cb32btargetblank0ea67c6a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b4b420ff3f67e4d0314ea8c77f2dd5aeabdab895" target="_blank">b4b420f</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0ea67c667a119b68fa0167fa3cddf001fd1cb32b" target="_blank">0ea67c6</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeb4b420ff3f67e4d0314ea8c77f2dd5aeabdab895targetblankb4b420fa"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0ea67c667a119b68fa0167fa3cddf001fd1cb32btargetblank0ea67c6a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/b4b420ff3f67e4d0314ea8c77f2dd5aeabdab895" target="_blank">b4b420f</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0ea67c667a119b68fa0167fa3cddf001fd1cb32b" target="_blank">0ea67c6</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -666,6 +666,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/0ea67c667a119b68fa0167fa3cddf001fd1cb32b/analysis/text_for_cohort_labels.Rmd" target="_blank">0ea67c6</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-23
+</td>
+<td>
+… actually (plz) fixing adding meta-data to doccano
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/a240263cbf7d554a4bbf1cd90fedfda0a8eebaee/docs/text_for_cohort_labels.html" target="_blank">a240263</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-23
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -2388,7 +2422,7 @@ print(&quot;Words more common in sentences with cohort names than sentences with
 class="section level2">
 <h2>Add cohort-related context sentences to methods sections</h2>
 <pre class="r"><code># extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
-cohort_context_df = extract_cohort_sentences(methods_texts,
+methods_cohort_context_df = extract_cohort_sentences(methods_texts,
                                             cohort_context_terms,
                                             column_name = &quot;CONTEXT&quot;,
                                             ignore_case = FALSE
@@ -2396,7 +2430,7 @@ cohort_context_df = extract_cohort_sentences(methods_texts,
 
 methods_cohort_sentences_df &lt;-
 left_join(methods_cohort_sentences_df,
-          cohort_context_df |&gt; select(pubmed_id, 
+          methods_cohort_context_df |&gt; select(pubmed_id, 
                                       article_id,
                                       sentence_id,
                                       CONTEXT),
@@ -2421,22 +2455,22 @@ print(&quot;Number of sentences with cohort names and/or cohort-related context:
 2 FALSE      TRUE         1154
 3 TRUE       FALSE        1516
 4 TRUE       TRUE          357</code></pre>
-<pre class="r"><code>filtered_cohort_sentences_df =
+<pre class="r"><code>filtered_methods_cohort_sentences_df =
   methods_cohort_sentences_df |&gt;
   filter(COHORT != &quot;&quot; | CONTEXT != &quot;&quot;)
 
 print(&quot;Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):&quot;)</code></pre>
 <pre><code>[1] &quot;Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):&quot;</code></pre>
 <pre class="r"><code>nrow(filtered_cohort_sentences_df)</code></pre>
-<pre><code>[1] 3027</code></pre>
+<pre><code>[1] 1091</code></pre>
 </div>
 <div
 id="get-other-sentences-with-words-that-indicate-sample-or-cohort-is-being-discussed-1"
 class="section level2">
 <h2>Get other sentences with words that indicate sample or cohort is
 being discussed</h2>
-<pre class="r"><code>control_cohort_sentences_df &lt;-
-cohort_sentences_df |&gt;
+<pre class="r"><code>control_methods_cohort_sentences_df &lt;-
+methods_cohort_sentences_df |&gt;
   filter(COHORT == &quot;&quot; &amp; CONTEXT == &quot;&quot;) |&gt;
   filter(grepl(paste(sample_terms, collapse = &quot;|&quot;), 
                sentence, 
@@ -2445,19 +2479,19 @@ cohort_sentences_df |&gt;
 
 print(&quot;Number of sentences without (detected) cohort names or cohort-context but with sample-related context:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of sentences without (detected) cohort names or cohort-context but with sample-related context:&quot;</code></pre>
-<pre class="r"><code>nrow(control_cohort_sentences_df)</code></pre>
-<pre><code>[1] 706</code></pre>
-<pre class="r"><code>filtered_cohort_sentences_df =
-  bind_rows(filtered_cohort_sentences_df,
-            control_cohort_sentences_df
+<pre class="r"><code>nrow(control_methods_cohort_sentences_df)</code></pre>
+<pre><code>[1] 4361</code></pre>
+<pre class="r"><code>filtered_methods_cohort_sentences_df =
+  bind_rows(filtered_methods_cohort_sentences_df,
+            control_methods_cohort_sentences_df
             ) |&gt;
   distinct()
 
 print(&quot;Percentage of sentences with cohort names vs other cohort-related context&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of sentences with cohort names vs other cohort-related context&quot;</code></pre>
-<pre class="r"><code>total_n_sentences &lt;- nrow(filtered_cohort_sentences_df)
+<pre class="r"><code>total_n_sentences &lt;- nrow(filtered_methods_cohort_sentences_df)
 
-filtered_cohort_sentences_df |&gt;
+filtered_methods_cohort_sentences_df |&gt;
   group_by(has_cohort) |&gt; 
   summarise(n = n(),
             percentage = round(100 * n/total_n_sentences, digits = 2)
@@ -2465,8 +2499,8 @@ filtered_cohort_sentences_df |&gt;
 <pre><code># A tibble: 2 × 3
   has_cohort     n percentage
   &lt;lgl&gt;      &lt;int&gt;      &lt;dbl&gt;
-1 FALSE       1860       49.8
-2 TRUE        1873       50.2</code></pre>
+1 FALSE       5515       74.6
+2 TRUE        1873       25.4</code></pre>
 </div>
 <div id="prepare-data-in-doccano-json-format-1" class="section level2">
 <h2>Prepare data in Doccano JSON format</h2>
@@ -2476,17 +2510,16 @@ json_file = here::here(&quot;output/doccano/methods_with_cohort_info.json&quot;)
 # file path for final jsonl file output
 jsonl_file = here::here(&quot;output/doccano/methods_with_cohort_info.jsonl&quot;)
 
-filtered_cohort_sentences_df &lt;- left_join(
-  filtered_cohort_sentences_df,
+filtered_methods_cohort_sentences_df  &lt;- left_join(
+  filtered_methods_cohort_sentences_df,
   meta_data_df,
   by = &quot;pubmed_id&quot;
 )
 
 # Create JSON as a list
 json_list &lt;- convert_to_doccano_json_sentence_level(
-  cohort_sentences_df = filtered_cohort_sentences_df
+  cohort_sentences_df = filtered_methods_cohort_sentences_df 
 )
-
 
 # Write to JSON file
 writeLines(toJSON(json_list,
