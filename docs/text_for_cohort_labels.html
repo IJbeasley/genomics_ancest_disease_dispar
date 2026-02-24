@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0ea67c667a119b68fa0167fa3cddf001fd1cb32btargetblank0ea67c6a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreede0b1286172796b91b6d75f0b0a2db03f03bb451targetblankde0b128a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0ea67c667a119b68fa0167fa3cddf001fd1cb32b" target="_blank">0ea67c6</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/de0b1286172796b91b6d75f0b0a2db03f03bb451" target="_blank">de0b128</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree0ea67c667a119b68fa0167fa3cddf001fd1cb32btargetblank0ea67c6a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreede0b1286172796b91b6d75f0b0a2db03f03bb451targetblankde0b128a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/0ea67c667a119b68fa0167fa3cddf001fd1cb32b" target="_blank">0ea67c6</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/de0b1286172796b91b6d75f0b0a2db03f03bb451" target="_blank">de0b128</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -554,6 +554,7 @@ Ignored files:
     Ignored:    bc2GMtest_1.0.tar.gz
     Ignored:    code/.DS_Store
     Ignored:    code/full_text_conversion/.DS_Store
+    Ignored:    cohort_sentences.json
     Ignored:    data/.DS_Store
     Ignored:    data/RCDCFundingSummary_01042026.xlsx
     Ignored:    data/cdc/
@@ -608,6 +609,7 @@ Ignored files:
     Ignored:    spacyr_venv/
 
 Untracked files:
+    Untracked:  code/extract_text/sentence_embeddings.py
     Untracked:  schools.R
     Untracked:  testing.R
 
@@ -666,6 +668,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/de0b1286172796b91b6d75f0b0a2db03f03bb451/analysis/text_for_cohort_labels.Rmd" target="_blank">de0b128</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-23
+</td>
+<td>
+Save cohort sentences
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/1c2ecd853cd287cca9cecffecfe4c829f2415974/docs/text_for_cohort_labels.html" target="_blank">1c2ecd8</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-02-23
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1435,7 +1471,7 @@ cohort_full_names &lt;- unique(cohort_full_names)
 print(&quot;Number of unique cohort full names:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique cohort full names:&quot;</code></pre>
 <pre class="r"><code>length(cohort_full_names)</code></pre>
-<pre><code>[1] 756</code></pre>
+<pre><code>[1] 767</code></pre>
 <pre class="r"><code>cohort_abbr_names = cohort_names$cohort[!is.na(cohort_names$cohort)]
 cohort_abbr_names &lt;- str_trim(cohort_abbr_names)
 cohort_abbr_names &lt;- iconv(cohort_abbr_names, to = &quot;UTF-8&quot;)
@@ -1480,7 +1516,7 @@ cohort_abbr_names &lt;- cohort_abbr_names[cohort_abbr_names != &quot;FG&quot;]
 print(&quot;Number of unique cohort abbreviation names:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique cohort abbreviation names:&quot;</code></pre>
 <pre class="r"><code>length(cohort_abbr_names)</code></pre>
-<pre><code>[1] 1019</code></pre>
+<pre><code>[1] 1029</code></pre>
 </div>
 </div>
 <div id="get-cohort-relevant-abstract-sentences" class="section level1">
@@ -1661,6 +1697,30 @@ You can override using the `.groups` argument.</code></pre>
                                pattern = &quot;\\|$|^\\|&quot;
                                )
          ) </code></pre>
+<pre class="r"><code>json_list &lt;- 
+cohort_sentences_df |&gt;
+  filter(has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/abstract_cohort_sentences.json&quot;))
+
+
+json_list &lt;- 
+cohort_sentences_df |&gt;
+  filter(!has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/abstract_non_cohort_sentences.json&quot;))</code></pre>
 </div>
 <div
 id="distinguishing-words-between-sentences-with-cohort-names-and-sentences-without-cohort-names"
@@ -2265,7 +2325,7 @@ methods_cohorts  |&gt; length()</code></pre>
   select(article_id, sentence_id) |&gt;
   distinct() |&gt;
   nrow()</code></pre>
-<pre><code>[1] 1873</code></pre>
+<pre><code>[1] 1878</code></pre>
 <pre class="r"><code>print(&quot;Number of entities in methods sections&quot;)</code></pre>
 <pre><code>[1] &quot;Number of entities in methods sections&quot;</code></pre>
 <pre class="r"><code>methods_cohort_sentences_df |&gt;
@@ -2274,7 +2334,7 @@ methods_cohorts  |&gt; length()</code></pre>
   str_split(&quot;\\|&quot;) |&gt;
   unlist() |&gt;
   length()</code></pre>
-<pre><code>[1] 2792</code></pre>
+<pre><code>[1] 2822</code></pre>
 <pre class="r"><code>print(&quot;Most common cohort names detected in methods sections:&quot;)</code></pre>
 <pre><code>[1] &quot;Most common cohort names detected in methods sections:&quot;</code></pre>
 <pre class="r"><code>methods_cohort_sentences_df |&gt;
@@ -2305,7 +2365,7 @@ methods_cohorts  |&gt; length()</code></pre>
   summarise(n_abstracts = n()) |&gt;
   filter(n_abstracts == 1) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 229</code></pre>
+<pre><code>[1] 240</code></pre>
 <pre class="r"><code>print(&quot;Number of unique cohorts referenced in methods sections (not unique cohort names, but unique strings in the COHORT column):&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique cohorts referenced in methods sections (not unique cohort names, but unique strings in the COHORT column):&quot;</code></pre>
 <pre class="r"><code>detected_cohorts_methods &lt;- methods_cohort_sentences_df |&gt;
@@ -2319,7 +2379,7 @@ n_cohorts_methods &lt;- detected_cohorts_methods |&gt;
   length()
 
 print(n_cohorts_methods)</code></pre>
-<pre><code>[1] 389</code></pre>
+<pre><code>[1] 402</code></pre>
 <pre class="r"><code>print(&quot;Most common cohort names detected in methods sections by number of sentences they are mentioned in:&quot;)</code></pre>
 <pre><code>[1] &quot;Most common cohort names detected in methods sections by number of sentences they are mentioned in:&quot;</code></pre>
 <pre class="r"><code>data.frame(cohort = detected_cohorts_methods) |&gt;
@@ -2344,6 +2404,30 @@ print(n_cohorts_methods)</code></pre>
 # methods_cohort_sentences_df |&gt;
 #   filter(!c(article_id %in% methods_abstracts_cohorts)) |&gt;
 #   View()</code></pre>
+<pre class="r"><code>json_list &lt;- 
+methods_cohort_sentences_df  |&gt;
+  filter(has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/methods_cohort_sentences.json&quot;))
+
+
+json_list &lt;- 
+methods_cohort_sentences_df  |&gt;
+  filter(!has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/methods_non_cohort_sentences.json&quot;))</code></pre>
 </div>
 <div
 id="distinguishing-words-between-sentences-with-cohort-names-and-sentences-without-cohort-names-in-methods-sections"
@@ -2351,7 +2435,7 @@ class="section level2">
 <h2>Distinguishing words between sentences with cohort names, and
 sentences without cohort names in methods sections</h2>
 <pre class="r"><code>cohort_sentences_words &lt;- 
-cohort_sentences_df |&gt;
+methods_cohort_sentences_df  |&gt;
   filter(has_cohort) |&gt;
   pull(sentence) |&gt;
   tokenizers::tokenize_words() |&gt;
@@ -2365,7 +2449,7 @@ data.frame(word = cohort_sentences_words) |&gt;
   filter(n_in_cohort &gt; 5)
 
 non_cohort_sentences_words &lt;-
-cohort_sentences_df |&gt;
+methods_cohort_sentences_df  |&gt;
   filter(!has_cohort) |&gt;
   pull(sentence) |&gt;
   tokenizers::tokenize_words() |&gt;
@@ -2395,28 +2479,28 @@ print(&quot;Words more common in sentences with cohort names than sentences with
   arrange(desc(delta_n)) |&gt;
   head(20)</code></pre>
 <pre><code># A tibble: 20 × 4
-   word        n_in_cohort n_not_cohort delta_n
-   &lt;chr&gt;             &lt;int&gt;        &lt;dbl&gt;   &lt;dbl&gt;
- 1 biobank              53            0      53
- 2 study                62           19      43
- 3 uk                   41            1      40
- 4 data                 38            9      29
- 5 n                    29            4      25
- 6 cases                35           16      19
- 7 controls             32           15      17
- 8 consortium           15            0      15
- 9 cohorts              15            2      13
-10 project              13            0      13
-11 african              12            0      12
-12 based                18            7      11
-13 genomes              11            0      11
-14 individuals          25           14      11
-15 performed            25           14      11
-16 1000                 10            0      10
-17 19                   10            0      10
-18 ancestry             14            4      10
-19 analysis             40           31       9
-20 cohort               15            6       9</code></pre>
+   word         n_in_cohort n_not_cohort delta_n
+   &lt;chr&gt;              &lt;int&gt;        &lt;dbl&gt;   &lt;dbl&gt;
+ 1 study                523          189     334
+ 2 biobank              300            6     294
+ 3 uk                   289           12     277
+ 4 data                 503          279     224
+ 5 1000                 184            7     177
+ 6 genomes              177            3     174
+ 7 project              165           12     153
+ 8 cohort               212           67     145
+ 9 reference            190           45     145
+10 ukb                  145            0     145
+11 consortium           134            7     127
+12 participants         194           82     112
+13 cases                240          132     108
+14 european             153           46     107
+15 phase                118           13     105
+16 panel                115           26      89
+17 samples              216          129      87
+18 individuals          193          109      84
+19 ukbb                  84            0      84
+20 studies              149           68      81</code></pre>
 </div>
 <div id="add-cohort-related-context-sentences-to-methods-sections"
 class="section level2">
@@ -2451,10 +2535,10 @@ print(&quot;Number of sentences with cohort names and/or cohort-related context:
 # Groups:   has_cohort [2]
   has_cohort has_context     n
   &lt;lgl&gt;      &lt;lgl&gt;       &lt;int&gt;
-1 FALSE      FALSE       12169
-2 FALSE      TRUE         1154
-3 TRUE       FALSE        1516
-4 TRUE       TRUE          357</code></pre>
+1 FALSE      FALSE       12166
+2 FALSE      TRUE         1152
+3 TRUE       FALSE        1519
+4 TRUE       TRUE          359</code></pre>
 <pre class="r"><code>filtered_methods_cohort_sentences_df =
   methods_cohort_sentences_df |&gt;
   filter(COHORT != &quot;&quot; | CONTEXT != &quot;&quot;)
@@ -2480,7 +2564,7 @@ methods_cohort_sentences_df |&gt;
 print(&quot;Number of sentences without (detected) cohort names or cohort-context but with sample-related context:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of sentences without (detected) cohort names or cohort-context but with sample-related context:&quot;</code></pre>
 <pre class="r"><code>nrow(control_methods_cohort_sentences_df)</code></pre>
-<pre><code>[1] 4361</code></pre>
+<pre><code>[1] 4358</code></pre>
 <pre class="r"><code>filtered_methods_cohort_sentences_df =
   bind_rows(filtered_methods_cohort_sentences_df,
             control_methods_cohort_sentences_df
@@ -2499,8 +2583,8 @@ filtered_methods_cohort_sentences_df |&gt;
 <pre><code># A tibble: 2 × 3
   has_cohort     n percentage
   &lt;lgl&gt;      &lt;int&gt;      &lt;dbl&gt;
-1 FALSE       5515       74.6
-2 TRUE        1873       25.4</code></pre>
+1 FALSE       5510       74.6
+2 TRUE        1878       25.4</code></pre>
 </div>
 <div id="prepare-data-in-doccano-json-format-1" class="section level2">
 <h2>Prepare data in Doccano JSON format</h2>
