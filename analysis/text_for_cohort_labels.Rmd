@@ -756,6 +756,35 @@ cohort_sentences_df =
 
 ```
 
+```{r}
+
+json_list <- 
+cohort_sentences_df |>
+  filter(has_cohort) |>
+  pull(sentence) |>
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here("output/doccano/abstract_cohort_sentences.json"))
+
+
+json_list <- 
+cohort_sentences_df |>
+  filter(!has_cohort) |>
+  pull(sentence) |>
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here("output/doccano/abstract_non_cohort_sentences.json"))
+
+```
+
 #### Distinguishing words between sentences with cohort names, and sentences without cohort names
 
 ```{r distinguish_cohort_sentences_abstracts}
@@ -1358,12 +1387,41 @@ data.frame(cohort = detected_cohorts_methods) |>
 
 ```
 
+```{r}
+
+json_list <- 
+methods_cohort_sentences_df  |>
+  filter(has_cohort) |>
+  pull(sentence) |>
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here("output/doccano/methods_cohort_sentences.json"))
+
+
+json_list <- 
+methods_cohort_sentences_df  |>
+  filter(!has_cohort) |>
+  pull(sentence) |>
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here("output/doccano/methods_non_cohort_sentences.json"))
+
+```
+
 ## Distinguishing words between sentences with cohort names, and sentences without cohort names in methods sections
 
 ```{r distinguish_cohort_sentences_methods}
 
 cohort_sentences_words <- 
-cohort_sentences_df |>
+methods_cohort_sentences_df  |>
   filter(has_cohort) |>
   pull(sentence) |>
   tokenizers::tokenize_words() |>
@@ -1377,7 +1435,7 @@ data.frame(word = cohort_sentences_words) |>
   filter(n_in_cohort > 5)
 
 non_cohort_sentences_words <-
-cohort_sentences_df |>
+methods_cohort_sentences_df  |>
   filter(!has_cohort) |>
   pull(sentence) |>
   tokenizers::tokenize_words() |>
