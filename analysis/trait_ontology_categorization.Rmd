@@ -50,7 +50,7 @@ gwas_study_info  <-
 
 ```
 
-## Mapping terms for studies with unmapped traits: 
+## Add mapped ontology terms for studies with unmapped traits: 
 
 ```{r deal_with_unmapped_traits}
 
@@ -151,6 +151,9 @@ unmapped_traits =
           MAPPED_TRAIT_URI = "http://snomed.info/id/267659002"
           )
 
+
+# Add the unmapped traits to the gwas study info df, by matching on DISEASE/TRAIT
+# and making unmmaped traits are NA
 gwas_study_info =
   gwas_study_info |>
   mutate(MAPPED_TRAIT = ifelse(MAPPED_TRAIT == "",
@@ -172,13 +175,23 @@ gwas_study_info |>
 
 ```
 
-## Correcting some MAPPED_TRAIT (MAPPED by GWAS Catalog) terms
+## Add DISEASE/TRAIT description for studies where this is missing
 
-## Add to DISEASE/TRAIT
+```{r deal_with_missing_disease_trait}
 
-```{r add_to_disease_trait}
+print("Before fixing, how many studies have missing DISEASE/TRAIT?")
+gwas_study_info |> 
+  filter(`DISEASE/TRAIT` == ""| is.na(`DISEASE/TRAIT`)) |>
+  nrow()
 
 # pubmed id: 35240980
+gwas_study_info |>
+  filter(PUBMED_ID == 35240980) |>
+  select(`DISEASE/TRAIT`, 
+         MAPPED_TRAIT, 
+         MAPPED_BACKGROUND_TRAIT) 
+
+
 # DISEASE/TRAIT == "Cognitive impairment among children born extremely preterm"
 gwas_study_info =
   gwas_study_info |>
@@ -188,6 +201,12 @@ gwas_study_info =
          )
 
 # study accession: GCST90624363
+gwas_study_info |> 
+  filter(STUDY_ACCESSION == "GCST90624363") |>
+  select(`DISEASE/TRAIT`, 
+         MAPPED_TRAIT, 
+         MAPPED_BACKGROUND_TRAIT)
+
 # DISEASE/TRAIT == "Lyme borreliosis"
 gwas_study_info =
   gwas_study_info |>
@@ -198,6 +217,13 @@ gwas_study_info =
 
 # pubmed id: 38509478
 # Nausea and vomiting during pregnancy
+gwas_study_info |>
+  filter(PUBMED_ID == 38509478) |>
+  select(`DISEASE/TRAIT`, 
+         MAPPED_TRAIT, 
+         MAPPED_BACKGROUND_TRAIT)
+
+
 gwas_study_info =
   gwas_study_info |>
   mutate(`DISEASE/TRAIT` = ifelse(PUBMED_ID == 38509478,
@@ -205,52 +231,21 @@ gwas_study_info =
                                 `DISEASE/TRAIT`)
          )
 
+
+print("After fixing, how many studies have missing DISEASE/TRAIT?")
+gwas_study_info |> 
+  filter(`DISEASE/TRAIT` == ""| is.na(`DISEASE/TRAIT`)) |>
+  nrow()
+
 ```
+
+## Correcting some MAPPED_TRAIT (MAPPED to ontology terms by GWAS Catalog) 
 
 ### Re-map some traits based on DISEASE/TRAIT
 
-```{r fix_bad_mapping}
+#### Non-specific disease mapping
 
-# `DISEASE/TRAIT contains resistance to mycobacterium tuberculosis infection
-# PUBMED_ID: 33661925
-# replace MAPPED_TRAIT == "decreased susceptibility to bacterial infection"
-# to "tuberculosis"
-# MAPPED_TRAIT_URI from "http://www.ebi.ac.uk/efo/EFO_0008322" to 
-
-## pubmed id: 34737426
-# mapped_trait = benign neoplasm
-# but should be cervical carcinoma, 	EFO_0001061
-
-gwas_study_info =
-  gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 34737426 & 
-                                MAPPED_TRAIT == "benign neoplasm",
-                               "cervical carcinoma",
-                               MAPPED_TRAIT)
-         ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 34737426 & 
-                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/MONDO_0021230",
-                                     "http://www.ebi.ac.uk/efo/EFO_0001061",
-                                     MAPPED_TRAIT_URI)
-           )
-
-# Capecitabine-induced hand-foot syndrome in breast or colorectal cancer
-
-  gwas_study_info =
-      gwas_study_info  |>
-  mutate(
-    MAPPED_TRAIT = 
-      ifelse(grepl("Capecitabine-induced hand-foot syndrome in breast or colorectal cancer", `DISEASE/TRAIT`),
-         "breast cancer, colorectal cancer, hand-foot syndrome",
-         MAPPED_TRAIT
-         ),
-    MAPPED_TRAIT_URI = 
-      ifelse(grepl("Capecitabine-induced hand-foot syndrome in breast or colorectal cancer", `DISEASE/TRAIT`),
-         "http://purl.obolibrary.org/obo/MONDO_0007254, http://purl.obolibrary.org/obo/MONDO_0005575, http://purl.obolibrary.org/obo/MONDO_0700048",
-         MAPPED_TRAIT_URI
-         )
-  )
-  
+```{r fix_bad_mapping_non_specific}
 
 # STUDY ACCESSION: GCST90043814
 # MAPPED_TRAIT == "disease" 
@@ -284,127 +279,55 @@ gwas_study_info =
                                                 MAPPED_BACKGROUND_TRAIT_URI)
            )
 
+```
 
-# GCST001789
-# replace MAPPED_TRAIT from "bronchopulmonary dysplasia"
-# to "blood high density lipoprotein particle diameter"
-# and MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/CMO_0002692"
+#### Pregnancy and maternal health related traits
+
+```{r fix_bad_mapping_pregnancy}
+
+# Pubmed id: 33239672
+# Multiple consecutive miscarriage
+## MAPPED_TRAIT == "fertility trait"
+## MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464"
+
+# What to convert to:
+# make MAPPED_TRAIT -> "spontaneous abortion"
+# MAPPED_TRAIT_URI -> "http://www.ebi.ac.uk/efo/EFO_1001255"
 
 gwas_study_info =
   gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST001789" & 
-                                MAPPED_TRAIT == "bronchopulmonary dysplasia",
-                               "blood high density lipoprotein particle diameter",
+  mutate(MAPPED_TRAIT = ifelse(grepl("Multiple consecutive miscarriage", `DISEASE/TRAIT`) & 
+                                MAPPED_TRAIT == "fertility trait",
+                               "spontaneous abortion",
                                MAPPED_TRAIT)
          ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST001789" & 
-                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/MONDO_0019091",
-                                     "http://purl.obolibrary.org/obo/CMO_0002692",
-                                     MAPPED_TRAIT_URI)
-           )
-  
-# GCST011663
-# replace MAPPED_TRAIT from "decreased susceptibility to bacterial infection"
-# to "tuberculosis"
-# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
-gwas_study_info =
-  gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST011663" & 
-                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
-                               "tuberculosis",
-                               MAPPED_TRAIT)
-         ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST011663" & 
-                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0008322",
-                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Multiple consecutive miscarriage", `DISEASE/TRAIT`) & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464",
+                                     "http://www.ebi.ac.uk/efo/EFO_1001255",
                                      MAPPED_TRAIT_URI)
            )
 
-# GCST011664
-# replace MAPPED_TRAIT from "decreased susceptibility to bacterial infection"
-# to "tuberculosis"
-# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
+# for PUBMED_ID 29018042
+## DISEASE/TRAIT == "Post-term birth"
+## MAPPED_TRAIT == "gestational age"
+## MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0005112"
+
+# What to convert to:
+# make MAPPED_TRAIT to "post term pregnancy"
+# MAPPED_TRAIT_URI to "http://www.ebi.ac.uk/efo/EFO_0009681"
+
 gwas_study_info =
   gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST011664" & 
-                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
-                               "tuberculosis",
+  mutate(MAPPED_TRAIT = ifelse(grepl("Post-term birth", `DISEASE/TRAIT`) & 
+                                MAPPED_TRAIT == "gestational age",
+                               "post term pregnancy",
                                MAPPED_TRAIT)
          ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST011664" & 
-                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0008322",
-                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Post-term birth", `DISEASE/TRAIT`) & 
+                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0005112",
+                                     "http://www.ebi.ac.uk/efo/EFO_0009681",
                                      MAPPED_TRAIT_URI)
            )
-
-
-# for PUBMED = 28628665
-# MAPPED_TRAIT = "decreased susceptibility to bacterial infection"
-# MAPPED_TRAIT_URI = "http://www.ebi.ac.uk/efo/EFO_0008322"
-
-# replace MAPPED_TRAIT to "tuberculosis"
-# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
-gwas_study_info =
-  gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 28628665 & 
-                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
-                               "tuberculosis",
-                               MAPPED_TRAIT)
-         ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 28628665 & 
-                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0008322",
-                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
-                                     MAPPED_TRAIT_URI)
-           )
-
-
-# GCST004690
-# replace MAPPED_TRAIT from "decreased susceptibility to bacterial infection"
-# to "tuberculosis"
-# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
-# MAPPED_BACKGROUND_TRAIT to "hiv infection" 
-# MAPPED_BACKGROUND_TRAIT_URI to "http://purl.obolibrary.org/obo/NCIT_C3108"
-gwas_study_info =
-  gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST004690" & 
-                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
-                               "tuberculosis",
-                               MAPPED_TRAIT)
-         ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST004690" & 
-                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/NCIT_C142500",
-                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
-                                     MAPPED_TRAIT_URI)
-           ) |>
-    mutate(MAPPED_BACKGROUND_TRAIT = ifelse(STUDY_ACCESSION == "GCST004690",
-                                           "hiv infection",
-                                           MAPPED_BACKGROUND_TRAIT)
-           ) |>
-    mutate(MAPPED_BACKGROUND_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST004690",
-                                                "http://purl.obolibrary.org/obo/NCIT_C3108",
-                                                MAPPED_BACKGROUND_TRAIT_URI)
-           )
-
-# Periodontal disease related phenotype
-# set trait to periodontal disorder
-# rather than periodontal measurement
-gwas_study_info =
-  gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("Periodontal disease related phenotype", `DISEASE/TRAIT`),
-                               str_replace_all(pattern = "periodontal measurement",
-                                               replacement = "periodontal disorder",
-                                               MAPPED_TRAIT
-                                               ),
-                               MAPPED_TRAIT)
-         ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Periodontal disease related phenotype", `DISEASE/TRAIT`),
-                               str_replace_all(pattern = "http://www.ebi.ac.uk/efo/EFO_0007780",
-                                               replacement = "http://purl.obolibrary.org/obo/MONDO_0002635",
-                                               MAPPED_TRAIT_URI
-                                               ),
-                               MAPPED_TRAIT_URI)
-    )
-
 
 # DISEASE/TRAIT == "Spontaneous preterm birth (preterm delivery)"
 # MAPPED_TRAIT == "delivery measurement"
@@ -445,51 +368,135 @@ gwas_study_info =
                                      "http://www.ebi.ac.uk/efo/EFO_1001255",
                                      MAPPED_TRAIT_URI)
            )
+ 
+```
 
-# Multiple consecutive miscarriage
-## MAPPED_TRAIT == "fertility trait"
-## MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464"
+#### TB 
 
-# make MAPPED_TRAIT to "spontaneous abortion"
-# MAPPED_TRAIT_URI to "http://www.ebi.ac.uk/efo/EFO_1001255"
+```{r fix_bad_mapping_tb}
 
+# PUBMED_ID: 33661925
+# `DISEASE/TRAIT contains resistance to mycobacterium tuberculosis infection
+# replace MAPPED_TRAIT == "decreased susceptibility to bacterial infection"
+# with "tuberculosis"
+# MAPPED_TRAIT_URI from "http://www.ebi.ac.uk/efo/EFO_0008322" 
+# to "http://purl.obolibrary.org/obo/MONDO_0018076"
 gwas_study_info =
   gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("Multiple consecutive miscarriage", `DISEASE/TRAIT`) & 
-                                MAPPED_TRAIT == "fertility trait",
-                               "spontaneous abortion",
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 33661925 & 
+                                MAPPED_TRAIT == "decreased susceptibility to bacterial infection",
+                               "tuberculosis",
                                MAPPED_TRAIT)
          ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Multiple consecutive miscarriage", `DISEASE/TRAIT`) & 
-                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/OBA_VT0010464",
-                                     "http://www.ebi.ac.uk/efo/EFO_1001255",
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 33661925 & 
+                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0008322",
+                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
                                      MAPPED_TRAIT_URI)
            )
 
 
-## DISEASE/TRAIT == "Post-term birth"
-## MAPPED_TRAIT == "gestational age"
-## MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0005112"
+# for PUBMED = 28628665
+# MAPPED_TRAIT = "decreased susceptibility to bacterial infection"
+# MAPPED_TRAIT_URI = "http://www.ebi.ac.uk/efo/EFO_0008322"
 
-# make MAPPED_TRAIT to "post term pregnancy"
-# MAPPED_TRAIT_URI to "http://www.ebi.ac.uk/efo/EFO_0009681"
-
+# replace MAPPED_TRAIT to "tuberculosis"
+# MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/MONDO_0018076"
 gwas_study_info =
   gwas_study_info |>
-  mutate(MAPPED_TRAIT = ifelse(grepl("Post-term birth", `DISEASE/TRAIT`) & 
-                                MAPPED_TRAIT == "gestational age",
-                               "post term pregnancy",
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 28628665 & 
+                                MAPPED_TRAIT == "tuberculin skin test reactivity measurement, decreased susceptibility to bacterial infection",
+                               "tuberculosis",
                                MAPPED_TRAIT)
          ) |>
-    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Post-term birth", `DISEASE/TRAIT`) & 
-                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0005112",
-                                     "http://www.ebi.ac.uk/efo/EFO_0009681",
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 28628665 & 
+                                      MAPPED_TRAIT_URI == "http://www.ebi.ac.uk/efo/EFO_0008307, http://www.ebi.ac.uk/efo/EFO_0008322",
+                                     "http://purl.obolibrary.org/obo/MONDO_0018076",
                                      MAPPED_TRAIT_URI)
            )
+
 
 ```
 
-### Add some missing MAPPED_BACKGROUND_TRAIT terms
+#### Other bad mappings
+
+```{r fix_other_bad_mapping}
+
+## pubmed id: 34737426
+# mapped_trait = benign neoplasm
+# but should be cervical carcinoma, 	EFO_0001061
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(PUBMED_ID == 34737426 & 
+                                MAPPED_TRAIT == "benign neoplasm",
+                               "cervical carcinoma",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(PUBMED_ID == 34737426 & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/MONDO_0021230",
+                                     "http://www.ebi.ac.uk/efo/EFO_0001061",
+                                     MAPPED_TRAIT_URI)
+           )
+
+# Capecitabine-induced hand-foot syndrome in breast or colorectal cancer
+  gwas_study_info =
+      gwas_study_info  |>
+  mutate(
+    MAPPED_TRAIT = 
+      ifelse(grepl("Capecitabine-induced hand-foot syndrome in breast or colorectal cancer", `DISEASE/TRAIT`),
+         "breast cancer, colorectal cancer, hand-foot syndrome",
+         MAPPED_TRAIT
+         ),
+    MAPPED_TRAIT_URI = 
+      ifelse(grepl("Capecitabine-induced hand-foot syndrome in breast or colorectal cancer", `DISEASE/TRAIT`),
+         "http://purl.obolibrary.org/obo/MONDO_0007254, http://purl.obolibrary.org/obo/MONDO_0005575, http://purl.obolibrary.org/obo/MONDO_0700048",
+         MAPPED_TRAIT_URI
+         )
+  )
+
+
+
+# GCST001789
+# replace MAPPED_TRAIT from "bronchopulmonary dysplasia"
+# to "blood high density lipoprotein particle diameter"
+# and MAPPED_TRAIT_URI to "http://purl.obolibrary.org/obo/CMO_0002692"
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(STUDY_ACCESSION == "GCST001789" & 
+                                MAPPED_TRAIT == "bronchopulmonary dysplasia",
+                               "blood high density lipoprotein particle diameter",
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(STUDY_ACCESSION == "GCST001789" & 
+                                      MAPPED_TRAIT_URI == "http://purl.obolibrary.org/obo/MONDO_0019091",
+                                     "http://purl.obolibrary.org/obo/CMO_0002692",
+                                     MAPPED_TRAIT_URI)
+           )
+  
+
+# Periodontal disease related phenotype
+# set trait to periodontal disorder
+# rather than periodontal measurement
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("Periodontal disease related phenotype", `DISEASE/TRAIT`),
+                               str_replace_all(pattern = "periodontal measurement",
+                                               replacement = "periodontal disorder",
+                                               MAPPED_TRAIT
+                                               ),
+                               MAPPED_TRAIT)
+         ) |>
+    mutate(MAPPED_TRAIT_URI = ifelse(grepl("Periodontal disease related phenotype", `DISEASE/TRAIT`),
+                               str_replace_all(pattern = "http://www.ebi.ac.uk/efo/EFO_0007780",
+                                               replacement = "http://purl.obolibrary.org/obo/MONDO_0002635",
+                                               MAPPED_TRAIT_URI
+                                               ),
+                               MAPPED_TRAIT_URI)
+    )
+
+```
+
+### Add and correct MAPPED_BACKGROUND_TRAIT terms
 
 ```{r add_missing_background}
 
@@ -1140,7 +1147,6 @@ gwas_study_info  |>
 
 # yay! all match now
 
-
 ```
 
 # Overlap ontology terms and GWAS traits
@@ -1339,28 +1345,11 @@ length(disease_terms)
 
 ### Find disease terms in GWAS traits
 
-```{r}
+```{r find_disease_terms_in_mapped_traits}
 # Find GWAS traits that fall within disease or disorder terms
 #simple_disease_terms = all_gwas_terms[all_gwas_terms %in% disease_terms]
 disease_gwas <- all_gwas_terms[all_gwas_terms %in% disease_terms]
 
-# # Also search for cases where there are multiple terms separated by commas
-# # and one of them is a disease term
-# not_simple_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_terms]
-# 
-# # sometimes there's multiple terms - check if any disease term is in these gwas terms
-# multiple_terms = grep(",", 
-#                       not_simple_disease_terms, value = T)
-# 
-# disease_chunks <- split(disease_terms, ceiling(seq_along(disease_terms) / 100))
-# disease_chunks  <- lapply(disease_chunks, function(x) paste0(x, collapse = "|"))
-# mask <- Reduce(`|`, lapply(disease_chunks, function(x) grepl(x, multiple_terms, ignore.case = T)))
-# additional_disease_gwas <- multiple_terms[mask]
-
-# disease_gwas = c(all_gwas_terms[all_gwas_terms %in% disease_terms],
-#                  additional_disease_gwas)
-
-#not_disease_terms = not_simple_disease_terms[!not_simple_disease_terms %in% additional_disease_gwas]
 not_disease_terms = all_gwas_terms[!all_gwas_terms %in% disease_gwas]
 
 print("Number of GWAS traits under disease or disorder terms")
@@ -1380,7 +1369,7 @@ not_accounted_for = not_disease_terms
 
 ## Phenotype abnormality overlap
 
-```{r}
+```{r find_phenotype_abnormality_terms_in_mapped_traits}
 
 pheno_abnorm <- readLines(here::here("output/trait_ontology/hp_0000118_descendants.txt"))
 pheno_abnorm = stringr::str_trim(tolower(pheno_abnorm))
@@ -1391,18 +1380,7 @@ pheno_abnorm <- c("abnormal pap smear",
                   "abnormal result of diagnostic imaging",
                   pheno_abnorm)
 
-# # Find terms where all comma-split pieces are in measurement
-# pheno_abnorm_gwas <- not_accounted_for[
-#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
-#     parts <- trimws(parts) # remove extra spaces
-#     all(parts %in% pheno_abnorm)
-#   })
-# ]
-
-#additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
 pheno_abnorm_gwas <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
-
-#pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
 
 print("Percentage of GWAS traits under phenotype abnormality terms")
 round(100 * length(pheno_abnorm_gwas) / length(all_gwas_terms),
@@ -1424,7 +1402,7 @@ length(not_accounted_for)
 
 ### Combine measurement
 
-```{r}
+```{r combine_measurement_terms}
 
 measurement <- readLines(here::here("output/trait_ontology/efo_0001444_descendants.txt"))
 total_choles <- readLines(here::here("output/trait_ontology/efo_0004574_descendants.txt"))
@@ -1573,7 +1551,7 @@ round(100 * length(not_accounted_for) / length(all_gwas_terms),
 
 ### General measurement terms 
 
-```{r}
+```{r general_measurement_terms_in_gwas}
 
 behavior_measurement <- c(
                     "smoking",
@@ -1606,18 +1584,7 @@ measurement <- grep("emphysema|eye colour|lifestyle",
                     value = T, 
                     invert = T)
 
-
-# Find terms where all comma-split pieces are in measurement
-# measurement_gwas <- not_accounted_for[
-#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
-#     parts <- trimws(parts)
-#     all(parts %in% measurement)
-#   })
-# ]
 measurement_gwas <- not_accounted_for[not_accounted_for %in% measurement]
-#additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
-
-#measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
 
 print("Number of GWAS traits under measurement terms")
 length(measurement_gwas)
@@ -1640,7 +1607,7 @@ length(not_accounted_for)
 
 ### Combine response terms
 
-```{r}
+```{r combine_response_terms}
 
 go_response = readLines(here::here("output/trait_ontology/go_0050896_descendants.txt"))
 efo_response <- readLines(here::here("output/trait_ontology/efo_go_0050896_descendants.txt"))
@@ -1656,15 +1623,7 @@ response = unique(response)
 
 ```
 
-```{r}
-
-# Find terms where all comma-split pieces are in measurement
-# response_gwas <- not_accounted_for[
-#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
-#     parts <- trimws(parts)
-#     all(parts %in% response)
-#   })
-# ]
+```{r response_terms_in_gwas}
 
 response_gwas <- not_accounted_for[not_accounted_for %in% response]
 
@@ -1688,7 +1647,7 @@ length(not_accounted_for)
 
 ## Mental process
 
-```{r}
+```{r mental_process_terms_in_gwas}
 
 mental <- readLines(here::here("output/trait_ontology/efo_0004323_descendants.txt"))
 mental = stringr::str_trim(tolower(mental))
@@ -1720,7 +1679,7 @@ length(not_accounted_for)
 
 ## Behavior
 
-```{r}
+```{r find_behavior_terms_in_gwas}
 
 behavior <- readLines(here::here("output/trait_ontology/go_0007610_descendants.txt"))
 behavior = stringr::str_trim(tolower(behavior))
@@ -1748,7 +1707,7 @@ length(not_accounted_for)
 
 ## Injury
 
-```{r}
+```{r find_injury_terms_in_gwas}
 
 injury <- readLines(here::here("output/trait_ontology/efo_0000546_descendants.txt"))
 injury = stringr::str_trim(tolower(injury))
@@ -1774,7 +1733,7 @@ length(not_accounted_for)
 
 ## Phenotype
 
-```{r}
+```{r find_phenotype_terms_in_gwas}
 
 phenotype <- readLines(here::here("output/trait_ontology/efo_0000651_descendants.txt"))
 phenotype = stringr::str_trim(tolower(phenotype))
@@ -1822,7 +1781,7 @@ length(not_accounted_for)
 
 ## Medical procedure
 
-```{r}
+```{r find_medical_procedure_terms_in_gwas}
 
 medical_procedure <- readLines(here::here("output/trait_ontology/efo_0002571_descendants.txt"))
 surgical_procedure <- readLines(here::here("output/trait_ontology/maxo_0000004_descendants.txt"))
@@ -1871,7 +1830,7 @@ length(not_accounted_for)
 
 ## Environmental factors
 
-```{r}
+```{r find_environmental_factor_terms_in_gwas}
 
 enviro_factors <- c(
 "diet measurement",
@@ -1915,7 +1874,7 @@ length(not_accounted_for)
 
 ### Biological process 
 
-```{r}
+```{r find_biological_process_terms_in_gwas}
 
 bio_process <- c("pregnancy",
                  "puberty",
@@ -1946,7 +1905,7 @@ length(not_accounted_for)
 
 ### Traditional medicine constitutional types
 
-```{r}
+```{r find_traditional_medicine_constitution_terms_in_gwas}
 
 tm_constitution <- c("yu-zhi constitution type",
                       "sasang constitutional medicine",
@@ -1980,7 +1939,7 @@ length(not_accounted_for)
 
 ### Ancestry-info
 
-```{r}
+```{r find_ancestry_terms_in_gwas}
 
 ancestry_gwas <- "latin or admixed american ancestry"
 
@@ -1990,7 +1949,7 @@ not_accounted_for = not_accounted_for[!not_accounted_for %in% ancestry_gwas]
 
 ### Cell lines 
 
-```{r}
+```{r find_cell_line_terms_in_gwas}
 
 cell_line_gwas <- "gm11992"
 
@@ -2005,27 +1964,6 @@ not_accounted_for = not_accounted_for[!not_accounted_for %in% cell_line_gwas]
 ## Add disease & phenotypic abnormality terms to GWAS study info dataset
 
 ```{r disease_terms}
-
-# find_disease_terms  <-   function(MAPPED_TRAIT) {
-#         # find all disease terms that appear in the trait
-#         # split_mapped_traits <- stringr::str_split(MAPPED_TRAIT, ", ") |> 
-#         #                        unlist()
-#         
-#         mapped_disease_terms <- split_mapped_traits[split_mapped_traits %in% disease_terms]
-#         mapped_pheno_abnorm_terms <- split_mapped_traits[split_mapped_traits %in% pheno_abnorm]
-#         
-#         mapped_disease_terms = unique(c(mapped_disease_terms, 
-#                                         mapped_pheno_abnorm_terms
-#                                         )
-#         )
-#                                       
-#         return(str_flatten(mapped_disease_terms, 
-#                            collapse = ", ",
-#                            na.rm = T))  # combine multiple matches
-#         
-# }
-# 
-
 
 disease_or_disorder <- c(disease_gwas,
                           pheno_abnorm_gwas,
@@ -2044,7 +1982,6 @@ unique()
 gwas_study_info |>
 filter(STUDY_ACCESSION %in% disease_progress_measure) |>
 select(STUDY_ACCESSION, MAPPED_TRAIT, MAPPED_BACKGROUND_TRAIT)
-
 
 # similarly for: 
 # disease free survival
@@ -2091,7 +2028,7 @@ disease_or_disorder <-
 
 gwas_study_info <- 
   gwas_study_info |> 
-  dplyr::rowwise() |>
+  #dplyr::rowwise() |>
   dplyr::mutate(
     disease_terms = 
       ifelse(MAPPED_TRAIT %in% disease_or_disorder,
@@ -2103,7 +2040,7 @@ gwas_study_info <-
 
 ## Map GWAS traits to high-level categories
 
-```{r}
+```{r map_gwas_traits_to_categories}
 
 gwas_study_info = 
 gwas_study_info |>
@@ -2133,7 +2070,7 @@ gwas_study_info |>
 
 # Background traits
 
-```{r}
+```{r background_traits}
 
 gwas_background <- gwas_study_info$MAPPED_BACKGROUND_TRAIT
 
@@ -2149,14 +2086,7 @@ length(gwas_background)
 
 ## Overlap with disease/disorder traits
 
-```{r}
-
-# multiple_terms = grep(",", gwas_background, value = T)
-# mask <- Reduce(`|`, lapply(disease_terms, function(x) grepl(x, multiple_terms)))
-# additional_disease_gwas <- multiple_terms[mask]
-
-# disease_gwas = c(gwas_background[gwas_background %in% disease_terms],
-#                  additional_disease_gwas)
+```{r background_disease_terms}
 
 disease_gwas = gwas_background[gwas_background %in% disease_terms]
 
@@ -2177,22 +2107,9 @@ round(100 * length(not_accounted_for) / length(gwas_background),
 
 ## Phenotype abnormality overlap
 
-```{r}
-
-# Find terms where all comma-split pieces are in measurement
-# pheno_abnorm_gwas <- not_accounted_for[
-#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
-#     parts <- trimws(parts) # remove extra spaces
-#     all(parts %in% pheno_abnorm)
-#   })
-# ]
-
-# additional_pheno_abnorm <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
-
-# pheno_abnorm_gwas  = c(pheno_abnorm_gwas, additional_pheno_abnorm) |> unique()
+```{r background_phenotype_abnormality_terms}
 
 pheno_abnorm_gwas  = pheno_abnorm_gwas
-
 
 print("Percentage of background GWAS traits under phenotype abnormality terms")
 round(100 * length(pheno_abnorm_gwas) / length(gwas_background),
@@ -2219,7 +2136,7 @@ disease_or_disorder <- c(disease_gwas,
 
 gwas_study_info <- 
   gwas_study_info |>
-  rowwise() |>
+  #rowwise() |>
   dplyr::mutate(
     background_disease_terms = 
       ifelse(MAPPED_BACKGROUND_TRAIT %in% disease_or_disorder,
@@ -2228,33 +2145,11 @@ gwas_study_info <-
   ) |>
   ungroup()
 
-# gwas_study_info <- 
-#   gwas_study_info |>
-#   rowwise() |>
-#   dplyr::mutate(
-#     background_disease_terms = 
-#       ifelse(MAPPED_BACKGROUND_TRAIT == "",
-#              NA,
-#              background_disease_terms)
-#   ) |>
-#   ungroup()
-
 ```
 
 ## Measurement traits
 
-```{r}
-
-# measurement_gwas <- not_accounted_for[
-#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
-#     parts <- trimws(parts) # remove extra spaces
-#     all(parts %in% measurement)
-#   })
-# ]
-
-# additional_measurement <- not_accounted_for[not_accounted_for %in% measurement]
-
-# measurement_gwas  = c(measurement_gwas, additional_measurement) |> unique()
+```{r background_measurement_terms}
 
 measurement_gwas  = measurement[measurement %in% not_accounted_for]
 
@@ -2272,19 +2167,7 @@ length(not_accounted_for)
 
 ## Response traits
 
-```{r}
-
-# Find terms where all comma-split pieces are in measurement
-# response_gwas <- not_accounted_for[
-#   sapply(strsplit(not_accounted_for, ", "), function(parts) {
-#     parts <- trimws(parts)
-#     all(parts %in% response)
-#   })
-# ]
-
-# additional_response <- not_accounted_for[not_accounted_for %in% response]
-# 
-# response_gwas  = c(response_gwas, additional_response) |> unique()
+```{r background_response_terms}
 
 response_gwas  = response[response %in% not_accounted_for]
 
@@ -2309,7 +2192,7 @@ round(100 * length(not_accounted_for) / length(gwas_background),
 
 ## Medical procedure traits
 
-```{r}
+```{r background_medical_procedure_terms}
 
 medical_procedure_gwas = medical_procedure[medical_procedure %in% not_accounted_for]
 
@@ -2326,7 +2209,7 @@ length(not_accounted_for)
 
 ## Background trait categories 
 
-```{r}
+```{r map_background_traits_to_categories}
 
 gwas_study_info = 
 gwas_study_info |>
@@ -2342,14 +2225,12 @@ gwas_study_info |>
                                       TRUE ~ "Other")
                 )
 
-
 ```
-
 
 
 # Summary of number of disease studies (and studies of each kind of trait)
 
-```{r}
+```{r summary_of_study_types}
 
 gwas_study_info |>
   group_by(MAPPED_TRAIT_CATEGORY, BACKGROUND_TRAIT_CATEGORY) |>
@@ -2358,7 +2239,7 @@ gwas_study_info |>
 
 gwas_study_info = 
 gwas_study_info |>
-  dplyr::rowwise() |>
+  #dplyr::rowwise() |>
   dplyr::mutate(DISEASE_STUDY = 
                    case_when(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
                              MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
@@ -2369,6 +2250,7 @@ gwas_study_info |>
                 ) |>
   dplyr::ungroup() 
 
+print("Number of studies of each kind of trait")
 gwas_study_info |> 
   group_by(DISEASE_STUDY, 
            MAPPED_TRAIT_CATEGORY, 
@@ -2376,6 +2258,7 @@ gwas_study_info |>
   summarise(n = n()) 
 
 # Number of papers with at least one disease study
+print("Number of papers with at least one disease study")
 gwas_study_info |> 
   group_by(PUBMED_ID) |> 
   summarise(DISEASE_STUDY = any(DISEASE_STUDY == T)) |> 
@@ -2402,13 +2285,711 @@ gwas_study_info |>
 
 ```
 
-## Number of disease studies 
+# Check for disease terms in traits of studies that don't have a disease term mapped to either the trait or background trait - to see if there are any disease studies that we missed
 
-```{r}
+```{r check_for_disease_terms_in_non_disease_studies}
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Number of papers with no disease study")
+length(not_disease_pubmeds)
+
+```
+
+## Cancer
+
+```{r cancer_terms_in_non_disease_studies}
+
+gwas_study_info |> 
+  filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+  filter(grepl("breast cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+  select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
+  distinct()
+
+# for these studies, add breast cancer to the disease terms column, and disease/disorder to the trait category column, and then we can re-run the summary of number of studies of each kind
+
+add_missed_breast_cancer <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("breast cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "breast carcinoma",
+           DISEASE_STUDY = T)
+
+# colorectal cancer
+add_missed_colorectal_cancer <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("colorectal cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "colorectal cancer",
+           DISEASE_STUDY = T) 
+
+# colon cancer
+add_missed_colon_cancer <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("colon cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "colorectal adenocarcinoma",
+           DISEASE_STUDY = T) 
+
+# small-cell lung cancer
+add_small_cell_lung_carcinoma <-
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("small-cell lung cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "small cell lung carcinoma",
+           DISEASE_STUDY = T) 
+  
+# lung cancer
+add_lung_cancer <-
+  gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("lung cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "lung carcinoma",
+           DISEASE_STUDY = T) 
+
+# head and neck cancer
+add_head_neck_cancer <-
+  gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("head and neck cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "head and neck malignant neoplasia",
+           DISEASE_STUDY = T) 
+
+gwas_study_info <- 
+rows_append(gwas_study_info,
+            rbind(add_missed_breast_cancer,
+              add_missed_colorectal_cancer,
+              add_small_cell_lung_carcinoma,
+              add_lung_cancer,
+              add_head_neck_cancer
+              )
+            )
+  
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning cancer in DISEASE/TRAIT that are still not categorized as disease studies after adding missed cancer studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("cancer", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("cancer", 
+                 STUDY, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct() |> 
+    head()
+
+print("Number of papers with no disease study after adding missed cancer studies")
+length(not_disease_pubmeds)
+
+```
+
+## Diabetes 
+
+```{r diabetes_terms_in_non_disease_studies}
+
+# type 2 diabetes
+add_missed_type_2_diabetes <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("type 2 diabetes|\\bT2D\\b", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "type 2 diabetes mellitus",
+           DISEASE_STUDY = T) 
+
+# type 1 diabetes
+add_missed_type_1_diabetes <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("type 1 diabetes", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "type 1 diabetes mellitus",
+           DISEASE_STUDY = T) 
+
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            rbind(add_missed_type_2_diabetes,
+              add_missed_type_1_diabetes
+              )
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning diabetes in DISEASE/TRAIT that are still not categorized as disease studies after adding missed diabetes studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("diabetes", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("\\bdiabetes", 
+                 STUDY,
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct() |>
+    head()
+
+# diabetes add 
+add_missed_diabetes <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("diabetes", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "diabetes mellitus",
+           DISEASE_STUDY = T)
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            add_missed_diabetes
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Number of papers with no disease study after adding missed diabetes studies")
+length(not_disease_pubmeds)
+
+
+```
+
+## COPD, and other chronic lung/airway diseases
+
+```{r lung_terms_in_non_disease_studies}
+
+add_missed_copd <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("chronic osbtructive pulmonary disease|COPD|chronic obstructive pulmonary disease", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "chronic obstructive pulmonary disease",
+           DISEASE_STUDY = T)
+
 
 gwas_study_info |>
-  filter(DISEASE_STUDY == T) |>
-  nrow()
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("asthma", `DISEASE/TRAIT`, ignore.case = T))  |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+
+add_missed_asthma <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("asthma", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "asthma",
+           DISEASE_STUDY = T)
+
+# interstitial lung disease
+add_missed_ild <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("interstitial lung disease", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "interstitial lung disease",
+           DISEASE_STUDY = T)
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            rbind(add_missed_copd,
+              add_missed_asthma,
+              add_missed_ild
+              )
+            )
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning COPD in DISEASE/TRAIT that are still not categorized as disease studies after adding missed COPD studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("COPD|chronic obstructive pulmonary disease|lung|asthma", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("COPD|chronic obstructive pulmonary disease|lung|asthma", 
+                 STUDY, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct() |>
+    head()
+
+print("Number of papers with no disease study after adding missed chronic lung/airway studies")
+length(not_disease_pubmeds)
+
+
+```
+
+## Psychiatric/Neurological 
+
+```{r psychiatric_neurological_terms_in_non_disease_studies}
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("bipolar disorder", `DISEASE/TRAIT`, ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
+    distinct()
+
+# bipolar disorder
+add_missed_bipolar_disorder <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("bipolar disorder", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "bipolar disorder",
+           DISEASE_STUDY = T)
+
+
+# major depressive disorder
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("major depressive disorder", `DISEASE/TRAIT`, ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
+    distinct()
+
+add_missed_major_depressive_disorder <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("major depressive disorder", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "major depressive disorder",
+           DISEASE_STUDY = T)
+
+
+# ADHD
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("attention deficit hyperactivity disorder|ADHD|attention-deficit/hyperactivity disorder", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
+    distinct()
+
+add_missed_adhd <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("attention deficit hyperactivity disorder|ADHD|attention-deficit/hyperactivity disorder", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "attention deficit hyperactivity disorder",
+           DISEASE_STUDY = T)
+
+# schizophrenia
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("schizophrenia", `DISEASE/TRAIT`, ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
+    distinct()
+
+add_missed_schizophrenia <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("schizophrenia", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "schizophrenia",
+           DISEASE_STUDY = T)
+
+# Alzheimer's disease
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("Alzheimer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
+    distinct()
+
+add_missed_alzheimers <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("Alzheimer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "Alzheimer's disease",
+           DISEASE_STUDY = T)
+
+
+# dementia
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("dementia", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            rbind(add_missed_bipolar_disorder,
+              add_missed_major_depressive_disorder,
+              add_missed_adhd,
+              add_missed_schizophrenia,
+              add_missed_alzheimers
+              )
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning psychiatric or neurological diseases in DISEASE/TRAIT that are still not categorized as disease studies after adding missed psychiatric/neurological disease studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("bipolar disorder|major depressive disorder|attention deficit hyperactivity disorder|ADHD|schizophrenia|Alzheimer|dementia", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("bipolar disorder|major depressive disorder|attention deficit hyperactivity disorder|ADHD|schizophrenia|Alzheimer|dementia", 
+                 STUDY, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct()
+
+print("Number of papers with no disease study after adding missed psychiatric/neurological disease studies")
+length(not_disease_pubmeds)
+
+
+```
+
+## Pubmed ID 35760791
+
+```{r hereditary hemorrhagic telangiectasia}
+
+gwas_study_info |> 
+  filter(PUBMED_ID =="35760791") |>
+  select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+add_missed_hereditary_hemorrhagic_telangiectasia <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("hereditary hemorrhagic telangiectasia", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "hereditary hemorrhagic telangiectasia",
+           DISEASE_STUDY = T)
+
+
+add_missed_marfan_syndrome <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("marfan syndrome", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "marfan syndrome",
+           DISEASE_STUDY = T)
+
+add_missed_alport_syndrome <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("alport syndrome", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "alport syndrome",
+           DISEASE_STUDY = T)
+
+# autosomal dominant polycystic kidney disease
+add_missed_adpkd <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("autosomal dominant polycystic kidney disease|ADPKD", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "autosomal dominant polycystic kidney disease",
+           DISEASE_STUDY = T)
+
+# alpha-1-antitrypsin deficiency
+add_missed_a1at_deficiency <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("alpha-1-antitrypsin deficiency", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "alpha-1-antitrypsin deficiency",
+           DISEASE_STUDY = T)
+
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            rbind(
+              add_missed_hereditary_hemorrhagic_telangiectasia,
+              add_missed_marfan_syndrome,
+              add_missed_alport_syndrome,
+              add_missed_adpkd,
+              add_missed_a1at_deficiency
+              )
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Number of papers with no disease study after adding missed hereditary hemorrhagic telangiectasia study")
+length(not_disease_pubmeds)
+
+
+
+```
+
+## Infectious disease
+
+```{r infectious_disease_terms_in_non_disease_studies}
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("HIV|human immunodeficiency virus|AIDS|acquired immunodeficiency syndrome", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+add_hiv_1_infection <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("HIV-1|human immunodeficiency virus 1", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "hiv-1 infection",
+           DISEASE_STUDY = T)
+
+# hepatitis c virus infection
+add_hep_c_virus_infection <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("hepatitis c virus infection", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "hepatitis c virus infection",
+           DISEASE_STUDY = T)
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            rbind(add_hiv_1_infection,
+              add_hep_c_virus_infection
+              )
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning infectious diseases in DISEASE/TRAIT that are still not categorized as disease studies after adding missed infectious disease studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("HIV|human immunodeficiency virus|AIDS|acquired immunodeficiency syndrome|hepatitis c virus infection", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("HIV|human immunodeficiency virus|AIDS|acquired immunodeficiency syndrome|hepatitis c virus infection", 
+                 STUDY, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct() |> 
+    head()
+
+print("Number of papers with no disease study after adding missed infectious disease studies")
+length(not_disease_pubmeds)
+
+```
+
+## Autoimmune/Inflammatory: 
+
+```{r autoimmune_inflammatory_terms_in_non_disease_studies}
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("inflammatory bowel disease|IBD", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+# inflammatory bowel disease
+add_missed_ibd <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("inflammatory bowel disease|IBD", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "inflammatory bowel disease",
+           DISEASE_STUDY = T)
+
+# rheumatoid arthritis
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("in rheumatoid arthritis\\b", `DISEASE/TRAIT`, ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+add_missed_ra <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("in rheumatoid arthritis\\b", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "rheumatoid arthritis",
+           DISEASE_STUDY = T)
+
+# juvenile idiopathic arthritis
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("juvenile idiopathic arthritis", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+add_missed_jia <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("juvenile idiopathic arthritis", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "juvenile idiopathic arthritis",
+           DISEASE_STUDY = T)
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            rbind(add_missed_ibd,
+              add_missed_ra,
+              add_missed_jia
+              )
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning autoimmune/inflammatory diseases in DISEASE/TRAIT that are still not categorized as disease studies after adding missed autoimmune/inflammatory disease studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("inflammatory bowel disease|IBD|rheumatoid arthritis|juvenile idiopathic arthritis", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("inflammatory bowel disease|IBD|rheumatoid arthritis|juvenile idiopathic arthritis", 
+                 STUDY, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct()
+
+print("Number of papers with no disease study after adding missed autoimmune/inflammatory disease studies")
+length(not_disease_pubmeds)
+
+```
+
+## Cardiovascular disease
+
+```{r cardiovascular_terms_in_non_disease_studies}
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("cardiovascular disease|coronary artery disease|myocardial infarction|heart attack|heart disease",
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)
+           ) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+  distinct()
+
+add_missed_coronary_artery_disease <-
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("stable coronary artery disease", `DISEASE/TRAIT`, ignore.case = T)) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "coronary artery disease",
+           DISEASE_STUDY = T)
+
+gwas_study_info <-
+rows_append(gwas_study_info,
+            add_missed_coronary_artery_disease
+            )
+
+not_disease_pubmeds <- gwas_study_info  |> 
+                       group_by(PUBMED_ID) |> 
+                       summarise(DISEASE_STUDY = any(DISEASE_STUDY)) |> 
+                       filter(DISEASE_STUDY == F) |> 
+                       pull(PUBMED_ID) |>
+                       unique()
+
+print("Papers mentioning cardiovascular diseases in DISEASE/TRAIT that are still not categorized as disease studies after adding missed cardiovascular disease studies")
+gwas_study_info |> 
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("cardiovascular disease|coronary artery disease|myocardial infarction|heart attack|heart disease", 
+                 `DISEASE/TRAIT`, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    distinct()
+
+gwas_study_info |>
+    filter(PUBMED_ID %in% not_disease_pubmeds) |> 
+    filter(grepl("cardiovascular disease|coronary artery disease|myocardial infarction|heart attack|heart disease", 
+                 STUDY, 
+                 ignore.case = T)) |>
+    select(PUBMED_ID, STUDY) |>
+    distinct()
+
+print("Number of papers with no disease study after adding missed cardiovascular disease studies")
+length(not_disease_pubmeds)
 
 ```
 
@@ -2441,7 +3022,7 @@ combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
 
 gwas_study_info <- 
   gwas_study_info |>
-  dplyr::rowwise() |>
+  #dplyr::rowwise() |>
   dplyr::mutate(all_disease_terms = 
                 case_when(is.na(background_disease_terms) & is.na(disease_terms) ~ NA,
                           is.na(background_disease_terms) & !is.na(disease_terms) ~ disease_terms,
@@ -2463,12 +3044,6 @@ gwas_study_info =
         "osteoarthritis of \\1"
       )
   )
-  # mutate(all_disease_terms = 
-  #          str_replace_all(
-  #            pattern = "^osteoarthritis, \\1$",
-  #            replacement = "\\1",
-  #            string = all_disease_terms)
-  # )
 
 gwas_study_info =
   gwas_study_info |>
@@ -2624,10 +3199,10 @@ gwas_study_info |>
 
 ### Fix bug where MAPPED_TRAIT/BACKGROUND_MAPPED_TRAIT is empty string but TRAIT_CATEGORY is listed as disease/phenotypic abnormality
 
-```{r}
+```{r fix_empty_mapped_trait_but_disease_category}
 
 gwas_study_info = gwas_study_info |>
-  rowwise() |>
+  #rowwise() |>
   mutate(MAPPED_TRAIT_CATEGORY = ifelse(MAPPED_TRAIT == "",
                                         "Other",
                                         MAPPED_TRAIT_CATEGORY)) |>
@@ -2642,11 +3217,11 @@ gwas_study_info = gwas_study_info |>
 
 now that I have corrected any mistakes in categorization and added some missing disease terms
 
-```{r}
+```{r recalculate_disease_study_flag}
 
 gwas_study_info = 
 gwas_study_info |>
-  dplyr::rowwise() |>
+  #dplyr::rowwise() |>
   dplyr::mutate(DISEASE_STUDY = 
                    ifelse(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
                           MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
@@ -2656,13 +3231,35 @@ gwas_study_info |>
                 ) |>
   dplyr::ungroup() 
 
-
 gwas_study_info |> 
-  filter(DISEASE_STUDY == T) |> 
-  filter(all_disease_terms == "")  |> 
-  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
-  distinct() |>
-  nrow()
+  filter(DISEASE_STUDY == T) |>
+    group_by(MAPPED_TRAIT_CATEGORY, 
+           BACKGROUND_TRAIT_CATEGORY) |>
+    summarise(n = n()) |>
+  arrange(desc(n))
+
+
+# gwas_study_info |> 
+#   filter(DISEASE_STUDY == T) |> 
+#   filter(all_disease_terms == "" | is.na(all_disease_terms))  |> 
+#   select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
+#   distinct() |>
+#   nrow()
+
+print("Number of studies of each kind of trait")
+gwas_study_info |> 
+  group_by(DISEASE_STUDY, 
+           MAPPED_TRAIT_CATEGORY, 
+           BACKGROUND_TRAIT_CATEGORY) |> 
+  summarise(n = n()) |>
+  arrange(desc(n))
+
+print("Number of papers with at least one disease study")
+gwas_study_info |> 
+  group_by(PUBMED_ID) |> 
+  summarise(DISEASE_STUDY = any(DISEASE_STUDY == T)) |> 
+  group_by(DISEASE_STUDY) |> 
+  summarise(n = n())
 
 ```
 
