@@ -9,6 +9,112 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r load_libraries, message=FALSE, warning=FALSE}
+
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
+```
+
+# Proportion of all published studies that have cohort meta-data
+
+```{r original_cohort_info}
+
+orig_gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
+
+orig_gwas_study_info = orig_gwas_study_info |>
+  dplyr::rename_with(~ tolower(gsub(" ", "_", .x)))
+
+# how many published studies (i.e. number of unique pubmed ids)
+n_published_studies_orig <- orig_gwas_study_info |>
+  dplyr::filter(!is.na(pubmed_id)) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print("Number of published studies in original GWAS Catalog:")
+print(n_published_studies_orig)
+
+# how many published studies include any cohort information?
+n_studies_with_cohort_info_orig <- orig_gwas_study_info |>
+  dplyr::filter(!is.na(cohort) & cohort != "") |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print("Number of published studies with cohort information in original GWAS Catalog:")
+print(n_studies_with_cohort_info_orig)
+
+print("Proportion of published studies with cohort information in original GWAS Catalog:")
+100 * n_studies_with_cohort_info_orig / n_published_studies_orig
+
+studies_with_true_cohort_info_orig <- orig_gwas_study_info |>
+  dplyr::mutate(cohort = stringr::str_remove_all(pattern = "(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)|(not reported)", 
+                                                 cohort)) |>
+  dplyr::mutate(cohort = stringr::str_remove_all(pattern = "other|multiple|Other|Multiple|Others|\\(Multiple cohorts\\)|OTHER", 
+                                                 cohort)) |>
+  dplyr::filter(!is.na(cohort) & 
+                  cohort != "") |>
+  dplyr::pull(pubmed_id) |>
+  unique()
+
+# how many published studies include any true cohort information 
+# (i.e. not 'NR', or 'not reported', 'other', 'multiple')
+n_studies_with_true_cohort_info_orig <- studies_with_true_cohort_info_orig |> 
+  unique() |>
+  length()
+
+print("Number of published studies with true cohort information in original GWAS Catalog:")
+print(n_studies_with_true_cohort_info_orig)
+
+print("Proportion of published studies with true cohort information in original GWAS Catalog:")
+100 * n_studies_with_true_cohort_info_orig / n_published_studies_orig
+
+data.frame(n_studies = c(n_published_studies_orig - n_studies_with_cohort_info_orig, 
+                         n_studies_with_cohort_info_orig - n_studies_with_true_cohort_info_orig,
+                         n_studies_with_true_cohort_info_orig),
+           type = c("all",
+                    "studies_with_cohort_info",
+                    "studies_with_true_cohort_info"),
+           group = c("GWAS Catalog Published Studies")) |>
+ggplot(aes(x = group, y = n_studies, fill = type)) +
+  geom_col(position = "stack") +
+  labs(x = "",
+       y = "Number of studies",
+       title = "Published GWAS Catalog Studies") +
+  scale_y_continuous(
+    breaks = seq(0, max(n_published_studies_orig), by = 1000),
+    expand = expansion(mult = c(0, 0.05))
+  ) + 
+  scale_fill_manual(
+    name = "Cohort metadata availability",
+    values = c(
+      all = "grey",
+      studies_with_cohort_info = "black",
+      studies_with_true_cohort_info = "#1b9e77"
+    ),
+    labels = c(
+      all = "None",
+      studies_with_cohort_info = "Uninformative metadata\n(NR, other, multiple)",
+      studies_with_true_cohort_info = "At least one valid cohort name"
+    )
+  ) + 
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y  = element_text(size = 20),
+    axis.title.y = element_text(size = 24),
+    legend.title = element_text(size = 24),
+    legend.text  = element_text(size = 23),
+    title        = element_text(size = 24)
+  )
+
+
+
+```
+
 # Number of papers - for 15 conditions
 
 ```{r n_total_papers, message=FALSE, warning=FALSE}
@@ -32,7 +138,241 @@ print(n_published_studies)
 
 ```
 
-# Proportion of published papers in the GWAS catalog that include cohort information 
+# Number of papers (excluding infectious diseases)
+
+```{r n_non_com_total_papers, message=FALSE, warning=FALSE}
+
+#gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ tolower(gsub(" ", "_", .x)))
+
+
+gwas_non_comm_study_info = gwas_study_info |>
+  dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+
+gwas_non_comm_study_info$cause |> unique() |> sort()
+
+# how many published studies (i.e. number of unique pubmed ids)
+n_published_non_comm_studies <- gwas_non_comm_study_info |>
+  dplyr::filter(!is.na(pubmed_id)) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+n_published_non_comm_studies
+
+```
+
+# Number of studies for each condition
+
+```{r n_papers_per_condition}
+
+condition_counts <-
+gwas_study_info |>
+  dplyr::select(pubmed_id, cause) |>
+  dplyr::distinct() |> 
+  dplyr::group_by(cause) |>
+  dplyr::summarise(n_studies = length(unique(pubmed_id))) |>
+  dplyr::arrange(desc(n_studies))
+
+lancet_grouping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
+
+lancet_grouping = lancet_grouping |>
+  dplyr::select(cause = mapped_gbd_term, lancet_group)
+
+condition_counts = condition_counts |>
+  dplyr::left_join(lancet_grouping, by = "cause") |>
+  dplyr::arrange(desc(n_studies))
+
+# combine Liver cancer due to hepatitis B and Liver cancer due to hepatitis C
+condition_counts = condition_counts |>
+  dplyr::mutate(cause = ifelse(cause %in% c("Liver cancer due to hepatitis B",
+                                           "Liver cancer due to hepatitis C"),
+                              "Liver cancer",
+                              cause)) |>
+  dplyr::group_by(cause, lancet_group) |>
+  dplyr::summarise(n_studies = sum(n_studies)) |>
+  dplyr::arrange(desc(n_studies))
+
+# exclude "Diabetes mellitus"
+condition_counts = condition_counts |>
+  dplyr::filter(cause != "Diabetes mellitus")
+
+# rename Chronic kidney disease due to diabetes mellitus type 2
+# Chronic kidney disease (type 2 diabetes)
+condition_counts = condition_counts |>
+  dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 2",
+                              "Chronic kidney disease (type 2 diabetes)",
+                              cause))
+
+# repeat for Chronic kidney disease due to diabetes mellitus type 1
+condition_counts = condition_counts |>
+  dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 1",
+                              "Chronic kidney disease (type 1 diabetes)",
+                              cause))
+
+
+# change lancent group names, for better display
+# I-8 = Infectious diseases
+# NCD-7 = Non-communicable diseases
+condition_counts = condition_counts |>
+  dplyr::mutate(lancet_group = ifelse(lancet_group == "I-8",
+                                     "Infectious diseases",
+                                     lancet_group)) |>
+  dplyr::mutate(lancet_group = ifelse(lancet_group == "NCD-7",
+                                     "Non-communicable diseases",
+                                     lancet_group))
+
+ggplot(aes(x = reorder(cause, n_studies), 
+           fill = lancet_group,
+           y = n_studies),
+       data = condition_counts) +
+  geom_col() +
+  coord_flip() +
+  labs(#x = "Condition",
+       y = "Number of published studies") +
+       #title = "Number of published GWAS Catalog studies per condition") +
+  # facet_wrap(~lancet_group,
+  #            nrow = 2,
+  #            scales = "free_y") +
+  facet_grid(space = "free_y",
+             scale = "free_y",
+             rows = vars(lancet_group)) + 
+  scale_fill_discrete(type = c("skyblue", "orange")) + 
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_text(size = 20),
+    axis.text.y  = element_text(size = 20),
+    axis.title.x = element_text(size = 24),
+    axis.title.y = element_blank(),
+    title        = element_text(size = 24), 
+    strip.text = element_text(size = 22),
+    legend.position = "none"
+  )
+
+```
+
+# Number of studies per condition - non_communicable diseases only
+
+```{r n_papers_per_non-communicable_condition}
+
+condition_counts <-
+gwas_non_comm_study_info |>
+  dplyr::select(pubmed_id, cause) |>
+  dplyr::distinct() |> 
+  dplyr::group_by(cause) |>
+  dplyr::summarise(n_studies = length(unique(pubmed_id))) |>
+  dplyr::arrange(desc(n_studies))
+
+lancet_grouping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
+
+lancet_grouping = lancet_grouping |>
+  dplyr::select(cause = mapped_gbd_term, lancet_group)
+
+condition_counts = condition_counts |>
+  dplyr::left_join(lancet_grouping, by = "cause") |>
+  dplyr::arrange(desc(n_studies))
+
+# combine Liver cancer due to hepatitis B and Liver cancer due to hepatitis C
+condition_counts = condition_counts |>
+  dplyr::mutate(cause = ifelse(cause %in% c("Liver cancer due to hepatitis B",
+                                           "Liver cancer due to hepatitis C"),
+                              "Liver cancer",
+                              cause)) |>
+  dplyr::group_by(cause, lancet_group) |>
+  dplyr::summarise(n_studies = sum(n_studies)) |>
+  dplyr::arrange(desc(n_studies))
+
+# exclude "Diabetes mellitus"
+condition_counts = condition_counts |>
+  dplyr::filter(cause != "Diabetes mellitus")
+
+# rename Chronic kidney disease due to diabetes mellitus type 2
+# Chronic kidney disease (type 2 diabetes)
+condition_counts = condition_counts |>
+  dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 2",
+                              "Chronic kidney disease (type 2 diabetes)",
+                              cause))
+
+# repeat for Chronic kidney disease due to diabetes mellitus type 1
+condition_counts = condition_counts |>
+  dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 1",
+                              "Chronic kidney disease (type 1 diabetes)",
+                              cause))
+
+
+# change lancent group names, for better display
+# I-8 = Infectious diseases
+# NCD-7 = Non-communicable diseases
+condition_counts = condition_counts |>
+  dplyr::mutate(lancet_group = ifelse(lancet_group == "I-8",
+                                     "Infectious diseases",
+                                     lancet_group)) |>
+  dplyr::mutate(lancet_group = ifelse(lancet_group == "NCD-7",
+                                     "Non-communicable diseases",
+                                     lancet_group))
+
+ggplot(aes(x = reorder(cause, n_studies), 
+           fill = lancet_group,
+           y = n_studies),
+       data = condition_counts) +
+  geom_col() +
+  coord_flip() +
+  labs(#x = "Condition",
+       y = "Number of published studies") +
+       #title = "Number of published GWAS Catalog studies per condition") +
+  # facet_wrap(~lancet_group,
+  #            nrow = 2,
+  #            scales = "free_y") +
+  facet_grid(space = "free_y",
+             scale = "free_y",
+             rows = vars(lancet_group)) + 
+  scale_fill_discrete(type = c("skyblue", "orange")) + 
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_text(size = 20),
+    axis.text.y  = element_text(size = 20),
+    axis.title.x = element_text(size = 24),
+    axis.title.y = element_blank(),
+    title        = element_text(size = 24), 
+    strip.text = element_text(size = 22),
+    legend.position = "none"
+  )
+
+```
+
+# Relationship between causes and mapped traits
+
+```{r causes_mapped_traits}
+
+cause_mapped_trait_counts <-
+gwas_study_info |>
+  dplyr::select(cause, collected_all_disease_terms, pubmed_id) |>
+  dplyr::distinct() |> 
+  dplyr::group_by(cause, collected_all_disease_terms) |>
+  dplyr::summarise(n_studies = length(unique(pubmed_id))) |>
+  dplyr::arrange(cause, desc(n_studies))
+  
+
+cause_mapped_trait_counts |>
+  dplyr::filter(cause == "Cervical cancer")
+
+```
+
+# Proportion include cohort information ( published papers in the GWAS catalog that )
 
 ```{r prop_cohort_info}
 
@@ -56,12 +396,48 @@ print("Proportion of published studies with cohort information:")
 
 ```
 
+# Proportion of non-communicable disease studies that include cohort information
+
+```{r prop_cohort_info_non_comm}
+
+gwas_non_comm_study_info = gwas_study_info |>
+  dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+
+gwas_cohort_non_comm = gwas_cohort |>
+  dplyr::filter(PUBMED_ID %in% unique(gwas_non_comm_study_info$pubmed_id))
+
+# how many published studies include cohort information?
+n_studies_with_cohort_info_non_comm <- gwas_cohort_non_comm |>
+  dplyr::filter(COHORT != "") |>
+  dplyr::pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+print("Number of published non-communicable disease studies with cohort information:")
+n_studies_with_cohort_info_non_comm
+
+print("Proportion of published non-communicable disease studies with cohort information:")
+100 * n_studies_with_cohort_info_non_comm / n_published_non_comm_studies
+
+```
+
 # Proportion of studies with abstracts
 
 ```{r prop_abstracts}
 
 downloaded_abstracts <-
- list.files("output/abstracts") |> 
+ list.files(here::here("output/abstracts")) |> 
   stringr::str_remove_all(".txt$") 
 
 n_studies_with_abstracts <-
@@ -82,6 +458,53 @@ print(n_published_studies - n_studies_with_abstracts)
 
 ```
 
+# Year number of papers per condition
+
+```{r papers_per_year}
+
+gwas_study_info |>
+  select(cause, year, pubmed_id) |> 
+  distinct() |> 
+  ggplot(aes(x = year)) +
+  geom_histogram() + 
+  facet_wrap(~cause)
+
+
+gwas_study_info |>
+  select(cause, year, pubmed_id) |> 
+  distinct() |>
+  group_by(cause) |>
+  summarise(min_year = min(year),
+            first_quartile_year = quantile(year, 0.25),
+            median_year = median(year),
+            average_year = mean(year),
+            third_quartile_year = quantile(year, 0.75),
+            max_year = max(year)
+            ) 
+
+```
+
+# Proportion of studies with abstracts - non-communicable diseases only
+
+```{r prop_abstracts_non_comm}
+
+n_studies_with_abstracts_non_comm <-
+gwas_non_comm_study_info   |>
+   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
+  dplyr::filter(pubmed_id %in% downloaded_abstracts) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+  
+print("Number of published non-communicable disease studies with abstracts downloaded:")
+print(n_studies_with_abstracts_non_comm)
+
+print("Proportion of published non-communicable disease studies with abstracts downloaded:")
+100 * n_studies_with_abstracts_non_comm / n_published_non_comm_studies
+
+
+```
+
 # Proportion of studies with full text: 
 
 ```{r prop_full_text}
@@ -89,9 +512,10 @@ print(n_published_studies - n_studies_with_abstracts)
 downloaded_fulltexts <-
 list.files(c(here::here("output/fulltexts/ncbi_cloud"),
               here::here("output/fulltexts/europe_pmc")
+             
              )
 ) |>
-  stringr::str_remove_all(".xml")
+  stringr::str_remove_all(".xml|.pdf")
 
 convert_pmid_df <- data.table::fread(here::here("data/europe_pmc/PMID_PMCID_DOI.csv"))
 
@@ -100,6 +524,22 @@ convert_pmid_df |>
   dplyr::filter(PMCID %in% downloaded_fulltexts) |>
   dplyr::pull(PMID) |> 
   unique() 
+
+other_downloaded_fulltexts <-
+  list.files(c(here::here("output/fulltexts/springer_nature"),
+             here::here("output/fulltexts/wiley"),
+             here::here("output/fulltexts/elsevier"),
+             here::here("output/fulltexts/oxford_academic/txt"),
+             here::here("output/fulltexts/sage")
+             )
+             ) |>
+  stringr::str_remove_all(".xml|.txt|.pdf")
+
+downloaded_fulltexts <-
+c(downloaded_fulltexts,
+  other_downloaded_fulltexts
+) |>
+  unique()
 
 n_studies_with_fulltext <-
 gwas_study_info |>
@@ -116,6 +556,441 @@ print("Proportion of published studies with full text downloaded:")
 
 print("Number of published studies without full text downloaded:")
 print(n_published_studies - n_studies_with_fulltext)
+
+```
+
+
+# Proportion of studies with full text - non-communicable diseases only
+
+```{r prop_full_text_non_comm}
+
+studies_with_fulltext_non_comm <-
+gwas_non_comm_study_info |>
+   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
+  dplyr::filter(pubmed_id %in% downloaded_fulltexts) |>
+  dplyr::pull(pubmed_id) |>
+  unique()
+
+n_studies_with_fulltext_non_comm <-
+gwas_non_comm_study_info |>
+   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
+  dplyr::filter(pubmed_id %in% downloaded_fulltexts) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print("Number of published non-communicable disease studies with full text downloaded:")
+print(n_studies_with_fulltext_non_comm)
+
+print("Proportion of published non-communicable disease studies with full text downloaded:")
+100 * n_studies_with_fulltext_non_comm / n_published_non_comm_studies
+
+```
+
+# Of not full-text, how many open acess by OpenAlex? 
+
+```{r open_access_no_fulltext}
+
+library(openalexR)
+
+studies_without_fulltext <-
+  gwas_non_comm_study_info |>
+   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
+  filter(!(pubmed_id %in% downloaded_fulltexts)) |>
+  pull(pubmed_id) |>
+  unique()
+
+doi_information <-
+convert_pmid_df |>
+  filter(PMID %in% studies_without_fulltext) |>
+  pull(DOI)
+
+doi_information = 
+doi_information[doi_information != ""]
+
+# get open alex works for pmids
+open_alex_works <- oa_fetch(
+  doi = doi_information,
+  entity = "works",
+  options = list(select = c("doi", 
+                            "open_access"))
+)
+
+```
+
+# Plot number of studies with abstracts or full text 
+
+```{r plot_abstracts_fulltext}
+
+data.frame(n_studies = c(n_published_studies - n_studies_with_abstracts,
+                         n_studies_with_abstracts - n_studies_with_fulltext,
+                         n_studies_with_fulltext),
+           type = c("all",
+                    "studies_with_abstracts",
+                    "studies_with_fulltext"),
+           group = c("GWAS Catalog Published Studies")) |>
+ggplot(aes(x = group, y = n_studies, fill = type)) +
+  geom_col(position = "stack") +
+  labs(x = "",
+       y = "Number of studies",
+       title = "Published GWAS Catalog Studies") +
+  # scale_y_continuous(
+  #   breaks = seq(0, max(n_published_studies), by = 1000),
+  #   expand = expansion(mult = c(0, 0.05))
+  # ) + 
+  scale_fill_manual(
+    name = "Text availability",
+    values = c(
+      all = "grey",
+      studies_with_abstracts = "black",
+      studies_with_fulltext = "#7570b3"
+    ),
+    labels = c(
+      all = "None",
+      studies_with_abstracts = "Abstract only",
+      studies_with_fulltext = "Full text + abstract"
+    )
+  ) + 
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y  = element_text(size = 20),
+    axis.title.y = element_text(size = 24),
+    legend.title = element_text(size = 24),
+    legend.text  = element_text(size = 23),
+    title        = element_text(size = 24)
+  )
+
+```
+
+
+# Studies without full text, what proportion have cohort info?
+
+```{r no_fulltext_cohort_info}
+
+studies_without_fulltext <-
+setdiff(gwas_study_info$pubmed_id, downloaded_fulltexts)
+
+n_studies_without_fulltext_with_cohort_info <-
+gwas_cohort |>
+  dplyr::filter(!c(PUBMED_ID %in% downloaded_fulltexts) &
+                COHORT != "") |>
+  dplyr::pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+print("Number of published studies without full text downloaded that have cohort information:")
+print(n_studies_without_fulltext_with_cohort_info)
+
+print("Proportion of published studies without full text downloaded that have cohort information:")
+100 * n_studies_without_fulltext_with_cohort_info / length(studies_without_fulltext)
+
+```
+
+# Plot % deaths explained by diseases (California, 2019)
+
+```{r deaths_by_condition}
+
+
+gbd_2019 <-
+  data.table::fread(here::here("data/gbd/gbd_2019_california_percent_deaths.csv"))
+
+gbd_2019 = gbd_2019 |>
+  dplyr::mutate(val = 100 * val) |>
+  dplyr::mutate(lower = 100 * lower) |>
+  dplyr::mutate(upper = 100 * upper)
+
+gbd_2019 =
+  gbd_2019 |>
+  dplyr::mutate(cause = ifelse(cause == "Diabetes mellitus type 2",
+                               "Type 2 diabetes mellitus",
+                               cause)) |>
+  dplyr::mutate(cause = ifelse(cause == "Diabetes mellitus type 1",
+                               "Type 1 diabetes mellitus",
+                               cause)) |>
+    dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 2",
+                               "Chronic kidney disease (type 2 diabetes)",
+                               cause)) |>
+      dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 1",
+                               "Chronic kidney disease (type 1 diabetes)",
+                               cause)) 
+
+# add row summing all conditions
+gbd_2019 |>
+  dplyr::summarise(total_val = sum(val))
+
+
+ggplot(aes(x = reorder(cause, val), 
+           y = val),
+       data = gbd_2019) +
+  geom_col(fill = "firebrick") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
+  coord_flip() +
+  labs(x = "",
+       y = "% Percentage of all deaths (California, 2019)",
+       #title = "Percentage of deaths by condition in California (2019)"
+       ) +
+    theme_minimal(base_family = "Arial") +
+  # theme(
+  #   axis.text.x  = element_text(size = 8),   # 8pt for axis text
+  #   axis.text.y  = element_text(size = 8),   # 8pt for axis text
+  #   axis.title.x = element_text(size = 9),  # 10pt for labels
+  #   axis.title.y = element_blank(),
+  #   title        = element_text(size = 9),  # 10pt for labels
+  #   strip.text   = element_text(size = 9),  # 10pt for labels
+  #   legend.title = element_text(size = 8),  # 10pt for labels
+  #   legend.text  = element_text(size = 8),   # 8pt for legend text
+  #   legend.position = "bottom",           # Bottom left corner
+  #   legend.justification = "left",
+  #   #legend.justification = c(0, 0),      # Anchor at bottom left
+  #   #legend.background = element_rect(fill = "white", color = "grey80"),
+  #   legend.margin = margin(l = -0.25, unit = "npc"),
+  #   #legend.margin = margin(5, 5, 5, 5),
+  #   # legend.position = "bottom"
+  # )
+    theme(
+    axis.text.x  = element_text(size = 8),   # 8pt for axis text
+    axis.text.y  = element_text(size = 8),   # 8pt for axis text
+    axis.title.x = element_text(size = 8),  # 10pt for labels
+    axis.title.y = element_blank(),
+    title        = element_text(size = 8),  # 10pt for labels
+    strip.text   = element_text(size = 8),  # 10pt for labels
+    legend.title = element_text(size = 8),  # 10pt for labels
+    legend.text  = element_text(size = 8),   # 8pt for legend text
+    legend.position = "right",           # Bottom left corner
+    legend.justification = "left",
+    #legend.justification = c(0, 0),      # Anchor at bottom left
+    #legend.background = element_rect(fill = "white", color = "grey80"),
+    legend.margin = margin(l = -0.25, unit = "npc"),
+    #legend.margin = margin(5, 5, 5, 5),
+    # legend.position = "bottom"
+  )
+
+
+cause_levels <- factor(gbd_2019$cause,
+                        levels = gbd_2019$cause[order(gbd_2019$val)])
+
+ggsave(
+  filename = "california_rank_studies.pdf",
+  width = 7.5 * 0.6,   # Letter width
+  height = 11 * 0.3,   # Letter height
+  units = "in",
+  device = cairo_pdf  # Better font rendering
+)
+
+```
+
+# Plot: Proportion of full text, across disease conditions
+
+```{r fulltext_by_condition}
+
+fulltext_by_condition <-
+  gwas_non_comm_study_info |>
+  dplyr::mutate(HAS_FULLTEXT = ifelse(pubmed_id %in% downloaded_fulltexts,
+                                     T,
+                                     F)) |>
+# gwas_study_info |>
+  # dplyr::mutate(HAS_FULLTEXT = ifelse(pubmed_id %in% downloaded_fulltexts,
+  #                                    T,
+  #                                    F)) |>
+  # dplyr::mutate(HAS_COHORT = ifelse(pubmed_id %in% studies_with_true_cohort_info_orig,
+  #                                 T,
+  #                                F)) |>
+  # dplyr::mutate(HAS_ARCHIVE = ifelse(pubmed_id %in% studies_with_archive_info,
+  #                                 T,
+  #                                 F)) |>
+  # dplyr::mutate(cohort_info = case_when( HAS_ARCHIVE == T &
+  #                                        HAS_COHORT == T & 
+  #                                        HAS_FULLTEXT == T ~ "All",
+  #                                        
+  #                                      HAS_ARCHIVE == T &
+  #                                      HAS_COHORT == T & 
+  #                                     HAS_FULLTEXT == F ~ "Cohort + Archive",
+  #                                     
+  #                                      HAS_ARCHIVE == F &
+  #                                      HAS_COHORT == T & 
+  #                                        HAS_FULLTEXT == T ~ "Cohort + Full text",
+  #                                     
+  #                                        HAS_COHORT == T & 
+  #                                        HAS_FULLTEXT == F & 
+  #                                        HAS_ARCHIVE == F ~ "Cohort only",
+  #                                     
+  #                                      HAS_ARCHIVE == T &
+  #                                      HAS_COHORT == F & 
+  #                                        HAS_FULLTEXT == T ~ "Archive + Full text",
+  #                                     
+  #                                     
+  #                                     HAS_ARCHIVE == F &
+  #                                      HAS_COHORT == F & 
+  #                                        HAS_FULLTEXT == T ~ "Full text only",
+  #                                     
+  #                                     HAS_ARCHIVE == T &
+  #                                      HAS_COHORT == F & 
+  #                                        HAS_FULLTEXT == F ~ "Archive only",
+  #                                        
+  #                                        HAS_ARCHIVE == F &
+  #                                        HAS_COHORT == F & 
+  #                                        HAS_FULLTEXT == F ~ "None")) |>
+  dplyr::group_by(cause, 
+                  HAS_FULLTEXT) |>
+  dplyr::summarise(n_studies = length(unique(pubmed_id))) |>
+  dplyr::ungroup() |>
+  tidyr::pivot_wider(names_from = HAS_FULLTEXT,
+                     values_from = n_studies,
+                     values_fill = 0) |>
+  dplyr::mutate(TOTAL_STUDIES = `FALSE` + `TRUE`) |>
+  dplyr::mutate(PROP_FULLTEXT = 100 * `TRUE` / TOTAL_STUDIES) |>
+  dplyr::arrange(desc(PROP_FULLTEXT))
+
+# add lancet grouping
+lancet_grouping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
+
+lancet_grouping = lancet_grouping |>
+  dplyr::select(cause = mapped_gbd_term, lancet_group)
+
+fulltext_by_condition = fulltext_by_condition |>
+  dplyr::left_join(lancet_grouping, by = "cause") |>
+  dplyr::arrange(desc(PROP_FULLTEXT))
+
+
+# group liver cancer due to hepatitis B and liver cancer due to hepatitis C
+fulltext_by_condition = fulltext_by_condition |>
+  dplyr::mutate(cause = ifelse(cause %in% c("Liver cancer due to hepatitis B",
+                                           "Liver cancer due to hepatitis C"),
+                              "Liver cancer",
+                              cause)) |>
+  dplyr::group_by(cause, lancet_group) |>
+  dplyr::summarise(
+    `False` = sum(`FALSE`),
+    `True` = sum(`TRUE`)
+  ) |>
+  dplyr::mutate(TOTAL_STUDIES = `False` + `True`) |>
+  dplyr::mutate(PROP_FULLTEXT = 100 * `True` / TOTAL_STUDIES) |>
+  dplyr::arrange(desc(PROP_FULLTEXT))
+
+# exclude "Diabetes mellitus"
+fulltext_by_condition = fulltext_by_condition |>
+  dplyr::filter(cause != "Diabetes mellitus")
+
+# rename Chronic kidney disease due to diabetes mellitus type 2
+# Chronic kidney disease (type 2 diabetes)
+fulltext_by_condition = fulltext_by_condition |>
+  dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 2",
+                              "Chronic kidney disease (type 2 diabetes)",
+                              cause))
+
+# repeat for Chronic kidney disease due to diabetes mellitus type 1
+fulltext_by_condition = fulltext_by_condition |>
+  dplyr::mutate(cause = ifelse(cause == "Chronic kidney disease due to diabetes mellitus type 1",
+                              "Chronic kidney disease (type 1 diabetes)",
+                              cause))
+
+
+fulltext_by_condition <-
+  tidyr::pivot_longer(data = fulltext_by_condition,
+                      cols = !c("cause", 
+                               "lancet_group", 
+                               "TOTAL_STUDIES", 
+                               "PROP_FULLTEXT"),
+                      names_to = "FULLTEXT_STATUS",
+                      values_to = "N_STUDIES")
+
+# I-8 = Infectious diseases
+# NCD-7 = Non-communicable diseases
+fulltext_by_condition  = fulltext_by_condition  |>
+  dplyr::mutate(lancet_group = ifelse(lancet_group == "I-8",
+                                     "Infectious diseases",
+                                     lancet_group)) |>
+  dplyr::mutate(lancet_group = ifelse(lancet_group == "NCD-7",
+                                     "Non-communicable diseases",
+                                     lancet_group))
+
+
+# fulltext_by_condition =
+#   fulltext_by_condition |>
+#   mutate(cause = factor(cause,
+#                         levels = gbd_2019$cause[order(gbd_2019$val)]))
+
+ggplot(aes(x = reorder(cause, N_STUDIES),
+           fill = FULLTEXT_STATUS,
+           y = N_STUDIES),
+       data = fulltext_by_condition) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "",
+       y = "Number of published studies") +
+       #title = "Number of published GWAS Catalog studies per condition") +
+  # facet_grid(space = "free_y",
+  #            scale = "free_y",
+  #            rows = vars(lancet_group)) + 
+  scale_fill_manual(
+    name = "Full text downloaded",
+    values = c(
+      `True` = "dodgerblue",
+      `False` = "grey"
+    ),
+    labels = c(
+      `True` = "Y",
+      `False` = "N"
+    )
+  ) + 
+    theme_minimal(base_family = "Arial") +
+  theme(
+    #axis.text.y  = #element_text(size = 20), 
+    #element_text(size = 8),   # 8pt for axis text
+    axis.text.x  = #element_text(size = 20),   # 8pt for axis text
+    element_text(size = 8),   
+    axis.title.x = #element_text(size = 20),  # 10pt for labels
+    element_text(size = 8),   
+    axis.title.y = #element_text(size = 18), #element_blank(),
+    element_blank(),
+    #title        = element_text(size = 9),  # 10pt for labels
+    strip.text   = #element_text(size = 18),  # 10pt for labels
+    element_text(size = 8),
+    legend.title = #element_text(size = 22),  # 10pt for labels
+    element_text(size = 8),
+    legend.text  = #element_text(size = 20),   # 8pt for legend text
+    element_text(size = 8),
+    legend.position = "bottom",#, #"left", # "right", # "bottom",           # Bottom left corner
+    legend.margin = margin(t = 0, unit = "pt"),
+    legend.box.spacing = unit(0, "pt"),
+    plot.margin = margin(t = 5, 
+                         r = 5, 
+                         b = 5, 
+                         l = 0, 
+                         unit = "pt"),
+    axis.text.y = element_text(size = 8, margin = margin(r = 0, unit = "pt")),
+    #legend.justification = "left"
+    legend.justification = c(-5, 2)  # Anchor at bottom left
+    #legend.background = element_rect(fill = "white", color = "grey80"),
+    #legend.margin = margin(l = -0.25, unit = "npc"),
+    #legend.margin = margin(5, 5, 5, 5),
+    # legend.position = "bottom"
+  )
+
+  # theme_minimal() +
+  # theme(
+  #   axis.text.x  = element_text(size = 20),
+  #   axis.text.y  = element_text(size = 20),
+  #   axis.title.x = element_text(size = 24),
+  #   axis.title.y = element_blank(),
+  #   title        = element_text(size = 24), 
+  #   strip.text = element_text(size = 22),
+  #   legend.title = element_text(size = 24),
+  #   legend.text  = element_text(size = 23)
+  # )
+
+# Export to PDF with letter size (8.5 x 11 inches)
+# Adjust width to maintain readability based on number of categories
+ggsave(
+  filename = "fulltext_by_condition.pdf",
+  width = 7.5 * 0.7,   # Letter width
+  height = 11 * 0.28,   # Letter height
+  units = "in",
+  device = cairo_pdf  # Better font rendering
+)
+
 
 ```
 
@@ -177,9 +1052,9 @@ dbgap_info |>
   dplyr::filter(PMCID %in% all_pmcids) 
 
 n_studies_with_dbgap_info <-
-  bind_rows(pmids_with_dbgap_info,
-            pmcids_with_dbgap_info)  %>%
-  dplyr::select(EXTID, PMCID) %>%
+  dplyr::bind_rows(pmids_with_dbgap_info,
+            pmcids_with_dbgap_info)  |>
+  dplyr::select(EXTID, PMCID) |>
   dplyr::distinct() |>
   dplyr::pull(EXTID) |>
   unique() |>
@@ -197,7 +1072,7 @@ print("Proportion of published studies with dbGAP information:")
 
 ```{r ega_info}
 
-fread(here::here("data/europe_pmc/ega.csv")) -> ega_info
+data.table::fread(here::here("data/europe_pmc/ega.csv")) -> ega_info
 
 all_pmids <- gwas_study_info$pubmed_id |> unique()
 
@@ -219,14 +1094,45 @@ print("Proportion of published studies with EGA information:")
 
 ```
 
+# Studies with EGA, dbGAP, or JGA information
+
+```{r ega_dbgap_jga_info}
+
+epmc_dbgap_info <- pmids_with_dbgap_info |> pull(EXTID) |> unique()
+
+text_extracted <- data.table::fread(
+                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
+)
+
+pmcids_with_archive_info <- 
+text_extracted |>
+  pull(pmcid) |>
+  unique()
+
+pmids_with_archive_info <-
+convert_pmid_df |>
+  dplyr::filter(PMCID %in% pmcids_with_archive_info) |>
+  dplyr::pull(PMID) |>
+  unique()
+
+epmc_ega_info <- pmids_with_ega_info |> unique()
+
+studies_with_archive_info <- 
+  Reduce("union", 
+      list(epmc_dbgap_info,
+      epmc_ega_info,
+      pmids_with_archive_info))
+
+```
+
 # Overlap in dbgap and full text
 
 ```{r overlap_dbgap_fulltext}
 
 dbgap_pubmed_ids <-
-  bind_rows(pmids_with_dbgap_info,
-            pmcids_with_dbgap_info)  %>%
-  dplyr::select(EXTID, PMCID) %>%
+  dplyr::bind_rows(pmids_with_dbgap_info,
+            pmcids_with_dbgap_info) |>
+  dplyr::select(EXTID, PMCID) |>
   dplyr::distinct() |>
   dplyr::pull(EXTID) |>
   unique()
@@ -262,14 +1168,29 @@ length(Reduce(union, list(dbgap_pubmed_ids,
 
 ```
 
+# Studies without full text, what proportion have dbGAP info?
+
+```{r no_fulltext_dbgap_info}
+
+n_studies_without_fulltext_with_dbgap_info <-
+sum(studies_without_fulltext %in% pmids_with_dbgap_info$EXTID)
+
+print("Number of published studies without full text downloaded that have dbGAP information:")
+print(n_studies_without_fulltext_with_dbgap_info)
+
+print("Proportion of published studies without full text downloaded that have dbGAP information:")
+100 * n_studies_without_fulltext_with_dbgap_info / length(studies_without_fulltext)
+
+```
+
 # Percentage of cohort information that includes 'other' or 'multiple'
 
-```{r}
+```{r, eval = F}
 
 studies_with_other_or_multiple_cohort_info <- gwas_study_info |>
-  dplyr::mutate(cohort = stringr::str_remove_all(pattern = "(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
-                                                 cohort)) |> 
-  dplyr::filter(grepl("other|multiple", tolower(cohort))) |>
+  dplyr::mutate(COHORT = stringr::str_remove_all(pattern = "(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
+                                                 COHORT)) |> 
+  dplyr::filter(grepl("other|multiple", tolower(COHORT))) |>
   dplyr::pull(pubmed_id) |>
   unique() |>
   length()
@@ -282,5 +1203,7 @@ print("Proportion of published studies with 'other' or 'multiple' cohort informa
 
 
 ```
+
+
 
 
