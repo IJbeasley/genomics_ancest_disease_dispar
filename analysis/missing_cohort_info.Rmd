@@ -23,126 +23,151 @@ library(stringr)
 
 #  Load / pre-process GWAS Catalog data
 
-```{r load_gwas}
-# Load GWAS Catalog studies
-# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
-#                          sep = "\t", quote = "")
-gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+This analysis investigates the extent and patterns of missing cohort information in the GWAS Catalog, and manually corrects cohort labels for specific studies where the information is available from the original publications.
 
-# Standardize column names (remove spaces)
+```{r load_gwas}
+# Load the cohort name-corrected study metadata (produced by an earlier processing step)
+gwas_study_info <- fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
+
+# Standardize column names (remove spaces) for easier programmatic access
 gwas_study_info <- gwas_study_info |>
   rename_all(~gsub(" ", "_", .x))
 
+
+original_gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv")) |>
+  rename_all(~gsub(" ", "_", .x)) |>
+  select(-COHORT, -DATE)
+
+
+gwas_study_info =
+  left_join(gwas_study_info, 
+            original_gwas_study_info,
+            by = "PUBMED_ID") 
+
 ```
 
-## Missingness in cohort information over time 
+## Missingness in cohort information over time
 
-```{r}
-gwas_study_info = 
-gwas_study_info |> 
+Flag studies as having missing cohort information if their COHORT field is empty, "mutiple" (a typo in the data), or "other". The stacked area chart shows the cumulative number of studies over time, split by whether cohort info is missing. A substantial proportion of studies -- particularly in the recent explosive growth period post-2015 -- lack informative cohort labels.
+
+```{r missingness_over_time}
+# Flag studies with missing/uninformative cohort labels
+gwas_study_info =
+gwas_study_info |>
   mutate(MISSING_COHORT_INFO = ifelse(COHORT == ""|COHORT == "mutiple"|COHORT == "other",
                                       T,
                                       F)
   )
-         
+
+# missing by year, reducing over time
 gwas_study_info |>
+  select(PUBMED_ID, DATE, MISSING_COHORT_INFO) |>
+  distinct() |>
+  mutate(YEAR = lubridate::year(DATE)) |>
+  group_by(YEAR) |>
+  summarise(n_missing = sum(MISSING_COHORT_INFO),
+            n_total = n(),
+            prop_missing = round(100 * n_missing / n_total, digits = 0))
+
+# Stacked area chart: cumulative studies over time, coloured by missing cohort info
+gwas_study_info |>
+  select(PUBMED_ID, DATE, MISSING_COHORT_INFO) |>
+  distinct() |>
   arrange(DATE) |>
   mutate(n_row = row_number()) |>
-  ggplot(aes(x =DATE, y=n_row, fill = MISSING_COHORT_INFO)) + 
-  geom_area(position = 'stack') + 
-  theme_bw() + 
-  labs(y = "Number of studies")
+  ggplot(aes(x =DATE, y=n_row, fill = MISSING_COHORT_INFO)) +
+  geom_area(position = 'stack') +
+  theme_bw() +
+  labs(y = "Number of publications")
 
 ```
 
 
-```{r}
+Which publications contribute the most studies with missing cohort info? The top offenders are PMID 34648354 (3,892 studies, known to use the Fenland cohort) and PMID 36482414 (2,334 studies, PrecisionLink Biobank / BCH Biobank). There are 5,617 PubMed IDs in total with at least one study missing cohort info.
 
+```{r top_missing_cohort_pubmeds}
+# Rank PubMed IDs by number of studies with missing cohort info
 gwas_study_info |>
   filter(MISSING_COHORT_INFO) |>
   group_by(PUBMED_ID) |>
   summarise(n_studies = n()) |>
   arrange(desc(n_studies))
 
-
-# 34648354
-# Fenland
-
-
-# 36482414
-# PrecisionLink Biobank
-# BCH Biobank
+# Notes on top PubMed IDs with missing cohort info:
+# 34648354 -> Fenland cohort
+# 36482414 -> PrecisionLink Biobank / BCH Biobank
 
 ```
 
 
-# Data used in PUBMED ID: 36324656  
+# Manual cohort corrections for specific studies
 
-```{r}
+This section manually fills in missing cohort labels for specific studies by looking up the original publications. These corrections address studies that had empty COHORT fields in the GWAS Catalog but where the cohort information is available from the paper.
 
-gwas_study_info |> 
-  filter(grepl("\\bUK\\b", COHORT)) |> 
-  select(PUBMED_ID, COHORT) |> 
+```{r manual_cohort_corrections}
+
+# Explore studies with "UK" in the cohort name for context
+gwas_study_info |>
+  filter(grepl("\\bUK\\b", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
   distinct() |>
   tail()
 
-# Pappa study: https://onlinelibrary.wiley.com/doi/10.1002/ajmg.b.32333
-gwas_study_info |> 
-    filter(grepl("Pappa", FIRST_AUTHOR)) |> 
-    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
-    distinct()
-
-gwas_study_info |> 
-    filter(PUBMED_ID == "26087016") |> 
-    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
+# Correction 1: Pappa study (PMID 26087016)
+# Source: https://onlinelibrary.wiley.com/doi/10.1002/ajmg.b.32333
+# Cohort was empty, should be EAGLE
+gwas_study_info |>
+    filter(PUBMED_ID == "26087016") |>
+    select(PUBMED_ID, COHORT, DATE) |>
     distinct()
 
 gwas_study_info = rows_update(gwas_study_info,
                               tibble(PUBMED_ID = 26087016, COHORT = "EAGLE"),
                               unmatched = "ignore")
 
-# Karlsson Linnér https://pmc.ncbi.nlm.nih.gov/articles/PMC6713272/#ABS1
-gwas_study_info |> 
-  filter(grepl("Karlsson", FIRST_AUTHOR)) |> 
-  filter(grepl("Genome-wide association analyses of risk tolerance and risky behaviors", STUDY)) |> select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
-  distinct()
+# Correction 2: Karlsson Linnér (PMID 30643258) - risk tolerance and risky behaviors
+# Source: https://pmc.ncbi.nlm.nih.gov/articles/PMC6713272/#ABS1
+# 8 study accessions had empty cohorts; corrected to appropriate combinations
+# of UKBB, 23andMe, and TAG based on which cohorts each trait used
 
 gwas_study_info |>
   filter(PUBMED_ID == 30643258) |>
-  select(`DISEASE/TRAIT`, STUDY_ACCESSION, COHORT) |>
+  select(PUBMED_ID, COHORT) |>
   distinct()
 
-karlsson_study_update = 
+karlsson_study_update =
 tibble(
   STUDY_ACCESSION = c('GCST007322', 'GCST007324',
                       'GCST007329', 'GCST007328', 'GCST007326',
                       'GCST007327'),
-  `DISEASE/TRAIT` = c("General risk toleranc", "Adventurousness", 
-                      "Automobile speeding propensity", 
-                      "Alcohol consumption (drinks per week)", 
+  `DISEASE/TRAIT` = c("General risk toleranc", "Adventurousness",
+                      "Automobile speeding propensity",
+                      "Alcohol consumption (drinks per week)",
                       "Number of sexual partners",
                       "Smoking status (ever vs never smokers)"),
-       COHORT = c("UKBB|23andMe", "23andMe", 
+       COHORT = c("UKBB|23andMe", "23andMe",
                   "UKBB", "UKBB", "UKBB",
                   "UKBB|TAG")
        )
 
-gwas_study_info = rows_update(gwas_study_info, 
+gwas_study_info = rows_update(gwas_study_info,
                               karlsson_study_update,
                               unmatched = "ignore")
 
 
-# Pasman: https://pmc.ncbi.nlm.nih.gov/articles/PMC6386176/#S7
-gwas_study_info |> 
-    filter(grepl("Pasman", FIRST_AUTHOR)) |> 
+# Correction 3: Pasman (PMID 30150663) - GWAS of lifetime cannabis use
+# Source: https://pmc.ncbi.nlm.nih.gov/articles/PMC6386176/#S7
+# Cohort was empty, should be ICC|23andME|UKBB
+gwas_study_info |>
+    filter(grepl("Pasman", FIRST_AUTHOR)) |>
     filter(grepl("GWAS of lifetime cannabis use reveals new risk loci, genetic overlap with psychiatric traits", STUDY)) |>
-    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |> 
+    select(PUBMED_ID, COHORT, DATE, FIRST_AUTHOR) |>
     distinct()
 
-gwas_study_info = 
-    rows_update(gwas_study_info, 
-                tibble(PUBMED_ID = 30150663, 
-                       COHORT = "ICC|23andME|UKBB"), 
+gwas_study_info =
+    rows_update(gwas_study_info,
+                tibble(PUBMED_ID = 30150663,
+                       COHORT = "ICC|23andME|UKBB"),
                 unmatched = "ignore")
 
 
@@ -150,7 +175,9 @@ gwas_study_info =
 
 #### Checking cohort subsetting in same study
 
-```{r, eval = F}
+Some publications list multiple study accessions with overlapping cohort labels (e.g., one accession uses "TwinsUK" and another uses "TwinsUK|KORA"). This function checks whether any cohort in a publication is a strict subset of another, which could indicate subsampling or stage-based analysis designs (e.g., discovery vs replication).
+
+```{r check_cohort_subsampling, eval = F}
 
 # Step 3: Function to check if any cohort is a subset of another
 is_subsampling_cohort <- function(cohort_list) {
@@ -188,8 +215,9 @@ cohort_counts |> filter(!subsampling_possible) |> nrow()
 
 ```
 
-```{r, eval=F}
-
+```{r example_no_subsampling, eval=F}
+# Sample 5 random publications where no cohort subsampling was detected,
+# to manually inspect what their cohort labels look like
 set.seed(10)
 
 example_no_subsampling =
@@ -208,9 +236,11 @@ for(example in example_no_subsampling){
 
 ```
 
-### No sub-sampling but multi-cohort ... 
+### No sub-sampling but multi-cohort ...
 
-```{r, eval=FALSE}
+For publications flagged as multi-cohort but without subsampling, check how many have blank cohort labels. If a multi-cohort publication has no blank labels and no subsampling, it means the studies genuinely used distinct, non-overlapping cohort combinations.
+
+```{r no_subsampling_multi_cohort, eval=FALSE}
 
 no_subsampling = cohort_counts |> filter(!subsampling_possible) |> pull(PUBMED_ID)
 
@@ -235,143 +265,125 @@ gwas_study_info |>
   select(PUBMED_ID, COHORT) |>
   distinct()
 
-
-
-
-
 ```
 
-```{r}
-gwas_study_info |> 
+Example of cohort subsetting: PMID 24816252 has studies using "TwinsUK" alone and "TwinsUK|KORA" -- TwinsUK is a subset of the TwinsUK|KORA combination.
+
+```{r example_cohort_subsetting}
+# Example: PMID 24816252 shows TwinsUK and TwinsUK|KORA
+gwas_study_info |>
   filter(PUBMED_ID == 24816252) |>
   select(PUBMED_ID, COHORT) |>
   distinct()
 
 ```
 
-### Unlabelled cohorts 
+### Unlabelled cohorts
 
-```{r}
+Categorise each unique cohort-publication pair into three types: "Not reported" (empty or "other"), "Multiple" (pipe-separated, "multiple", or "(Multiple cohorts)"), and "Reported" (a specific single cohort name). The stacked area chart shows the cumulative growth of each category over time. "Reported" cohorts (green) dominate, but "Not reported" (red) and "Multiple" (blue) are also substantial and growing.
 
+```{r cohort_type_over_time}
+# Categorise cohort labels and plot cumulative growth by type
 gwas_study_info |>
   select(COHORT, DATE, PUBMED_ID) |>
   distinct() |>
   mutate(COHORT_TYPE = case_when(COHORT == "" | COHORT == "other" ~ "Not reported",
-                                 COHORT == "multiple" | 
-                                 grepl("\\|",COHORT) | 
+                                 COHORT == "multiple" |
+                                 grepl("\\|",COHORT) |
                                  COHORT == "(Multiple cohorts)" ~ "Multiple",
                                  TRUE~"Reported")
          ) |>
   arrange(DATE) |>
   mutate(n_row = row_number()) |>
-  ggplot(aes(x =DATE, y=n_row, fill = COHORT_TYPE)) + 
-  geom_area() + 
+  ggplot(aes(x =DATE, y=n_row, fill = COHORT_TYPE)) +
+  geom_area() +
   theme_bw()
 
 
 ```
 
+The "other" label specifically: over 8,500 studies use "other" as the cohort label, with steady growth especially after ~2015.
 
-```{r}
-
+```{r other_cohort_over_time}
+# Cumulative count of studies labelled "other" over time
 gwas_study_info |>
   filter(COHORT == "other") |>
   arrange(DATE) |>
   mutate(n_row = row_number()) |>
-  ggplot(aes(x =DATE, y=n_row)) + 
+  ggplot(aes(x =DATE, y=n_row)) +
   geom_area()
 
 ```
 ## Number of cohorts per study
 
-```{r}
+How many study accessions (i.e., cohort-trait combinations) does each publication contribute? The median is 1, but the mean is 19.5 and the max is 7,972 -- reflecting large-scale studies reporting many trait associations. About 38.5% of publications have more than one study accession, and the 98th percentile is 48.
 
-# most papers have just 1 study / cohort
-n_cohorts_per_study = 
+For multi-cohort publications, do the multiple study accessions reflect genuinely different cohorts, or just the same cohort tested on different traits? When grouping by PubMed ID and trait, the median drops to 1 cohort per trait (mean 2.7, max 7,008). There are 10,634 PubMed-trait combinations with more than 1 cohort. The 80th percentile is just 2 -- meaning around 80% of multi-study publications are explained by studying multiple traits within the same cohort, not by using multiple cohorts per trait.
+
+```{r cohorts_per_study}
+
+# Distribution of study accessions per PubMed ID
+# Median 1, mean 19.5, max 7,972
+n_cohorts_per_study =
 gwas_study_info |>
   group_by(PUBMED_ID) |>
-  summarise(n = n()) 
+  summarise(n = n())
 
 n_cohorts_per_study |>
   dplyr::pull(n) |>
   summary()
 
-100 * 
-  nrow(n_cohorts_per_study |> filter(n > 1)) / 
+# ~38.5% of papers have more than 1 study accession
+100 *
+  nrow(n_cohorts_per_study |> filter(n > 1)) /
   nrow(n_cohorts_per_study)
-# ~39% of papers have more than 1 cohort
 
+# 50th percentile = 1, 98th percentile = 48
 quantile(n_cohorts_per_study$n, probs = c(0.5, 0.98))
 
 
-multi_cohort_studies = n_cohorts_per_study |> 
+# For multi-study publications: how many cohorts per trait?
+multi_cohort_studies = n_cohorts_per_study |>
                        filter(n > 1) |>
                        pull(PUBMED_ID)
 
-cohorts_per_trait = 
+cohorts_per_trait =
 gwas_study_info |>
   dplyr::filter(PUBMED_ID %in% multi_cohort_studies) |>
   group_by(PUBMED_ID, MAPPED_TRAIT, MAPPED_BACKGROUND_TRAIT) |>
   summarise(n = n())
 
+# Extremely right-skewed: most PubMed-trait pairs use just 1 cohort
 cohorts_per_trait |>
-  ggplot(aes(x = n)) + 
-  geom_histogram() + 
-  theme_bw() + 
+  ggplot(aes(x = n)) +
+  geom_histogram() +
+  theme_bw() +
   labs(title = "Number of cohorts for the same PUBMED ID and trait")
 
+# Median 1, mean 2.7, max 7,008
 summary(cohorts_per_trait$n)
 
+# 10,634 PubMed-trait combinations have >1 cohort
 cohorts_per_trait |>
   filter(n > 1) |>
   nrow()
 
+# 75th-80th percentiles: mostly 1, with 80th = 2
+# This confirms ~80% of multi-study papers are explained by
+# multiple traits in the same cohort, not multiple cohorts per trait
 quantile(cohorts_per_trait$n, probs = c(0.75, 0.77,0.78, 0.79, 0.8))
 
-# 80% of papers with multiple cohorts - likely explained by multiple diseases, same cohort
+# PubMed IDs where each trait uses exactly 1 cohort
 cohorts_per_trait |>
-  filter(n == 1) |> 
+  filter(n == 1) |>
   pull(PUBMED_ID)
 
-# study accession is unqiue
+# Confirm: each (PUBMED_ID, STUDY_ACCESSION) pair is unique (all = 1)
 gwas_study_info |>
   group_by(PUBMED_ID, STUDY_ACCESSION) |>
   summarise(n = n()) |>
   pull(n) |>
   summary()
-
-
-
-```
-
-
-
-
-```{r}
-
-gwas_study_info |>
-  group_by(PUBMED_ID) |>
-  summarise(n = n()) |>
-  ggplot(aes(x = n)) + 
-  geom_histogram() + 
-  theme_bw(
-  ) +
-  labs(title = "Number of studies per PUBMED ID")
-
-gwas_study_info |>
-  group_by(PUBMED_ID) |>
-  summarise(n = n()) |>
-  arrange(desc(n)) |> 
-  head(
-  )
-
-
-
-
-
-#cohorts per study
-gwas_study_info |>
-  group_by(PUBMED_ID)
 
 
 
