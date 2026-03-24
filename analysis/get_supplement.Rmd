@@ -1,0 +1,547 @@
+---
+title: "Get supplemental files"
+author: "Isobel Beasley"
+date: "2026-03-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Ideas/help for downloading supplemental files: 
+- https://pmc.ncbi.nlm.nih.gov/articles/PMC12371329/
+
+What file types are likely to be relevant?
+- pdf
+- Excel spreadsheet: (xls, xlsx)
+- Data files (csv, txt)
+- Word documents (docx, doc) 
+
+## Required packages 
+
+```{r, message=FALSE}
+
+library(httr)
+library(xml2)
+library(stringr)
+library(here)
+library(dplyr)
+library(data.table)
+
+```
+
+
+# Get PMCIDs and PUBMIDs for GWAS Catalog studies of diseases
+
+## Pubmed ids from GWAS catalog
+
+```{r get_pmids}
+
+## Step 1: 
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+# filter out infectious diseases
+gwas_study_info <- gwas_study_info |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+print("Number of disease studies to get full texts for:")
+all_pmids <- unique(gwas_study_info$PUBMED_ID)
+length(all_pmids)
+
+```
+
+### PMCIDs for these PMIDS from Europe PMC mapping file
+
+```{r pmids_to_pmcids_stats, warning=FALSE}
+
+converted_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv"))
+
+print("Head of pmid to pmcid mapping data.frame:")
+head(converted_ids)
+
+print("Dimensions of pmid to pmcid mapping data.frame:")
+dim(converted_ids)
+length(all_pmids)
+
+print("All pmids are in this data.frame, but some don't have pmcid mapping")
+
+not_converted_pmids <-
+converted_ids |>
+  filter(pmcids == "")  |>
+  pull(PMID)
+
+print("Number of pmids without pmcid mapping:")
+length(not_converted_pmids)
+
+pmcids <-
+converted_ids$pmcids |>
+  unique()
+
+pmcids <- pmcids[pmcids != ""]
+
+print("Number of pmids with pmcid mapping:")
+length(pmcids)
+
+print("Percentage of pmids with pmcid:")
+round(100 * length(pmcids) / length(all_pmids), digits = 2)
+
+```
+
+
+# Download from European PMC
+
+```{r download_supplemental_files, eval = F}
+
+library(httr)
+library(here)
+library(tools)
+
+download_pmc_supplements <- function(pmcid,
+                                     out_dir = here::here("output/supplement")) {
+  
+  # Create PMCID-specific subdirectory
+  pmcid_dir <- file.path(out_dir, pmcid)
+  
+  # Check if directory already exists and has files
+  if (dir.exists(pmcid_dir) && length(list.files(pmcid_dir)) > 0) {
+    message("Supplementary files for ", pmcid, " already exist. Skipping.")
+    return(invisible(list(pmcid = pmcid, status = "skipped", files = list.files(pmcid_dir))))
+  }
+  
+  # Create directory if it doesn't exist
+  dir.create(pmcid_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  # Build URL
+  sup_url <- paste0(
+    "https://www.ebi.ac.uk/europepmc/webservices/rest/",
+    pmcid,
+    "/supplementaryFiles"
+  )
+  
+  message("Fetching supplementary files for ", pmcid, "...")
+  
+  # Save zip to a temp file
+  zip_path <- file.path(pmcid_dir, 
+                        paste0(pmcid, "_supplements.zip"))
+  resp <- GET(sup_url, 
+              write_disk(zip_path, overwrite = TRUE))
+  
+  if (status_code(resp) != 200) {
+    warning("Failed to retrieve supplements for ", pmcid,
+            ". HTTP status: ", status_code(resp))
+    unlink(pmcid_dir, recursive = TRUE)
+    return(invisible(list(pmcid = pmcid, status = "failed", files = NULL)))
+  }
+  
+  # Unzip into the PMCID folder
+  unzip_result <- tryCatch({
+    unzip(zip_path, exdir = pmcid_dir)
+  }, error = function(e) {
+    warning("Failed to unzip supplements for ", pmcid, ": ", e$message)
+    NULL
+  })
+  
+  # Remove the zip file after extraction
+  file.remove(zip_path)
+  
+  if (is.null(unzip_result)) {
+    return(invisible(list(pmcid = pmcid, status = "unzip_failed", files = NULL)))
+  }
+  
+  extracted_files <- list.files(pmcid_dir, recursive = TRUE, full.names = TRUE)
+  message("Extracted ", length(extracted_files), " file(s) to ", pmcid_dir)
+  
+  return(invisible(list(
+    pmcid  = pmcid,
+    status = "success",
+    dir    = pmcid_dir,
+    files  = extracted_files
+  )))
+}
+
+
+# Batch across multiple PMCIDs
+results <- lapply(pmcids, function(id) {
+  tryCatch(
+    download_pmc_supplements(id),
+    error = function(e) {
+      message("Error processing ", id, ": ", e$message)
+      list(pmcid = id, status = "error", files = NULL)
+    }
+  )
+})
+
+```
+
+```{bash unzip_europe_pmc, eval = F}
+
+find output/supplement -name "*.zip" | while read f; do
+  unzip -o "$f" -d "$(dirname "$f")"
+done
+
+```
+
+```{bash delete_empty_dirs_europe_pmc, eval = F}
+
+find output/supplement -type d -empty -delete
+
+```
+
+
+# Download from NCBI Cloud AWS
+
+```{r pmcids_to_get_aws}
+
+# check how many pmcids I have downloaded supplementary materials for
+sup_dir <- here::here("output/supplement")
+
+folders <- list.dirs(sup_dir, 
+                     full.names = TRUE, 
+                     recursive = FALSE)
+
+folders_with_files <- folders[
+  sapply(folders, function(d) length(list.files(d, recursive = TRUE)) > 0)
+]
+
+not_retrieved_pmcids <- setdiff(pmcids, basename(folders_with_files))
+
+print("PMCIDs for which I could not retrieve supplements from European PMC:")
+print(length(not_retrieved_pmcids))
+
+writeLines(
+  not_retrieved_pmcids,
+  here::here("output/supplement/selected_pmcids.txt")
+)
+
+```
+
+
+```{bash, eval = FALSE}
+
+bash code/extract_text/download_pmc_supplements_aws.sh --file output/supplement/selected_pmcids.txt
+
+```
+
+
+```{bash delete_empty_dirs_ncbi_aws, eval = FALSE}
+
+find output/supplement -type d -empty -delete
+
+```
+
+## Check how many supplements I have downloaded, and what file types they are
+
+```{r check_supplemental_files}
+
+# check how many pmcids I have downloaded supplementary materials for
+sup_dir <- here::here("output/supplement")
+
+folders <- list.dirs(sup_dir, 
+                     full.names = TRUE, 
+                     recursive = FALSE)
+
+folders_with_files <- folders[
+  sapply(folders, function(d) length(list.files(d, recursive = TRUE)) > 0)
+]
+
+message(length(folders_with_files), 
+        " / ", 
+        length(folders), 
+        " folders contain at least one file")
+
+
+# check extensions of files downloaded
+all_files <- unlist(lapply(folders_with_files, 
+                           list.files, 
+                           recursive = TRUE, 
+                           full.names = TRUE))
+
+file_extensions <- tools::file_ext(all_files) |>
+  table() |>
+  as.data.frame() |>
+  dplyr::arrange(desc(Freq))
+
+print("File extensions of downloaded supplementary files:")
+print(file_extensions)
+
+folders_with_relevant_files <- folders[
+  sapply(folders, function(d) length(list.files(d, 
+                                                recursive = TRUE,
+                                                pattern = "*.pdf|*.docx|*.doc|*.xls|*.XLSX")) > 0)
+]
+
+message(length(folders_with_relevant_files), 
+        " / ", length(folders), 
+        " folders contain at least one relevant file type (pdf, docx, doc, xls, xlsx)")
+
+```
+
+# Convert sup materials
+
+```{r}
+
+folders <- list.dirs(sup_dir, 
+                     full.names = TRUE, 
+                     recursive = FALSE)
+
+folders_with_relevant_files <- folders[
+  sapply(folders, function(d) length(list.files(d, 
+                                                recursive = TRUE,
+                                                pattern = "*.pdf|*.docx|*.doc|*.DOCX|*.txt|*.xls|*.XLSX")) > 0)
+]
+
+print("Number of folders with at least one relevant file type (pdf, docx, doc, xls, xlsx):")
+print(length(folders_with_relevant_files))
+
+no_relevant_files <- folders[!c(folders %in% folders_with_relevant_files)]
+
+print("File extensions of folders without relevant file types:")
+list.files(no_relevant_files, 
+           recursive = TRUE, 
+           full.names = TRUE) |>
+  tools::file_ext()  |>
+  unique() 
+
+
+```
+
+```{r convert_supplemental_materials}
+
+# what sup files to convert?
+
+sup_files <- list.files(sup_dir,
+                        recursive = TRUE,
+                        pattern = "*.pdf|*.docx|*.doc|*.xls|*.XLSX"
+                        )
+
+
+sup_files <- paste0("output/supplement/", sup_files)
+
+writeLines(sup_files, 
+           here::here("output/supplement/supplemental_files_to_convert.txt"))
+
+
+```
+
+```{bash, eval = FALSE}
+
+./code/extract_text/convert_supplemental_materials.sh 
+
+```
+
+# Archived / not run
+
+## FAIR-SMART links from NCBI
+
+```{r get_supplemental_files_ncbi, eval = F}
+
+get_fair_smart_links <- function(pmid) {
+  
+  url <- paste0("https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/supplmat_query_request.cgi/bioc_xml/", 
+                pmid,
+                "/CPC",)
+  
+  response <- GET(url)
+  
+  if (status_code(response) == 200) {
+    
+    collected_response <- content(response, as = "text", encoding = "UTF-8")
+    
+    sup_link = xml2::xml_text(xml2:::read_xml(collected_response))
+    
+    if(grepl("No result can be found", sup_link)) {
+      warning("No relevant supplements found for PMID: ", pmid)
+      return(NULL)
+    }
+    
+    supplement_links <- stringr::str_extract_all(sup_link, "https?://[^\\s]+")
+    
+    supplement_links <- unlist(supplement_links)
+    
+    # print("Supplement links found:")
+    # print(supplement_links)
+    
+    return(supplement_links)
+    
+  } else {
+    warning("Failed to retrieve supplements for PMID: ", pmid, 
+            ". HTTP status: ", status_code(response))
+    return(NULL)
+  }
+}
+
+sup_links <- purrr::map(all_pmids, 
+                        get_fair_smart_links)
+
+names(sup_links) <- all_pmids
+
+
+download_relevant_sup <- function(sup_link,
+                                  out_dir,
+                                  pmid) {
+  
+  if(is.null(sup_link)) {
+    return(NULL)
+  }
+  
+  out_path <- here::here(paste0(out_dir,"/", 
+                                pmid, 
+                                "_supplement_", basename(sup_link))
+                         )
+  
+  resp <- GET(sup_link, 
+              write_disk(out_path, overwrite = TRUE))
+  
+  if (status_code(resp) != 200) {
+    warning("Failed to download supplement from ", sup_link,
+            ". HTTP status: ", status_code(resp))
+    return(NULL)
+  }
+  
+  message("Downloaded supplement from ", sup_link, " to ", out_path)
+  return(out_path)
+}
+
+purrr::iwalk(sup_links,
+             ~download_relevant_sup(.x, 
+                                    out_dir = here::here("output/supplement/ncbi"), 
+                                    pmid = .y)
+             )
+
+
+```
+
+## Download supplements from Elsevier
+
+```{r elsevier_supplements, eval = F}
+
+
+elseiver_xmls <- list.files(here::here("output/fulltexts/elsevier/elsevier_xml/"), full.names = TRUE)
+
+
+xml <- xml2::read_xml(here::here("output/fulltexts/elsevier/elsevier_xml/17223258.xml")) 
+
+use_local <- function(x) {
+  paste0(".//*[local-name()='", x, "']")
+}
+
+get_elsevier_supplement_links <- function(xml_file_path,
+                                          api_key    = Sys.getenv("ELSEVIER_API_KEY"),
+                                          out_dir = here::here("output/supplement/elsevier")) {
+  
+  
+  # Build auth headers
+  headers <- c("X-ELS-APIKey" = api_key)
+  
+  xml <- xml2::read_xml(xml_file_path)
+  doc <- xml_find_first(xml, use_local("xocs:doc"))
+  meta <- xml_find_first(doc, use_local("xocs:meta"))
+  
+  attachments <- xml_find_all(meta, 
+                                use_local("xocs:attachments")
+                                )
+  supplement_eids <- xml_find_all(attachments, 
+                                   use_local("xocs:attachment-eid")
+                                   ) |> 
+    xml_text()
+  
+  supplement_eids <- supplement_eids[!grepl("main", 
+                                              supplement_eids, 
+                                              ignore.case = TRUE)]
+  
+# sup_names <- xml_text(xml_find_all(attachments, use_local("attachment-eid")))
+  # track results for all files
+  results <- list()
+
+if(length(supplement_eids) > 0) {
+  
+  #@browser()
+  
+   out_dir = paste0(out_dir, 
+                    "/",
+                    tools::file_path_sans_ext(basename(xml_file_path))
+                    )
+   
+   # make directory for this article
+   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  for(eid in supplement_eids) {
+    
+    message("Supplement link: ", eid)
+    
+    out_path  <- paste0(out_dir, "/", basename(eid))
+    
+    api_url  = paste0("https://api.elsevier.com/content/object/eid/", eid)
+    
+    file_resp <- GET(api_url,
+                     add_headers(.headers = headers),  # <-- auth headers
+                write_disk(out_path,
+                           overwrite = TRUE)
+                )
+    
+    http_status  <- status_code(file_resp)
+    file_size_kb <- file.size(out_path) / 1024
+      
+    is_html_error <- tryCatch({
+        first_bytes <- readLines(out_path, n = 1, warn = FALSE)
+        grepl("^<!DOCTYPE|^<html", first_bytes, ignore.case = TRUE)
+      }, error = function(e) FALSE)
+    
+    status <- dplyr::case_when(
+        http_status == 403               ~ "permission_denied",
+        http_status == 401               ~ "unauthorized",
+        http_status != 200               ~ paste0("http_error_", http_status),
+        is_html_error                    ~ "permission_denied_html_response",
+        file_size_kb < 5                 ~ "suspiciously_small",
+        TRUE                             ~ "success"
+      )
+    
+    if (status != "success") {
+        warning(sprintf("  [%s] %s (%.1f KB, HTTP %d)",
+                        status, basename(eid), file_size_kb, http_status))
+        # Remove the bad file so it doesn't look like a successful download
+        file.remove(out_path)
+      } else {
+        message(sprintf("  [OK] %s (%.1f KB)", basename(eid), file_size_kb))
+      }
+    
+    # results[[basename(sup)]] <- list(
+    #     url         = sup,
+    #     out_path    = out_path,
+    #     http_status = http_status,
+    #     file_size_kb = round(file_size_kb, 2),
+    #     status      = status
+    #   )
+    # 
+    
+  }
+  
+
+} else {
+  message("No supplement links found in ", xml_file_path)
+}
+
+}
+
+purrr::map(elseiver_xmls, get_elsevier_supplement_links)
+
+```
+
+
+#### More
+
