@@ -17,52 +17,39 @@ library(stringr)
 
 ## 1. Load / pre-process GWAS Catalog data
 
+This analysis uses two GWAS Catalog datasets: a study-level metadata file (with cohort labels corrected in a prior step), and an ancestry-level metadata file. The goal is to understand the structure of these datasets and how cohort labels are distributed across studies.
+
 ```{r load_gwas}
-# Load GWAS Catalog studies
-# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
-#                          sep = "\t", quote = "")
-gwas_study_info <- fread(here::here("output/gwas_study_info_cohort_corrected.csv"))
+# Load the cohort-corrected study metadata (produced by an earlier processing step)
+# rather than the raw GWAS Catalog studies file
+gwas_study_info <- fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
 
-
+# Load the GWAS Catalog ancestry metadata (one row per ancestry group per study)
 gwas_ancest_info <-  fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
                          sep = "\t", quote = "")
 
-# Standardize column names (remove spaces)
+# Standardize column names (remove spaces) for easier programmatic access
 gwas_study_info <- gwas_study_info |>
   rename_all(~gsub(" ", "_", .x))
 
 gwas_ancest_info <- gwas_ancest_info |>
-  rename_all(~gsub(" ", "_", .x)) 
+  rename_all(~gsub(" ", "_", .x))
 
 ```
 
+How many rows per PubMed ID in each dataset? A single publication (PubMed ID) can contain multiple GWAS studies (e.g., studying different traits), so PubMed IDs can map to many rows. In the ancestry dataset, the median is 2 rows per PubMed ID but the maximum is 11,670. In the study dataset, the median is 1 but the maximum is 7,972 -- reflecting large-scale studies that report thousands of trait associations.
 
-### Comparing study info to ancestry info datasets: 
-
-```{r study_accession_compare}
-
-gwas_study_info$STUDY_ACCESSION |> unique() |> length()
-
-gwas_study_info$STUDY_ACCESSION |> length()
-# each row is a study accession in gwas study info, 
-
-gwas_ancest_info$STUDY_ACCESSION |> unique() |> length()
-
-gwas_ancest_info$STUDY_ACCESSION |> length()
-# study accessions have multiple rows in gwas ancest info, 
-# because of multiple ancestries per study
-```
-
-
-```{r}
-# number of rows per pubmed id
-# distribution
-gwas_ancest_info |> 
+```{r rows_per_pubmed}
+# Distribution of rows per PubMed ID in ancestry info
+# Median is 2, but max is 11,670 (very right-skewed)
+gwas_ancest_info |>
   group_by(PUBMED_ID) |>
   summarise(n = n()) |>
   pull(n) |>
   summary()
 
+# Distribution of rows per PubMed ID in study info
+# Median is 1, max is 7,972
 gwas_study_info |>
   group_by(PUBMED_ID) |>
   summarise(n = n()) |>
@@ -71,62 +58,73 @@ gwas_study_info |>
 
 ```
 
+The two datasets share only four columns in common: PUBMED_ID, FIRST_AUTHOR, DATE, and STUDY_ACCESSION. STUDY_ACCESSION is the key for joining the two datasets.
 
-```{r}
-
-# PUBMED_ID, FIRST_AUTHOR, DATE (deposition date), STUDY_ACCESSION are the only consistent
-# across ancestry and study metadata
+```{r shared_columns}
+# Identify shared columns between the two datasets
 colnames(gwas_ancest_info)[colnames(gwas_ancest_info) %in% colnames(gwas_study_info)]
-
 colnames(gwas_study_info)[colnames(gwas_study_info) %in% colnames(gwas_ancest_info)]
 
 ```
 
-More rows in gwas ancestry dataset, corresponding to multiple rows (sometimes) for the same study accession - done when multiple ancestries for the same cohort. 
+More rows in the ancestry dataset than the study dataset, because study accessions with multiple ancestry groups get multiple rows in the ancestry file.
 
 
 ## 2. Cohort Summary
 
+There are 1,205 unique cohort labels in the dataset. However, the distribution of studies per cohort is extremely right-skewed: the median cohort has only 2 studies, but the largest (UK Biobank) has 38,265. The second most common "cohort" is an empty string (15,019 studies with no cohort label), followed by "other" (8,529). This highlights that cohort metadata is often missing or generic.
+
 ```{r cohort_overview}
 
-# Number of unique cohorts
+# 1,205 unique cohort labels
 length(unique(gwas_study_info$COHORT))
 
-# Studies per cohort
+# Count studies per cohort, sorted by most common
 studies_per_cohort = gwas_study_info |>
   group_by(COHORT) |>
   summarise(n_studies = n()) |>
-  arrange(desc(n_studies)) 
+  arrange(desc(n_studies))
 
+# Very right-skewed: median 2, mean 118.5, max 38,265
 summary(studies_per_cohort$n_studies)
 
+# Histogram shows the long tail -- most cohorts have few studies,
+# but a handful of mega-cohorts (UKBB, MVP, etc.) dominate
 studies_per_cohort |>
-  ggplot(aes(x=n_studies)) + 
-  geom_histogram() + 
-  theme_bw() + 
+  ggplot(aes(x=n_studies)) +
+  geom_histogram() +
+  theme_bw() +
   labs(title = "Distribution of the number of studies per cohort label")
 
-
+# Top 10 cohorts: UKBB (38,265), empty string (15,019), other (8,529),
+# MVP (7,669), AASK (6,790), AGES (4,782), CLSA (4,449), ...
 dplyr::slice_head(studies_per_cohort, n = 10)
 
 ```
 
-#### Check: cohorts only listed once? 
+#### Check: cohorts only listed once?
 
-```{r}
+Some COHORT values contain multiple cohort names separated by "|" (pipe). After splitting on "|", there are 1,078 unique individual cohort names (fewer than the 1,205 unique combined labels, since some cohorts appear in multi-cohort combinations). Of these, 208 cohorts appear in only a single study.
 
+```{r split_pipe_separated_cohorts}
+
+# Split pipe-separated cohort labels into individual cohort names
 all_cohorts = gwas_study_info$COHORT
 all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
 
+# 1,078 unique individual cohort names after splitting
 length(unique(all_cohorts))
 
+# After splitting, each individual cohort appears in more studies on average
+# (median 5, mean 205.4, max 43,189) compared to the combined labels
 data.frame(cohort = all_cohorts) |>
   group_by(cohort) |>
   summarise(n_studies = n()) |>
   pull(n_studies) |>
   summary()
 
-single_use_cohorts_v2 =   
+# 208 cohort names appear in only a single study
+single_use_cohorts_v2 =
 data.frame(cohort = all_cohorts) |>
   group_by(cohort) |>
   summarise(n_studies = n()) |>
@@ -138,25 +136,13 @@ single_use_cohorts_v2 |> unique() |> length()
 ```
 
 
-#### One to one relationship between COHORT and STUDY accession? 
-
-
-```{r}
-
-gwas_study_info |>
-  group_by(COHORT, STUDY_ACCESSION) |>
-  summarise(n = n()) |>
-  pull(n) |>
-  summary()
-# yep - for the same study accession, same cohort
-
-```
-
-
 ### One-to-one relationship between study accession and pubmed?
 
-```{r}
-# not true for pubmed i believe .... 
+No -- the relationship between PubMed IDs and cohorts is one-to-many. While the median PubMed ID maps to just 1 cohort, some map to as many as 55 different cohorts. This happens because a single publication can report results from multiple cohorts (e.g., a meta-analysis combining data from GECCO, CORECT, CORSA, etc.).
+
+```{r pubmed_cohort_relationship}
+# Most publications use a single cohort (median 1),
+# but some use up to 55 different cohorts
 gwas_study_info |>
   select(PUBMED_ID, COHORT) |>
   distinct() |>
@@ -165,18 +151,21 @@ gwas_study_info |>
   pull(n_pubmed) |>
   summary()
 
-pubmed_multi_cohort = 
+# Find PubMed IDs associated with multiple cohorts
+pubmed_multi_cohort =
 gwas_study_info |>
   select(PUBMED_ID, COHORT) |>
   distinct() |>
   group_by(PUBMED_ID) |>
   summarise(n_pubmed = n()) |>
   filter(n_pubmed > 1) |>
-  pull(PUBMED_ID) 
-  
+  pull(PUBMED_ID)
+
+# Example: PubMed ID 30510241 has studies from GECCO, CORECT, CORSA,
+# and one study with no cohort label -- typical of multi-cohort meta-analyses
 gwas_study_info |>
   filter(PUBMED_ID %in% pubmed_multi_cohort) |>
-  select(PUBMED_ID, COHORT, STUDY_ACCESSION) |>
+  select(PUBMED_ID, COHORT) |>
   head()
 
 
