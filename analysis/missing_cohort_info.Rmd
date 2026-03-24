@@ -302,18 +302,6 @@ gwas_study_info |>
 
 ```
 
-The "other" label specifically: over 8,500 studies use "other" as the cohort label, with steady growth especially after ~2015.
-
-```{r other_cohort_over_time}
-# Cumulative count of studies labelled "other" over time
-gwas_study_info |>
-  filter(COHORT == "other") |>
-  arrange(DATE) |>
-  mutate(n_row = row_number()) |>
-  ggplot(aes(x =DATE, y=n_row)) +
-  geom_area()
-
-```
 ## Number of cohorts per study
 
 How many study accessions (i.e., cohort-trait combinations) does each publication contribute? The median is 1, but the mean is 19.5 and the max is 7,972 -- reflecting large-scale studies reporting many trait associations. About 38.5% of publications have more than one study accession, and the 98th percentile is 48.
@@ -376,7 +364,8 @@ quantile(cohorts_per_trait$n, probs = c(0.75, 0.77,0.78, 0.79, 0.8))
 # PubMed IDs where each trait uses exactly 1 cohort
 cohorts_per_trait |>
   filter(n == 1) |>
-  pull(PUBMED_ID)
+  pull(PUBMED_ID) |>
+  length()
 
 # Confirm: each (PUBMED_ID, STUDY_ACCESSION) pair is unique (all = 1)
 gwas_study_info |>
