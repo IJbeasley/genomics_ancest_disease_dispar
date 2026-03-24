@@ -11,15 +11,12 @@ editor_options:
     wrap: 72
 ---
 
-<b>
-[github repository link](https://github.com/IJbeasley/genomics_ancest_disease_dispar)
-</b>
+<b> [github repository
+link](https://github.com/IJbeasley/genomics_ancest_disease_dispar) </b>
 
 <br>
 
-
-    
-<br>  
+<br>
 
 # Find GWAS studies of Lancet Commission Priority Diseases
 
@@ -45,11 +42,15 @@ n_unique_traits <- function(trait_col){
 
 ## Identify GWAS studies of diseases in general
 
-I find GWAS Catalog studies that of diseases, by looking for disease-related EFO ontology mapped terms in the 'MAPPED_TRAIT' column of the GWAS Catalog metadata. I categorize traits into disease, response, measurement etc. using the EFO ontology.
+I find GWAS Catalog studies that of diseases, by looking for
+disease-related EFO ontology mapped terms in the 'MAPPED_TRAIT' column
+of the GWAS Catalog metadata. I categorize traits into disease,
+response, measurement etc. using the EFO ontology.
 
 -   [Download trait ontology information](download_ontology.html)
 
--   [Categorising GWAS traits into disease, response, measurement etc.](trait_ontology_categorization.html)
+-   [Categorising GWAS traits into disease, response, measurement
+    etc.](trait_ontology_categorization.html)
 
 ```{r trait_ontology, echo=FALSE}
 
@@ -69,11 +70,13 @@ n_unique_traits(gwas_study_info$all_disease_terms)
 
 ```
 
-## Mapping traits to ICD 10 Codes 
+## Mapping traits to ICD 10 Codes
 
-Next, for GWAS studies of disease I harmonise disease trait labels to reduce redundancy due to typos, synonyms etc.
+Next, for GWAS studies of disease I harmonise disease trait labels to
+reduce redundancy due to typos, synonyms etc.
 
--   [Harmonising disease trait labels - typos, synonyms etc.](disease_trait_terms_simplify.html)
+-   [Harmonising disease trait labels - typos, synonyms
+    etc.](disease_trait_terms_simplify.html)
 
 ```{r, echo=FALSE}
 
@@ -83,7 +86,8 @@ n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
 ```
 
--   [Grouping cancer disease traits (removing disease subtypes etc)](group_cancer_diseases.html)
+-   [Grouping cancer disease traits (removing disease subtypes
+    etc)](group_cancer_diseases.html)
 
 ```{r, echo=FALSE}
 
@@ -93,7 +97,8 @@ n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
 ```
 
--   [Grouping non-cancer disease traits (removing disease subtypes etc)](group_non_cancer_diseases.html)
+-   [Grouping non-cancer disease traits (removing disease subtypes
+    etc)](group_non_cancer_diseases.html)
 
 ```{r, echo=FALSE}
 
@@ -103,100 +108,146 @@ n_unique_traits(gwas_study_info$collected_all_disease_terms)
 
 ```
 
-### Now: Mapping traits to ICD 10 Codes 
+### Now: Mapping traits to ICD 10 Codes
 
-Then, I map the harmonised disease trait labels to ICD-10 codes, by the following step-wise procedure:
-1. Where available, extract author provided ICD-10 Codes in GWAS Catalog DISEASE/TRAIT metadata
-2. Where available, extract author provided PheCodes in GWAS Catalog DISEASE/TRAIT metadata
-3. Where author provided PheCodes are available, map PheCode to ICD-10 codes using PheWAS map, and manually confirmed PheCode to ICD-10cm mappings (from https://phenomics.va.ornl.gov/phecodemap/).
-4. If author provided ICD-10 or PheCodes are not available, match `DISEASE/TRAIT` labels to ICD-10 and PheCode code descriptions
-4. Remap remaining unmapped traits are manually mapped with the help of ICD-10 codes of studies of the same disease, and the WHO ICD-10 2019 index (https://icd.who.int/browse10/2019). 
+Then, I map the harmonised disease trait labels to ICD-10 codes, by the
+following step-wise procedure:
 
-The final map of disease traits to ICD-10 codes is produce
+1.  Where available, extract author provided ICD-10 Codes in GWAS
+    Catalog DISEASE/TRAIT metadata
 
--  [Mapping all traits to ICD-10 codes - automatic + manual method](map_trait_to_icd10.html)
+2.  Where available, extract author provided PheCodes in GWAS Catalog
+    DISEASE/TRAIT metadata. These PheCodes are converted to ICD-10 codes
+    using the PheWAS R package international mapping file, and checked
+    against PheCode to ICD-10cm mappings (from
+    <https://phenomics.va.ornl.gov/phecodemap/>).
 
--  [Manually mapped traits - from WHO ICD-10 2019](manual_trait_map_icd10.html)
+3.  If author provided ICD-10 or PheCodes are not available, match
+    `DISEASE/TRAIT` labels to ICD-10 code descriptions
+
+4.  If not able to match `DISEASE/TRAIT` labels to ICD-10 code
+    descriptions, try match `DISEASE/TRAIT` labels to PheCode
+    descriptions
+
+5.  If not able to match `DISEASE/TRAIT` labels to PheCode descriptions,
+    try match `DISEASE/TRAIT` labels to UMLS terms
+
+6.  Use manually created excel mapping file (ICD-10 to `DISEASE/TRAIT`
+    terms, from WHO ICD-10 2019 index:
+    <https://icd.who.int/browse10/2019>).
+
+7.  Repeat Steps 3-5 for but instead of trying to match terms to
+    `DISEASE/TRAIT` try to match terms to `collected_all_disease_terms`
+    labels (these are processed EFO and other ontology terms)
+
+8.  Use author provide ICD-10 codes from studies of the same disease
+    (same `collected_all_disease_terms` )
+
+The code creating the final map of disease traits to ICD-10 codes is
+below:
+
+-   [Mapping all traits to ICD-10 codes](map_trait_to_icd10.html)
+
+-   [Manually mapped traits ](manual_trait_map_icd10.html)
 
 <br>
 
-## Get Lancet Commission Priority Diseases
+## Find GWAS publications of Lancet Commission Priority Diseases
 
-- [Matching GWAS traits to GBD causes / diseases](gwas_to_gbd.html)
+Use the above mapping of disease traits to ICD-10 codes to find GWAS Catalog studies of the Lancet Commission Priority Diseases. This is done by matching the ICD-10 codes of the diseases to the ICD-10 codes of the GWAS Catalog disease traits.
 
+-   [Matching GWAS traits to GBD causes / diseases](gwas_to_gbd.html)
 
-# Cohort labels 
+<br> 
+
+# Extracting cohort labels
 
 Allowing us to deal with overlapping samples.
 
--   [Fixing & harmonising cohort labels](correcting_cohort_names.html)
+-   [Fixing & harmonising GWAS Catalog cohort metadata](correcting_cohort_names.html)
 
-    Mostly just correcting for typos and different ways of writing the same cohort name (e.g. Finland vs FINLAND)
+    Mostly just correcting for typos and different ways of writing the
+    same cohort name (e.g. Finland vs FINLAND). 
 
--   [Missing cohort information](missing_cohort_info.html) 
+-   [Missing cohort metadata in the GWAS Catalog](missing_cohort_info.html)
+
+     Investigation into missingness of GWAS Catalog cohort metadata, is it more common in older studies, or more recent studies? 
 
 -   [Distribution of cohort information exploration](cohort_dist.html)
+     
+     Explore the structure of GWAS Catalog metadata and how cohort labels are distributed across studies.
 
-### Text mining stratergies (for labelling other cohorts)
+## Fine tune text mining model 
 
-- [Get abstracts from GWAS Catalog](get_abstracts.html)
+### Get text to fine tune model
 
--  [Getting + initial analysis of full-text of GWAS Catalog articles](get_full_text.html)
+-   [Getting abstracts from GWAS Catalog](get_abstracts.html)
 
--  [Getting + initial labelling of abstracts from GWAS Catalog studies](test_for_cohort_labels.html)
+-   [Getting full-text of GWAS Catalog articles](get_full_text.html)
 
-### Other investigations 
+-   [Getting supplement of GWAS Catalog articles](get_supplement.html) 
 
--  [Extracting dbGAP accessions from GWAS Catalog studies](get_dbgap_ids.html)
+Pre-process article text for text mining:
 
--   [Looking into: can identify UK Biobank studies from citations?](collapse_cohorts.html)
+-   Convert text to sentences: code/extract_text/spacy_obtain_sentences.pu
 
+-   [Get initial annotated training sentences](test_for_cohort_labels.html)
 
-<br>
+### Other investigations
 
-
-## Calculating ancestry biases 
-
--   [Replicate observed ancestry biases figures in GWAS dataset](replication_ancestry_bias.html)
-    
-    Replicating Martin et al. 2019 Figure 
-    
--  [Disease investigated by ancestry](disease_inves_by_ancest.html)
-
+-   [Extracting dbGAP accessions from GWAS Catalog studies](get_dbgap_ids.html)
 
 <br>
-<br>
 
-# Investigation analyses
+## Calculating ancestry biases
+
+-   [Replicate observed ancestry biases figures in GWAS
+    dataset](replication_ancestry_bias.html)
+
+    Replicating Martin et al. 2019 Figure
+
+-   [Disease investigated by ancestry](disease_inves_by_ancest.html)
+
+<br> <br> <br>
+
+# Exploratory analyses
+
+Not included in analysis/study. 
 
 ## Disease burden statistics
 
--   [Global Burden of Disease Study data - DALYs, deaths etc.](gbd_data_plots.html)
+-   [Global Burden of Disease Study data - DALYs, deaths
+    etc.](gbd_data_plots.html)
 
-    Global Burden of Disease Study (GBD) global statistics on incidence, prevalence, DALYs (Disability-Adjusted Life Years) and PAF (population Attributable Fraction) for diseases and risk factors.
+    Global Burden of Disease Study (GBD) global statistics on incidence,
+    prevalence, DALYs (Disability-Adjusted Life Years) and PAF
+    (population Attributable Fraction) for diseases and risk factors.
 
+<br> <br>
 
-<br>
-<br>
+### Archived / not currently being used:
 
-## Archived / not currently being used:
+-   [Looking into: can identify UK Biobank studies from citations?](collapse_cohorts.html)
 
-### Paper citation metrics
+#### Paper citation metrics
 
--  [iCite - citation metrics for GWAS Catalog Papers](icite_rcr.html)
+-   [iCite - citation metrics for GWAS Catalog Papers](icite_rcr.html)
 
-    Replicating Reales & Wallace, 2023 - sharing gwas data results in more citations
+    Replicating Reales & Wallace, 2023 - sharing gwas data results in
+    more citations
 
-### Old grouping / filtering disease traits pages:
+#### Old grouping / filtering disease traits pages:
 
 -   [Excluding infectious diseases](grouping_infectious_diseases.html)
 
-- [Filtering of non-disease, symptom phenotypes etc.](other_disease_filtering.html)
+-   [Filtering of non-disease, symptom phenotypes
+    etc.](other_disease_filtering.html)
 
--   [Grouping cancer disease traits (removing disease subtypes etc)](level_1_disease_group_cancer.html)
+-   [Grouping cancer disease traits (removing disease subtypes
+    etc)](level_1_disease_group_cancer.html)
 
--   [Grouping non-cancer disease traits (removing disease subtypes etc)](level_1_disease_group_non_cancer.html)
+-   [Grouping non-cancer disease traits (removing disease subtypes
+    etc)](level_1_disease_group_non_cancer.html)
 
--   [Match GWAS studies to Global Burden of Disease Study Groupings](level_2_disease_group.html)
-
-
+-   [Match GWAS studies to Global Burden of Disease Study
+    Groupings](level_2_disease_group.html)
