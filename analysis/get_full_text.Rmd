@@ -56,7 +56,6 @@ gwas_study_info <- gwas_study_info |>
 #   dplyr::filter(DISEASE_STUDY == TRUE)
 
 print("Number of disease studies to get full texts for:")
-
 all_pmids <- unique(gwas_study_info$PUBMED_ID)
 length(all_pmids)
 
@@ -603,7 +602,7 @@ mkdir -p output/fulltexts/elsevier/xml
 
 for file in output/fulltexts/elsevier/elsevier_xml/*.xml; do 
     filename=$(basename "$file")
-    Rscript code/full_text_conversion/elsevier_to_jats_v4.R "$file" "output/fulltexts/elsevier/xml/${filename%.xml}.xml"
+    Rscript code/full_text_conversion/elsevier_to_jats_v5.R "$file" "output/fulltexts/elsevier/xml/${filename%.xml}.xml"
 done
 
 ```
@@ -1228,7 +1227,7 @@ https://diabetesjournals.org/journals/pages/license
 diabetes_doi_patterns <- "10.2337"
 
 diabetes_links <-
-  grep(diabetes_doi_patterns,
+  grep(diabetes_doi_patterns, 
        doi_information$DOI,
        value = TRUE)
 
@@ -1236,6 +1235,18 @@ print("Number of papers potentially can get from Diabetes:")
 length(diabetes_links)
 
 ```
+
+PNAS
+
+- https://www.pnas.org/author-center/publication-charges
+Text and data mining are permitted for noncommercial institutions with an active institutional site license to PNAS for internal noncommercial research purposes.
+
+
+AAAS / Science: 
+- https://www.science.org/content/page/institutional-license-agreement
+"Non-commercial Licensees' Authorized Users may use the Licensed Materials (excluding any Complimentary Resources) for text and data mining, for purely internal non-commercial research purposes, for as long as the Licensee maintains a subscription to the Licensed Materials, subject to the terms and conditions in ANNEX A"
+
+
 
 # Total number of downloaded full texts
 
@@ -1287,6 +1298,49 @@ n_manual_review
 
 print("Assuming 10 minutes per paper to review, total time (hours):")
 n_manual_review * 10 / 60
+
+```
+
+# Extracting methods sections
+
+```{bash extract_methods_sections, eval = F}
+
+# NCBI cloud xmls:
+code/extract_text/batch_process_methods.sh \
+output/fulltexts/ncbi_cloud \
+output/fulltexts/methods_sections
+
+# Europe PMC xmls:
+code/extract_text/batch_process_methods.sh \
+output/fulltexts/europe_pmc \
+output/fulltexts/methods_sections
+
+# Sage xmls:
+code/extract_text/batch_process_methods.sh \
+output/fulltexts/sage \
+output/fulltexts/methods_sections
+
+# Springer nature xmls
+code/extract_text/batch_process_methods.sh \
+output/fulltexts/springer_nature \
+output/fulltexts/methods_sections
+
+# wiley converted xmls:
+code/extract_text/batch_process_methods.sh \
+output/fulltexts/wiley/xml \
+output/fulltexts/methods_sections
+
+# Elsevier converted xmls: 
+code/extract_text/batch_process_methods.sh \
+output/fulltexts/elsevier/xml \
+output/fulltexts/methods_sections
+
+```
+
+```{bash check_methods_sections, eval = F}
+
+code/extract_text/batch_check_methods.sh \
+output/fulltexts/methods_sections 
 
 ```
 
