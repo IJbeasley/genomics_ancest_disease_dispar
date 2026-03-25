@@ -1,3 +1,4 @@
+---
 title: "Mapping GWAS traits to ICD 10"
 author: "Isobel Beasley"
 date: "2025-09-26"
@@ -1600,10 +1601,37 @@ disease_mapping |>
 
 ```{r how_was_icd10_inferred}
 
+# as a percentage
+n_disease_mapping = nrow(disease_mapping)
+
+group_levels <- c(
+  "UMLS Match",
+  "Study Provided Info",
+  "Phecode Match",
+  "ICD Description Match",
+  "Manual Mapping",
+  "Other"
+)
+
 disease_mapping  |> 
-group_by(icd10_code_origin) |> 
-summarise(n = n()) |> 
-arrange(desc(n))
+mutate(icd10_code_origin_group = case_when(
+  grepl("Study", icd10_code_origin) ~ "Study Provided Info",
+  grepl("Phecode Phenotype Match", icd10_code_origin) ~ "Phecode Match",
+  grepl("ICD Description Match", icd10_code_origin) ~ "ICD Description Match",
+  grepl("UMLS", icd10_code_origin) ~ "UMLS Match",
+  grepl("Manual Mapping", icd10_code_origin) ~ "Manual Mapping",
+  TRUE ~ "Other"
+)) |>
+  mutate(icd10_code_origin_group = factor(icd10_code_origin_group,
+                                        levels = group_levels
+                                        )
+       ) |>
+group_by(icd10_code_origin_group, icd10_code_origin) |> 
+summarise(n = n(),
+          percent = round(100 * n/n_disease_mapping, 
+                          digits = 2)
+          ) |> 
+arrange(icd10_code_origin_group, desc(n))
 
 ```
 
