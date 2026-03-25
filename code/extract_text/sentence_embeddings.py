@@ -1,13 +1,26 @@
+# After finding sentences with cohort names (see relevant Rmarkdown page)
+# In this script,
+# identify semantically similar sentences
+#  and inspect them to see if they are good hard negatives for 
+# training a model to distinguish between cohort and non-cohort sentences. 
+# Also look for semantically similar sentences within the cohort set to 
+# get a sense of how similar cohort sentences are to each other.
 from sentence_transformers import SentenceTransformer
 import json
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 from optparse import OptionParser
 
 model = SentenceTransformer("neuml/pubmedbert-base-embeddings")
 
-def run_similarity_analysis(label: str, cohort_path: str, non_cohort_path: str) -> None:
+def run_similarity_analysis(
+    label: str,
+    cohort_path: str,
+    non_cohort_path: str,
+    figure_save_path: str,
+) -> None:
     cohort_sentences = json.load(open(cohort_path, "r"))
     non_cohort_sentences = json.load(open(non_cohort_path, "r"))
 
@@ -51,7 +64,10 @@ def run_similarity_analysis(label: str, cohort_path: str, non_cohort_path: str) 
     plt.legend()
     plt.grid(axis='y', alpha=0.3)
     plt.tight_layout()
-    histogram_path = f"output/similarities_histogram_{label}.png"
+    histogram_path = figure_save_path
+    output_dir = os.path.dirname(histogram_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     plt.savefig(histogram_path, dpi=300)
     print(f"\n[{label}] Histogram saved to {histogram_path}")
 
@@ -134,6 +150,13 @@ def parse_args():
         dest="non_cohort_path",
         help="Path to JSON file containing non-cohort sentences",
     )
+    parser.add_option(
+        "-s",
+        "--figure_save_path",
+        dest="figure_save_path",
+        default="output/similarities_histogram.png",
+        help="Path to save the similarity histogram figure/s",
+    )
 
     options, _ = parser.parse_args()
 
@@ -153,7 +176,12 @@ def parse_args():
 
 if __name__ == "__main__":
     opts = parse_args()
-    run_similarity_analysis(opts.label, opts.cohort_path, opts.non_cohort_path)
+    run_similarity_analysis(
+        opts.label,
+        opts.cohort_path,
+        opts.non_cohort_path,
+        opts.figure_save_path,
+    )
 
 
 
