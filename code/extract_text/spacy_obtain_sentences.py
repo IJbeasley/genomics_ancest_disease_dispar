@@ -1,4 +1,4 @@
-# Break abstract text into sentences using Spacy
+# Break article text into sentences using Spacy
 from pydoc import doc
 import warnings
 import scispacy
@@ -20,18 +20,16 @@ warnings.filterwarnings("ignore", category=UserWarning, message=".*CUDA is not a
 load_model = spacy.load("en_core_sci_scibert")
 
 # Parse command-line arguments
-parser = argparse.ArgumentParser(description="Break abstracts into sentences using Spacy")
+parser = argparse.ArgumentParser(description="Break articles into sentences using Spacy")
 parser.add_argument(
     "--input_dir",
     type=str,
-    default="output/abstracts",
-    help="Input directory containing .txt abstract files (default: output/abstracts)"
+    help="Input directory containing .txt article files"
 )
 parser.add_argument(
     "--output_dir",
     type=str,
-    default="output/abstracts",
-    help="Output directory to save sentence JSON files (default: output/abstracts)"
+    help="Output directory to save sentence JSON files"
 )
 args = parser.parse_args()
 
