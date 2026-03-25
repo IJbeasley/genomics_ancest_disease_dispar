@@ -2025,7 +2025,6 @@ disease_or_disorder <-
                         )
                         )]
 
-
 gwas_study_info <- 
   gwas_study_info |> 
   #dplyr::rowwise() |>
@@ -2035,6 +2034,8 @@ gwas_study_info <-
              MAPPED_TRAIT,
              NA)
   )
+
+
 
 ```
 
@@ -2046,8 +2047,8 @@ gwas_study_info =
 gwas_study_info |>
   dplyr::mutate(MAPPED_TRAIT_CATEGORY = dplyr::case_when(is.na(MAPPED_TRAIT) ~ NA,
                                                          MAPPED_TRAIT == "" ~ NA,
-                                                         tolower(MAPPED_TRAIT) %in% disease_gwas ~ "Disease/Disorder",
-                                                         tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
+                                                         tolower(MAPPED_TRAIT) %in% disease_or_disorder ~ "Disease/Disorder",
+                                                         #tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
                                                          tolower(MAPPED_TRAIT) %in% seropositivity_gwas ~ "Seropositivity",
                                                          tolower(MAPPED_TRAIT) %in% bmi_weight_gwas ~ "BMI/Weight/Body Fat Measurement",
                                                          tolower(MAPPED_TRAIT) %in% lipid_cholesterol_gwas ~ "Lipid/Cholesterol Measurement",
@@ -2217,8 +2218,8 @@ gwas_study_info |>
                    dplyr::case_when(
                                       MAPPED_BACKGROUND_TRAIT == "" ~ NA,
                                       is.na(MAPPED_BACKGROUND_TRAIT) ~ NA,
-                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% disease_gwas ~ "Disease/Disorder",
-                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
+                                      stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% disease_or_disorder ~ "Disease/Disorder",
+                                      #stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% measurement_gwas ~ "Measurement",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% response_gwas ~ "Response",
                                       stringr::str_trim(tolower(MAPPED_BACKGROUND_TRAIT)) %in% medical_procedure_gwas ~ "Medical Procedure",
@@ -3003,8 +3004,8 @@ length(not_disease_pubmeds)
 combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
   
   
-  MAPPED_TRAIT_1 = stringr::str_split(MAPPED_TRAIT_1, ", ") |> unlist()
-  MAPPED_TRAIT_2  = stringr::str_split(MAPPED_TRAIT_2, ", ") |> unlist()
+  #MAPPED_TRAIT_1 = stringr::str_split(MAPPED_TRAIT_1, ", ") |> unlist()
+  #MAPPED_TRAIT_2  = stringr::str_split(MAPPED_TRAIT_2, ", ") |> unlist()
   
   all_mapped_disease_terms = 
     c(MAPPED_TRAIT_1, MAPPED_TRAIT_2) |>
@@ -3022,18 +3023,25 @@ combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
 
 gwas_study_info <- 
   gwas_study_info |>
+  tidyr::unite(col = "all_disease_terms",
+               c("disease_terms", "background_disease_terms"),
+               remove = F,
+               sep = "; ", 
+               na.rm = TRUE)
   #dplyr::rowwise() |>
-  dplyr::mutate(all_disease_terms = 
-                case_when(is.na(background_disease_terms) & is.na(disease_terms) ~ NA,
-                          is.na(background_disease_terms) & !is.na(disease_terms) ~ disease_terms,
-                          !is.na(background_disease_terms) & is.na(disease_terms) ~ background_disease_terms,
-                          !is.na(background_disease_terms) & !is.na(disease_terms) ~
-                            combined_disease_terms(background_disease_terms,
-                                                   disease_terms)) 
+  # dplyr::mutate(all_disease_terms = 
+  #               case_when(is.na(background_disease_terms) & is.na(disease_terms) ~ NA,
+  #                         is.na(background_disease_terms) & !is.na(disease_terms) ~ disease_terms,
+  #                         !is.na(background_disease_terms) & is.na(disease_terms) ~ background_disease_terms,
+  #                         !is.na(background_disease_terms) & !is.na(disease_terms) ~
+  #                           combined_disease_terms(disease_terms,
+  #                                                  background_disease_terms,
+  #                                                  )) 
+  # 
+  # ) |>
+  # dplyr::ungroup()
 
-  ) |>
-  dplyr::ungroup()
-
+# correct commas
 gwas_study_info =
   gwas_study_info |>
     mutate(
@@ -3172,6 +3180,17 @@ gwas_study_info |>
              string = all_disease_terms
            )) 
 
+gwas_study_info  = 
+gwas_study_info |> 
+    mutate(all_disease_terms = 
+           str_replace_all(
+             pattern = "genital neoplasm, female",
+             replacement = "female genital neoplasm",
+             string = all_disease_terms
+           )) 
+
+print("Number of studies with bad commas")
+gwas_study_info |> filter(grepl(",", all_disease_terms))
 
 gwas_study_info =
   gwas_study_info |>
@@ -3191,9 +3210,16 @@ gwas_study_info =
 gwas_study_info |> 
   filter(DISEASE_STUDY == T) |> 
   filter(all_disease_terms == "")  |> 
-  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
+  select(PUBMED_ID) |> 
   distinct() |>
   nrow()
+
+gwas_study_info |> 
+  filter(DISEASE_STUDY == T) |> 
+  filter(all_disease_terms == "")  |> 
+  select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
+  distinct() |>
+  head()
 
 ```
 
