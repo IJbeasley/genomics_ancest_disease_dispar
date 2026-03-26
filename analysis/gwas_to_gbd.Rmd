@@ -219,13 +219,401 @@ disease_mapping_with_cause =
 
 ```
 
+```{r check_mapping}
+
+# K76.1 ULMS mapping to chronic liver disease, but is actually about downstream consequences of
+# heart failure/disease 
+disease_mapping_with_cause |> 
+  filter(icd10_code == "K76.1" & grepl("UMLS", icd10_code_origin)) |> 
+  select(`DISEASE/TRAIT`, cause) |> 
+  distinct()  |> 
+  head()
+
+# remove this mapping 
+disease_mapping_with_cause = 
+  disease_mapping_with_cause |>
+  filter(!(icd10_code == "K76.1" & grepl("UMLS", icd10_code_origin)))
+
+```
+
+```{r check_mapping_results}
+
+print("Number of unique studies mapped to a cause:")
+disease_mapping_with_cause |> 
+  filter(!is.na(cause)) |> 
+  pull(PUBMED_ID) |> 
+  unique() |> 
+  length()
+
+print("Number of unique studies mapped to non-communicable diseases:")
+# filter out infectious diseases
+disease_mapping_with_cause |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders")) |>
+    filter(!is.na(cause)) |> 
+  pull(PUBMED_ID) |> 
+  unique() |> 
+  length()
+
+```
+
+
+# Check recall i.e. that I have identified most/all studies of the priority diseases
+
+## Diabetes 
+
+```{r recall_diabetes}
+
+no_capture <- paste0("(?<!no )",
+                "(?<!non )",
+                "(?<!no type 2 )"
+                )
+
+diabetes_grep = paste0(no_capture, "diabetes")
+
+disease_mapping_with_cause |>
+  filter(grepl(diabetes_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(diabetes_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  select(PUBMED_ID, 
+         `DISEASE/TRAIT`,
+         collected_all_disease_terms, 
+         icd10_code,
+         cause) |>
+  distinct() 
+
+
+```
+
+## Liver cancer, and other chronic liver diseases (e.g. cirrhosis) 
+
+Check recall for these together as they are often comorbid and may be captured by similar terms
+
+```{r recall_liver_cancer}
+
+liver_cancer_grep = paste0(no_capture, "liver|cirhosis|hepatocellular carcinoma|hepatoma|hepatic carcinoma")
+
+disease_mapping_with_cause |>
+  filter(grepl(liver_cancer_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(liver_cancer_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T)) |>
+  ungroup() |>
+  select(`DISEASE/TRAIT`,
+         collected_all_disease_terms) |>
+  distinct()
+
+```
+
+## Stroke
+
+```{r recall_stroke}
+
+stroke_grep = paste0(no_capture, 
+                     "stroke|cerebrovascular|cerebral|hemorrhage")
+
+disease_mapping_with_cause |>
+  filter(grepl(stroke_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(stroke_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                collapse = ", ",
+                                na.rm = T)) |>
+  ungroup() |>
+  select(`DISEASE/TRAIT`,
+         collected_all_disease_terms) |>
+  distinct()
+  
+
+```
+
+## Stomach cancer
+
+```{r recall_stomach_cancer}
+
+stomach_cancer_grep = paste0(no_capture, 
+                     "stomach|gastric")
+
+disease_mapping_with_cause |>
+  filter(grepl(stomach_cancer_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(stomach_cancer_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                collapse = ", ",
+                                na.rm = T)) |>
+  ungroup() |>
+  select(`DISEASE/TRAIT`,
+         collected_all_disease_terms) |>
+  distinct()
+
+
+```
+
+## Cervical cancer
+
+```{r recall_cervical_cancer}
+
+cervical_cancer_grep = paste0(no_capture, 
+                     "cervical|cervix")
+
+disease_mapping_with_cause |>
+  filter(grepl(cervical_cancer_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(cervical_cancer_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                collapse = ", ",
+                                na.rm = T)) |>
+  ungroup() |>
+  select(`DISEASE/TRAIT`,
+         collected_all_disease_terms) |>
+  distinct()
+
+# pubmed 35729236 studies 
+# hormone-sensitive cancers: breast, ovarian, thyroid, prostate, and uterine cancer
+# but GWAS Catalog mapped uterine cancer to cervical cancer, which is
+# why it is picked up in this recall, but correctly not 
+# mapped to cervical cancer in ICD-10 mapping!
+
+
+# human papilloma virus (HPV) is a major cause of cervical cancer ...
+# so do we include studies of HPV in our mapping of cervical cancer?
+hpv_grep <- paste0(no_capture, 
+                     "hpv|human papilloma virus|pap smear")
+
+disease_mapping_with_cause |>
+  filter(grepl(hpv_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(hpv_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                collapse = ", ",
+                                na.rm = T)) |>
+  ungroup() |>
+  select(`DISEASE/TRAIT`,
+         collected_all_disease_terms) |>
+  distinct()
+
+disease_mapping_with_cause <- 
+  disease_mapping_with_cause |>
+  mutate(icd10_code = str_replace(icd10_code, "R879", "R87.9")) 
+
+```
+
+## Lip and oral cavity cancer
+
+```{r recall_lip_oral_cavity_cancer}
+
+lip_oral_cavity_cancer_grep = paste0(no_capture, 
+                     "lip\\b|oral cavity|mouth|tongue|pharynx|larynx|pharyngeal|laryngeal")
+
+disease_mapping_with_cause |>
+  filter(grepl(lip_oral_cavity_cancer_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(lip_oral_cavity_cancer_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  filter(!grepl("cleft", `DISEASE/TRAIT`, ignore.case = TRUE)) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                collapse = ", ",
+                                na.rm = T))
+
+
+# !!!!!!!!!!!! Maybe caught one! 
+
+```
+
+## Heart disease
+
+```{r}
+
+heart_disease_grep = paste0(no_capture, 
+                     "heart disease|cardiovascular|coronary|myocardial|angina|heart failure")
+
+disease_mapping_with_cause |>
+  filter(grepl(heart_disease_grep, 
+               `DISEASE/TRAIT`, 
+               ignore.case = TRUE, 
+               perl = TRUE)|
+           grepl(heart_disease_grep,
+                collected_all_disease_terms,
+                ignore.case = TRUE,
+                perl = TRUE
+                )
+         ) |>
+  group_by(PUBMED_ID) |>
+  filter(all(is.na(cause))) |>
+  group_by(PUBMED_ID, 
+           `DISEASE/TRAIT`,
+           collected_all_disease_terms,
+           cause) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(icd10_code), 
+                                collapse = ", ",
+                                na.rm = T))
+
+```
+
+# Check precision i.e. that the studies I have mapped to the priority diseases are actually about those diseases
+
+## Type 2 diabetes 
+
+```{r precision_type_2_diabetes}
+
+disease_mapping_with_cause |>
+  filter(cause == "Type 2 diabetes mellitus") |>
+  filter(!grepl("type 2 diabetes|diabetes type 2|e11|type ii diabetes", `DISEASE/TRAIT`, ignore.case = TRUE) 
+         ) |>
+ group_by(PUBMED_ID,
+          STUDY_ACCESSION,
+          `DISEASE/TRAIT`,
+          collected_all_disease_terms) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(cause), 
+                                collapse = ", ",
+                                na.rm = T)) |>
+  select(PUBMED_ID, 
+         `DISEASE/TRAIT`,
+         collected_all_disease_terms, 
+         icd10_code,
+         cause) |>
+  distinct()
+
+
+# problems with GCST90079743, GCST90083729 study provided mapping
+
+# pubmed id 29703844 - should map to type 2 diabetes
+#  genome-wide association study (GWAS) of DKD in type 2 diabetes (T2D)
+
+
+# ? idk: 27670767
+
+```
+
+
 ### Checking hierarchy levels
 
 ```{r check_hierarchy_levels}
 
-disease_mapping_with_cause = 
-  disease_mapping_with_cause |>
-  filter(!is.na(cause))
+# disease_mapping_with_cause = 
+#   disease_mapping_with_cause |>
+#   filter(!is.na(cause))
 
 # filtering na to deal with pivoting 
 # disease_mapping_with_cause_grouped = 
