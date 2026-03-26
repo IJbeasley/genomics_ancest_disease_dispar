@@ -2367,13 +2367,42 @@ add_head_neck_cancer <-
            disease_terms = "head and neck malignant neoplasia",
            DISEASE_STUDY = T) 
 
+
+# 21437268 - add pharynx cancer, oral cavity cancer
+add_pharynx_cancer <-
+  gwas_study_info |> 
+    filter(PUBMED_ID == 21437268) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "pharyngeal cancer",
+           DISEASE_STUDY = T)
+
+add_oral_cavity_cancer <-
+  gwas_study_info |> 
+    filter(PUBMED_ID == 21437268) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "oral cavity carcinoma",
+           DISEASE_STUDY = T)
+
+add_oropharyngeal_cancer <-
+  gwas_study_info |> 
+    filter(PUBMED_ID %in% c(35459784, 37706329, 34642315)) |>
+    slice_sample(n = 1, by = PUBMED_ID) |>
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "oropharyngeal cancer",
+           DISEASE_STUDY = T)
+
+
 gwas_study_info <- 
 rows_append(gwas_study_info,
             rbind(add_missed_breast_cancer,
               add_missed_colorectal_cancer,
               add_small_cell_lung_carcinoma,
               add_lung_cancer,
-              add_head_neck_cancer
+              add_head_neck_cancer,
+              add_pharynx_cancer,
+              add_oropharyngeal_cancer,
+              add_oral_cavity_cancer
+            
               )
             )
   
@@ -2502,6 +2531,13 @@ gwas_study_info |>
            disease_terms = "chronic obstructive pulmonary disease",
            DISEASE_STUDY = T)
 
+add_other_missed_copd <-
+gwas_study_info |>
+    filter(PUBMED_ID  == "30657218") |> 
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "chronic obstructive pulmonary disease",
+           DISEASE_STUDY = T)
+
 
 gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
@@ -2530,6 +2566,7 @@ gwas_study_info |>
 gwas_study_info <-
 rows_append(gwas_study_info,
             rbind(add_missed_copd,
+                  add_other_missed_copd,
               add_missed_asthma,
               add_missed_ild
               )
