@@ -490,7 +490,7 @@ get_crossref_links <- function(doi) {
 ```{r get_elsevier_dois}
 
 # elsevier dois:
-elsevier_doi_patterns <-	"10.1016|10.1053|10.1086|10.1194|10.1593|10.1097/jto.|10.1182"
+elsevier_doi_patterns <-	"10.1016|10.1053|10.1086|10.1194|10.1593|10.1097/jto.|10.1182|10.1038/sj.ki"
 
 elsevier_dois <- grep(elsevier_doi_patterns,
                           doi_information$DOI,
@@ -697,9 +697,6 @@ springer_nature_links <-
        doi_information$DOI,
        value = TRUE)
 
-springer_nature_links <- str_remove_all(pattern = "https://doi.org/", 
-                                        string = springer_nature_links)
-
 print("Number of papers potentially can get from Springer Nature:")
 length(springer_nature_links)
 
@@ -708,26 +705,49 @@ length(springer_nature_links)
 
 ```{r download_springer_full_texts, eval = F}
 
-pmids <- doi_information %>%
+springer_to_get <- doi_information %>%
   filter(DOI %in% paste0("https://doi.org/", 
-                         springer_nature_links)) %>%
-  pull(PMID)
+                         springer_nature_links))
+
+springer_nature_links <- springer_to_get$DOI |> 
+  str_remove_all(pattern = "https://doi.org/")
+
+springer_nature_pmids <- springer_to_get$PMID
 
 check_springer_oa <- function(doi, 
                               api_key,
                               pmids,
                               out_dir = here::here("output/fulltexts/springer_nature/")) {
   
-  if(file.exists(paste0(out_dir, pmids, ".xml"))){
-    return(data.frame(doi = doi, 
-                      openaccess = TRUE)
-    )
-  }
+  # if(file.exists(paste0(out_dir, pmids, ".xml"))){
+  #   return(data.frame(doi = doi, 
+  #                     openaccess = TRUE)
+  #   )
+  # }
   
-  url<- paste0("https://api.springernature.com/openaccess/jats?",
-               "api_key=", api_key,
-               "&q=", doi
-  )
+query <- glue::glue('(doi:"{doi}")')
+
+url <- modify_url(
+    "https://api.springernature.com/openaccess/jats",
+    query = list(
+        api_key = Sys.getenv("NATURE_SPRINGER_OA_API_KEY"),
+        callback = "",
+        s = 1,
+        p = 1,
+        q = query
+    )
+)
+  
+  # url<- paste0('https://api.springernature.com/openaccess/',
+  #               'jats?',
+  #              'api_key=', api_key,
+  #              '&callback=&s=1&p=1',
+  #              '&q=(doi:', '"', doi, '"', ")"
+  # )
+  
+  # url <-  'https://api.springernature.com/openaccess/jats?api_key=237213d679b2c31096e6e777bd122f5c&q=(doi="10.1038/nature05616")'
+  
+  print(url)
   
   response <- GET(url)
   
@@ -761,10 +781,15 @@ check_springer_oa <- function(doi,
     )
     
 }
+
+check_springer_oa(doi = springer_nature_links[1],
+                      api_key = Sys.getenv("NATURE_SPRINGER_OA_API_KEY"),
+                      pmids = springer_nature_pmids[1]
+                  )
   
   oa_status <-
 purrr::map2(springer_nature_links,
-           pmids,
+            springer_nature_pmids,
            ~check_springer_oa(doi = .x,
                               api_key = Sys.getenv("NATURE_SPRINGER_OA_API_KEY"),
                               pmids = .y)
