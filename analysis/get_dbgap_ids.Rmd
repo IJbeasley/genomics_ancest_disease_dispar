@@ -19,33 +19,442 @@ library(stringr)
 
 ```
 
-## Get pubmed ids for disease studies
+# Get from full text 
 
-```{r load-data}
+## Functions to extract dbGaP (and other archive) ids from full text
 
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+```{r get_full_text_files_fns}
 
-gwas_study_info = gwas_study_info |>
-  dplyr::rename_with(~ gsub(" ", "_", .x))
+# patterns to extract: 
+# get dbgap ids
+# get EGA ids
+# get JGAS
+# get PRJEB / PRJNA ids
+patterns <- list(
+  dbgap = "\\bphs\\d+(?:\\.v\\d+)?(?:\\.p\\d+)?",
+  ega   = "\\bEGA[CDFS]\\d+",
+  jgas  = "\\bJGAS\\d+|JGAD\\d+",
+  prj   = "\\bPRJEB\\d+|PRJNA\\d+"
+)
 
-gwas_study_info =
-  gwas_study_info |>
-  dplyr::filter(DISEASE_STUDY == T)
+grep_pattern <- paste(patterns, collapse = "|")
 
-all_pmids <-
-unique(gwas_study_info$PUBMED_ID)
+library(tokenizers)
 
-print(length(all_pmids))
+# get sentences with dbgap / ega ids etc. in them
+get_grep_sentences <- function(file_path,
+                               grep_pattern) {
+  
+  #browser()
+  
+  
+  txt_in <- suppressWarnings(xml2::read_xml(file_path))
+  
+  # txt_in <- tryCatch(
+  #   xml2::read_xml(file_path),
+  #   error = function(e) {
+  #     print(paste0("error with ", file_path));
+  #     return(NULL)
+  #   }
+  # )
+  
+  txt_in <- xml2::read_xml(file_path)
+  
+  get_patterns <- c(".//*[local-name()='body']//*[local-name()='p']",
+                    ".//*[local-name()='abstract']//*[local-name()='p']",
+                    ".//*[local-name()='back']//*[local-name()='p']",
+                    ".//*[local-name()='fig']//*[local-name()='caption']",
+                    ".//*[local-name()='table-wrap']//*[local-name()='p']",
+                    ".//*[local-name()='sec' and @sec-type='data-availability']//*[local-name()='p']",
+                    ".//*[local-name()='supplementary-material']//*[local-name()='p']",
+                    ".//passage/text")
+  
+  canidate_text <- txt_in |>
+                   xml2::xml_find_all(paste(get_patterns, collapse = " | ")) |>
+                   # xml2::xml_find_all("//body//p | 
+                   #                     //abstract//p |
+                   #                    //back//p  |
+                   #                    //fig//caption |
+                   #                    //table-wrap//p |
+                   #                    //sec[@sec-type='data-availability']//p
+                   #                    //supplementary-material") |>
+                   #xml2::xml_find_all("//body|//back") |>
+                   xml2::xml_text()
+  
+  
+  if(length(canidate_text) == 0) {
+    print(paste0("No candidate text found in ", file_path))
+    return(character(0))
+  }
+  
+  # txt_in <- readLines(file_path,
+  #                     warn = FALSE,
+  #                     encoding = "UTF-8")
+  # tokenize into sentences
+  
+  
+  sentences <- unlist(
+  tokenize_sentences(paste(canidate_text, collapse = " "))
+)
+
+grep_sentences <- sentences[grepl(grep_pattern, sentences)]
+
+  # sentences <- tokenize_sentences(paste(canidate_text, collapse = "\n"))
+  # 
+  # grep_sentences <- sentences[grepl(grep_pattern, sentences)]
+
+  # grep_sentences <- tokenize_sentences(paste(candidate_lines, 
+  #                                            collapse = "\n"))
+  # 
+  # sentences <- tokenize_sentences(paste(txt_in, collapse = " "))
+  # 
+  # sentences <- unlist(tokenize_sentences(txt_in))
+  # 
+  # dbgap_sentences = sentences[grepl(grep_pattern, sentences)]
+
+  return(grep_sentences)
+}
+
 
 ```
 
-# Get dbGaP ids for pubmed ids
+## Text file paths to load 
+
+```{r get_full_text_file_paths}
+
+full_text_files <-
+  list.files(here::here("output/fulltexts"), 
+             recursive = T, 
+             pattern = "\\.xml$") 
+
+# some duplicates come from converted xml files 
+# i.e. from propriety wiley and elsevier xml
+# let's keep only the converted files:
+full_text_files <- 
+  grep("elsevier/elsevier_xml|wiley/wiley_xml", 
+       full_text_files, 
+       value = TRUE,
+       invert = TRUE)
+
+
+# get pmcids of these files
+all_ids <-
+  full_text_files |>
+  gsub(pattern = ".*/", replacement = "") |>
+  gsub(pattern = "\\.xml$", replacement = "") |>
+  gsub(pattern = "_bioc", replacement = "") |>
+  gsub(pattern = "\\.pdf.tei", replacement = "")
+
+# some duplicates come from ncbi and europe pmc
+# let's keep the europe pmc files
+duplicate_ids <-
+data.frame(ids = all_ids) |>
+  group_by(ids) |>
+  summarise(count = n()) |>
+  filter(count > 1) |>
+  pull(ids)
+
+grep(full_text_files, 
+     pattern = duplicate_ids[1],#paste(duplicate_ids, collapse = "|"),
+     value = T)
+
+duplicates_to_remove <-
+grep(full_text_files, 
+     pattern = paste(duplicate_ids, collapse = "|"),
+     value = T) |>
+  grep(pattern = "ncbi", value = T)
+
+full_text_files <- full_text_files[!c(full_text_files %in% duplicates_to_remove)]
+
+# convert to file paths 
+full_text_files <- here::here(paste0("output/fulltexts/", 
+                                     full_text_files)
+                              )
+
+# get pmids and pmcids of relevant files to load
+relevant_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) 
+
+relevant_ids <- c(relevant_ids$PMID, relevant_ids$pmcids)
+
+all_text_ids <-   full_text_files |>
+  gsub(pattern = ".*/", replacement = "") |>
+  gsub(pattern = "\\.xml$", replacement = "") |>
+  gsub(pattern = "_bioc", replacement = "") |>
+  gsub(pattern = "\\.pdf.tei", replacement = "")
+
+text_files_to_get <-
+data.frame(full_text_files = full_text_files,
+           all_text_ids = all_text_ids) |>
+  filter(all_text_ids %in% relevant_ids)
+
+full_text_files <- text_files_to_get$full_text_files
+
+print("Number of full text files to load:")
+print(length(full_text_files))
+
+```
+
+## Extract dbGaP accessions from full text
+
+```{r get_dbgap_from_full_text, warning=FALSE}
+
+pmcid_dbgap_sentences <- 
+purrr::map(full_text_files,
+           ~get_grep_sentences(.x, 
+                               grep_pattern = grep_pattern
+                               )
+           ) 
+
+all_text_ids <-   full_text_files |>
+  gsub(pattern = ".*/", replacement = "") |>
+  gsub(pattern = "\\.xml$", replacement = "")  |>
+  gsub(pattern = "_bioc", replacement = "") |>
+  gsub(pattern = "\\.pdf.tei", replacement = "")
+
+names(pmcid_dbgap_sentences) <- all_text_ids
+
+keep_pmcid_dbgap_sentences <-
+  purrr::discard(
+pmcid_dbgap_sentences,
+~rlang::is_empty(.x)
+) 
+
+
+# Convert to data frame
+sentences_df <- 
+  purrr::imap(keep_pmcid_dbgap_sentences,
+              ~data.frame(pmcid = .y,
+                          sentence = unique(.x),
+                        stringsAsFactors = FALSE)
+              )|>
+  dplyr::bind_rows()
+
+# Extract all dbGaP IDs from the sentences
+sentences_df <- sentences_df |>
+  mutate(
+    dbgap_id = str_extract_all(sentence, patterns[["dbgap"]]),
+                               #"phs\\d+(\\.v\\d+)?(\\.p\\d+)?"),
+    ega_id = str_extract_all(sentence, patterns[["ega"]]),
+                             #"EGA[CDFS]\\d+"),
+    jgas_id = str_extract_all(sentence, patterns[["jgas"]]),
+                              #"JGAS\\d+|JGAD"),
+    prj_id = str_extract_all(sentence, patterns[["prj"]]),
+                             #"PRJEB\\d+|PRJNA\\d+")
+  )
+             
+sentences_df = 
+  sentences_df |>
+  distinct()
+
+print("Number of unique PMCIDs with dbgap / ega ids found in full text:")
+sentences_df$pmcid |> unique() |> length()
+
+# number of pubmed ids with dbgap ids found
+print("Number of unique PMCIDs with dbgap ids found in full text:")
+sentences_df %>%
+  rowwise() %>%
+  filter(!rlang::is_empty(dbgap_id)) %>%
+  filter(length(dbgap_id) > 0) %>%
+  ungroup() %>%
+  pull(pmcid) %>%
+  unique() %>%
+  length()
+
+print("Number of unique PMCIDs with EGA ids found in full text:")
+sentences_df %>%
+  rowwise() %>%
+  filter(!rlang::is_empty(ega_id)) %>%
+  filter(length(ega_id) > 0) %>%
+  pull(pmcid) %>%
+  unique() %>%
+  length()
+
+convert_pmid_df  <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) |>
+  rename(PMCID = pmcids)
+
+# add pmid column
+sentences_df =
+  left_join(sentences_df,
+            convert_pmid_df |> 
+              dplyr::select(pmcid = PMCID,
+                            pmid = PMID),
+            by = "pmcid"
+            ) |>
+  mutate(pmid = ifelse(is.na(pmid), 
+                      pmcid,
+                      pmid
+                      )
+  ) |> 
+  mutate(pmcid = ifelse(grepl("PMC", pmid),
+                        pmid,
+                        pmcid)
+         ) |>
+  mutate(pmcid = ifelse(grepl("PMC", pmcid), 
+                        pmcid, 
+                        ""
+                        )
+  )
+
+
+sentences_df = 
+  left_join(sentences_df |> 
+              select(-pmcid) |> 
+              mutate(pmid = as.integer(pmid)),
+            convert_pmid_df |> 
+              dplyr::select(pmcid = PMCID,
+                            pmid = PMID),
+            by = "pmid"
+            ) 
+
+# typo in text for PMC8486151
+# replace  "phs000" with 
+# phs000.56.v1.p1
+
+sentences_df |> filter(pmcid == "PMC8486151") |> pull(dbgap_id)
+
+fix_dbgap_ids <- 
+  c(sentences_df |> filter(pmcid == "PMC8486151") |> pull(dbgap_id),
+    "phs00056.v1.p1"
+    ) |>
+  unlist()
+
+fix_dbgap_ids <- fix_dbgap_ids[fix_dbgap_ids != "phs000"]
+
+sentences_df <-
+  sentences_df |>
+  mutate(dbgap_id = ifelse(pmcid == "PMC8486151",
+                          list(fix_dbgap_ids),
+                          dbgap_id
+                          )
+         )
+         
+
+data.table::fwrite(sentences_df,
+                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
+                   )
+                   
+                   
+```
+
+                  
+# Get from Europe PMC list
+
+```{r get-dbgap-ids-europe-pmc}
+
+dbgap_info <-
+data.table::fread(here::here("data/europe_pmc/dbgap.csv")) 
+
+pmids <- convert_pmid_df$PMID 
+
+pmcids <- convert_pmid_df$PMCID
+
+relevant_pmid_dbgaps = dbgap_info |>
+  filter(EXTID %in% pmids) |>
+  distinct() 
+
+print("Number of unique PMIDs with dbgap ids found in Europe PMC:")
+relevant_pmid_dbgaps |>
+  pull(EXTID) |>
+  unique() |>
+  length()
+
+relevant_pmcids_dbgaps = dbgap_info |>
+  filter(PMCID %in% pmcids) |>
+  filter(PMCID != "") |>
+  distinct()
+
+print("Number of unique PMCIDs with dbgap ids found in Europe PMC:")
+relevant_pmcids_dbgaps |>
+  pull(PMCID) |>
+  unique() |>
+  length()
+
+# overlap between pmid and pmcid dbgap annotations in europe pmc
+print("Number of unique PMIDs with dbgap ids found in Europe PMC that also have dbgap ids found in full text:")
+unique(sentences_df$pmid) %in% unique(relevant_pmid_dbgaps$EXTID) |>
+  sum() 
+
+# overlap between pmid and pmcid dbgap annotations in europe pmc
+# 49 / 57 = 86% of pmids with dbgap ids in europe pmc annotations are also found in full text
+
+print("Number of unique PMIDs with dbgap ids found in full text, but not in Europe PMC:")
+setdiff(unique(sentences_df$pmid), 
+        unique(relevant_pmid_dbgaps$EXTID)) |> length()
+
+# 101 / 158 = 64% of pmids with dbgap ids found in full text are not found in europe pmc annotations
+
+print("Number of unique PMIDs with dbgap ids found in Europe PMC that do not have dbgap ids found in full text:")
+setdiff(unique(relevant_pmid_dbgaps$EXTID), 
+        unique(sentences_df$pmid)) |> length()
+
+```
+
+```{r compare-europe-pmc-full-text}
+
+full_text_dbgaps = 
+sentences_df  |>
+  select(dbgap_id, pmid, pmcid) |>
+  tidyr::unnest(dbgap_id) |>
+  mutate(dbgap_id = str_trim(dbgap_id)) |>
+  mutate(dbgap_id = str_extract(dbgap_id, "^phs\\d+")) |>
+  # mutate(dbgap_id = str_remove(dbgap_id, "\\.v\\d+\\.p\\d+.*$")) |> 
+  group_by(pmid, pmcid) |>
+  summarise(dbgap_full_text = str_flatten(unique(sort(dbgap_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) |>
+#  tidyr::nest(dbgap_full_text = dbgap_id) |>
+  mutate(pmid = as.character(pmid))
+
+
+europe_pmc_dbgaps =
+relevant_pmid_dbgaps |>
+  select(dbgap_id = dbgap,
+         pmcid = PMCID,
+         pmid = EXTID) |>
+    group_by(pmid, pmcid) |>
+  summarise(dbgap_epmc = str_flatten(unique(sort(dbgap_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) 
+ # tidyr::nest(dbgap_epmc = dbgap_id) 
+
+joined <-
+full_join(full_text_dbgaps,
+          europe_pmc_dbgaps,
+          by = c("pmid", "pmcid")
+          )
+
+# includes more dbgap ids from full text than europe pmc annotations
+joined |> 
+  filter(!is.na(dbgap_full_text) & !is.na(dbgap_epmc)) |> 
+  filter(dbgap_full_text != dbgap_epmc) 
+
+joined |>
+  filter(!is.na(dbgap_full_text) & is.na(dbgap_epmc))
+
+# seems good extraction: 
+# pubmed id: 39024449
+# pubmed id: 26959717
+# pubmed id: 31537701
+# pubmed id: 37167549
+# pubmed id: 30207284
+# pubmed id: 33135175
+# pubmed id: 37069358
+
+joined |>
+  filter(is.na(dbgap_full_text) & !is.na(dbgap_epmc))
+```
+
+# Get from Entrez
 
 ## Extract internal dbGAP ids
 
 ```{r get-dbgap-ids, eval = F}
 
+Sys.getenv("ENTREZ_KEY")
+
 get_internal_dbgap_ids = function(pubmed_id) {
+  
+  Sys.sleep(0.1)
 
 dbgap_links <- entrez_link(
             dbfrom = "pubmed",
@@ -54,6 +463,10 @@ dbgap_links <- entrez_link(
 )
 
 dbgap_ids <- unlist(dbgap_links$links$pubmed_gap)
+
+if(is.null(dbgap_ids)){
+  dbgap_ids = NA
+}
 
 return(data.frame(PUBMED_ID = pubmed_id,
                   DBGAP_ID = str_flatten(dbgap_ids,
@@ -64,13 +477,12 @@ return(data.frame(PUBMED_ID = pubmed_id,
 
 }
 
-
 pubmed_dbgap_mapping <-
-purrr::map(all_pmids,
-           get_internal_dbgap_ids
+purrr::map(pmids,
+           get_internal_dbgap_ids,
+           .progress = TRUE
            ) |>
   dplyr::bind_rows()
-
 
 
 ```
@@ -98,13 +510,13 @@ n_with_dbgap = pubmed_dbgap_mapping |>
   dplyr::filter(DBGAP_ID != "") |>
   nrow()
 
+print("Number of unique PMIDs with dbgap ids found via Entrez:")
+n_with_dbgap
+
 percent_with_dbgap = n_with_dbgap / nrow(pubmed_dbgap_mapping) * 100
 
+print("Percentage of PMIDs with dbgap ids found via Entrez:")
 percent_with_dbgap
-
-# a lot of internal dbgap ids are not able be retrieve study accessions
-# sad
-# ? perhaps because they are old dbgap versions? 
 
 ```
 
@@ -112,14 +524,17 @@ percent_with_dbgap
 
 ```{r extract-dbgap-accessions, warning=FALSE, message=FALSE, eval = F}
 
-dbgap_ids = pubmed_dbgap_mapping$DBGAP_ID
+entrez_dbgap_ids = pubmed_dbgap_mapping$DBGAP_ID
 
-dbgap_ids = dbgap_ids[dbgap_ids != ""]
+entrez_dbgap_ids = entrez_dbgap_ids[entrez_dbgap_ids != ""]
 
-dbgap_ids = dbgap_ids |>
+entrez_dbgap_ids = entrez_dbgap_ids |>
   strsplit(",") |>
   unlist() |>
   unique()
+
+print("Number of unique internal dbgap ids to retrieve accessions for:")
+print(length(entrez_dbgap_ids))
 
 
 get_dbgap_accession = function(internal_dbgap_id) {
@@ -142,10 +557,43 @@ get_dbgap_accession = function(internal_dbgap_id) {
 } 
 
 dbgap_accession_mapping <-
-  purrr::map(dbgap_ids,
-             get_dbgap_accession
+  purrr::map(entrez_dbgap_ids,
+             get_dbgap_accession,
+             .progress = TRUE
              ) |>
   dplyr::bind_rows()
+
+```
+
+
+### Save dbGaP accession mapping
+
+```{r save-dbgap-accessions, eval = F}
+
+  data.table::fwrite(
+    dbgap_accession_mapping,
+     here::here("output/gwas_cohorts/gwas_study_dbgap_accessions.csv")
+                     )
+  
+
+```
+
+### Percentage of internal dbGaP ids for which we could not retrieve accessions
+
+```{r percent-with-dbgap-accessions}
+
+dbgap_accession_mapping <- data.table::fread(
+  here::here("output/gwas_cohorts/gwas_study_dbgap_accessions.csv")
+)
+
+# a lot of internal dbgap ids are not able be retrieve study accessions
+# sad
+# ? perhaps because they are old dbgap versions? 
+print("Number of internal dbgap ids for which we could not retrieve accessions:")
+dbgap_accession_mapping |> 
+  filter(DBGAP_ACCESSION == "") |>
+  nrow()
+
 
 pubmed_dbgap_mapping =
   pubmed_dbgap_mapping |>
@@ -163,205 +611,33 @@ left_join(pubmed_dbgap_mapping,
      by = c("DBGAP_ID" = "INTERNAL_DBGAP_ID")
      ) 
 
-
-
-```
-
-### Save dbGaP accession mapping
-
-```{r save-dbgap-accessions, eval = F}
-
-  data.table::fwrite(
-    dbgap_accession_mapping,
-     here::here("output/gwas_cohorts/gwas_study_dbgap_accessions.csv")
-                     )
-  
+print("Number of unique PMIDs with dbgap accessions found via Entrez:")
+dbgap_accession_mapping |>
+  filter(DBGAP_ACCESSION != "" & DBGAP_ID != "") |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
 
 ```
 
-## Percentage of studies with dbGaP accessions 
+### Save combined dbGaP mapping
 
-```{r percent-with-dbgap-accessions}
-
-# load previously saved mapping
-dbgap_accession_mapping <- data.table::fread(
-  here::here("output/gwas_cohorts/gwas_study_dbgap_accessions.csv")
-)
-
-# compress to one row per pubmed id
-dbgap_accession_mapping =
-  dbgap_accession_mapping |>
-  group_by(PUBMED_ID) |>
-  summarise(DBGAP_ACCESSION = str_flatten(unique(DBGAP_ACCESSION),
-                                         collapse = ",",
-                                         na.rm = TRUE),
-            DBGAP_ID = str_flatten(unique(DBGAP_ID),
-                                         collapse = ",",
-                                         na.rm = TRUE)
-            )
-
-n_with_dbgap_accession = dbgap_accession_mapping |>
-  dplyr::filter(DBGAP_ACCESSION != "") |>
-  nrow()
-
-percent_with_dbgap_accession = n_with_dbgap_accession / nrow(pubmed_dbgap_mapping) * 100
-
-percent_with_dbgap_accession
-```
-
-# Do the reverse - dbGaP to pubmed
-
-```{r dbgap-to-pubmed, eval = F}
-
-dbgap_to_pubmed_id <- function(dbgap_accession) {
-  
-  res <- entrez_search(db = "gap",
-                       term = paste0(dbgap_accession, "[STID]"))
-  
-  links <- entrez_link(dbfrom = "gap",
-                       db = "pubmed",
-                       id = res$ids
-                       )
-  
-  pmids <- unlist(links$links$gap_pubmed)
-  
-  return(data.frame(
-    DBGAP_ACCESSION = dbgap_accession,
-    DBGAP_ID = str_flatten(res$ids,
-                            collapse = ",",
-                            na.rm = TRUE),
-    PUBMED_ID = str_flatten(pmids,
-                            collapse = ",",
-                            na.rm = TRUE)
-  )
-  )
-  
-}
-
-safe_dbgap_to_pubmed_id <- purrr::possibly(dbgap_to_pubmed_id,
-                                        otherwise = data.frame(
-                                          DBGAP_ACCESSION = NA,
-                                          DBGAP_ID = NA,
-                                          PUBMED_ID = NA
-                                        ))
-
-# get known dbgap accessions from gwas study info
-cohort_info <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
-                                 sheet = 1)
-dbgap_accessions <- 
-  c(cohort_info$dbGaP[cohort_info$dbGaP != "" & !is.na(cohort_info$dbGaP)],
-    dbgap_accession_mapping$DBGAP_ACCESSION[dbgap_accession_mapping$DBGAP_ACCESSION != ""]
-    )
-
-dbgap_accessions <- unlist(strsplit(dbgap_accessions, ","))
-
-dbgap_accessions <- unique(dbgap_accessions)
-
-
-
-dbgap_to_pubmed_mapping <-
-  purrr::map(dbgap_accessions,
-             safe_dbgap_to_pubmed_id
-             ) |>
-  dplyr::bind_rows()
-
-dbgap_to_pubmed_mapping = 
-dbgap_to_pubmed_mapping |>
-  filter(!is.na(PUBMED_ID)) |>
-  tidyr::separate_longer_delim(cols = "PUBMED_ID", delim = ",")
-
-dbgap_accession_mapping =
-  dbgap_accession_mapping |>
-  mutate(DBGAP_ACCESSION = as.character(DBGAP_ACCESSION)) 
-
-dbgap_to_pubmed_mapping =
-  dbgap_to_pubmed_mapping |>
-  mutate(PUBMED_ID = as.numeric(PUBMED_ID))
-
-combined_dbgap_pubmed_mapping =
-bind_rows(
-dbgap_accession_mapping,
-dbgap_to_pubmed_mapping)
-
-combined_dbgap_pubmed_mapping =
-combined_dbgap_pubmed_mapping |>
-  distinct()
-
-combined_dbgap_pubmed_mapping =
-combined_dbgap_pubmed_mapping |>
-  filter(!(DBGAP_ID == "" & is.na(DBGAP_ACCESSION))
-         )
-
-combined_dbgap_pubmed_mapping =
-  combined_dbgap_pubmed_mapping |>
-  filter(!(is.na(PUBMED_ID)))
-
-# filter for pmids in gwas study info
-combined_dbgap_pubmed_mapping =
-  combined_dbgap_pubmed_mapping |>
-  filter(PUBMED_ID %in% all_pmids)
+```{r save-combined-dbgap-mapping, eval = F}
 
 combined_dbgap_pubmed_mapping = 
-  combined_dbgap_pubmed_mapping |>
-  arrange(PUBMED_ID)
-
-combined_dbgap_pubmed_mapping =
-  combined_dbgap_pubmed_mapping |>
-  mutate(DBGAP_ACCESSION = stringr::str_remove_all(pattern = "^,|,$", 
-                                                   DBGAP_ACCESSION),
-         DBGAP_ID = stringr::str_remove_all(pattern = "^,|,$", 
-                                            DBGAP_ID)
-         )
-
-combined_dbgap_pubmed_mapping =
-  combined_dbgap_pubmed_mapping |>
-  group_by(PUBMED_ID) |>
-  summarise(
-    DBGAP_ACCESSION = str_flatten(unique(
-                                 unlist(strsplit(DBGAP_ACCESSION, ","))
-                                       ),
-                                 collapse = ",",
-                                 na.rm = TRUE),
-    DBGAP_ID = str_flatten(unique(
-                                 unlist(strsplit(DBGAP_ID, ","))
-                                 ),
-                                 collapse = ",",
-                                 na.rm = TRUE)
-    )
-  
-```
-
-## Save complete dbGaP to pubmed mapping
-
-```{r save-complete-dbgap-pubmed-mapping, eval = F}
+  dbgap_accession_mapping |>
+  filter(DBGAP_ACCESSION != "" & DBGAP_ID != "") |>
+  select(PUBMED_ID, DBGAP_ACCESSION) |>
+  distinct()
 
 data.table::fwrite(
-    combined_dbgap_pubmed_mapping,
-     here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
-                     )
-
-```
-
-## Percentage now of studies with dbGaP accessions
-
-```{r percent-with-complete-dbgap-accessions}
-
-# load previously saved mapping
-combined_dbgap_pubmed_mapping <- data.table::fread(
+  combined_dbgap_pubmed_mapping,
   here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
 )
 
-n_studies_with_dbgap =
-combined_dbgap_pubmed_mapping |>
-  filter(!(DBGAP_ACCESSION == "" & DBGAP_ID == "")) |>
-  nrow()
-
-n_studies_with_dbgap / nrow(pubmed_dbgap_mapping) * 100
-
 ```
 
-
-# Compare dbgap retrieved via extracting full text vs via entrez
+## Compare dbgap retrieved via extracting full text vs via entrez
 
 ```{r compare-dbgap-sources}
 
@@ -369,83 +645,231 @@ combined_dbgap_pubmed_mapping <- data.table::fread(
   here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
 )
 
-combined_dbgap_pubmed_mapping =
+entrez_dbgaps <- 
   combined_dbgap_pubmed_mapping |>
-  select(pmid = PUBMED_ID,
-         dbgap_annotation = DBGAP_ACCESSION
+  rename(pmid = PUBMED_ID,
+         dbgap_id = DBGAP_ACCESSION
          ) |>
-  distinct()
+  mutate(dbgap_id = str_extract(dbgap_id, "^phs\\d+")) |>
+  filter(dbgap_id != "") |>
+  group_by(pmid) |>
+  summarise(dbgap_annotation = str_flatten(unique(sort(dbgap_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) |>
+  mutate(pmid = as.character(pmid))
 
-combined_dbgap_pubmed_mapping = 
-  combined_dbgap_pubmed_mapping |>
-  filter(!is.na(dbgap_annotation) & dbgap_annotation != "") |>
-  summarise(dbgap_annotation = str_flatten(unique(dbgap_annotation),
-                                             collapse = "|",
-                                             na.rm = TRUE),
-            .by = pmid
-            )
 
-dbgap_text <- data.table::fread(
-                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
-)
+joined_dbgaps =
+full_join(entrez_dbgaps,
+          full_text_dbgaps,
+          by = "pmid")
 
-pmid_to_pmcid = data.table::fread(
-  here::here("output/gwas_cat/gwas_pubmed_to_pmcid_mapping.csv")
-)
-
-dbgap_text <- data.table::fread(
-                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
-)
-
-dbgap_text <-
-  dbgap_text |>
-  select(dbgap_extracted = dbgap_id,
-         pmcid
-         ) |>
-  filter(dbgap_extracted != "") 
-
-dbgap_text =
-  dbgap_text |>
-  group_by(pmcid) |>
-  summarise(dbgap_extracted = str_flatten(unique(dbgap_extracted),
-                                          collapse = "|",
-                                          na.rm = TRUE)
-            )
-
-dbgap_text =
-  left_join(dbgap_text,
-            pmid_to_pmcid |> rename(pmcid = pmcids,
-                                    pmid = pmids),
-            by = "pmcid"
-            ) 
-
-comparison_df =
-  full_join(
-    combined_dbgap_pubmed_mapping,
-    dbgap_text,
-    by = c("pmid")
-  )
-
-# overlaps
-comparison_df |>
-  filter(dbgap_annotation != "" &
-         dbgap_extracted != ""
-         ) |> 
+print("Number of PMIDs with dbgap annotations from Entrez that do not match dbgap ids found in full text:")
+joined_dbgaps |>
+  filter(!is.na(dbgap_annotation) & !is.na(dbgap_full_text)) |>
+  filter(dbgap_annotation != dbgap_full_text)
+ 
+print("Number of PMIDs with dbgap annotations from Entrez that match dbgap ids found in full text:")
+joined_dbgaps |>
+  filter(!is.na(dbgap_annotation) & !is.na(dbgap_full_text)) |>
+  filter(dbgap_annotation == dbgap_full_text) |>
   nrow()
 
-# only in annotation
-comparison_df |>
-  filter(dbgap_annotation != "" &
-         (is.na(dbgap_extracted) | dbgap_extracted == "")
-         ) |> 
+print("Number of PMIDs with dbgap annotations from Entrez but no dbgap ids found in full text:")
+joined_dbgaps |>
+  filter(!is.na(dbgap_annotation) & is.na(dbgap_full_text)) |>
   nrow()
 
-# only in extracted
-comparison_df |>
-  filter((is.na(dbgap_annotation) | dbgap_annotation == "") &
-         dbgap_extracted != ""
-         ) |> 
+print("Number of PMIDs with dbgap found in full text but not in Entrez annotations:")
+joined_dbgaps |>
+  filter(is.na(dbgap_annotation) & !is.na(dbgap_full_text)) |>
   nrow()
-  
 
 ```
+
+# Combine and save
+
+```{r combine-and-save}
+
+# europe_pmc_dbgaps
+# entrez_dbgaps 
+# full_text_dbgaps
+
+full_text_dbgaps = 
+sentences_df  |>
+  select(dbgap_id, pmid, pmcid) |>
+  tidyr::unnest(dbgap_id) |>
+  mutate(dbgap_id = str_trim(dbgap_id)) |>
+  # mutate(dbgap_id = str_extract(dbgap_id, "^phs\\d+")) |>
+  # mutate(dbgap_id = str_remove(dbgap_id, "\\.v\\d+\\.p\\d+.*$")) |> 
+  group_by(pmid, pmcid) |>
+  summarise(dbgap_full_text = str_flatten(unique(sort(dbgap_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) |>
+#  tidyr::nest(dbgap_full_text = dbgap_id) |>
+  mutate(pmid = as.character(pmid))
+
+
+europe_pmc_dbgaps =
+relevant_pmid_dbgaps |>
+  select(dbgap_id = dbgap,
+         pmcid = PMCID,
+         pmid = EXTID) |>
+    group_by(pmid, pmcid) |>
+  summarise(dbgap_epmc = str_flatten(unique(sort(dbgap_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) 
+
+entrez_dbgaps <- 
+  combined_dbgap_pubmed_mapping |>
+  rename(pmid = PUBMED_ID,
+         dbgap_id = DBGAP_ACCESSION
+         ) |>
+  # mutate(dbgap_id = str_extract(dbgap_id, "^phs\\d+")) |>
+  filter(dbgap_id != "") |>
+  group_by(pmid) |>
+  summarise(dbgap_annotation = str_flatten(unique(sort(dbgap_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) |>
+  mutate(pmid = as.character(pmid))
+
+combined_annotations <-
+full_join(full_text_dbgaps,
+          europe_pmc_dbgaps,
+          by = c("pmid", "pmcid")
+          ) |>
+  full_join(entrez_dbgaps,
+            by = c("pmid")
+            ) |>
+  tidyr::separate_longer_delim(cols = c(dbgap_full_text),
+                               delim = ", ")|>
+  tidyr::separate_longer_delim(cols = c(dbgap_epmc),
+                               delim = ", ")|>
+  tidyr::separate_longer_delim(cols = c(dbgap_annotation),
+                               delim = ", ")|>
+  tidyr::pivot_longer(cols = c(dbgap_full_text, dbgap_epmc, dbgap_annotation),
+               names_to = "source",
+               values_to = "dbgap_id") |>
+  filter(!is.na(dbgap_id) & dbgap_id != "") |>
+  mutate(source = stringr::str_remove_all("dbgap_", string = source)) |>
+  mutate(source = ifelse(source == "annotation", "entrez", source)) |>
+  distinct()
+
+
+combined_annotations$pmid |> unique() |> length()
+
+
+n_pubmeds_per_dbgap =
+combined_annotations |>
+  mutate(broad_dbgap = str_extract(dbgap_id, "^phs\\d+")) |>
+  select(pmid, broad_dbgap) |>
+  distinct() |>
+  group_by(broad_dbgap) |>
+  summarise(n_pubmeds = n()) |>
+  arrange(desc(n_pubmeds))
+
+n_pubmeds_per_dbgap |>
+  head(
+  )
+
+n_pubmeds_per_dbgap$n_pubmeds |> summary()
+
+
+```
+
+### Are there any dbgap ids not in our cohort description mapping?
+
+```{r new_dbgap_ids}
+
+cohort_dbgap_mapping <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
+                                 sheet = 1)
+annotated_dbgap_ids =
+  combined_annotations |>
+  pull(dbgap_id) |>
+  str_trim() |>
+  str_extract(pattern = "^phs\\d+") |>
+  unique()
+
+cohort_desc_dbgap_ids = 
+  cohort_dbgap_mapping |>
+  pull(dbGaP) |>
+  strsplit(",") |>
+  unlist() |>
+  str_trim() |>
+  str_extract(pattern = "^phs\\d+") |> 
+  unique()
+
+cohort_desc_dbgap_ids_p2 = 
+    cohort_dbgap_mapping |>
+  pull(old_dbGaP) |>
+  strsplit(",") |>
+  unlist() |>
+  str_trim() |>
+  str_extract(pattern = "^phs\\d+") |> 
+  unique()
+
+cohort_desc_dbgap_ids <- unique(c(cohort_desc_dbgap_ids, cohort_desc_dbgap_ids_p2))
+
+not_found_dbgap_ids <- annotated_dbgap_ids[!c(annotated_dbgap_ids %in% cohort_desc_dbgap_ids)]
+
+not_found_dbgap_ids  <- sort(not_found_dbgap_ids)
+
+not_found_dbgap_ids |> length()
+
+not_found_dbgap_ids
+
+```
+
+
+```{r get_cohort_names}
+
+get_dbgap_cohort_names <- 
+cohort_dbgap_mapping |>
+  tidyr::separate_longer_delim(cols = c(dbGaP),
+                               delim = ",")  |>
+  tidyr::separate_longer_delim(cols = c(old_dbGaP),
+                               delim = ",")  |>
+  tidyr::pivot_longer(cols = c(dbGaP, old_dbGaP),
+               names_to = "source",
+               values_to = "dbgap_id") |>
+  select(cohort, dbgap_id) |>
+  mutate(dbgap_id = str_trim(dbgap_id)) |>
+  mutate(broad_dbgap = str_extract(dbgap_id, "^phs\\d+")) |>
+  filter(!is.na(dbgap_id)) |>
+  select(-dbgap_id) |>
+  distinct()
+
+get_dbgap_cohort_names |>
+  group_by(broad_dbgap) |>
+  summarise(n = n(),
+            cohorts = stringr::str_flatten(cohort, collapse = ", ", na.rm = T)) |>
+  filter(n > 1)
+
+get_dbgap_cohort_names <- 
+  get_dbgap_cohort_names |>
+  group_by(broad_dbgap) |>
+  summarise(cohort = stringr::str_flatten(cohort, collapse = "|", na.rm = T))
+
+dbgap_cohort_names =
+left_join(
+combined_annotations |> 
+  mutate(broad_dbgap = str_extract(dbgap_id, "^phs\\d+")),
+get_dbgap_cohort_names,
+by = c("broad_dbgap")
+) 
+
+
+```
+
+
+```{save-dbgap-cohort-names}
+
+data.table::fwrite(dbgap_cohort_names,
+                   here::here("output/gwas_cohorts/gwas_study_dbgap_cohort_names.csv")
+                   )
+
+```
+
+
+
+
