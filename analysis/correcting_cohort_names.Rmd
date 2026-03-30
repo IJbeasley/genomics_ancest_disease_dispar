@@ -1531,12 +1531,14 @@ gwas_study_info =
 
 gwas_study_info =
   gwas_study_info |>
-  mutate(COHORT = ifelse(COHORT != "",
-                         unlist(str_split(string = COHORT,
-                                          pattern = "\\|")
-                                ),
-                         "")
-         ) |>
+  tidyr::separate_rows(COHORT, sep = "\\|") |>
+  # mutate(COHORT = ifelse(COHORT != "",
+  #                        tidyr::separate_rows(COHORT, sep = "\\|"),
+  #                        # unlist(str_split(string = COHORT,
+  #                        #                  pattern = "\\|")
+  #                               # ),
+  #                        "")
+  #        ) |>
   group_by(PUBMED_ID) |>
   summarise(COHORT = str_flatten(unique(COHORT), 
                                  collapse = "|",
