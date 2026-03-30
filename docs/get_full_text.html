@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeecea90d627d3dfd80df1cbffd6fbc0f66f72d76btargetblankecea90da">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7a17bd6f6bf07a1c6d31d5400d252e722971a2edtargetblank7a17bd6a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ecea90d627d3dfd80df1cbffd6fbc0f66f72d76b" target="_blank">ecea90d</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7a17bd6f6bf07a1c6d31d5400d252e722971a2ed" target="_blank">7a17bd6</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeecea90d627d3dfd80df1cbffd6fbc0f66f72d76btargetblankecea90da"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7a17bd6f6bf07a1c6d31d5400d252e722971a2edtargetblank7a17bd6a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ecea90d627d3dfd80df1cbffd6fbc0f66f72d76b" target="_blank">ecea90d</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7a17bd6f6bf07a1c6d31d5400d252e722971a2ed" target="_blank">7a17bd6</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -615,7 +615,6 @@ Untracked files:
 
 Unstaged changes:
     Modified:   analysis/disease_inves_by_ancest.Rmd
-    Modified:   analysis/get_dbgap_ids.Rmd
     Modified:   analysis/gwas_to_gbd.Rmd
     Modified:   analysis/replication_ancestry_bias.Rmd
     Modified:   analysis/specific_aims_stats.Rmd
@@ -664,6 +663,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/7a17bd6f6bf07a1c6d31d5400d252e722971a2ed/analysis/get_full_text.Rmd" target="_blank">7a17bd6</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-03-30
+</td>
+<td>
+Fix springer nature download bug
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/a1dd9e212aebafe59a30ab9ecc2ccb4291929e87/docs/get_full_text.html" target="_blank">a1dd9e2</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-03-30
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1548,7 +1581,7 @@ class="uri">https://dev.elsevier.com/api_key_settings.html</a></li>
 <li>XMLS are in Elsevier’s proprietary XML format (not JATS)</li>
 </ul>
 <pre class="r"><code># elsevier dois:
-elsevier_doi_patterns &lt;-    &quot;10.1016|10.1053|10.1086|10.1194|10.1593|10.1097/jto.|10.1182&quot;
+elsevier_doi_patterns &lt;-    &quot;10.1016|10.1053|10.1086|10.1194|10.1593|10.1097/jto.|10.1182|10.1038/sj.ki&quot;
 
 elsevier_dois &lt;- grep(elsevier_doi_patterns,
                           doi_information$DOI,
@@ -1558,7 +1591,7 @@ elsevier_dois &lt;- grep(elsevier_doi_patterns,
 print(&quot;Number of papers potentially can get from Elsevier:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers potentially can get from Elsevier:&quot;</code></pre>
 <pre class="r"><code>length(elsevier_dois)</code></pre>
-<pre><code>[1] 41</code></pre>
+<pre><code>[1] 42</code></pre>
 <pre class="r"><code>elsevier_api_key &lt;- Sys.getenv(&quot;ELSEVIER_API_KEY&quot;)
 
 elsevier_doi_info &lt;- str_remove_all(pattern = &quot;https://doi.org/&quot;, 
@@ -1739,31 +1772,51 @@ class="section level3">
        doi_information$DOI,
        value = TRUE)
 
-springer_nature_links &lt;- str_remove_all(pattern = &quot;https://doi.org/&quot;, 
-                                        string = springer_nature_links)
-
 print(&quot;Number of papers potentially can get from Springer Nature:&quot;)
 length(springer_nature_links)</code></pre>
-<pre class="r"><code>pmids &lt;- doi_information %&gt;%
+<pre class="r"><code>springer_to_get &lt;- doi_information %&gt;%
   filter(DOI %in% paste0(&quot;https://doi.org/&quot;, 
-                         springer_nature_links)) %&gt;%
-  pull(PMID)
+                         springer_nature_links))
+
+springer_nature_links &lt;- springer_to_get$DOI |&gt; 
+  str_remove_all(pattern = &quot;https://doi.org/&quot;)
+
+springer_nature_pmids &lt;- springer_to_get$PMID
 
 check_springer_oa &lt;- function(doi, 
                               api_key,
                               pmids,
                               out_dir = here::here(&quot;output/fulltexts/springer_nature/&quot;)) {
   
-  if(file.exists(paste0(out_dir, pmids, &quot;.xml&quot;))){
-    return(data.frame(doi = doi, 
-                      openaccess = TRUE)
-    )
-  }
+  # if(file.exists(paste0(out_dir, pmids, &quot;.xml&quot;))){
+  #   return(data.frame(doi = doi, 
+  #                     openaccess = TRUE)
+  #   )
+  # }
   
-  url&lt;- paste0(&quot;https://api.springernature.com/openaccess/jats?&quot;,
-               &quot;api_key=&quot;, api_key,
-               &quot;&amp;q=&quot;, doi
-  )
+query &lt;- glue::glue(&#39;(doi:&quot;{doi}&quot;)&#39;)
+
+url &lt;- modify_url(
+    &quot;https://api.springernature.com/openaccess/jats&quot;,
+    query = list(
+        api_key = Sys.getenv(&quot;NATURE_SPRINGER_OA_API_KEY&quot;),
+        callback = &quot;&quot;,
+        s = 1,
+        p = 1,
+        q = query
+    )
+)
+  
+  # url&lt;- paste0(&#39;https://api.springernature.com/openaccess/&#39;,
+  #               &#39;jats?&#39;,
+  #              &#39;api_key=&#39;, api_key,
+  #              &#39;&amp;callback=&amp;s=1&amp;p=1&#39;,
+  #              &#39;&amp;q=(doi:&#39;, &#39;&quot;&#39;, doi, &#39;&quot;&#39;, &quot;)&quot;
+  # )
+  
+  # url &lt;-  &#39;https://api.springernature.com/openaccess/jats?api_key=237213d679b2c31096e6e777bd122f5c&amp;q=(doi=&quot;10.1038/nature05616&quot;)&#39;
+  
+  print(url)
   
   response &lt;- GET(url)
   
@@ -1797,10 +1850,15 @@ check_springer_oa &lt;- function(doi,
     )
     
 }
+
+check_springer_oa(doi = springer_nature_links[1],
+                      api_key = Sys.getenv(&quot;NATURE_SPRINGER_OA_API_KEY&quot;),
+                      pmids = springer_nature_pmids[1]
+                  )
   
   oa_status &lt;-
 purrr::map2(springer_nature_links,
-           pmids,
+            springer_nature_pmids,
            ~check_springer_oa(doi = .x,
                               api_key = Sys.getenv(&quot;NATURE_SPRINGER_OA_API_KEY&quot;),
                               pmids = .y)
@@ -1827,7 +1885,7 @@ auto-corpus -b NATURE_GENETICS -t &quot;output/fulltexts/springer_nature&quot; -
              pattern = &quot;\\.xml$&quot;
 )
 )</code></pre>
-<pre><code>[1] 76</code></pre>
+<pre><code>[1] 75</code></pre>
 <pre class="r"><code>print(&quot;Number of downloaded html files from Springer Nature:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of downloaded html files from Springer Nature:&quot;</code></pre>
 <pre class="r"><code>length(list.files(here::here(&quot;output/fulltexts/springer_nature&quot;),
@@ -1835,7 +1893,7 @@ auto-corpus -b NATURE_GENETICS -t &quot;output/fulltexts/springer_nature&quot; -
              pattern = &quot;\\.html$&quot;
 )
 )</code></pre>
-<pre><code>[1] 9</code></pre>
+<pre><code>[1] 72</code></pre>
 </div>
 <div id="download-full-text-from-wiley" class="section level3">
 <h3>Download full text from Wiley</h3>
@@ -2627,11 +2685,11 @@ full_text_pmids = unique(full_text_pmids)
 print(&quot;Number of PMIDs with full texts downloaded:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of PMIDs with full texts downloaded:&quot;</code></pre>
 <pre class="r"><code>sum(all_pmids %in% full_text_files)</code></pre>
-<pre><code>[1] 793</code></pre>
+<pre><code>[1] 792</code></pre>
 <pre class="r"><code>print(&quot;% of total PMIDs with full texts downloaded:&quot;)</code></pre>
 <pre><code>[1] &quot;% of total PMIDs with full texts downloaded:&quot;</code></pre>
 <pre class="r"><code>100 * sum(all_pmids %in% full_text_files) / length(all_pmids)</code></pre>
-<pre><code>[1] 95.77295</code></pre>
+<pre><code>[1] 95.65217</code></pre>
 <div id="number-of-papers-to-manually-review" class="section level2">
 <h2>Number of papers to manually review</h2>
 <p>The papers I can’t get full texts for automatically (either through
@@ -2641,11 +2699,11 @@ be manually reviewed to identify study cohorts.</p>
 <pre><code>[1] &quot;Number of PMIDs without full texts downloaded (to manually review):&quot;</code></pre>
 <pre class="r"><code>n_manual_review = length(all_pmids) - sum(all_pmids %in% full_text_files)
 n_manual_review</code></pre>
-<pre><code>[1] 35</code></pre>
+<pre><code>[1] 36</code></pre>
 <pre class="r"><code>print(&quot;Assuming 10 minutes per paper to review, total time (hours):&quot;)</code></pre>
 <pre><code>[1] &quot;Assuming 10 minutes per paper to review, total time (hours):&quot;</code></pre>
 <pre class="r"><code>n_manual_review * 10 / 60</code></pre>
-<pre><code>[1] 5.833333</code></pre>
+<pre><code>[1] 6</code></pre>
 </div>
 </div>
 <div id="extracting-methods-sections" class="section level1">
