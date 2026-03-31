@@ -115,15 +115,19 @@ ggplot(aes(x = group, y = n_studies, fill = type)) +
 
 ```
 
-# Number of papers - for 15 conditions
+# Number of papers
+
+## For all priority conditions
+
+Non-communicable and communicable
 
 ```{r n_total_papers, message=FALSE, warning=FALSE}
 
-#gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
 gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
 
 gwas_study_info = gwas_study_info |>
-  dplyr::rename_with(~ tolower(gsub(" ", "_", .x)))
+  dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
+  dplyr::filter(cause != "")
 
 # how many published studies (i.e. number of unique pubmed ids)
 n_published_studies <- gwas_study_info |>
@@ -135,19 +139,11 @@ n_published_studies <- gwas_study_info |>
 print("Number of published studies in GWAS Catalog:")
 print(n_published_studies)
 
-
 ```
 
-# Number of papers (excluding infectious diseases)
+## For non-communicable diseases only (i.e. excluding infectious disease studies)
 
 ```{r n_non_com_total_papers, message=FALSE, warning=FALSE}
-
-#gwas_study_info <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
-gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
-
-gwas_study_info = gwas_study_info |>
-  dplyr::rename_with(~ tolower(gsub(" ", "_", .x)))
-
 
 gwas_non_comm_study_info = gwas_study_info |>
   dplyr::filter(!cause %in% c("HIV/AIDS",
@@ -160,9 +156,9 @@ gwas_non_comm_study_info = gwas_study_info |>
                              "Diphtheria",
                              "Pertussis" ,
                              "Measles",
-                             "Maternal disorders"))
+                             "Maternal disorders")) 
 
-
+print("Non-communicable disease causes in the dataset:")
 gwas_non_comm_study_info$cause |> unique() |> sort()
 
 # how many published studies (i.e. number of unique pubmed ids)
@@ -172,11 +168,12 @@ n_published_non_comm_studies <- gwas_non_comm_study_info |>
   unique() |>
   length()
 
+print("Number of published non-communicable disease studies in GWAS Catalog:")
 n_published_non_comm_studies
 
 ```
 
-# Number of studies for each condition
+## For each condition
 
 ```{r n_papers_per_condition}
 
@@ -191,7 +188,8 @@ gwas_study_info |>
 lancet_grouping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
 
 lancet_grouping = lancet_grouping |>
-  dplyr::select(cause = mapped_gbd_term, lancet_group)
+  dplyr::select(cause = mapped_gbd_term, lancet_group) |>
+  distinct()
 
 condition_counts = condition_counts |>
   dplyr::left_join(lancet_grouping, by = "cause") |>
@@ -280,7 +278,8 @@ gwas_non_comm_study_info |>
 lancet_grouping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
 
 lancet_grouping = lancet_grouping |>
-  dplyr::select(cause = mapped_gbd_term, lancet_group)
+  dplyr::select(cause = mapped_gbd_term, lancet_group) |>
+  distinct()
 
 condition_counts = condition_counts |>
   dplyr::left_join(lancet_grouping, by = "cause") |>
@@ -354,7 +353,9 @@ ggplot(aes(x = reorder(cause, n_studies),
 
 ```
 
-# Relationship between causes and mapped traits
+# Examples
+
+## Relationship between causes and mapped traits
 
 ```{r causes_mapped_traits}
 
@@ -372,11 +373,34 @@ cause_mapped_trait_counts |>
 
 ```
 
-# Proportion include cohort information ( published papers in the GWAS catalog that )
+# Proportion of papers
+
+## That have cohort information/metadata that includes 'other' or 'multiple'
+
+```{r, eval = F}
+
+studies_with_other_or_multiple_cohort_info <- gwas_study_info |>
+  dplyr::mutate(COHORT = stringr::str_remove_all(pattern = "(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
+                                                 COHORT)) |> 
+  dplyr::filter(grepl("other|multiple", tolower(COHORT))) |>
+  dplyr::pull(pubmed_id) |>
+  unique() |>
+  length()
+
+print("Number of published studies with 'other' or 'multiple' cohort information:")
+print(studies_with_other_or_multiple_cohort_info)
+
+print("Proportion of published studies with 'other' or 'multiple' cohort information:")
+100 * studies_with_other_or_multiple_cohort_info / n_studies_with_cohort_info 
+
+
+```
+
+## That include cohort information (of all papers studying priority conditions)
 
 ```{r prop_cohort_info}
 
-gwas_cohort <- data.table::fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
+gwas_cohort <- data.table::fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv")) 
 
 gwas_cohort = gwas_cohort |>
   dplyr::filter(PUBMED_ID %in% unique(gwas_study_info$pubmed_id))
@@ -396,23 +420,9 @@ print("Proportion of published studies with cohort information:")
 
 ```
 
-# Proportion of non-communicable disease studies that include cohort information
+## That include cohort information/metadata (of non-communicable disease studies)
 
 ```{r prop_cohort_info_non_comm}
-
-gwas_non_comm_study_info = gwas_study_info |>
-  dplyr::filter(!cause %in% c("HIV/AIDS",
-                             "Tuberculosis",
-                             "Malaria",
-                             "Lower respiratory infections",
-                             "Diarrhoeal diseases",
-                             "Neonatal disorders",
-                             "Tetanus",
-                             "Diphtheria",
-                             "Pertussis" ,
-                             "Measles",
-                             "Maternal disorders"))
-
 
 gwas_cohort_non_comm = gwas_cohort |>
   dplyr::filter(PUBMED_ID %in% unique(gwas_non_comm_study_info$pubmed_id))
@@ -432,7 +442,7 @@ print("Proportion of published non-communicable disease studies with cohort info
 
 ```
 
-# Proportion of studies with abstracts
+## That have downloaded abstracts (of all papers studying non-communicable conditions)
 
 ```{r prop_abstracts}
 
@@ -440,196 +450,237 @@ downloaded_abstracts <-
  list.files(here::here("output/abstracts")) |> 
   stringr::str_remove_all(".txt$") 
 
-n_studies_with_abstracts <-
-gwas_study_info |>
+studies_with_abstracts <-
+gwas_non_comm_study_info |>
   dplyr::filter(pubmed_id %in% downloaded_abstracts) |>
   dplyr::pull(pubmed_id) |>
-  unique() |>
+  unique() 
+
+n_studies_with_abstracts <-
+  studies_with_abstracts  |>
   length()
 
 print("Number of published studies with abstracts downloaded:")
 print(n_studies_with_abstracts)
 
 print("Proportion of published studies with abstracts downloaded:")
-100 * n_studies_with_abstracts / n_published_studies
+100 * n_studies_with_abstracts / n_published_non_comm_studies
 
 print("Number of published studies without abstracts downloaded:")
-print(n_published_studies - n_studies_with_abstracts)
+print(n_published_non_comm_studies - n_studies_with_abstracts)
 
 ```
 
-# Year number of papers per condition
-
-```{r papers_per_year}
-
-gwas_study_info |>
-  select(cause, year, pubmed_id) |> 
-  distinct() |> 
-  ggplot(aes(x = year)) +
-  geom_histogram() + 
-  facet_wrap(~cause)
-
-
-gwas_study_info |>
-  select(cause, year, pubmed_id) |> 
-  distinct() |>
-  group_by(cause) |>
-  summarise(min_year = min(year),
-            first_quartile_year = quantile(year, 0.25),
-            median_year = median(year),
-            average_year = mean(year),
-            third_quartile_year = quantile(year, 0.75),
-            max_year = max(year)
-            ) 
-
-```
-
-# Proportion of studies with abstracts - non-communicable diseases only
-
-```{r prop_abstracts_non_comm}
-
-n_studies_with_abstracts_non_comm <-
-gwas_non_comm_study_info   |>
-   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
-  dplyr::filter(pubmed_id %in% downloaded_abstracts) |>
-  dplyr::pull(pubmed_id) |>
-  unique() |>
-  length()
-  
-print("Number of published non-communicable disease studies with abstracts downloaded:")
-print(n_studies_with_abstracts_non_comm)
-
-print("Proportion of published non-communicable disease studies with abstracts downloaded:")
-100 * n_studies_with_abstracts_non_comm / n_published_non_comm_studies
-
-
-```
-
-# Proportion of studies with full text: 
+## That have downloaded full text (.xml) (of all papers studying non-communicable conditions)
 
 ```{r prop_full_text}
 
-downloaded_fulltexts <-
-list.files(c(here::here("output/fulltexts/ncbi_cloud"),
-              here::here("output/fulltexts/europe_pmc")
-             
-             )
-) |>
-  stringr::str_remove_all(".xml|.pdf")
+full_text_files <-
+  list.files(here::here("output/fulltexts"), 
+             recursive = T, 
+             pattern = "\\.xml$") 
 
-convert_pmid_df <- data.table::fread(here::here("data/europe_pmc/PMID_PMCID_DOI.csv"))
+all_ids <-
+  full_text_files |>
+  gsub(pattern = ".*/", replacement = "") |>
+  gsub(pattern = "\\.xml$", replacement = "") |>
+  gsub(pattern = "_bioc", replacement = "") |>
+  gsub(pattern = "\\.pdf.tei", replacement = "")
 
-downloaded_fulltexts <-
-convert_pmid_df |>
-  dplyr::filter(PMCID %in% downloaded_fulltexts) |>
-  dplyr::pull(PMID) |> 
+
+converted_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) 
+
+# convert pmcids to pmids
+converted_pmids <-
+converted_ids |> 
+  filter(pmcids %in% all_ids) |>
+  pull(PMID) |>
   unique() 
 
-other_downloaded_fulltexts <-
-  list.files(c(here::here("output/fulltexts/springer_nature"),
-             here::here("output/fulltexts/wiley"),
-             here::here("output/fulltexts/elsevier"),
-             here::here("output/fulltexts/oxford_academic/txt"),
-             here::here("output/fulltexts/sage")
-             )
-             ) |>
-  stringr::str_remove_all(".xml|.txt|.pdf")
-
-downloaded_fulltexts <-
-c(downloaded_fulltexts,
-  other_downloaded_fulltexts
-) |>
+all_fulltext_pmids <- c(grep("PMC", all_ids, value = T, invert = T), 
+               converted_pmids) |> 
   unique()
 
-n_studies_with_fulltext <-
-gwas_study_info |>
-  dplyr::filter(pubmed_id %in% downloaded_fulltexts) |>
+studies_with_fulltext <-
+gwas_non_comm_study_info |>
+  dplyr::filter(pubmed_id %in% all_fulltext_pmids) |>
   dplyr::pull(pubmed_id) |>
-  unique() |>
+  unique() 
+
+studies_without_fulltext <-
+  gwas_non_comm_study_info |>
+  dplyr::filter(!c(pubmed_id %in% all_fulltext_pmids)) |>
+  dplyr::pull(pubmed_id) |>
+  unique() 
+
+n_studies_with_fulltext <-
+studies_with_fulltext |>
   length()
 
 print("Number of published studies with full text downloaded:")
 print(n_studies_with_fulltext)
 
 print("Proportion of published studies with full text downloaded:")
-100 * n_studies_with_fulltext / n_published_studies
+100 * n_studies_with_fulltext / n_published_non_comm_studies
 
 print("Number of published studies without full text downloaded:")
-print(n_published_studies - n_studies_with_fulltext)
+print(n_published_non_comm_studies - n_studies_with_fulltext)
 
 ```
 
+## Proportion of papers without full text downloaded 
 
-# Proportion of studies with full text - non-communicable diseases only
+### That have cohort information
 
-```{r prop_full_text_non_comm}
+```{r no_fulltext_cohort_info}
 
-studies_with_fulltext_non_comm <-
-gwas_non_comm_study_info |>
-   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
-  dplyr::filter(pubmed_id %in% downloaded_fulltexts) |>
-  dplyr::pull(pubmed_id) |>
-  unique()
-
-n_studies_with_fulltext_non_comm <-
-gwas_non_comm_study_info |>
-   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
-  dplyr::filter(pubmed_id %in% downloaded_fulltexts) |>
-  dplyr::pull(pubmed_id) |>
+n_studies_without_fulltext_with_cohort_info <-
+gwas_cohort |>
+  dplyr::filter(PUBMED_ID %in% studies_without_fulltext) |>
+  dplyr::filter(COHORT != "") |>
+  dplyr::pull(PUBMED_ID) |>
   unique() |>
   length()
 
-print("Number of published non-communicable disease studies with full text downloaded:")
-print(n_studies_with_fulltext_non_comm)
+print("Number of published studies without full text downloaded that have cohort information:")
+print(n_studies_without_fulltext_with_cohort_info)
 
-print("Proportion of published non-communicable disease studies with full text downloaded:")
-100 * n_studies_with_fulltext_non_comm / n_published_non_comm_studies
+print("Proportion of published studies without full text downloaded that have cohort information:")
+100 * n_studies_without_fulltext_with_cohort_info / length(studies_without_fulltext)
 
 ```
 
-# Of not full-text, how many open acess by OpenAlex? 
+### That have dbGAP info
 
-```{r open_access_no_fulltext}
+```{r no_fulltext_dbgap_info}
 
-library(openalexR)
-
-studies_without_fulltext <-
-  gwas_non_comm_study_info |>
-   dplyr::rename_with(~ tolower(gsub(" ", "_", .x))) |>
-  filter(!(pubmed_id %in% downloaded_fulltexts)) |>
-  pull(pubmed_id) |>
-  unique()
-
-doi_information <-
-convert_pmid_df |>
-  filter(PMID %in% studies_without_fulltext) |>
-  pull(DOI)
-
-doi_information = 
-doi_information[doi_information != ""]
-
-# get open alex works for pmids
-open_alex_works <- oa_fetch(
-  doi = doi_information,
-  entity = "works",
-  options = list(select = c("doi", 
-                            "open_access"))
+combined_dbgap_pubmed_mapping <- data.table::fread(
+  here::here("output/gwas_cohorts/gwas_study_combined_dbgap_pubmed_mapping.csv")
 )
 
+n_studies_without_fulltext_with_dbgap_info <-
+sum(studies_without_fulltext %in% combined_dbgap_pubmed_mapping$PUBMED_ID)
+
+print("Number of published studies without full text downloaded that have dbGAP information:")
+print(n_studies_without_fulltext_with_dbgap_info)
+
+print("Proportion of published studies without full text downloaded that have dbGAP information:")
+100 * n_studies_without_fulltext_with_dbgap_info / length(studies_without_fulltext)
+
 ```
 
-# Plot number of studies with abstracts or full text 
+
+## Proportion of papers with full text
+
+### That have cohort info 
+
+```{r overlap_cohort_fulltext}
+
+cohort_pubmed_ids <-
+gwas_cohort |>
+  dplyr::filter(PUBMED_ID %in% unique(gwas_non_comm_study_info$pubmed_id)) |>
+  dplyr::filter(COHORT != "") |>
+  dplyr::pull(PUBMED_ID) |>
+  unique() 
+
+n_studies_with_cohort_and_fulltext <-
+length(intersect(cohort_pubmed_ids, all_fulltext_pmids))
+
+print("Number of published studies with cohort information and full text downloaded:")
+print(n_studies_with_cohort_and_fulltext)
+
+print("Proportion of published studies with cohort information that also have full text downloaded:")
+100 * n_studies_with_cohort_and_fulltext / n_studies_with_cohort_info
+
+print("Proportion of published studies with full text downloaded that also have cohort information:")
+100 * n_studies_with_cohort_and_fulltext / n_studies_with_fulltext
+
+print("Proportion of published studies of non-communicable traits with cohort information or full text downloaded:")
+n_studies_with_cohort_or_fulltext <-
+length(unique(c(cohort_pubmed_ids, all_fulltext_pmids)))
+
+100 * n_studies_with_cohort_or_fulltext / n_published_non_comm_studies
+
+```
+
+
+### That have dbgap info 
+
+```{r overlap_dbgap_fulltext}
+  
+n_studies_with_dbgap_and_fulltext <-
+length(intersect(combined_dbgap_pubmed_mapping$PUBMED_ID, all_fulltext_pmids))
+
+n_studies_with_dbgap_info <- 
+combined_dbgap_pubmed_mapping$PUBMED_ID |>
+  unique() |>
+  length()
+
+print("Number of published studies with dbGAP information and full text downloaded:")
+print(n_studies_with_dbgap_and_fulltext)
+
+print("Proportion of published studies with dbGAP information that also have full text downloaded:")
+100 * n_studies_with_dbgap_and_fulltext / n_studies_with_dbgap_info
+
+print("Proportion of published studies with full text downloaded that also have dbGAP information:")
+100 * n_studies_with_dbgap_and_fulltext / n_studies_with_fulltext
+
+print("Proportion of published studies with dbGAP information or full text downloaded:")
+n_studies_with_dbgap_or_fulltext <-
+length(union(combined_dbgap_pubmed_mapping$PUBMED_ID, all_fulltext_pmids))
+
+100 * n_studies_with_dbgap_or_fulltext / n_published_non_comm_studies
+
+print("Proportion of published studies that have dbGAP, cohort information or full text downloaded:")
+n_studies_with_dbgap_cohort_or_fulltext <-
+length(Reduce(union, list(combined_dbgap_pubmed_mapping$PUBMED_ID,
+                                 cohort_pubmed_ids,
+                                 all_fulltext_pmids
+                                 )
+                      )
+       )
+
+100 * n_studies_with_dbgap_cohort_or_fulltext / n_published_non_comm_studies
+
+```
+
+
+
+# Plots
+
+
+
+## Number of studies with abstracts or full text 
 
 ```{r plot_abstracts_fulltext}
 
-data.frame(n_studies = c(n_published_studies - n_studies_with_abstracts,
-                         n_studies_with_abstracts - n_studies_with_fulltext,
-                         n_studies_with_fulltext),
-           type = c("all",
-                    "studies_with_abstracts",
-                    "studies_with_fulltext"),
-           group = c("GWAS Catalog Published Studies")) |>
-ggplot(aes(x = group, y = n_studies, fill = type)) +
+got_text_df <- 
+gwas_non_comm_study_info |>
+  select(pubmed_id) |>
+  distinct() |>
+  mutate(has_abstract = ifelse(pubmed_id %in% studies_with_abstracts, "Yes", "No"),
+         has_fulltext = ifelse(pubmed_id %in% studies_with_fulltext, "Yes", "No")) 
+
+
+got_text_df <-
+  got_text_df  |>
+  mutate(text_availability = case_when(
+    has_fulltext == "Yes" & has_abstract == "Yes" ~ "Full text + abstract",
+    has_abstract == "Yes" & has_abstract == "No" ~ "Abstract only",
+    has_fulltext == "Yes" & has_abstract == "No" ~ "Full text only",
+    TRUE ~ "None"
+  ))
+
+
+got_text_df <-
+  got_text_df |> 
+  group_by(text_availability) |>
+  summarise(n_studies = n()) 
+
+got_text_df |>
+ggplot(aes(x = text_availability, 
+           y = n_studies, 
+           fill = text_availability)) +
   geom_col(position = "stack") +
   labs(x = "",
        y = "Number of studies",
@@ -641,9 +692,9 @@ ggplot(aes(x = group, y = n_studies, fill = type)) +
   scale_fill_manual(
     name = "Text availability",
     values = c(
-      all = "grey",
-      studies_with_abstracts = "black",
-      studies_with_fulltext = "#7570b3"
+      "Full text + abstract" = "grey",
+      "Abstract only" = "black",
+      "Full text only" = "#7570b3"
     ),
     labels = c(
       all = "None",
@@ -664,34 +715,36 @@ ggplot(aes(x = group, y = n_studies, fill = type)) +
 
 ```
 
+## Year number of papers per condition
 
-# Studies without full text, what proportion have cohort info?
+```{r papers_per_year}
 
-```{r no_fulltext_cohort_info}
+gwas_study_info |>
+  select(cause, year, pubmed_id) |> 
+  distinct() |> 
+  ggplot(aes(x = year)) +
+  geom_histogram() + 
+  facet_wrap(~cause) + 
+  theme_minimal() 
 
-studies_without_fulltext <-
-setdiff(gwas_study_info$pubmed_id, downloaded_fulltexts)
 
-n_studies_without_fulltext_with_cohort_info <-
-gwas_cohort |>
-  dplyr::filter(!c(PUBMED_ID %in% downloaded_fulltexts) &
-                COHORT != "") |>
-  dplyr::pull(PUBMED_ID) |>
-  unique() |>
-  length()
-
-print("Number of published studies without full text downloaded that have cohort information:")
-print(n_studies_without_fulltext_with_cohort_info)
-
-print("Proportion of published studies without full text downloaded that have cohort information:")
-100 * n_studies_without_fulltext_with_cohort_info / length(studies_without_fulltext)
+gwas_study_info |>
+  select(cause, year, pubmed_id) |> 
+  distinct() |>
+  group_by(cause) |>
+  summarise(min_year = min(year),
+            first_quartile_year = quantile(year, 0.25),
+            median_year = median(year),
+            average_year = mean(year),
+            third_quartile_year = quantile(year, 0.75),
+            max_year = max(year)
+            ) 
 
 ```
 
-# Plot % deaths explained by diseases (California, 2019)
+## % deaths explained by diseases (California, 2019)
 
 ```{r deaths_by_condition}
-
 
 gbd_2019 <-
   data.table::fread(here::here("data/gbd/gbd_2019_california_percent_deaths.csv"))
@@ -772,7 +825,7 @@ cause_levels <- factor(gbd_2019$cause,
                         levels = gbd_2019$cause[order(gbd_2019$val)])
 
 ggsave(
-  filename = "california_rank_studies.pdf",
+  filename = here::here("figures/california_rank_studies.pdf"),
   width = 7.5 * 0.6,   # Letter width
   height = 11 * 0.3,   # Letter height
   units = "in",
@@ -781,13 +834,16 @@ ggsave(
 
 ```
 
-# Plot: Proportion of full text, across disease conditions
+## Proportion of papers with full text, across disease conditions
 
 ```{r fulltext_by_condition}
 
 fulltext_by_condition <-
   gwas_non_comm_study_info |>
-  dplyr::mutate(HAS_FULLTEXT = ifelse(pubmed_id %in% downloaded_fulltexts,
+  dplyr::filter(cause != "") |>
+  select(cause, pubmed_id) |>
+  distinct() |>
+  dplyr::mutate(HAS_FULLTEXT = ifelse(pubmed_id %in% all_fulltext_pmids,
                                      T,
                                      F)) |>
 # gwas_study_info |>
@@ -851,7 +907,8 @@ lancet_grouping = lancet_grouping |>
 
 fulltext_by_condition = fulltext_by_condition |>
   dplyr::left_join(lancet_grouping, by = "cause") |>
-  dplyr::arrange(desc(PROP_FULLTEXT))
+  dplyr::arrange(desc(PROP_FULLTEXT)) |>
+  distinct()
 
 
 # group liver cancer due to hepatitis B and liver cancer due to hepatitis C
@@ -912,7 +969,7 @@ fulltext_by_condition  = fulltext_by_condition  |>
 #   mutate(cause = factor(cause,
 #                         levels = gbd_2019$cause[order(gbd_2019$val)]))
 
-ggplot(aes(x = reorder(cause, N_STUDIES),
+ggplot(aes(x = reorder(cause, N_STUDIES), 
            fill = FULLTEXT_STATUS,
            y = N_STUDIES),
        data = fulltext_by_condition) +
@@ -984,225 +1041,17 @@ ggplot(aes(x = reorder(cause, N_STUDIES),
 # Export to PDF with letter size (8.5 x 11 inches)
 # Adjust width to maintain readability based on number of categories
 ggsave(
-  filename = "fulltext_by_condition.pdf",
-  width = 7.5 * 0.7,   # Letter width
-  height = 11 * 0.28,   # Letter height
+  filename = here::here("figures/fulltext_by_condition.png"),
+  width = 7.5 * 0.6,   # Letter width
+  height = 11 * 0.27275,   # Letter height
   units = "in",
-  device = cairo_pdf  # Better font rendering
+  device = "png" #cairo_pdf  # Better font rendering
 )
 
-
 ```
 
-# Overlap between studies with cohort info and full text 
 
-```{r overlap_cohort_fulltext}
 
-cohort_pubmed_ids <-
-gwas_cohort |>
-  dplyr::filter(COHORT != "") |>
-  dplyr::pull(PUBMED_ID) |>
-  unique() 
-
-fulltext_pubmed_ids <- downloaded_fulltexts
-
-n_studies_with_cohort_and_fulltext <-
-length(intersect(cohort_pubmed_ids, fulltext_pubmed_ids))
-
-print("Number of published studies with cohort information and full text downloaded:")
-print(n_studies_with_cohort_and_fulltext)
-
-print("Proportion of published studies with cohort information that also have full text downloaded:")
-100 * n_studies_with_cohort_and_fulltext / n_studies_with_cohort_info
-
-print("Proportion of published studies with full text downloaded that also have cohort information:")
-100 * n_studies_with_cohort_and_fulltext / n_studies_with_fulltext
-
-print("Proportion of published studies with cohort information or full text downloaded:")
-n_studies_with_cohort_or_fulltext <-
-length(union(cohort_pubmed_ids, fulltext_pubmed_ids))
-
-100 * n_studies_with_cohort_or_fulltext / n_published_studies
-
-```
-
-# Proportion of studies with dbGAP information (Europe PMC)
-
-```{r dbgap_info}
-
-dbgap_info <-
-data.table::fread(here::here("data/europe_pmc/dbgap.csv")) 
-
-all_pmids <- gwas_study_info$pubmed_id |> unique()
-
-pmids_with_dbgap_info <-
-dbgap_info |>
-  dplyr::filter(EXTID %in% all_pmids) 
-
-# check no different with pmcids
-all_pmcids <-
-convert_pmid_df |>
-  dplyr::filter(PMID %in% gwas_study_info$pubmed_id) |>
-  dplyr::pull(PMCID)
-
-all_pmcids <- all_pmcids[all_pmcids != ""]
-
-pmcids_with_dbgap_info <-
-dbgap_info |>
-  dplyr::filter(PMCID %in% all_pmcids) 
-
-n_studies_with_dbgap_info <-
-  dplyr::bind_rows(pmids_with_dbgap_info,
-            pmcids_with_dbgap_info)  |>
-  dplyr::select(EXTID, PMCID) |>
-  dplyr::distinct() |>
-  dplyr::pull(EXTID) |>
-  unique() |>
-  length()
-
-print("Number of published studies with dbGAP information:")
-print(n_studies_with_dbgap_info)
-
-print("Proportion of published studies with dbGAP information:")
-100 * n_studies_with_dbgap_info / n_published_studies
-
-```
-
-# Proportion of studies with EGA information (Europe PMC)
-
-```{r ega_info}
-
-data.table::fread(here::here("data/europe_pmc/ega.csv")) -> ega_info
-
-all_pmids <- gwas_study_info$pubmed_id |> unique()
-
-pmids_with_ega_info <-
-ega_info |>
-  dplyr::filter(EXTID %in% all_pmids) |>
-  dplyr::pull(EXTID) 
-
-n_studies_with_ega_info <-
-pmids_with_ega_info |>
-  unique() |>
-  length()
-
-print("Number of published studies with EGA information:")
-print(n_studies_with_ega_info)
-
-print("Proportion of published studies with EGA information:")
-100 * n_studies_with_ega_info / n_published_studies
-
-```
-
-# Studies with EGA, dbGAP, or JGA information
-
-```{r ega_dbgap_jga_info}
-
-epmc_dbgap_info <- pmids_with_dbgap_info |> pull(EXTID) |> unique()
-
-text_extracted <- data.table::fread(
-                   here::here("output/gwas_cat/gwas_study_dbgap_ega_sentences.csv")
-)
-
-pmcids_with_archive_info <- 
-text_extracted |>
-  pull(pmcid) |>
-  unique()
-
-pmids_with_archive_info <-
-convert_pmid_df |>
-  dplyr::filter(PMCID %in% pmcids_with_archive_info) |>
-  dplyr::pull(PMID) |>
-  unique()
-
-epmc_ega_info <- pmids_with_ega_info |> unique()
-
-studies_with_archive_info <- 
-  Reduce("union", 
-      list(epmc_dbgap_info,
-      epmc_ega_info,
-      pmids_with_archive_info))
-
-```
-
-# Overlap in dbgap and full text
-
-```{r overlap_dbgap_fulltext}
-
-dbgap_pubmed_ids <-
-  dplyr::bind_rows(pmids_with_dbgap_info,
-            pmcids_with_dbgap_info) |>
-  dplyr::select(EXTID, PMCID) |>
-  dplyr::distinct() |>
-  dplyr::pull(EXTID) |>
-  unique()
-  
-n_studies_with_dbgap_and_fulltext <-
-length(intersect(dbgap_pubmed_ids, fulltext_pubmed_ids))
-
-print("Number of published studies with dbGAP information and full text downloaded:")
-print(n_studies_with_dbgap_and_fulltext)
-
-print("Proportion of published studies with dbGAP information that also have full text downloaded:")
-100 * n_studies_with_dbgap_and_fulltext / n_studies_with_dbgap_info
-
-print("Proportion of published studies with full text downloaded that also have dbGAP information:")
-100 * n_studies_with_dbgap_and_fulltext / n_studies_with_fulltext
-
-print("Proportion of published studies with dbGAP information or full text downloaded:")
-n_studies_with_dbgap_or_fulltext <-
-length(union(dbgap_pubmed_ids, fulltext_pubmed_ids))
-
-100 * n_studies_with_dbgap_or_fulltext / n_published_studies
-
-print("Proportion of published studies that have dbGAP, cohort information or full text downloaded:")
-n_studies_with_dbgap_cohort_or_fulltext <-
-length(Reduce(union, list(dbgap_pubmed_ids,
-                                 cohort_pubmed_ids,
-                                 fulltext_pubmed_ids
-                                 )
-                      )
-       )
-
-100 * n_studies_with_dbgap_cohort_or_fulltext / n_published_studies
-
-```
-
-# Studies without full text, what proportion have dbGAP info?
-
-```{r no_fulltext_dbgap_info}
-
-n_studies_without_fulltext_with_dbgap_info <-
-sum(studies_without_fulltext %in% pmids_with_dbgap_info$EXTID)
-
-print("Number of published studies without full text downloaded that have dbGAP information:")
-print(n_studies_without_fulltext_with_dbgap_info)
-
-print("Proportion of published studies without full text downloaded that have dbGAP information:")
-100 * n_studies_without_fulltext_with_dbgap_info / length(studies_without_fulltext)
-
-```
-
-# Percentage of cohort information that includes 'other' or 'multiple'
-
-```{r, eval = F}
-
-studies_with_other_or_multiple_cohort_info <- gwas_study_info |>
-  dplyr::mutate(COHORT = stringr::str_remove_all(pattern = "(^NR$)|(^NR\\|)|(\\|NR$)|(\\|NR\\|)", 
-                                                 COHORT)) |> 
-  dplyr::filter(grepl("other|multiple", tolower(COHORT))) |>
-  dplyr::pull(pubmed_id) |>
-  unique() |>
-  length()
-
-print("Number of published studies with 'other' or 'multiple' cohort information:")
-print(studies_with_other_or_multiple_cohort_info)
-
-print("Proportion of published studies with 'other' or 'multiple' cohort information:")
-100 * studies_with_other_or_multiple_cohort_info / n_studies_with_cohort_info 
-
-
-```
 
 
 
