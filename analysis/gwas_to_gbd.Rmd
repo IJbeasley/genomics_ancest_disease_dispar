@@ -266,6 +266,211 @@ disease_mapping_with_cause |>
 
 ```
 
+# Check overlap (upset plot) of studies mapped to different causes
+
+## Between type 1 diabetes, type 2 diabetes, and diabetes mellitus
+
+```{r check_overlap_diabetes}
+
+diabetes_studies = disease_mapping_with_cause |>
+  filter(cause %in% c("Type 1 diabetes mellitus", 
+                      "Type 2 diabetes mellitus", 
+                      "Diabetes mellitus",
+                      "Chronic kidney disease due to diabetes mellitus type 2",
+                      "Chronic kidney disease due to diabetes mellitus type 1")) |>
+  select(PUBMED_ID, cause) |>
+  distinct()
+
+library(ComplexHeatmap)
+
+# create a binary matrix indicating which studies are mapped to which causes
+
+diabetes_studies_wide = diabetes_studies |>
+  tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
+  select(-PUBMED_ID) |>
+  mutate_all(~ ifelse(is.na(.), 0, 1)) |>
+  as.data.frame()
+
+upset_matrix = make_comb_mat(diabetes_studies_wide)
+
+# create an upset plot
+UpSet(upset_matrix,
+      comb_order = order(comb_size(upset_matrix), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+  
+```
+
+## Between different types of cancer
+
+```{r check_overlap_cancer}
+
+cancer_studies = disease_mapping_with_cause |>
+  filter(grepl("cancer|neoplasm", cause, ignore.case = TRUE)) |>
+  select(PUBMED_ID, cause) |>
+  distinct()
+
+cancer_studies_wide = cancer_studies |>
+  tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
+  select(-PUBMED_ID) |>
+  mutate_all(~ ifelse(is.na(.), 0, 1)) |>
+  as.data.frame()
+
+upset_matrix_cancer = make_comb_mat(cancer_studies_wide)
+
+UpSet(upset_matrix_cancer,
+      comb_order = order(comb_size(upset_matrix_cancer), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+```
+
+## Between different cardiovascular diseases
+
+```{r check_overlap_cardiovascular}
+
+cardiovascular_studies = disease_mapping_with_cause |>
+  filter(grepl("heart|stroke|hemorrhage", cause, ignore.case = TRUE)) |>
+  select(PUBMED_ID, cause) |>
+  distinct()
+
+cardiovascular_studies_wide = cardiovascular_studies |>
+  tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
+  select(-PUBMED_ID) |>
+  mutate_all(~ ifelse(is.na(.), 0, 1)) |>
+  as.data.frame()
+
+upset_matrix_cardiovascular = make_comb_mat(cardiovascular_studies_wide)
+
+UpSet(upset_matrix_cardiovascular,
+      comb_order = order(comb_size(upset_matrix_cardiovascular), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+```
+
+## Across liver diseases
+
+Cirrhosis and other chronic liver diseases, Liver cancer due to hepatitis C, Liver cancer due to hepatitis B, Diabetes 
+
+```{r check_overlap_liver}
+
+liver_studies = disease_mapping_with_cause |>
+  filter(grepl("liver|diabetes", cause, ignore.case = TRUE)) |>
+  filter(!grepl("Type 2|Type 1", cause, ignore.case = TRUE)) |>
+  select(PUBMED_ID, cause) |>
+  distinct()
+
+
+liver_studies_wide = liver_studies |>
+  tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
+  select(-PUBMED_ID) |>
+  mutate_all(~ ifelse(is.na(.), 0, 1)) |>
+  as.data.frame()
+
+upset_matrix_liver = make_comb_mat(liver_studies_wide)
+
+UpSet(upset_matrix_liver,
+      comb_order = order(comb_size(upset_matrix_liver), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+```
+
+
+## Across all non-communicable diseases
+
+```{r check_overlap_all_ncd}
+
+non_communicable_studies =
+disease_mapping_with_cause |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders")) |>
+  filter(!is.na(cause)) |>
+  select(PUBMED_ID, cause) |>
+  distinct() 
+  
+non_communicable_studies_wide = non_communicable_studies |>
+  tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
+  select(-PUBMED_ID) |>
+  mutate_all(~ ifelse(is.na(.), 0, 1)) |>
+  as.data.frame()
+
+upset_matrix_non_communicable = make_comb_mat(non_communicable_studies_wide)
+
+UpSet(upset_matrix_non_communicable,
+      comb_order = order(comb_size(upset_matrix_non_communicable), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+
+```
+
+## Between different respiratory diseases
+
+Chronic obstructive pulmonary disease, "Tracheal, bronchus, and lung cancer
+
+```{r check_overlap_respiratory}
+
+respiratory_studies = disease_mapping_with_cause |>
+  filter(grepl("chronic obstructive pulmonary disease|tracheal|bronchus|lung cancer", cause, ignore.case = TRUE)) |>
+  select(PUBMED_ID, cause) |>
+  distinct()
+
+respiratory_studies_wide = respiratory_studies |>
+  tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
+  select(-PUBMED_ID) |>
+  mutate_all(~ ifelse(is.na(.), 0, 1)) |>
+  as.data.frame()
+
+
+upset_matrix_respiratory = make_comb_mat(respiratory_studies_wide)
+
+UpSet(upset_matrix_respiratory,
+      comb_order = order(comb_size(upset_matrix_respiratory), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+```
 
 # Check recall i.e. that I have identified most/all studies of the priority diseases
 
