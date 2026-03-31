@@ -11,10 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Relevant abstract text 
 
-```{r}
+```{r load_packages, message=FALSE}
 
 library(dplyr)
 library(rentrez)
+library(xml2)
 
 ```
 
@@ -24,11 +25,13 @@ library(rentrez)
 
 ## Step 1: 
 # get only disease studies
-# gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
-gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv"))
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
 
 gwas_study_info = gwas_study_info |>
   dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = gwas_study_info |>
+  filter(cause != "")
 
 # gwas_study_info =
 #   gwas_study_info |>
@@ -51,6 +54,28 @@ pmids = gwas_study_info$PUBMED_ID
 
 print("Number of unique pubmed ids for disease studies:")
 pmids |> length()
+
+```
+
+### Get only papers abstracts that haven't previously been downloaded
+
+```{r get_abstracts_existing}
+
+existing_abstracts <- list.files(here::here("output/abstracts/"), 
+                                 pattern = "*.txt", 
+                                 full.names = FALSE
+                                 ) |>
+  tools::file_path_sans_ext()
+
+pmids_with_abstracts <- existing_abstracts[existing_abstracts %in% pmids]
+
+print("Number of abstracts already downloaded:")
+length(pmids_with_abstracts)
+
+pmids <- pmids[!(pmids %in% pmids_with_abstracts)]
+
+print("Number of abstracts to download:")
+length(pmids)
 
 ```
 
@@ -137,6 +162,29 @@ for (i in seq_along(abstracts)) {
   file_name <- paste0(here::here("output/abstracts/"), pmids[i], ".txt")
   writeLines(abstracts[i], file_name)
 }
+
+```
+
+```{r check_abstracts}
+
+all_pmids = gwas_study_info$PUBMED_ID
+
+
+retrieved_abstracts <- list.files(here::here("output/abstracts/"), 
+                                 pattern = "*.txt", 
+                                 full.names = FALSE
+                                 ) |>
+  tools::file_path_sans_ext()
+
+missing_abstracts = setdiff(all_pmids,
+                             retrieved_abstracts)
+
+
+print("Number of abstracts still missing after retrieval:")
+length(missing_abstracts)
+
+print(missing_abstracts)
+
 
 ```
 
