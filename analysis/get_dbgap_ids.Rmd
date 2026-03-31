@@ -872,4 +872,82 @@ data.table::fwrite(dbgap_cohort_names,
 
 
 
+# EGA ids
+
+```{r compare-ega-sources}
+
+ega_info <-
+data.table::fread(here::here("data/europe_pmc/ega.csv")) 
+
+full_text_ega_ids =
+sentences_df  |>
+  select(ega_id, pmid, pmcid) |>
+  tidyr::unnest(ega_id) |>
+  mutate(ega_id = str_trim(ega_id)) |>
+  group_by(pmid, pmcid) |>
+  summarise(ega_full_text = str_flatten(unique(sort(ega_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) |>
+  mutate(pmid = as.character(pmid))
+
+epmc_ega_ids =
+ega_info |>
+  filter(EXTID %in% pmids) |>
+  select(ega_id = ega, 
+         pmid = EXTID,
+         pmcid = PMCID) |>
+  group_by(pmid, pmcid) |>
+  summarise(ega_epmc = str_flatten(unique(sort(ega_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE))
+
+
+joined_ega =
+full_join(full_text_ega_ids,
+          epmc_ega_ids,
+          by = c("pmid", "pmcid")
+          )
+
+joined_ega |>
+  filter(!is.na(ega_full_text) & !is.na(ega_epmc)) |>
+  filter(ega_full_text != ega_epmc)
+
+# european pmcs are a direct subset of full text extracted ega ids, which is good
+
+```
+
+```{r get_ega-cohort-names}
+
+
+get_ega_cohort_names <-
+cohort_dbgap_mapping |>
+  tidyr::separate_longer_delim(cols = c(EGA),
+                               delim = ",")  |>
+  tidyr::pivot_longer(cols = c(EGA),
+               names_to = "source",
+               values_to = "ega_id") |>
+  select(cohort, ega_id) |>
+  mutate(ega_id = str_trim(ega_id)) |>
+  filter(!is.na(ega_id)) |>
+  group_by(ega_id) |>
+  summarise(cohort = stringr::str_flatten(cohort, collapse = "|", na.rm = T)) |>
+  distinct()
+
+joined_ega <-
+  joined_ega |>
+  tidyr::pivot_longer(cols = c(ega_full_text, ega_epmc),
+               names_to = "source",
+               values_to = "ega_id") |>
+  tidyr::separate_longer_delim(cols = c(ega_id),
+                               delim = ", ") |>
+  filter(!is.na(ega_id) & ega_id != "")
+
+ega_cohort_names =
+left_join(joined_ega,
+get_ega_cohort_names, 
+by = "ega_id"
+)
+
+
+```
 
