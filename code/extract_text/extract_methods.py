@@ -58,24 +58,47 @@ def detect_xml_format(root):
 
     return 'unknown'
   
-# -----------------------------------------------------------------------------
-# Detect if this is a Nature Genetics article (for special handling of text without methods section)
-# -----------------------------------------------------------------------------
-def _is_nature_genetics(root):
-    journal = root.find('.//{*}journal-title')
-    if journal is not None and journal.text:
-        return 'nature genetics' in journal.text.lower()
     return False
   
-# -------------------------------------------------------------------------------
-# Detect if this is a HGG Adv article (for special handling of text without methods section)
-def _is_hgg_adv(root):
+# -----------------------------------------------------------------------------
+# Detect if this is a journal format without methods sections
+# -----------------------------------------------------------------------------
+def _is_main_journal(root):
     journal = root.find('.//{*}journal-title')
+
+    main_journals = {
+        'nature genetics',
+        'human genetics and genomics advances',
+        'american journal of human genetics',
+        'journal of human genetics'
+        
+    }
+
     if journal is not None and journal.text:
-        return 'human genetics and genomics advances' in journal.text.lower()
+        journal_name = journal.text.strip().lower()
+        return journal_name in main_journals
+
     return False
   
-  
+# -----------------------------------------------------------------------------
+# Detect if this article is a letter to the editor (which often has no methods section)
+# -----------------------------------------------------------------------------
+import re
+
+def _is_letter_to_editor(root):
+    pattern = re.compile(r'^\s*(to the editor|dear editor)\b', re.IGNORECASE)
+
+    for p in root.findall('.//{*}p'):
+        text = ''.join(p.itertext())
+        if not text:
+            continue
+
+        if pattern.match(text):
+            return True
+
+    return False
+
+
 # -------------------------------------------------------------------------------
 # Main extraction function - for Bioc Nature genetics
 # -------------------------------------------------------------------------------
@@ -618,14 +641,12 @@ def find_methods_section(root):
     """
     all_sections = find_all_methods_sections(root)
     
-    if _is_nature_genetics(root) and not all_sections:
-        # For Nature Genetics, if no methods section found, return the whole body text as fallback
+    if _is_main_journal(root) and not all_sections:
         body = root.find('.//{*}body')
         if body is not None:
             return (body, True)
-          
-    if _is_hgg_adv(root) and not all_sections:
-        # For HGG Advances, if no methods section found, return the whole body text as fallback
+    
+    if _is_letter_to_editor(root) and not all_sections:
         body = root.find('.//{*}body')
         if body is not None:
             return (body, True)
@@ -954,6 +975,7 @@ def main():
         print(f"Methods section extracted to: {output_path}")
     else:
         print(methods_text)
+        
 
 
 if __name__ == '__main__':
