@@ -1,13 +1,386 @@
 #!/usr/bin/env python3
 """
-Extract methods section from JATS XML files.
-This script extracts all text content from sections marked with sec-type="methods".
+Extract methods section from JATS, TEI (GROBID), and BioC XML files.
+This script extracts all text content from methods sections across formats.
+
+Supported formats:
+  - JATS XML: Standard PubMed Central format (<sec sec-type="methods">)
+  - TEI XML:  GROBID output from PDFs (.pdf.tei.xml), <div> with <head>Methods</head>
+  - BioC XML: Auto-CORPus/BioC format (_bioc.xml), <passage> with <infon>Methods</infon>
 """
 
 import xml.etree.ElementTree as ET
 import argparse
 import sys
+import re
+import unicodedata
+import html as htmlmod
 from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Format detection
+# ---------------------------------------------------------------------------
+
+def detect_xml_format(root):
+    """
+    Detect whether an XML root element is JATS, TEI, or BioC format.
+
+    Returns one of: 'jats', 'tei', 'bioc', or 'unknown'.
+    """
+    tag = root.tag
+
+    # TEI: root tag is <TEI> (possibly namespaced)
+    if tag.endswith('}TEI') or tag == 'TEI':
+        return 'tei'
+
+    # BioC: root tag is <collection>
+    if tag == 'collection':
+        return 'bioc'
+
+    # JATS: root tag is <article> (possibly namespaced)
+    if tag.endswith('}article') or tag == 'article':
+        return 'jats'
+
+    # Fallback heuristics
+    # TEI namespace present anywhere
+    for elem in root.iter():
+        if 'http://www.tei-c.org/ns/1.0' in elem.tag:
+            return 'tei'
+
+    # BioC has <document> > <passage> structure
+    if root.find('.//passage') is not None:
+        return 'bioc'
+
+    # JATS has <body> > <sec> structure
+    if root.find('.//{*}sec') is not None:
+        return 'jats'
+
+    return 'unknown'
+  
+# -----------------------------------------------------------------------------
+# Detect if this is a Nature Genetics article (for special handling of text without methods section)
+# -----------------------------------------------------------------------------
+def _is_nature_genetics(root):
+    journal = root.find('.//{*}journal-title')
+    if journal is not None and journal.text:
+        return 'nature genetics' in journal.text.lower()
+    return False
+  
+# -------------------------------------------------------------------------------
+# Detect if this is a HGG Adv article (for special handling of text without methods section)
+def _is_hgg_adv(root):
+    journal = root.find('.//{*}journal-title')
+    if journal is not None and journal.text:
+        return 'human genetics and genomics advances' in journal.text.lower()
+    return False
+  
+  
+# -------------------------------------------------------------------------------
+# Main extraction function - for Bioc Nature genetics
+# -------------------------------------------------------------------------------
+def extract_bioc_main(root):
+    text_parts = []
+
+    for passage in root.iter('passage'):
+        section_title = None
+
+        for infon in passage.findall('infon'):
+            if infon.get('key') == 'section_title_1':
+                section_title = infon.text
+                break
+
+        if section_title and section_title.strip().lower() == 'main':
+            text_elem = passage.find('text')
+            if text_elem is not None and text_elem.text:
+                para_text = text_elem.text.strip()
+                if para_text:
+                    text_parts.append(clean_extracted_text(para_text) + ' ')
+
+    result = ' '.join(text_parts).strip()
+    return result if result else None
+
+
+# ---------------------------------------------------------------------------
+# Text cleaning (shared across formats)
+# ---------------------------------------------------------------------------
+
+def clean_extracted_text(text):
+    """
+    Apply standard text cleaning to extracted methods text.
+    Shared across all XML formats.
+    """
+    text = unicodedata.normalize("NFKC", text)
+    text = htmlmod.unescape(text)
+    text = text.replace('\xa0', ' ')
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Remove section numbering at start of paragraphs
+    text = re.sub(r'^(\d+\.)+\d*\s*', '', text)
+    text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', text)
+
+    # Clean up punctuation artifacts from removed citations
+    text = re.sub(r'([,;.])\s*([,;.])', r'\2', text)
+    text = re.sub(r'\s+([,;.])', r'\1', text)
+
+    # Remove author citations
+    text = re.sub(r'\([A-Z][a-zA-Z\s&,;.]+et al[,;\s.]*\)', '', text)
+
+    # Remove empty brackets
+    text = re.sub(r'\[\s*[,;–—\-\s]*\s*\]', '', text)
+    text = re.sub(r'\(\s*[,;–—\-\s]*\s*\)', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Clean trailing punctuation artifacts
+    text = re.sub(r'[,;]\s*[–—\-]\s*[,;.]', '.', text)
+    text = re.sub(r'[,;]\s*[–—\-]\s*$', '.', text)
+    text = re.sub(r'[–—\-]\s*[,;.]', '.', text)
+
+    # Fix bracket spacing
+    text = re.sub(r'\(\s+', '(', text)
+    text = re.sub(r'\s+\)', ')', text)
+    text = re.sub(r'\[\s+', '[', text)
+    text = re.sub(r'\s+\]', ']', text)
+
+    # Final cleanup
+    text = re.sub(r'\s+([,;.:!?])', r'\1', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r'\.{2,}', '.', text)
+    text = re.sub(r',{2,}', ',', text)
+
+    return text
+
+
+# ---------------------------------------------------------------------------
+# TEI XML extraction (GROBID .pdf.tei.xml files)
+# ---------------------------------------------------------------------------
+
+TEI_NS = {'tei': 'http://www.tei-c.org/ns/1.0'}
+
+# Section titles that indicate the end of the methods section
+NON_METHODS_SECTIONS = {
+    'result', 'results', 'discussion', 'conclusion', 'conclusions',
+    'acknowledgment', 'acknowledgments', 'acknowledgement', 'acknowledgements',
+    'references', 'bibliography', 'funding', 'competing interests',
+    'conflict of interest', 'disclosure', 'data availability',
+    'supplementary', 'supplemental', 'appendix',
+}
+
+
+def extract_tei_methods(root):
+    """
+    Extract methods section from a TEI (GROBID) XML document.
+
+    TEI structure: <body> contains flat sibling <div> elements.
+    The Methods <div> typically has just a <head> with no paragraphs;
+    the actual content is in subsequent sibling <div> elements until
+    the next major section (Results, Discussion, etc.).
+
+    Returns extracted text string, or None if no methods section found.
+    """
+    body = root.find('.//tei:body', TEI_NS)
+    if body is None:
+        # Try without namespace
+        body = root.find('.//body')
+    if body is None:
+        return None
+
+    divs = list(body.findall('tei:div', TEI_NS))
+    if not divs:
+        divs = list(body.findall('div'))
+    if not divs:
+        return None
+
+    # Find the index of the Methods div
+    methods_start = None
+    for i, div in enumerate(divs):
+        head = div.find('tei:head', TEI_NS)
+        if head is None:
+            head = div.find('head')
+        if head is not None and head.text:
+            title = head.text.strip().lower()
+            # Match "methods", "materials and methods", "methods and materials", etc.
+            if ('method' in title and
+                not title.startswith('result') and
+                not title.startswith('discussion')):
+                methods_start = i
+                break
+
+    if methods_start is None:
+        return None
+
+    # Collect this div and all subsequent sibling divs until a non-methods section
+    text_parts = []
+    for div in divs[methods_start:]:
+        head = div.find('tei:head', TEI_NS)
+        if head is None:
+            head = div.find('head')
+
+        if head is not None and head.text:
+            title = head.text.strip().lower()
+            # Stop if we've hit a non-methods section (but not on the first div)
+            if div != divs[methods_start] and title in NON_METHODS_SECTIONS:
+                break
+            # Also stop on common non-methods patterns
+            if div != divs[methods_start]:
+                for stop_word in NON_METHODS_SECTIONS:
+                    if title == stop_word or title.startswith(stop_word + ' '):
+                        break
+                else:
+                    # No stop word matched — add section title
+                    # Remove leading numbering from title
+                    clean_title = re.sub(r'^(\d+\.)*\d+\s+', '', head.text.strip())
+                    if clean_title:
+                        text_parts.append(clean_title + '. ')
+                    # Fall through to extract paragraphs
+                    for p in div.findall('tei:p', TEI_NS) or div.findall('p'):
+                        para_text = ''.join(p.itertext()).strip()
+                        if para_text:
+                            text_parts.append(clean_extracted_text(para_text) + ' ')
+                    continue
+                # A stop word matched — break out of outer loop
+                break
+            else:
+                # First div (the Methods header itself)
+                clean_title = re.sub(r'^(\d+\.)*\d+\s+', '', head.text.strip())
+                if clean_title:
+                    text_parts.append(clean_title + '. ')
+
+        # Extract paragraphs from this div
+        for p in div.findall('tei:p', TEI_NS) or div.findall('p'):
+            para_text = ''.join(p.itertext()).strip()
+            if para_text:
+                text_parts.append(clean_extracted_text(para_text) + ' ')
+
+    result = ' '.join(text_parts).strip()
+    return result if result else None
+
+
+# ---------------------------------------------------------------------------
+# BioC XML extraction
+# ---------------------------------------------------------------------------
+
+def extract_bioc_methods(root):
+    """
+    Extract methods section from a BioC XML document.
+
+    BioC structure: flat <passage> elements, each with <infon> metadata
+    indicating the section. We collect all passages where
+    <infon key="section_title_1"> is "Methods" (case-insensitive).
+
+    Fallback: some BioC files (e.g. Oxford Academic via Auto-CORPus) have
+    broken section labels where the entire article body is mislabelled as
+    "Author notes", "document part", "ACKNOWLEDGEMENTS", etc.  For these,
+    we scan the passage text for inline section headers like
+    "Materials and Methods" and collect text until the next major section.
+
+    Returns extracted text string, or None if no methods section found.
+    """
+    # --- Primary strategy: use section_title_1 infon labels ---------------
+    text_parts = []
+
+    for passage in root.iter('passage'):
+        section_title = None
+        for infon in passage.findall('infon'):
+            if infon.get('key') == 'section_title_1':
+                section_title = infon.text
+                break
+
+        if section_title is None:
+            continue
+
+        title_lower = section_title.strip().lower()
+
+        # Match methods-related section titles
+        if ('method' in title_lower and
+            not title_lower.startswith('result') and
+            not title_lower.startswith('discussion')):
+
+            text_elem = passage.find('text')
+            if text_elem is not None and text_elem.text:
+                para_text = text_elem.text.strip()
+                if para_text:
+                    text_parts.append(clean_extracted_text(para_text) + ' ')
+
+    if text_parts:
+        result = ' '.join(text_parts).strip()
+        return result if result else None
+
+    # --- Fallback: scan passage text for inline section headers -----------
+    return _bioc_fallback_inline_headers(root)
+
+
+# Regex for detecting an inline methods header at the start of passage text
+_METHODS_HEADER_RE = re.compile(
+    r'^((?:Materials?\s+and\s+)?Methods?'
+    r'|Subjects?\s+and\s+Methods?'
+    r'|Patients?\s+and\s+Methods?'
+    r'|Study\s+Design(?:\s+and\s+Methods?)?'
+    r'|Experimental\s+(?:Procedures?|Section))'
+    r'\s*[:.]?\s',
+    re.IGNORECASE,
+)
+
+# Regex for detecting the START of a non-methods section (stops collection)
+_NON_METHODS_HEADER_RE = re.compile(
+    r'^(Results?'
+    r'|Discussion'
+    r'|Conclusions?'
+    r'|Acknowledg(?:e)?ments?'
+    r'|References'
+    r'|Funding'
+    r'|Data\s+Availability'
+    r'|Author\s+Contributions?'
+    r'|Supplementary)'
+    r'\s*[:.]?\s',
+    re.IGNORECASE,
+)
+
+
+def _bioc_fallback_inline_headers(root):
+    """
+    Fallback for BioC files with broken/missing section labels.
+
+    Scans all passage text for an inline "Methods" header, then collects
+    that passage and all subsequent passages until a non-methods header
+    (Results, Discussion, etc.) is encountered.
+    """
+    passages = list(root.iter('passage'))
+    methods_start = None
+
+    # Find the first passage whose text begins with a methods header
+    for i, passage in enumerate(passages):
+        text_elem = passage.find('text')
+        if text_elem is None or not text_elem.text:
+            continue
+        t = text_elem.text.strip()
+        if _METHODS_HEADER_RE.match(t):
+            methods_start = i
+            break
+
+    if methods_start is None:
+        return None
+
+    text_parts = []
+    for passage in passages[methods_start:]:
+        text_elem = passage.find('text')
+        if text_elem is None or not text_elem.text:
+            continue
+        t = text_elem.text.strip()
+
+        # Stop if we hit a non-methods section header (but not on the first passage)
+        if passage != passages[methods_start] and _NON_METHODS_HEADER_RE.match(t):
+            break
+
+        # Strip the inline header from the first passage
+        if passage == passages[methods_start]:
+            t = _METHODS_HEADER_RE.sub('', t, count=1).strip()
+
+        if t:
+            text_parts.append(clean_extracted_text(t) + ' ')
+
+    result = ' '.join(text_parts).strip()
+    return result if result else None
 
 
 def extract_text_from_element(element, parent_tag=None):
@@ -207,7 +580,8 @@ def extract_text_from_element(element, parent_tag=None):
     result = re.sub(r'\(\s*(?:[^()]*?et al[.,;]\s*[^()]*)\)', '', result)
     result = re.sub(r'\(\s*(?:[^()]*?n.d.\s*[^()]*)\)', '', result)
     result = re.sub(r'\(\s*[A-Z][A-Za-z-]+(?:\s*&\s*[A-Z][A-Za-z-]+)+\s*,?\s*\)','', result)
-    result = re.sub(r'\(\s*(?:[A-Z][A-Za-z-]+(?:\s*&\s*[A-Z][A-Za-z-]+)?(?:,\s*(?:n\.d\.|\d{4})?)?\s*;?\s*)+\)', '', result)
+    result = re.sub(r'\(\s*(?:[A-Z][A-Za-z-]+(?:\s*&\s*[A-Z][A-Za-z-]+)?,\s*(?:n\.d\.|\d{4})\s*;?\s*)+\)', '', result)
+    #result = re.sub(r'\(\s*(?:[A-Z][A-Za-z-]+(?:\s*&\s*[A-Z][A-Za-z-]+)?(?:,\s*(?:n\.d\.|\d{4})?)?\s*;?\s*)+\)', '', result)
     #result = re.sub(r'\(\s*(?:[^()]*?et al\.[^()]*)\)', '', result)
     
     # Fix bracket spacing LAST
@@ -233,7 +607,7 @@ def extract_text_from_element(element, parent_tag=None):
 def find_methods_section(root):
     """
     Find the methods section in a JATS XML document.
-    Returns the methods section element or None if not found.
+    Returns a tuple of (methods_element, is_main_fallback) or (None, False) if not found.
     
     Searches for methods section in multiple ways:
     1. sec-type="materials|methods" or "materials and methods" attribute
@@ -243,7 +617,20 @@ def find_methods_section(root):
     Skips methods sections inside abstracts (these are summaries, not full methods).
     """
     all_sections = find_all_methods_sections(root)
-    return all_sections[0] if len(all_sections) > 0 else None
+    
+    if _is_nature_genetics(root) and not all_sections:
+        # For Nature Genetics, if no methods section found, return the whole body text as fallback
+        body = root.find('.//{*}body')
+        if body is not None:
+            return (body, True)
+          
+    if _is_hgg_adv(root) and not all_sections:
+        # For HGG Advances, if no methods section found, return the whole body text as fallback
+        body = root.find('.//{*}body')
+        if body is not None:
+            return (body, True)
+          
+    return (all_sections[0], False) if len(all_sections) > 0 else (None, False)
 
 
 def find_all_methods_sections(root):
@@ -396,7 +783,7 @@ def find_all_methods_sections(root):
                     return 4
                 break
         return 5
-    
+      
     # Sort by priority
     candidates.sort(key=section_priority)
     
@@ -405,20 +792,38 @@ def find_all_methods_sections(root):
 
 def extract_methods_section(xml_file):
     """
-    Extract the methods section text from a JATS XML file.
-    
+    Extract the methods section text from a JATS, TEI, or BioC XML file.
+
+    Automatically detects the XML format and dispatches to the appropriate
+    extraction logic.
+
     Args:
-        xml_file: Path to the JATS XML file
-        
+        xml_file: Path to the XML file
+
     Returns:
-        String containing the methods section text, or None if not found or if online-only
+        Dictionary with keys:
+        - 'text': String containing the methods section text, or None if not found or if online-only
+        - 'is_main': Boolean indicating if this is Nature Genetics fallback body text
     """
     try:
         tree = ET.parse(xml_file)
         root = tree.getroot()
-        
+
+        # Detect format and dispatch
+        fmt = detect_xml_format(root)
+
+        if fmt == 'tei':
+            return {'text': extract_tei_methods(root), 'is_main': False}
+
+        if fmt == 'bioc':
+            return {'text': extract_bioc_methods(root), 'is_main': False}
+
+        if fmt == 'unknown':
+            print(f"Warning: could not detect XML format for {xml_file}, trying JATS", file=sys.stderr)
+
+        # JATS format (default) — original logic follows
         # Find the methods section
-        methods_section = find_methods_section(root)
+        methods_section, is_main = find_methods_section(root)
         
         if methods_section is None:
             # Check if methods are in supplementary materials
@@ -426,8 +831,8 @@ def extract_methods_section(xml_file):
             if supplementary_note:
                 # Methods are in supplementary files - don't write a file
                 print("Methods are in supplementary materials (not extracted).", file=sys.stderr)
-                return None
-            return None
+                return {'text': None, 'is_main': False}
+            return {'text': None, 'is_main': False}
         
         # Extract all text from the methods section
         methods_text = extract_text_from_element(methods_section)
@@ -476,16 +881,16 @@ def extract_methods_section(xml_file):
                 
                 # No alternative found, this is truly online-only
                 print("Methods are only available online (not extracted).", file=sys.stderr)
-                return None
+                return {'text': None, 'is_main': False}
         
-        return methods_text
+        return {'text': methods_text, 'is_main': is_main}
         
     except ET.ParseError as e:
         print(f"Error parsing XML file: {e}", file=sys.stderr)
-        return None
+        return {'text': None, 'is_main': False}
     except Exception as e:
         print(f"Error processing file: {e}", file=sys.stderr)
-        return None
+        return {'text': None, 'is_main': False}
 
 
 def check_supplementary_methods(root):
@@ -529,17 +934,24 @@ def main():
     args = parser.parse_args()
     
     # Extract methods section
-    methods_text = extract_methods_section(args.input_file)
+    result = extract_methods_section(args.input_file)
+    methods_text = result['text']
+    is_main = result['is_main']
     
     if methods_text is None:
         print("No methods section found in the XML file.", file=sys.stderr)
         sys.exit(1)
-    
+        
     # Output the results
     if args.output:
         output_path = Path(args.output)
+        # If this is Nature Genetics main fallback, add '_main' before file extension
+        if is_main:
+            stem = output_path.stem
+            suffix = output_path.suffix
+            output_path = output_path.parent / f"{stem}_main{suffix}"
         output_path.write_text(methods_text, encoding='utf-8')
-        print(f"Methods section extracted to: {args.output}")
+        print(f"Methods section extracted to: {output_path}")
     else:
         print(methods_text)
 
