@@ -13,29 +13,55 @@ import time
 import os
 from optparse import OptionParser
 
-model = SentenceTransformer("neuml/pubmedbert-base-embeddings")
+#model = SentenceTransformer("neuml/pubmedbert-base-embeddings")
+model = SentenceTransformer("pritamdeka/S-PubMedBert-MS-MARCO")
+
+# tokenized_inputs = tokenizer(
+#         batch["text"],
+#         truncation=True,
+#         padding="max_length",
+#         max_length=256,
+#         return_offsets_mapping=True
+#     )
 
 def run_similarity_analysis(
     label: str,
     cohort_path: str,
     non_cohort_path: str,
     figure_save_path: str,
+    percentile_threshold: float,
 ) -> None:
     cohort_sentences = json.load(open(cohort_path, "r"))
     non_cohort_sentences = json.load(open(non_cohort_path, "r"))
 
     # Ensure uniqueness
-    cohort_sentences = list(set(cohort_sentences))
-    non_cohort_sentences = list(set(non_cohort_sentences))
+    cohort_sentences = sorted(set(cohort_sentences))
+    non_cohort_sentences = sorted(set(non_cohort_sentences))
+    # check / confirm that there is no overlap between the two sets
+    non_cohort_sentences = [s for s in non_cohort_sentences if s not in set(cohort_sentences)]
 
     print(f"\n[{label}] Number of cohort sentences: {len(cohort_sentences)}")
     print(f"[{label}] Number of non-cohort sentences: {len(non_cohort_sentences)}")
 
-    cohort_embeddings = model.encode(cohort_sentences)
-    non_cohort_embeddings = model.encode(non_cohort_sentences)
+    #cohort_embeddings = model.encode(cohort_sentences)
+    cohort_embeddings = model.encode(
+    cohort_sentences, 
+    batch_size=64, 
+    show_progress_bar=True, 
+    convert_to_tensor=True
+    )
+    #non_cohort_embeddings = model.encode(non_cohort_sentences)
+    non_cohort_embeddings = model.encode(
+    non_cohort_sentences, 
+    batch_size=64,
+    show_progress_bar=True, 
+    convert_to_tensor=True
+    )
 
     # Compute cosine similarities
-    similarities = model.similarity(non_cohort_embeddings, cohort_embeddings)
+    similarities = model.similarity(non_cohort_embeddings, 
+                                    cohort_embeddings)
+                                    
     similarities = similarities.cpu().numpy() if hasattr(similarities, 'cpu') else np.array(similarities)
 
     # For each non-cohort sentence, find the most similar cohort sentence and its similarity score
@@ -66,22 +92,23 @@ def run_similarity_analysis(
     plt.tight_layout()
     histogram_path = figure_save_path
     output_dir = os.path.dirname(histogram_path)
-    if output_dir:
+    if output_dir:      
         os.makedirs(output_dir, exist_ok=True)
     plt.savefig(histogram_path, dpi=300)
     print(f"\n[{label}] Histogram saved to {histogram_path}")
 
     # keep non-cohort sentences that fall above the bottom 25% of cohort similarities
     # how many sentences does this select, and what is the ratio of selected hard negatives to cohort sentences?
-    threshold = np.percentile(cohort_best_similarity, 25)
-    hard_negatives_mask = best_similarity >= threshold
-    print(f"[{label}] Threshold: {threshold:.3f}")
-    print(f"[{label}] Hard negatives selected: {hard_negatives_mask.sum()} / {len(similarities)}")
-    print(f"[{label}] Ratio of hard negatives to cohort sentences: {hard_negatives_mask.sum()} / {len(cohort_sentences)}")
+    #threshold = np.percentile(cohort_best_similarity, 25)
+    # hard_negatives_mask = best_similarity >= threshold
+    # print(f"[{label}] Threshold: {threshold:.3f}")
+    # print(f"[{label}] Hard negatives selected: {hard_negatives_mask.sum()} / {len(similarities)}")
+    # print(f"[{label}] Ratio of hard negatives to cohort sentences: {hard_negatives_mask.sum()} / {len(cohort_sentences)}")
 
     # repeat, but for 50% threshold
-    threshold = np.percentile(cohort_best_similarity, 50)
+    threshold = np.percentile(cohort_best_similarity, percentile_threshold)
     hard_negatives_mask = best_similarity >= threshold
+    print("n[{label}] Threshold: {percentile_threshold}th percentile of cohort similarities: {threshold:.3f}")
     print(f"\n[{label}] Threshold: {threshold:.3f}")
     print(f"[{label}] Hard negatives selected: {hard_negatives_mask.sum()} / {len(similarities)}")
     print(f"[{label}] Ratio of hard negatives to cohort sentences: {hard_negatives_mask.sum()} / {len(cohort_sentences)}")
@@ -91,7 +118,12 @@ def run_similarity_analysis(
     # randomly sample 10 hard negatives to print
     np.random.seed(42)
     if len(hard_negatives) > 10:
-        hard_negatives_examples = np.random.choice(hard_negatives, size=10, replace=False)
+        #hard_negatives_examples = np.random.choice(hard_negatives, size=10, replace=False)
+        hard_negatives_examples = (
+    np.random.default_rng(42).choice(hard_negatives, size=10, replace=False)
+    if len(hard_negatives) > 10 else hard_negatives
+)
+
 
     print("\nExample hard negatives:")
     for i in range(min(10, len(hard_negatives_examples))):
@@ -157,6 +189,13 @@ def parse_args():
         default="output/similarities_histogram.png",
         help="Path to save the similarity histogram figure/s",
     )
+    parser.add_option(
+      "-p",
+      "--percentile",
+      dest="percentile_threshold",
+      default=50.0,
+      help = "Percentile threshold for selecting hard negatives (default: 50)"
+    )
 
     options, _ = parser.parse_args()
 
@@ -181,7 +220,8 @@ if __name__ == "__main__":
         opts.cohort_path,
         opts.non_cohort_path,
         opts.figure_save_path,
-    )
+        float(opts.percentile_threshold)
+)
 
 
 
