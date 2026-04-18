@@ -31,7 +31,7 @@ library(tokenizers)
 
 ### Step 1: Get only disease studies, and select relevant columns
 
-```{r gwas_cat_load_preprocess}
+```{r gwas_cat_load_preprocess, message=FALSE}
 
 ## Step 1: 
 # get only relevant disease studies
@@ -54,33 +54,167 @@ gwas_study_info <- gwas_study_info |>
                              "Measles",
                              "Maternal disorders"))
 
+gwas_study_info <-
+  gwas_study_info |>
+  filter(cause != "")
+
+```
+
+### What training set to use? 
+
+```{r get_lancet_conditions}
+
 # group conditions into broader categories to ensure we have enough papers in each category for sampling
-lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
-                                     sheet = 1) |>
-  dplyr::rename_with(~ gsub(" ", "_", .x))
+# lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
+#                                      sheet = 1) |>
+#   dplyr::rename_with(~ gsub(" ", "_", .x))
+# 
+# gwas_study_info <- gwas_study_info |>
+#   left_join(lancet_cause_mapping |> select(cause = mapped_gbd_term,
+#                                            lancet_condition), 
+#             by = "cause",
+#             relationship = "many-to-many") 
 
-set.seed(500)
-
-training_sample = gwas_study_info |>
-  left_join(lancet_cause_mapping |> select(cause = mapped_gbd_term,
-                                           lancet_condition), 
-            by = "cause",
-            relationship = "many-to-many") |>
-  select(PUBMED_ID,
-         lancet_condition) |>
+gwas_study_info <- gwas_study_info |>
+  select(PUBMED_ID, YEAR, lancet_condition) |>
   distinct() |>
-  dplyr::group_by(lancet_condition) |>
-  dplyr::slice_sample(prop = 0.25) |>
-  pull(PUBMED_ID) |>
-  unique()
+  group_by(PUBMED_ID) |>
+  summarise(
+    YEAR = paste(unique(YEAR), collapse = "|"),
+    lancet_condition = paste(sort(unique(lancet_condition)), collapse = " & ")
+  ) |>
+  mutate(lancet_condition_group = case_when(
+    str_detect(pattern = "&", lancet_condition) ~ "Multiple",
+    TRUE ~ lancet_condition
+  ))
 
-pmids <- training_sample
+```
+
+```{r training_set_features}
+
+# get medcpt article embeddings for all disease studies
+embeddings <- data.table::fread(here::here("output/clustering/medcpt_embeddings.csv"))
+
+PCA_test <- prcomp(embeddings, center = TRUE, scale. = TRUE) 
+
+pca_table <-
+data.frame(PC1 = PCA_test$x[,1], 
+           PC2 = PCA_test$x[,2], 
+           PC3 = PCA_test$x[,3], 
+           PC4 = PCA_test$x[,4], 
+           PC5 = PCA_test$x[,5], 
+           PC6 = PCA_test$x[,6], 
+           PC7 = PCA_test$x[,7], 
+           PC8 = PCA_test$x[,8], 
+           PC9 = PCA_test$x[,9], 
+           PC10 = PCA_test$x[,10],
+           PUBMED_ID = embeddings$PUBMED_ID) 
+
+
+library(ggplot2)
+
+var_exp <- PCA_test$sdev^2 / sum(PCA_test$sdev^2)
+
+data.frame(PC = paste0("PC", 1:length(var_exp)),
+           PC_n = 1:length(var_exp),
+           Variance_Explained = var_exp) |>
+  filter(PC_n <= 10) |>
+  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  geom_col() +
+  labs(x = "Principal Component", y = "Proportion of Variance Explained", title = "Variance explained by each principal component") + 
+  theme_bw()
+
+  pca_table |>
+  left_join(gwas_study_info |> 
+  select(PUBMED_ID, YEAR, lancet_condition), 
+  by = "PUBMED_ID") |>
+  mutate(YEAR = as.factor(YEAR)) |>
+  ggplot(aes(x = PC2, 
+  y = PC1, 
+  fill = YEAR, 
+  color = YEAR)) +
+  geom_point() +
+  scale_color_manual(values = viridisLite::plasma(n = 19)) +
+  #geom_smooth(method = "loess") +
+  labs(x = "PC2", y = "PC1", title = "PCA of GWAS Catalog abstract embeddings, colored by publication year") + 
+  theme_bw()
+  
+  pca_table |>
+  left_join(gwas_study_info |> 
+  select(PUBMED_ID, YEAR, lancet_condition_group), 
+  by = "PUBMED_ID") |>
+  mutate(YEAR = as.factor(YEAR)) |>
+  ggplot(aes(x = PC2, 
+  y = PC1, 
+  color = lancet_condition_group)) +
+  geom_point() +
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = "PC2", 
+  y = "PC1", title = "PCA of GWAS Catalog abstract embeddings, colored by lancet condition") + theme_bw()
+
+pca_table |>
+    left_join(gwas_study_info |> 
+                  select(PUBMED_ID, YEAR, lancet_condition_group), 
+              by = "PUBMED_ID") |>
+    mutate(YEAR = as.factor(YEAR)) |>
+    ggplot(aes(x = PC3, 
+               y = PC2, 
+               color = lancet_condition_group)) +
+    geom_point() +
+    scale_color_brewer(palette = "Set2") + 
+    labs(x = "PC3", 
+         y = "PC2",
+         title = "PCA of GWAS Catalog abstract embeddings, colored by lancet condition") + 
+    theme_bw()
+  
+
+pca_table |>
+    left_join(gwas_study_info |> 
+                  select(PUBMED_ID, YEAR, lancet_condition), 
+              by = "PUBMED_ID") |>
+    mutate(YEAR = as.factor(YEAR)) |>
+    ggplot(aes(x = PC3, 
+               y = PC2, 
+               color = YEAR)) +
+    geom_point() +
+    scale_color_manual(values = viridisLite::plasma(n = 19)) +
+    labs(x = "PC3", 
+         y = "PC2",
+         title = "PCA of GWAS Catalog abstract embeddings, colored by lancet condition") + 
+    theme_bw()
+  
+```
+
+```{r get_training_sample}
+
+# set.seed(500)
+
+# training_sample = gwas_study_info |>
+#   filter(!c(PUBMED_ID %in% original_training)) |>
+#   select(YEAR, PUBMED_ID,
+#          lancet_condition) |>
+#   tidyr::separate_longer_delim(lancet_condition, delim = " & ") |>
+#   distinct() |>
+#   dplyr::group_by(YEAR,lancet_condition) |>
+#   dplyr::slice_sample(n = 1) |>
+#   pull(PUBMED_ID) |>
+#   unique()
+
+# pmids <- training_sample
+
+pmids <- gwas_study_info$PUBMED_ID |> unique()
+
+# don't bother with already annotated data: 
+annotated <- stream_in(file(here::here("output/doccano/doccano_pt7_v5.jsonl")))
+annotated_pmids <- annotated$pubmed_id |> unique()
+pmids <- pmids[!c(pmids %in% annotated_pmids)]
 
 gwas_study_info =
   gwas_study_info |>
-  filter(PUBMED_ID %in% training_sample) 
+  filter(PUBMED_ID %in% pmids)
 
-print("Number of unique pubmed ids for disease studies:")
+print("Number of selected training pubmed ids for disease studies:")
 gwas_study_info$PUBMED_ID |> unique() |> length()
 
 ```
@@ -117,15 +251,7 @@ full_text_pmids <- grep("PMC",
 
 
 print("Number of training sample papers with full text retrieved:")
-sum(training_sample %in% full_text_pmids)
-
-print("Number of unique pubmed ids for disease studies with full text retrieved:")
-gwas_study_info |>
-  filter(PUBMED_ID %in% full_text_pmids) |>
-  select(PUBMED_ID, cause) |>
-  distinct() |>
-  group_by(cause) |>
-  summarise(n = n()) 
+sum(pmids %in% full_text_pmids)
 
 ```
 
@@ -179,7 +305,7 @@ population_descriptors <-
   str_replace_all("Recruitment in North, Central, and South America, Asia, and Europe", 
                   "North America, Central America, Asia, Europe") |>
   #stringr::str_split("\\,|;|heritage:\\|") |>
-  stringr::str_split("\\,|;|heritage:|") |>
+  stringr::str_split("\\,|;|heritage:|\\(|\\)|\\/|\\ - |\\: |\\band\\b") |>
   unlist() |>
   str_trim() 
 
@@ -203,26 +329,55 @@ population_descriptors <- population_descriptors |>
   str_remove_all("\\(Middle Eastern$") |>
   unique() 
 
+# exclude population descriptors containing numbers 
+population_descriptors <- population_descriptors[!str_detect(population_descriptors, "\\d")]
 
-# removing population descriptors that are not valid to match cohort descriptions in abstracts (e.g. "cases", "controls", "Bipolar disorder")
-not_valid_pop_descriptors <- c("NR", "N.R", "Other", "other", "", "unspecified",
-                               "East", "Euopre",
-                               "UKB", "UKBB", "DECODE", "Controls from UKBiobank", "UKBB and deCODE", 
-                               "NHAPC", "GeneID-I", " Family", 
-                               "non-Hispaniic white", "Zimbabweian", "Portugese", "Europen American",
-                               "(see Moffatt et al 2010)", "See Wu J. H", 
-                               "et al. 2013. PMID: 23362303", "See Wu et al 23362303", "23362303",
-                               "See Locke (PubMed 25673413) for BMI and Shungin (PubMed 25673412) for WHR")
+# exclude uninformative population descriptors 
+uninform_pop_desc <- c("NR", "N.R", 
+                       "Other", "other", 
+                       "", "unspecified", 
+                       "Mixed", "mixed", "Multiple", "multiple", 
+                       "Split", "split") 
 
+population_descriptors <- population_descriptors[!c(population_descriptors %in% uninform_pop_desc)]
+
+# exclude disease descriptors that are not valid to match cohort descriptions in abstracts (e.g. "Asthma", "Type 2 diabetes")
 disease_descriptors <- grep("cases|Bipolar|controls|Schizophrenia|disorder", 
                             population_descriptors, 
+                            ignore.case = T,
                             value = T)
 
-population_descriptors <- population_descriptors[!(population_descriptors %in% 
-                                                     c(not_valid_pop_descriptors,
-                                                       disease_descriptors
-                                                       )
+population_descriptors <- population_descriptors[!(population_descriptors %in% disease_descriptors
                                                      )]
+
+# exclude cohort names 
+cohort_names <- c("UKB", "UKBB", "DECODE", "Controls from UKBiobank", "UKBB and deCODE", 
+                  "NHAPC", "GeneID-I", " Family", "KARE", "Mayo")
+
+population_descriptors <- population_descriptors[!(population_descriptors %in% cohort_names)]
+
+# exclude weird paper related terms 
+grep("for|see|et al", population_descriptors, ignore.case = T, value = T)
+
+population_descriptors <- population_descriptors[!grepl(population_descriptors, "for|see", ignore.case = T)]
+
+# add directions
+directions <- c("North", 
+                "South",
+                "East", 
+                "West",
+                "Central",
+                "Southeast",
+                "Northeast",
+                "Northwest",
+                "Southwest")
+
+population_descriptors <- c(population_descriptors, 
+                            "multiracial")
+
+population_descriptors <- unique(c(population_descriptors, directions))
+
+population_descriptors <- population_descriptors |> str_trim() |> unique()
 
 ```
 
@@ -286,6 +441,13 @@ terms_to_exclude <- c("ancestry category",
 
 hancestro_terms <- hancestro_terms[!c(hancestro_terms %in% terms_to_exclude)]
 
+hancestro_terms <- 
+hancestro_terms |>
+  str_split("\\(|\\)") |>
+  unlist() |>
+  str_trim() |>
+  unique() 
+
 ```
 
 #### ? Other possible sources
@@ -293,46 +455,96 @@ hancestro_terms <- hancestro_terms[!c(hancestro_terms %in% terms_to_exclude)]
 Country R packages 
 Population descriptors in: https://pmc.ncbi.nlm.nih.gov/articles/PMC8715140/#sec2
 
+
+#### Terms to identify sentence identifying / describing cohort
+
+```{r get_cohort_descriptor_terms,}
+
+participant_words <- c("adults", "adolescents", "children", "infants", "neonates",
+                       "women", "men", "female", "male",
+                       "trios", "families", "twins", "siblings", 
+                        "cases", "probands", "affected", 
+                        "controls", "unaffected", "healthy",                        
+                       "genomes",  "individuals", "patients",  "participants", 
+                       "subjects", "samples", "donors", "volunteers")
+
+# words that indicate sample or cohort is being discussed:
+sample_terms <- c(
+  participant_words,
+  # demographic / population descriptor terms
+  "ancestry", "ancestral", "origin", "descent",  "lineage",  "heritage", 
+  "admixed", "admixture",
+  "ethnic", "ethnicity",  "multi-ethnic",
+  "racial", "multi-racial", "multiracial", "race",
+  "demographic", "self-identified", "self-reported",
+  "age", "aged", "years",
+  "founder", "isolate", "isolated", "population", "populations",
+  
+  # cohort/sample related terms
+  "biobank", "cohort", "cohorts", "consortium", "consortia",
+  "registry", "sample", "study", "trial",
+  
+  # enrollment related terms
+   "enroll", "enrolled", "enrollment", "enrollees",
+   "recruitment", "recruited", 
+   "volunteer", "volunteered", 
+   "sampling", "sampled", 
+   "ascertained", "residing",
+  
+  # Types of study
+  "case-control", "prospective", "longitudinal", "cross-sectional",  "nationwide",
+  "meta-analysis", "pooled",
+  "replication", "discovery", "validation",
+  
+  # Subsets 
+  "subgroup", "subset", "subcohort"
+  
+)
+
+
+```
+
 #### Combine sources 
 
 ```{r combine_cohort_context_terms, eval = F}
 
 # combine terms from different sources, and add some extra terms based on looking at cohort descriptions in abstracts
 cohort_context_terms <-
-c(countries, hancestro_terms, population_descriptors) |> 
+c(countries, 
+  hancestro_terms, 
+  population_descriptors,
+  sample_terms) |> 
   unique() |>
   sort()
 
-# terms to add: 
-cohort_context_terms <- c(cohort_context_terms, 
-                          "Scandinavians",
-                          "Native Hawaiians")
+
+# more terms to exclude:
+cohort_context_terms <- cohort_context_terms[!cohort_context_terms %in% c("San", "Split", "Han")]
 
 # terms to remove ... "Qatar", "UK", "Taiwan", "Korean"
-cohort_context_terms <- cohort_context_terms[!cohort_context_terms %in% c("Qatar", 
-                                                                          "UK", 
-                                                                          "Taiwan",
-                                                                          "Korean",
-                                                                          "population")]
+# cohort_context_terms <- cohort_context_terms[!cohort_context_terms %in% c("population", 
+#                                                                           "mixed",
+#                                                                           "split")]
 
 # replace brackets with \\( & and \\)
 cohort_context_terms <- cohort_context_terms |> 
   str_replace_all(pattern = "\\(", replacement = "\\\\(") |>
   str_replace_all(pattern = "\\)", replacement = "\\\\)")
 
+# cohort_context_terms <- c(cohort_context_terms, 
+#                           "UK\\b(?! Biobank)",
+#                           "UK\\b\\(?! Biobank\\)",
+#                           "Qatar\\b\\(?! Biobank\\)",
+#                           "Taiwan\\b\\(?! Biobank\\)",
+#                           "Korean\\b\\(?! Biobank\\)"
+#                           )
 
 
-cohort_context_terms <- c(cohort_context_terms, 
-                          "UK\\b(?! Biobank)",
-                          "UK\\b\\(?! Biobank\\)",
-                          "Qatar\\b\\(?! Biobank\\)",
-                          "Taiwan\\b\\(?! Biobank\\)",
-                          "Korean\\b\\(?! Biobank\\)"
-                          )
+# remove single character terms
+cohort_context_terms <- cohort_context_terms[nchar(cohort_context_terms) > 2]
 
 # sort by length of term (longest first) to match longest names first
 cohort_context_terms <- cohort_context_terms[order(-nchar(cohort_context_terms))]
-
 
 writeLines(cohort_context_terms, 
            here::here("output/gwas_cat/ancestry_population_terms.txt"))
@@ -519,6 +731,8 @@ cohort_full_names <- cohort_full_names[order(-nchar(cohort_full_names))]
 cohort_full_names <- cohort_full_names[cohort_full_names != "Not Reported"]
 cohort_full_names <- unique(cohort_full_names)
 
+cohort_full_names <- cohort_full_names[cohort_full_names != "Japan"]
+
 print("Number of unique cohort full names:")
 length(cohort_full_names)
 
@@ -560,9 +774,20 @@ cohort_abbr_names = unique(c(cohort_abbr_names,
                            gwas_cat_cohorts))
 
 # remove small abbreviations that are likely to be false positives
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "UK"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "US"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "NZ"]
 cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "DN"]
 cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "CHB"]
 cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "FG"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "HTN"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "GD"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "MD"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "UC"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "DC"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "ACE"]
+cohort_abbr_names <- cohort_abbr_names[cohort_abbr_names != "Japan"]
+
 
 print("Number of unique cohort abbreviation names:")
 length(cohort_abbr_names)
@@ -581,7 +806,8 @@ source spacyr_venv/bin/activate
 
 python3 code/extract_text/spacy_obtain_sentences.py \
 --input_dir output/abstracts \
---output_dir output/abstracts
+--output_dir output/abstracts \
+--hf_model pritamdeka/S-PubMedBert-MS-MARCO
 
 ```
 
@@ -635,26 +861,95 @@ length(missing_abstracts)
 
 ## Cohort name matching in abstract sentences
 
+### Remove title sentences and small sentences that are likely to contain cohort names but are not sentences describing the cohort
+
+```{r remove_title_and_small_sentences}
+
+# remove title from sentences (as this is likely to contain cohort names but is not a sentence describing the cohort)
+
+has_balanced_parens <- function(s) {
+  stringr::str_count(s, fixed("(")) == stringr::str_count(s, fixed(")"))
+}
+
+get_title_sentences <- function(x, n_words_threshold = 5) {
+                 
+                 # get short sentences < 6 words
+                 sentences <- x[stringr::str_count(x, " ") < n_words_threshold]
+                 
+                 # catch / inspect title sentences 
+                 # upper_case <- "(?m)^\\s*[A-Z][A-Z\\s]+$"
+                 
+                 # get sentences that start with capital letter
+                 sentences <- sentences[grepl("^(\\d+(\\.\\d+)*\\s+)?[A-Za-z]", sentences)]
+                  #sentences[grepl("^[A-Z]", sentences)]
+                 
+                 # exclude sentences containing unmatched bracket as these are more likely to be complex sentences that are less likely to be titles or headings
+                 #sentences <- sentences[!grepl("\\(|\\)", sentences)]
+                 sentences <- sentences[has_balanced_parens(sentences)]
+                 
+                 # exclude sentences that end with a comma, as these are more likely to be incomplete sentences that are part of a larger sentence, and less likely to be titles or headings
+                 sentences <- sentences[!grepl(",$|\\($", sentences)] 
+                 
+                 # exclude sentences that contain urls
+                 sentences <- sentences[!grepl("www.|http", sentences)]
+                 
+                 return(sentences)
+                 
+}
+
+get_non_title_sentences <- function(x) {
+  
+                title_sentences <- get_title_sentences(x)
+                 
+                keep_non_title_sentences <- x[!c(x %in% title_sentences)]
+                 
+                return(keep_non_title_sentences)
+}
+
+title_sentences <- purrr::map(abstracts,
+                              get_title_sentences
+                              ) |>
+                              # ~get_title_sentences(.x, 
+                              #                     n_words_threshold = 3)) |>
+                   purrr::list_c() |>
+                   sort() |>
+                   unique()
+
+
+print("Title sentences identified:")
+print(title_sentences)
+
+
+abstracts <-
+purrr::map(abstracts,
+           get_non_title_sentences        
+                 )
+
+
+```
+
 ### Function to extract sentences with cohort names
 
 ```{r fn_extract_cohort_sentences}
 
-extract_cohort_sentences <- function(abstract_list, 
-                                     cohort_names, 
+extract_cohort_sentences <- function(text_list, # list of texts to search through (e.g. abstracts, or full texts)
+                                     terms, # terms to grep search for
                                      column_name = "COHORT",
                                      tokenize = FALSE,
                                      ignore_case) {
   
-  cohort_names_grep <- paste0("\\b", cohort_names, "\\b") # add word boundaries to match whole words only
+  #word boundary or preceded by ( [ ,
+  terms_grep <- paste0("(?<=\\b|\\(|\\[)",
+                            terms,
+                            "(?=\\b|,|\\(|\\])")
   
-  results <- lapply(seq_along(abstract_list), function(i) {
+  results <- lapply(seq_along(text_list), function(i) {
     
-    #abstract <- text_vector[i]
-    # Split abstract into sentences
+    # Split text into sentences, if not done already
     if(tokenize) {
-      sentences <- tokenizers::tokenize_sentences(abstract_list[[i]])[[1]]
+      sentences <- tokenizers::tokenize_sentences(test_list[[i]])[[1]]
     } else {
-      sentences <-  abstract_list[[i]]
+      sentences <-  text_list[[i]]
     }
     
     # For each sentence, find all matching cohort names
@@ -663,31 +958,40 @@ extract_cohort_sentences <- function(abstract_list,
       sentence <- sentences[s]
       
       # Identify cohort names present in this sentence
-      matched_cohorts <- cohort_names[str_detect(sentence, 
-                                                 regex(cohort_names_grep, 
-                                                       ignore_case = ignore_case))]
-      cohort_df <-
+      matched_cohorts <- terms[str_detect(sentence, 
+                                          regex(terms_grep, 
+                                                ignore_case = ignore_case)
+                                          )
+                               ]
+      term_df <-
       data.frame(
         article_id = i,
         sentence_id = s,
         sentence = sentence,
-        has_cohort = length(matched_cohorts) > 0,
-        #!!column_name = if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else "",
-        #COHORT = if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else "",
         stringsAsFactors = FALSE
       )
       
-      # Add dynamic column
-      cohort_df[[column_name]] <- if (length(matched_cohorts) > 0) str_flatten(unique(matched_cohorts), collapse = "|", na.rm = T) else ""
+      # Add column with matched term names (if any)
+      term_df[[column_name]] <- ifelse(length(matched_cohorts) > 0,
+                                       str_flatten(unique(matched_cohorts), 
+                                                   collapse = "|", 
+                                                   na.rm = T),
+                                       ""
+      )
       
-      return(cohort_df)
+      # Add column with binary label for whether any terms were matched
+      term_df[[paste0("has_", tolower(column_name))]] <- ifelse(length(matched_cohorts) > 0, 
+                                                                TRUE, 
+                                                                FALSE)
+      
+      return(term_df)
       
     }) |> bind_rows()
   })
 
  results <- bind_rows(results)
  
- results$pubmed_id <- names(abstract_list)[results$article_id]
+ results$pubmed_id <- names(text_list)[results$article_id]
  
  return(results) #returns a df of sentences, with labelled columns for whether they contain cohort names, and which cohort names they contain (if any)
  # id of sentence, and abstract / article
@@ -756,105 +1060,6 @@ cohort_sentences_df =
 
 ```
 
-```{r}
-
-json_list <- 
-cohort_sentences_df |>
-  filter(has_cohort) |>
-  pull(sentence) |>
-  as.list()
-
-# Write to JSON file
-writeLines(toJSON(json_list,
-                  auto_unbox = TRUE,
-                  pretty = TRUE),
-           here::here("output/doccano/abstract_cohort_sentences.json"))
-
-
-json_list <- 
-cohort_sentences_df |>
-  filter(!has_cohort) |>
-  pull(sentence) |>
-  as.list()
-
-# Write to JSON file
-writeLines(toJSON(json_list,
-                  auto_unbox = TRUE,
-                  pretty = TRUE),
-           here::here("output/doccano/abstract_non_cohort_sentences.json"))
-
-```
-
-#### Distinguishing words between sentences with cohort names, and sentences without cohort names
-
-```{r distinguish_cohort_sentences_abstracts}
-
-# remove stop words and common words that are not informative for cohort context
-removal_words <- c("the", "and", "of", "in", "to", "with", "a",
-                   "for", "on", "by", "is", "are", "was", "were", "each", "all", "had", "have", "it",
-                   "as", "from", "that", "this", "which", "be", "at", "or", "an", "then", "than",  "into",
-                   "if", "not", "only", "both", "same", "after", "across", "between", "out", "up", "any", 
-                   "we", "our", "us", "these", "within", "per",
-                   "used", "using", "use",
-                  "0.01", "0.05", "0.5", "1", "one", "2", "two", "3", "three", "iii",
-                  "4", "5", "6", "p", "8",  "10", "value", "significant", "30",
-                   "i", "r", "wide"
-)
-
-cohort_sentences_words <- 
-cohort_sentences_df |>
-  filter(has_cohort) |>
-  pull(sentence) |>
-  tokenizers::tokenize_words() |>
-  unlist()
-
-cohort_sentence_words_df =
-data.frame(word = cohort_sentences_words) |>
-  filter(!(tolower(word) %in% removal_words)) |>
-  group_by(word) |>
-  summarise(n_in_cohort = n()) |>
-  filter(n_in_cohort > 5)
-
-non_cohort_sentences_words <-
-cohort_sentences_df |>
-  filter(!has_cohort) |>
-  pull(sentence) |>
-  tokenizers::tokenize_words() |>
-  unlist()
-
-# sample down non-cohort sentences words
-set.seed(500)
-non_cohort_sentences_words_sample <- sample(non_cohort_sentences_words, 
-                                              size = length(cohort_sentences_words), 
-                                              replace = FALSE)
-
-non_cohort_sentence_words_df =
-data.frame(word = non_cohort_sentences_words_sample) |>
-  filter(!(tolower(word) %in% removal_words)) |>
-  group_by(word) |>
-  summarise(n_not_cohort = n()) 
-
-
-n_sentences <- cohort_sentences_df |>
-  filter(COHORT != "") |>
-  select(article_id, sentence_id) |>
-  distinct() |>
-  nrow()
-
-
-print("Words more common in sentences with cohort names than sentences without cohort names:")
-left_join(cohort_sentence_words_df,
-          non_cohort_sentence_words_df,
-          by = "word"
-          ) |>
-  mutate(n_not_cohort = ifelse(is.na(n_not_cohort), 0, n_not_cohort)) |>
-  mutate(delta_n = n_in_cohort - n_not_cohort) |>
-  mutate(recall = n_in_cohort / n_sentences) |>
-  arrange(desc(delta_n)) |>
-  head(20)
-
-```
-
 ```{r cohort_sentence_summary}
 
 print("Number of abstracts containing probable cohort reference")
@@ -919,12 +1124,44 @@ cohort_sentences_df |>
   
 ```
 
-#### Add cohort-related context sentences
+#### Get cohort-related context sentences
 
 ```{r extract_cohort_context_sentences_from_abstracts}
 
+all_cohort_terms <- c(cohort_full_names, cohort_abbr_names)
+
+# mask cohort names in methods text
+# so that extract population descriptors etc. are not masked by cohort name matching
+cohort_patterns <- 
+  all_cohort_terms |>
+  unique()
+
+cohort_patterns <- cohort_patterns[order(-nchar(cohort_patterns))] # order by length, to avoid shorter patterns matching within longer patterns (e.g. "UK Biobank" and "Biobank")
+
+cohort_patterns  <- cohort_patterns |> 
+  stringr::str_escape()   # or: gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
+
+cohort_patterns <- paste0("(?<=\\b|\\(|\\[)",
+                            cohort_patterns,
+                            "(?=\\b|,|\\(|\\])")
+
+mask_re <- paste0("\\b(?:",
+                  paste(cohort_patterns,
+                        collapse = "|"),
+                  ")\\b")
+
+
+masked_abstracts <- purrr::map(abstracts,
+           function(x) {
+             stringr::str_replace_all(x, 
+                                      stringr::regex(mask_re, ignore_case = TRUE), 
+                                      "\u241F"
+                                      )
+           }
+           )
+
 # extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
-cohort_context_df = extract_cohort_sentences(abstracts,
+cohort_context_df = extract_cohort_sentences(masked_abstracts,
                                             cohort_context_terms,
                                             column_name = "CONTEXT",
                                             ignore_case = FALSE
@@ -935,7 +1172,8 @@ left_join(cohort_sentences_df,
           cohort_context_df |> select(pubmed_id,
                                       article_id, 
                                       sentence_id, 
-                                      CONTEXT),
+                                      CONTEXT,
+                                      has_context),
           by = c("pubmed_id",
                  "article_id", 
                  "sentence_id")
@@ -943,7 +1181,6 @@ left_join(cohort_sentences_df,
 
 print("Number of sentences with cohort names and/or cohort-related context:")
 cohort_sentences_df |> 
-  mutate(has_context = ifelse(CONTEXT == "", F, T)) |>
   group_by(has_cohort, has_context) |> 
   summarise(n = n())
 
@@ -956,63 +1193,86 @@ nrow(filtered_cohort_sentences_df)
 
 ```
 
-#### Get other sentences with words that indicate sample or cohort is being discussed
 
-Using this to correct for the over-representation of sentences without cohort names, by identifying well-matched sentences
+#### Get hard negatives 
 
-```{r extract_sample_context_sentences_from_abstracts}
+These are 'semanitically similar' sentences to cohort names. 
 
-# words that indicate sample or cohort is being discussed:
-sample_terms <- c(
-  # Your original list
-  "ancestry", "biobank", "cases", "cohort", "controls", 
-  "consortium", "consortia", "descent", "founder", 
-  "enrolled", "enrollment", "ethnicity", "heritage",
-  "isolate", "isolated", "individuals", "participants", 
-  "patients", "population", "recruitment", "registry", 
-  "sample", "study", "subjects", "volunteer",
-  
-  # Additional core terms
-  "recruited", "enroll", "ascertained", "volunteers",
-  "probands", "affected", "unaffected", "families", "twins",
-  "cohorts", "populations", "samples", "subgroup", "subset",
-  "subcohort", "demographic", "ethnic", "racial",
-  "admixed", "admixture", "ancestral", "origin",
-  "case-control", "prospective", "genotyped", "sequenced",
-  "meta-analysis", "pooled", "residing", "nationwide",
-  
-  # Useful variants
-  "enrollees", "sampling", "lineage", "self-reported",
-  "self-identified", "replication", "discovery", "validation"
-)
+```{r save_sentences}
 
-control_cohort_sentences_df <-
+json_list <- 
 cohort_sentences_df |>
-  filter(COHORT == "" & CONTEXT == "") |>
-  filter(grepl(paste(sample_terms, collapse = "|"), 
-               sentence, 
-               ignore.case = TRUE)
-         ) #|>
+  filter(has_cohort) |>
+  pull(sentence) |>
+  as.list()
 
-print("Number of sentences without (detected) cohort names or cohort-context but with sample-related context:")
-nrow(control_cohort_sentences_df)
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here("output/doccano/abstract_cohort_sentences.json"))
 
-filtered_cohort_sentences_df =
-  bind_rows(filtered_cohort_sentences_df,
-            control_cohort_sentences_df
-            ) |>
-  distinct()
 
-print("Percentage of sentences with cohort names vs other cohort-related context")
-total_n_sentences <- nrow(filtered_cohort_sentences_df)
+json_list <- 
+cohort_sentences_df |>
+  filter(!has_cohort) |>
+  pull(sentence) |>
+  as.list()
 
-filtered_cohort_sentences_df |>
-  group_by(has_cohort) |> 
-  summarise(n = n(),
-            percentage = round(100 * n/total_n_sentences, digits = 2)
-  )
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here("output/doccano/abstract_non_cohort_sentences.json"))
 
 ```
+
+```{bash, eval = F}
+
+source  spacyr_venv/bin/activate
+
+python3 code/extract_text/sentence_embeddings.py \
+        --label "abstracts" \
+        --cohort_path "output/doccano/abstract_cohort_sentences.json" \
+        --non_cohort_path "output/doccano/abstract_non_cohort_sentences.json" \
+        --figure_save_path "output/doccano/abstract_sentence_similarity.png" \
+        --p 75
+        
+```
+
+#### Make training set
+
+```{r add_hard_negs_to_abstract_sentences}
+
+abstract_hard_negatives <- jsonlite::read_json(here::here("output/doccano/hard_negatives_abstracts.json"),
+                                               simplifyVector = TRUE)
+
+cohort_sentences_df  <- 
+cohort_sentences_df |>
+  dplyr::mutate(hard_negative = ifelse(sentence %in% abstract_hard_negatives,
+                                TRUE,
+                                FALSE)
+  )
+
+print("Overlap between hard negatives and sentences with cohort names or cohort-related context:")
+cohort_sentences_df |>
+  filter(hard_negative == TRUE) |>
+  group_by(has_cohort, has_context) |>
+  summarise(n = n())
+
+# most hard negatives overlap with context sentences! (As expected, as 
+# as context sentences should also be semantically similar to cohort sentences
+
+filtered_cohort_sentences_df <-
+cohort_sentences_df |>
+  filter(COHORT != "" | CONTEXT != "" | hard_negative == TRUE)
+
+print("Size of training set:")
+print("Number of sentences with cohort names or cohort-related context (population, ancestry, country terms) or hard negatives:")
+nrow(filtered_cohort_sentences_df)
+
+```
+
 ## Prepare data in Doccano JSON format
 
 ```{r prepare_doccano_json_abstracts}
@@ -1180,93 +1440,402 @@ cat("JSONL saved to:", jsonl_file, "\n")
 source spacyr_venv/bin/activate
 
 python3 code/extract_text/spacy_obtain_sentences.py \
---input_dir output/fulltexts/methods_sections \
---output_dir  output/fulltexts/methods_sentences
+--input_dir output/methods \
+--output_dir  output/methods_sentences 
 
 ```
 
-## Get relevant methods text:
+## Load relevant methods text
 
 ```{r}
 
-methods_sections <- list.files(here::here("output/fulltexts/methods_sentences/"), 
+methods_sections <- list.files(here::here("output/methods_sentences/"), 
                              pattern = "*.json", 
                              full.names = TRUE
                              )
 
+methods_sections <- methods_sections[!c(methods_sections %in% 
+                                          grep("failed_files|no_methods", 
+                                                methods_sections, 
+                                                value = TRUE)
+                                      )
+                                     ]
+
 pmcids_with_methods <- methods_sections |>
   gsub(pattern = ".*/", replacement = "") |>
-  gsub(pattern = "_methods_sentences\\.json$", replacement = "")
+  gsub(pattern = "_methods_sentences\\.json$", replacement = "") |>
+  gsub(pattern = "_methods_main_sentences\\.json$", replacement = "") |>
+  gsub(pattern = "_bioc", replacement = "") 
 
-pubmeds_with_methods <- converted_ids |>
+converted_pmcids <-  converted_ids |>
   filter(pmcids %in% pmcids_with_methods) |>
   pull(PMID)
 
-pubmeds_with_methods <- c(pubmeds_with_methods, 
+pubmeds_with_methods <- c(converted_pmcids, 
                           grep("PMC", pmcids_with_methods, value = TRUE, invert = TRUE)
                           )
 
-print("Number of papers with methods sections extracted:")
-sum(pubmeds_with_methods %in% pmids)
+print("Number of papers with methods sections extracted out of training sample")
+sum(pubmeds_with_methods %in% pmids) 
 
-pmids_methods_to_get <-  pubmeds_with_methods[pubmeds_with_methods %in% pmids]
+100 * sum(pubmeds_with_methods %in% pmids) / length(pmids)
 
-pmcids_methods_to_get <- converted_ids |>
-  filter(PMID %in% pmids_methods_to_get) |>
-  pull(pmcids)
+# get corresponding files to pubmed ids 
+pubmeds_to_get <- pubmeds_with_methods[pubmeds_with_methods %in% pmids]
 
-ids_methods_to_get <- c(pmids_methods_to_get, pmcids_methods_to_get)
+get_file_names_df <- 
+   converted_ids |>
+   filter(PMID %in% pubmeds_to_get) |>
+   select(-DOI) |>
+   rename(pmid = PMID,
+          pmcid = pmcids
+          ) |>
+  rowwise() |>
+  
+  # data.frame(pmid = pubmeds_to_get) |>
+  #                    #rowwise() |>
+  #                    mutate(pmcid = converted_ids |> 
+  #                                    filter(PMID %in% pubmeds_to_get) |> 
+  #                                       pull(pmcids)
+  #                               ) |>
+  mutate(file_name = ifelse(!is.na(pmcid) | pmcid != "",
+                            grep(methods_sections, 
+                                 pattern = pmcid, 
+                                 value = TRUE),
+                            grep(methods_sections,
+                                 pattern = pmid, 
+                                 value = TRUE)
+                            )
+  ) |>
+  mutate(file_name = ifelse(is.na(file_name),
+                            grep(methods_sections,
+                                 pattern = pmid, 
+                                 value = TRUE),
+                            file_name
+                            )) |>
+  filter(!is.na(file_name)) |> 
+  ungroup()
 
-ids_methods_to_get <- ids_methods_to_get[ids_methods_to_get != ""]
-
-files_to_get <-
-paste0(ids_methods_to_get, 
-       "_methods_sentences.json") |>
-  sort()
-
-methods_sections_to_get <- methods_sections[basename(methods_sections) %in% files_to_get]
-methods_sections_to_get <- basename(methods_sections_to_get) |> 
-                           gsub(pattern = "_methods_sentences\\.json$", replacement = "")
-
-# read in methods sections for available papers
-methods_texts <- sapply(methods_sections_to_get,
-                    function(id) {
-                      
-                      file <- here::here(paste0("output/fulltexts/methods_sentences/",
-                                                id, 
-                                                "_methods_sentences.json"))
+methods_texts <- sapply(get_file_names_df$file_name,
+                    function(file) {
                       
                       json_data <- fromJSON(file)
                       
-                      abstract_lines <- json_data[json_data != ""]
-                      # readLines(file, 
-                      #           warn = FALSE, 
-                      #           encoding = "UTF-8") |>
-                      # paste(collapse = " ")
-                    }
+                      text_lines <- json_data[json_data != ""]
+
+                                          }
                     )
 
-# convert pmcids to pubmeds
-names(methods_texts) <- sapply(names(methods_texts), function(id) {
-  if(grepl("^PMC", id)) {
-    pmcid <- id
-    pubmed_id <- converted_ids$PMID[converted_ids$pmcids == pmcid]
-    if(length(pubmed_id) > 0) {
-      return(as.character(pubmed_id))
-    } else {
-      return(NA)
-    }
-  } else {
-    return(id)
-  }
-})
+
+names(methods_texts) <- get_file_names_df$pmid
 
 # order methods texts by pmids
 methods_texts <- methods_texts[order(names(methods_texts))]
 
 ```
 
-## Extract sentences with cohort names or cohort-related context (population, ancestry, country terms) from methods sections
+### Remove title sentences
+
+```{r remove_title_sentences}
+
+
+title_sentences <- purrr::map(methods_texts,
+                              get_title_sentences) |>
+                   purrr::list_c() |>
+                   sort() |>
+                   unique()
+
+
+print("Number of title sentences extracted from methods sections:")
+length(title_sentences)
+           
+
+methods_texts <-
+purrr::map(methods_texts,
+           get_non_title_sentences        
+                 )
+
+# what small sentences are left
+purrr::map(
+methods_texts,
+~.x[stringr::str_count(.x, " ") < 5]
+) |>
+  purrr::list_c()
+
+```
+
+### Manual checks of methods text sentences 
+
+```{r check_methods_texts, eval = F}
+
+# to do when more settled with methods text extraction, to check the quality of the sentences extracted from methods sections, and whether they are likely to be useful for cohort name extraction
+
+# Check 1. 
+# Do all sentences start:
+# with a capital,
+# Or a number 
+# Or a word that is lower case, and then upper case (e.g. eQTl)
+check_1_regex <- "^([A-Z]|[0-9]+|[a-z]+[A-Z])"
+
+check_1 <- purrr::keep(methods_texts,
+            ~any(!grepl(check_1_regex,
+                       .x)
+                 )
+                 ) 
+
+check_1 <- purrr::imap(check_1, 
+           function(x, idx) {
+             
+             sentences_idx = grep(check_1_regex,
+                                  x,
+                                  invert = TRUE,
+                                  value = F
+                                  )
+             
+             just_broken_sentences_idx <- sentences_idx
+             
+             sentences_idx <- sort(unique(c(sentences_idx - 1,
+                               sentences_idx, 
+                               sentences_idx + 1)))
+             
+             sentences_idx <- sentences_idx[sentences_idx > 0 & sentences_idx <= length(x)]
+             
+             
+             # idx of nearby sentences
+             # sentences_idx <- sort(unique(c(sentences_idx - 2,
+             #                                sentences_idx, 
+             #                                sentences_idx + 2))
+             #                       )
+             # 
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |>
+               dplyr::mutate(broken_sentence = ifelse(sentence_id %in% just_broken_sentences_idx, TRUE, FALSE))
+             
+             return(df)
+           }
+           ) |>
+  bind_rows()
+
+print("\n \n Check the starts of sentences seem reasonable")
+print("Number of papers with sentences that don't start with capital, number, or lower-upper case word:")
+check_1  |> pull(pubmed_id) |> unique() |> length()
+
+print("Number of sentences that don't start with capital, number, or lower-upper case word:")
+check_1 |> filter(broken_sentence) |> nrow()
+
+# Check 2: 
+# Sentence ends with a full stop: 
+# "\\.$"
+check_2_regex <- "\\.$|\\?$"
+
+check_2 <- purrr::keep(methods_texts,
+            ~any(!grepl(check_2_regex,
+                       .x)
+                 )
+                 )
+
+check_2 <- purrr::imap(check_2,
+           function(x, idx) {
+             
+             sentences_idx = grep(check_2_regex,
+                                  x,
+                                  invert = TRUE,
+                                  value = F
+                                  )
+             
+             just_broken_sentences_idx <- sentences_idx
+             
+             sentences_idx <- sort(unique(c(sentences_idx - 1,
+                               sentences_idx, 
+                               sentences_idx + 1)))
+             
+             sentences_idx <- sentences_idx[sentences_idx > 0 & sentences_idx <= length(x)]
+             
+             
+             # idx of nearby sentences
+             # sentences_idx <- sort(unique(c(sentences_idx - 2,
+             #                                sentences_idx, 
+             #                                sentences_idx + 2))
+             #                       )
+             # 
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |>
+               dplyr::mutate(broken_sentence = ifelse(sentence_id %in% just_broken_sentences_idx, TRUE, FALSE))
+             
+             return(df)
+           }
+           ) |>
+  bind_rows()
+
+
+print("\n \n Check the ends of sentences seem reasonable")
+print("Number of papers with sentences that don't end with a full stop or question mark:")
+check_2  |> pull(pubmed_id) |> unique() |> length()
+
+print("Number of sentences that don't end with a full stop or question mark:")
+check_2 |> filter(broken_sentence) |> nrow()
+
+# Check 3: 
+# Sentences don't have un-matched brackets
+# "\\((?![^()]*\\))|(?<!\\([^()]*\\))\\)"
+has_unmatched_parens <- function(x) {
+  open  <- stringr::str_count(x, "\\(")
+  close <- stringr::str_count(x, "\\)")
+  open != close
+}
+
+check_3 <- purrr::keep(methods_texts, 
+                       ~ any(has_unmatched_parens(.x)))
+
+check_3 <- purrr::imap(check_3,
+           function(x, idx) {
+             
+             sentences_idx = which(sapply(x, has_unmatched_parens))
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |>
+               dplyr::mutate(broken_sentence = TRUE) |>
+               tibble::remove_rownames()
+             
+             return(df)
+           }
+           ) |>
+  bind_rows()
+
+print("\n \n Check that brackets seem reasonable")
+print("Number of papers with sentences that have un-matched brackets:")
+check_3  |> pull(pubmed_id) |> unique() |> length()
+
+print("Number of sentences that have un-matched brackets:")
+check_3 |> filter(broken_sentence) |> nrow()
+
+# Check 4: 
+# Sentences don't have un-matched quotation marks
+# "\"([^\"]*\"[^\"]*)*\""
+check_4_regex <- "\"([^\"]*\"[^\"]*)*\""
+
+check_4 <- purrr::keep(methods_texts,
+            ~any(grepl(check_4_regex,
+                       .x)
+                 )
+                 )
+
+check_4 <- purrr::imap(check_4,
+           function(x, idx) {
+             
+             sentences_idx = grep(check_4_regex,
+                                  x,
+                                  value = F
+                                  )
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |>
+               dplyr::mutate(broken_sentence = TRUE)
+             
+             return(df)
+           }
+           ) |>
+  bind_rows()
+
+
+print("\n \n Check that quotation marks seem reasonable")
+print("Number of papers with sentences that have un-matched quotation marks:")
+print(head(check_4))
+
+  
+# Check sentences that end with [a-z][0-9].
+check_5_regex <- "[a-z][0-9].$|[A-Z][0-9].$"
+
+check_5 <- purrr::keep(methods_texts,
+            ~any(grepl(check_5_regex,
+                       .x)
+                 )
+                 )
+
+
+check_5 <- purrr::imap(check_5,
+           function(x, idx) {
+             
+             sentences_idx = grep(check_5_regex,
+                                  x,
+                                  value = F
+                                  )
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |>
+               dplyr::mutate(broken_sentence = TRUE)
+             
+             return(df)
+           }
+           ) |>
+  bind_rows()
+
+
+n_character_limit <- 100
+
+check_5 <- purrr::keep(methods_texts,
+            ~any((nchar(.x) > n_character_limit) & 
+                   length(grep(.x, pattern = ".") > 1)
+            )
+                 )
+
+check_5 <- purrr::imap(check_5,
+           function(x, idx) {
+             
+             sentences_idx = which(nchar(x) > n_character_limit)
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |>
+               dplyr::mutate(broken_sentence = TRUE)
+             
+             return(df)
+           }
+           ) |>
+  bind_rows()
+
+split_regex <- "(?<!St\\.)(?<!Fig\\.)(?<!no\\.)(?<!vs\\.)(?<!i\\.e\\.)(?<!e\\.g\\.)(?<!Inc\\.)(?<!Co\\.)(?<=[a-z]\\.)\\s+(?=[A-Z])"
+
+
+check_5 |>
+  mutate(match_split = str_detect(sentence, 
+                                  pattern = split_regex
+                                  )
+  ) |>
+  filter(match_split) |>
+  pull(sentence) |>
+  stringr::str_split(pattern = split_regex)  
+
+  
+
+```
+
+## Get cohort relevant sentences 
+
+### Get cohort names sentences
 
 ```{r extract_cohort_sentences_methods}
 
@@ -1379,13 +1948,74 @@ data.frame(cohort = detected_cohorts_methods) |>
   arrange(desc(n)) |>
   head(10)
 
+```
 
-# 
-# methods_cohort_sentences_df |>
-#   filter(!c(article_id %in% methods_abstracts_cohorts)) |>
-#   View()
+### Get cohort-related context sentences 
+
+```{r extract_cohort_context_sentences_methods}
+
+masked_methods_text <- purrr::map(methods_texts,
+           function(x) {
+             stringr::str_replace_all(x, 
+                                      stringr::regex(mask_re, ignore_case = TRUE), 
+                                      "\u241F"
+                                      )
+           }
+           )
+
+# extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
+methods_cohort_context_df = extract_cohort_sentences(
+                                            masked_methods_text,
+                                            cohort_context_terms,
+                                            column_name = "CONTEXT",
+                                            ignore_case = FALSE
+                                            )
+
+methods_cohort_sentences_df <-
+left_join(methods_cohort_sentences_df,
+          methods_cohort_context_df |> select(pubmed_id, 
+                                      article_id,
+                                      sentence_id,
+                                      CONTEXT,
+                                      has_context), 
+          by = c("pubmed_id",
+                 "article_id", 
+                 "sentence_id")
+          ) 
+
+print("Number of sentences with cohort names and/or cohort-related context:")
+methods_cohort_sentences_df |> 
+  mutate(has_context = ifelse(CONTEXT == "", F, T)) |>
+  group_by(has_cohort, has_context) |> 
+  summarise(n = n())
+
+print("Most common cohort-related context terms detected in methods sections:")
+methods_cohort_sentences_df |>
+  filter(CONTEXT != "") |>
+  select(CONTEXT, article_id) |>
+  tidyr::separate_rows(CONTEXT, sep = "\\|") |>
+  distinct() |>
+  group_by(CONTEXT) |>
+  summarise(n_abstracts = n()) |>
+  arrange(desc(n_abstracts)) |>
+  head(10)
+
+print("Most common cohort-related context terms detected in methods sections by number of sentences they are mentioned in:")
+methods_cohort_sentences_df |>
+  filter(CONTEXT != "") |>
+  select(CONTEXT, article_id) |>
+  tidyr::separate_rows(CONTEXT, sep = "\\|") |>
+  distinct() |>
+  group_by(CONTEXT) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head(10)
+
+
 
 ```
+
+### Get hard negatives
 
 ```{r}
 
@@ -1416,122 +2046,47 @@ writeLines(toJSON(json_list,
 
 ```
 
-## Distinguishing words between sentences with cohort names, and sentences without cohort names in methods sections
+```{bash, eval = F}
 
-```{r distinguish_cohort_sentences_methods}
+source  spacyr_venv/bin/activate
 
-cohort_sentences_words <- 
-methods_cohort_sentences_df  |>
-  filter(has_cohort) |>
-  pull(sentence) |>
-  tokenizers::tokenize_words() |>
-  unlist()
-
-cohort_sentence_words_df =
-data.frame(word = cohort_sentences_words) |>
-  filter(!(tolower(word) %in% removal_words)) |>
-  group_by(word) |>
-  summarise(n_in_cohort = n()) |>
-  filter(n_in_cohort > 5)
-
-non_cohort_sentences_words <-
-methods_cohort_sentences_df  |>
-  filter(!has_cohort) |>
-  pull(sentence) |>
-  tokenizers::tokenize_words() |>
-  unlist()
-
-# sample down non-cohort sentences words
-set.seed(500)
-non_cohort_sentences_words_sample <- sample(non_cohort_sentences_words, 
-                                              size = length(cohort_sentences_words), 
-                                              replace = FALSE)
-
-non_cohort_sentence_words_df =
-data.frame(word = non_cohort_sentences_words_sample) |>
-  filter(!(tolower(word) %in% removal_words)) |>
-  group_by(word) |>
-  summarise(n_not_cohort = n()) 
-
-
-print("Words more common in sentences with cohort names than sentences without cohort names:")
-left_join(cohort_sentence_words_df,
-          non_cohort_sentence_words_df,
-          by = "word"
-          ) |>
-  mutate(n_not_cohort = ifelse(is.na(n_not_cohort), 0, n_not_cohort)) |>
-  mutate(delta_n = n_in_cohort - n_not_cohort) |>
-  arrange(desc(delta_n)) |>
-  head(20)
-
+python3 code/extract_text/sentence_embeddings.py \
+        --label "methods" \
+        --cohort_path "output/doccano/methods_cohort_sentences.json" \
+        --non_cohort_path "output/doccano/methods_non_cohort_sentences.json" \
+        --figure_save_path "output/doccano/methods_sentence_similarity.png"
+        
 ```
 
-## Add cohort-related context sentences to methods sections
+### Make final traing set
 
-```{r extract_cohort_context_sentences_methods}
-
-# extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
-methods_cohort_context_df = extract_cohort_sentences(methods_texts,
-                                            cohort_context_terms,
-                                            column_name = "CONTEXT",
-                                            ignore_case = FALSE
-                                            )
-
-methods_cohort_sentences_df <-
-left_join(methods_cohort_sentences_df,
-          methods_cohort_context_df |> select(pubmed_id, 
-                                      article_id,
-                                      sentence_id,
-                                      CONTEXT),
-          by = c("pubmed_id",
-                 "article_id", 
-                 "sentence_id")
-          ) 
-
-print("Number of sentences with cohort names and/or cohort-related context:")
-methods_cohort_sentences_df |> 
-  mutate(has_context = ifelse(CONTEXT == "", F, T)) |>
-  group_by(has_cohort, has_context) |> 
-  summarise(n = n())
-
-filtered_methods_cohort_sentences_df =
-  methods_cohort_sentences_df |>
-  filter(COHORT != "" | CONTEXT != "")
-
-print("Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):")
-nrow(filtered_cohort_sentences_df)
-
-```
-
-## Get other sentences with words that indicate sample or cohort is being discussed
+sentences with words that indicate sample or cohort is being discussed
 
 ```{r get_sample_context_sentences_methods}
 
-control_methods_cohort_sentences_df <-
-methods_cohort_sentences_df |>
-  filter(COHORT == "" & CONTEXT == "") |>
-  filter(grepl(paste(sample_terms, collapse = "|"), 
-               sentence, 
-               ignore.case = TRUE)
-         ) #|>
+methods_hard_negatives <- jsonlite::read_json(here::here("output/doccano/hard_negatives_methods.json"),
+                                               simplifyVector = TRUE)
 
-print("Number of sentences without (detected) cohort names or cohort-context but with sample-related context:")
-nrow(control_methods_cohort_sentences_df)
+methods_cohort_sentences_df   <- 
+methods_cohort_sentences_df  |>
+  dplyr::mutate(hard_negative = ifelse(sentence %in% methods_hard_negatives,
+                                TRUE,
+                                FALSE)
+  )
+
+print("Overlap between hard negatives and sentences with cohort names or cohort-related context in methods sections:")
+methods_cohort_sentences_df |>
+  filter(hard_negative == TRUE) |>
+  group_by(has_cohort, has_context) |>
+  summarise(n = n())
+
 
 filtered_methods_cohort_sentences_df =
-  bind_rows(filtered_methods_cohort_sentences_df,
-            control_methods_cohort_sentences_df
-            ) |>
-  distinct()
+  methods_cohort_sentences_df |>
+  filter(COHORT != "" | CONTEXT != "" | hard_negative == TRUE)
 
-print("Percentage of sentences with cohort names vs other cohort-related context")
-total_n_sentences <- nrow(filtered_methods_cohort_sentences_df)
-
-filtered_methods_cohort_sentences_df |>
-  group_by(has_cohort) |> 
-  summarise(n = n(),
-            percentage = round(100 * n/total_n_sentences, digits = 2)
-  )
+print("Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):")
+nrow(filtered_methods_cohort_sentences_df)
 
 ```
 
@@ -1581,4 +2136,125 @@ cat("JSONL saved to:", jsonl_file, "\n")
 
 ```
 
+# Next steps to update: 
 
+## Population descriptors extract / label
+
+## Sample sizes extract / label
+
+```{r extract_sample_sizes, eval = F}
+
+participant_words <- c("adults", "adolescents", "children", "infants", 
+                       "neonates",
+                       "women", "men", "female", "male","trios", "families", "twins", "siblings", 
+                        "cases", "probands", #"case subjects", #"([A-Za-z-]+)\\scases", ,
+                        "controls", #"control subjects",   #"([A-Za-z-]+)\\scontrols"                            
+                        "individuals", "patients",  "participants", 
+                       "subjects", "samples", "donors")
+                        #“([A-Za-z-]+)\\sparticipants”
+                        #"\\b[0-9,]+\\s+([A-Za-z-]+)\\scases"
+
+                        # “population controls”,
+                        # "affected individuals"
+                       # "study participants"
+participant_phrases_regex <- paste0("\\b[0-9,]+\\s+([A-Za-z-]+)\\s", "(",
+                              paste0(participant_words, collapse = "|"), 
+                              ")")
+
+participant_phrases_regex_v2 <- paste0("\\b[0-9,]+\\s+([A-Za-z-]+)\\s+([A-Za-z-]+)\\s", "(",
+                                    paste0(participant_words, collapse = "|"), 
+                                    ")")
+
+participant_phrases_regex_v3 <- paste0("\\b[0-9,]+\\s+([A-Za-z-]+)\\s+([A-Za-z-]+)\\s([A-Za-z-]+)\\s", "(",
+                                       paste0(participant_words, collapse = "|"), 
+                                       ")")
+
+participant_regex <- paste0("\\b[0-9,]+\\s+", "(",
+                        paste0(participant_words, collapse = "|"), 
+                        ")")
+
+
+n_participants_regex <- "(n|N|Neffective|Neff|Ncontrol|Ncase|ncase|ncontrol|ntotal)\\s*=\\s*[0-9,]"
+
+filtered_cohort_sentences_df |>
+  filter(str_detect(sentence, participant_phrases_regex) | 
+           str_detect(sentence, participant_regex) |
+           str_detect(sentence, participant_phrases_regex_v2) |
+           str_detect(sentence, participant_phrases_regex_v3) |
+           str_detect(sentence, n_participants_regex)) |> 
+  select(sentence) |> 
+  distinct() |> 
+  pull()
+
+filtered_cohort_sentences_df |>
+  mutate(
+    participant_phrase = str_extract(sentence, participant_phrases_regex),
+    participant_phrase_v2 = str_extract(sentence, participant_phrases_regex_v2),
+    participant_phrase_v3 = str_extract(sentence, participant_regex),
+    n_participants_phrase = str_extract(sentence, n_participants_regex)
+  ) |>
+  mutate(any_participant_phrase = if_else(!is.na(participant_phrase) | 
+                                   !is.na(participant_phrase_v2) | 
+                                   !is.na(participant_phrase_v3) | !is.na(n_participants_phrase), 
+                                 TRUE, FALSE)) |>
+  filter(grepl(pattern = "\\b[0-9]+", sentence)) |>
+  filter(any_participant_phrase == FALSE) |>
+  pull(sentence) 
+
+filtered_methods_cohort_sentences_df |>
+mutate(
+  participant_phrase = str_extract(sentence, participant_phrases_regex),
+  participant_phrase_v2 = str_extract(sentence, participant_phrases_regex_v2),
+  participant_phrase_v3 = str_extract(sentence, participant_regex),
+  n_participants_phrase = str_extract(sentence, n_participants_regex)
+) |>
+  mutate(any_participant_phrase = if_else(!is.na(participant_phrase) | 
+                                            !is.na(participant_phrase_v2) | 
+                                            !is.na(participant_phrase_v3) | !is.na(n_participants_phrase), 
+                                          TRUE, FALSE)) |>
+  filter(grepl(pattern = "\\b[0-9]+", sentence)) |>
+  filter(any_participant_phrase == FALSE) |>
+  pull(sentence) 
+
+```
+
+
+## Identify meta-analysis studies 
+
+```{r extract_meta_analysis_studies, eval = F}
+pattern <- paste(
+  "meta-analy[sz]is",           # meta-analysis / meta-analyses / meta-analyze
+  "meta-analy[sz]ed",
+  "meta-analy[sz]ing",
+  "metaanaly[sz]is",            # no hyphen
+  "meta analy[sz]is",           # space
+  # "pooled analysis",
+  # "pooled analyses",
+  # "combined analysis",
+  # "combined analyses",
+  # "joint analysis",
+  # "mega-analysis",              # individual-participant variant
+  "METAL",
+  sep = "|"
+)
+
+
+possible_meta_abstracts <-
+  purrr::keep(abstracts,
+              ~ any(grepl(pattern, .x, ignore.case = TRUE))) |>
+  names()
+
+# purrr::map(abstracts,
+#             ~grep(pattern, .x, ignore.case = TRUE, value = TRUE)) |>
+#   purrr::list_c()
+
+possible_meta_methods <-
+  purrr::keep(methods_texts,
+              ~ any(grepl(pattern, .x, ignore.case = TRUE))) |>
+  names()
+
+possible_meta <- union(possible_meta_abstracts, possible_meta_methods)
+
+writeLines(possible_meta, here::here("output/meta_analysis_studies.txt"))
+
+```
