@@ -971,6 +971,11 @@ def main():
             stem = output_path.stem
             suffix = output_path.suffix
             output_path = output_path.parent / f"{stem}_main{suffix}"
+            
+        # if output contains .pdf.tei, then output in format as {pmid}_pdf_tei_methods.txt
+        if output_path.suffix == '.txt' and '.pdf.tei' in output_path.stem:
+           output_path = output_path.replace(".pdf.tei.", "_pdf_tei_")
+           
         output_path.write_text(methods_text, encoding='utf-8')
         print(f"Methods section extracted to: {output_path}")
     else:

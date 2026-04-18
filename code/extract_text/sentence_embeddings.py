@@ -5,24 +5,90 @@
 # training a model to distinguish between cohort and non-cohort sentences. 
 # Also look for semantically similar sentences within the cohort set to 
 # get a sense of how similar cohort sentences are to each other.
-from sentence_transformers import SentenceTransformer
 import json
-import numpy as np
-import matplotlib.pyplot as plt
-import time
 import os
+import time
 from optparse import OptionParser
 
-#model = SentenceTransformer("neuml/pubmedbert-base-embeddings")
-model = SentenceTransformer("pritamdeka/S-PubMedBert-MS-MARCO")
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn.functional as F
+from transformers import AutoModel, AutoTokenizer
 
-# tokenized_inputs = tokenizer(
-#         batch["text"],
-#         truncation=True,
-#         padding="max_length",
-#         max_length=256,
-#         return_offsets_mapping=True
-#     )
+try:
+    from tqdm import tqdm
+except ImportError:  # tqdm is optional
+    tqdm = None
+
+# ---------------------------------------------------------------------------
+# Model: NCBI MedCPT Query Encoder
+# ---------------------------------------------------------------------------
+# MedCPT-Query-Encoder is a BERT-based encoder released by NCBI and trained on
+# PubMed user click logs. It is a bi-encoder and produces a single dense
+# embedding per input by taking the [CLS] token of the last hidden state.
+# Reference: https://huggingface.co/ncbi/MedCPT-Query-Encoder
+#
+# Notes on usage:
+#   - The model was trained with short queries (max_length=64). Longer inputs
+#     will still run, but quality may degrade past ~64 tokens. We default to
+#     64 to match the training regime; bump MAX_LENGTH if your sentences are
+#     longer and you want to trade some accuracy for coverage.
+#   - Similarity is cosine similarity on the [CLS] embeddings.
+MODEL_NAME = "ncbi/MedCPT-Query-Encoder"
+MAX_LENGTH = 64
+
+_device = "cuda" if torch.cuda.is_available() else "cpu"
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModel.from_pretrained(MODEL_NAME).to(_device)
+model.eval()
+
+
+def encode_sentences(
+    sentences,
+    batch_size: int = 64,
+    max_length: int = MAX_LENGTH,
+    show_progress_bar: bool = True,
+) -> torch.Tensor:
+    """Encode a list of sentences with MedCPT-Query-Encoder.
+
+    Returns a float tensor of shape (len(sentences), hidden_size) on the
+    selected device. Uses the [CLS] token of the final hidden state as the
+    sentence embedding, matching the recipe in the MedCPT model card.
+    """
+    if len(sentences) == 0:
+        return torch.empty(0, model.config.hidden_size, device=_device)
+
+    iterator = range(0, len(sentences), batch_size)
+    if show_progress_bar and tqdm is not None:
+        iterator = tqdm(iterator, desc="Encoding", total=(len(sentences) + batch_size - 1) // batch_size)
+
+    all_embeds = []
+    with torch.no_grad():
+        for start in iterator:
+            batch = sentences[start:start + batch_size]
+            encoded = tokenizer(
+                batch,
+                truncation=True,
+                padding=True,
+                return_tensors="pt",
+                max_length=max_length,
+            ).to(_device)
+            outputs = model(**encoded)
+            # [CLS] pooling – first token of the last hidden state
+            embeds = outputs.last_hidden_state[:, 0, :]
+            all_embeds.append(embeds)
+    return torch.cat(all_embeds, dim=0)
+
+
+def cosine_similarity_matrix(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """Row-wise cosine similarity between rows of a and rows of b.
+
+    Returns a tensor of shape (a.shape[0], b.shape[0]).
+    """
+    a_norm = F.normalize(a, p=2, dim=1)
+    b_norm = F.normalize(b, p=2, dim=1)
+    return a_norm @ b_norm.T
 
 def run_similarity_analysis(
     label: str,
@@ -43,34 +109,28 @@ def run_similarity_analysis(
     print(f"\n[{label}] Number of cohort sentences: {len(cohort_sentences)}")
     print(f"[{label}] Number of non-cohort sentences: {len(non_cohort_sentences)}")
 
-    #cohort_embeddings = model.encode(cohort_sentences)
-    cohort_embeddings = model.encode(
-    cohort_sentences, 
-    batch_size=64, 
-    show_progress_bar=True, 
-    convert_to_tensor=True
+    cohort_embeddings = encode_sentences(
+        cohort_sentences,
+        batch_size=64,
+        show_progress_bar=True,
     )
-    #non_cohort_embeddings = model.encode(non_cohort_sentences)
-    non_cohort_embeddings = model.encode(
-    non_cohort_sentences, 
-    batch_size=64,
-    show_progress_bar=True, 
-    convert_to_tensor=True
+    non_cohort_embeddings = encode_sentences(
+        non_cohort_sentences,
+        batch_size=64,
+        show_progress_bar=True,
     )
 
-    # Compute cosine similarities
-    similarities = model.similarity(non_cohort_embeddings, 
-                                    cohort_embeddings)
-                                    
-    similarities = similarities.cpu().numpy() if hasattr(similarities, 'cpu') else np.array(similarities)
+    # Compute cosine similarities between non-cohort and cohort embeddings
+    similarities = cosine_similarity_matrix(non_cohort_embeddings, cohort_embeddings)
+    similarities = similarities.cpu().numpy()
 
     # For each non-cohort sentence, find the most similar cohort sentence and its similarity score
     best_cohort_idx = np.argmax(similarities, axis=1)
     best_similarity = np.max(similarities, axis=1)
 
     # For each cohort sentence, find the most similar cohort sentence (excluding itself) and its similarity score
-    cohort_similarities = model.similarity(cohort_embeddings, cohort_embeddings)
-    cohort_similarities = cohort_similarities.cpu().numpy() if hasattr(cohort_similarities, 'cpu') else np.array(cohort_similarities)
+    cohort_similarities = cosine_similarity_matrix(cohort_embeddings, cohort_embeddings)
+    cohort_similarities = cohort_similarities.cpu().numpy()
     np.fill_diagonal(cohort_similarities, -np.inf)  # Exclude self-similarities
     cohort_best_similarity = np.max(cohort_similarities, axis=1)
 
