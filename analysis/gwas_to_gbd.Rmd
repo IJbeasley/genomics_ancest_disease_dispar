@@ -472,6 +472,52 @@ UpSet(upset_matrix_respiratory,
 
 ```
 
+## Overlap across Lancet conditions
+
+```{r check_overlap_lancet_conditions}
+
+lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
+                                     sheet = 1) |>
+  dplyr::rename_with(~ gsub(" ", "_", .x)) |>
+  filter(!is.na(mapped_gbd_term)) |>
+  filter(lancet_group == "NCD-7") |>
+  select(cause = mapped_gbd_term, lancet_condition) |>
+  distinct()
+
+disease_mapping_with_cause = 
+  disease_mapping_with_cause |>
+  left_join(lancet_cause_mapping,
+            by = "cause"
+            )
+
+overlap_lancet_conditions =
+disease_mapping_with_cause |>
+  group_by(lancet_condition) |>
+  filter(!is.na(lancet_condition)) |>
+  summarise(PUBMED_ID = list(unique(PUBMED_ID))) |>
+  tibble::deframe()
+
+
+upset_matrix_lancet_conditions = make_comb_mat(overlap_lancet_conditions)
+
+UpSet(upset_matrix_lancet_conditions,
+      comb_order = order(comb_size(upset_matrix_lancet_conditions), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+print("Number of studies mapped to one Lancet condition:")
+comb_size(upset_matrix_lancet_conditions, degree = 1) |> sum()
+
+print("All non-communicable disease studies mapped to a Lancet condition:")
+overlap_lancet_conditions |> purrr::list_c() |> unique() |> length()
+
+```
+
 # Check recall i.e. that I have identified most/all studies of the priority diseases
 
 ## Diabetes 
