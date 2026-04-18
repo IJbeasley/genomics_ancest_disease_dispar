@@ -115,7 +115,8 @@ df <- df |>
 
 # Rows that belong to a multi-row group (i.e. have at least one match)
 matched <- df |>
-  filter(group_size > 1) |>
+  #filter(group_size > 1) |>
+  filter(!is.na(cohort) & !is.na(full_name)) |>
   arrange(group_size |> desc(), group_id, cohort)
 
 # ── 7. Classify match type ────────────────────────────────────────────────────
