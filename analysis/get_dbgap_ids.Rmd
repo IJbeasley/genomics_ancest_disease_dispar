@@ -1011,7 +1011,8 @@ joined_ega |>
                names_to = "source",
                values_to = "ega_id") |>
   mutate(ega_id = str_trim(ega_id)) |>
-  filter(!is.na(ega_id))
+  filter(!is.na(ega_id)) |> 
+  distinct()
 
 ega_cohort_names =
   left_join(joined_ega,
@@ -1020,11 +1021,11 @@ ega_cohort_names =
             relationship = "many-to-many"
             ) |>
   group_by(pmid, pmcid, source) |>
-  summarise(cohort = stringr::str_flatten(cohort, 
+  summarise(cohort = stringr::str_flatten(unique(cohort), 
                                           collapse = "|", 
                                           na.rm = T
                                           ),
-            full_name = stringr::str_flatten(full_name, 
+            full_name = stringr::str_flatten(unique(full_name), 
                                             collapse = "|", 
                                             na.rm = T
                                             )
