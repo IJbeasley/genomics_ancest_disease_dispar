@@ -19,9 +19,11 @@ library(stringr)
 
 ```
 
-# Get from full text 
+# dbGAP ids
 
-## Functions to extract dbGaP (and other archive) ids from full text
+## Get from full text 
+
+### Functions to extract dbGaP (and other archive) ids from full text
 
 ```{r get_full_text_files_fns}
 
@@ -34,7 +36,9 @@ patterns <- list(
   dbgap = "\\bphs\\d+(?:\\.v\\d+)?(?:\\.p\\d+)?",
   ega   = "\\bEGA[CDFS]\\d+",
   jgas  = "\\bJGAS\\d+|JGAD\\d+",
-  prj   = "\\bPRJEB\\d+|PRJNA\\d+"
+  prj   = "\\bPRJEB\\d+|PRJNA\\d+",
+  # clinical trial ids
+  clinical_trial = "\\bNCT\\d{8}"
 )
 
 grep_pattern <- paste(patterns, collapse = "|")
@@ -118,7 +122,7 @@ grep_sentences <- sentences[grepl(grep_pattern, sentences)]
 
 ```
 
-## Text file paths to load 
+### Text file paths to load 
 
 ```{r get_full_text_file_paths}
 
@@ -194,7 +198,7 @@ print(length(full_text_files))
 
 ```
 
-## Extract dbGaP accessions from full text
+### Extract dbGaP accessions from full text
 
 ```{r get_dbgap_from_full_text, warning=FALSE}
 
@@ -233,13 +237,10 @@ sentences_df <-
 sentences_df <- sentences_df |>
   mutate(
     dbgap_id = str_extract_all(sentence, patterns[["dbgap"]]),
-                               #"phs\\d+(\\.v\\d+)?(\\.p\\d+)?"),
     ega_id = str_extract_all(sentence, patterns[["ega"]]),
-                             #"EGA[CDFS]\\d+"),
     jgas_id = str_extract_all(sentence, patterns[["jgas"]]),
-                              #"JGAS\\d+|JGAD"),
     prj_id = str_extract_all(sentence, patterns[["prj"]]),
-                             #"PRJEB\\d+|PRJNA\\d+")
+    nct_id = str_extract_all(sentence, patterns[["clinical_trial"]])
   )
              
 sentences_df = 
@@ -337,7 +338,7 @@ data.table::fwrite(sentences_df,
 ```
 
                   
-# Get from Europe PMC list
+## Get from Europe PMC list
 
 ```{r get-dbgap-ids-europe-pmc}
 
@@ -444,9 +445,9 @@ joined |>
   filter(is.na(dbgap_full_text) & !is.na(dbgap_epmc))
 ```
 
-# Get from Entrez
+## Get from Entrez
 
-## Extract internal dbGAP ids
+### Extract internal dbGAP ids
 
 ```{r get-dbgap-ids, eval = F}
 
@@ -520,7 +521,7 @@ percent_with_dbgap
 
 ```
 
-## Extract dbGAP study accessions
+### Extract dbGAP study accessions
 
 ```{r extract-dbgap-accessions, warning=FALSE, message=FALSE, eval = F}
 
@@ -620,7 +621,7 @@ dbgap_accession_mapping |>
 
 ```
 
-### Save combined dbGaP mapping
+## Save combined dbGaP mapping
 
 ```{r save-combined-dbgap-mapping, eval = F}
 
@@ -779,9 +780,9 @@ n_pubmeds_per_dbgap$n_pubmeds |> summary()
 
 ### Are there any dbgap ids not in our cohort description mapping?
 
-```{r new_dbgap_ids}
+```{r new_dbgap_ids, message=FALSE, warning=FALSE}
 
-cohort_dbgap_mapping <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
+cohort_mapping <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
                                  sheet = 1)
 annotated_dbgap_ids =
   combined_annotations |>
@@ -791,7 +792,7 @@ annotated_dbgap_ids =
   unique()
 
 cohort_desc_dbgap_ids = 
-  cohort_dbgap_mapping |>
+  cohort_mapping |>
   pull(dbGaP) |>
   strsplit(",") |>
   unlist() |>
@@ -800,7 +801,7 @@ cohort_desc_dbgap_ids =
   unique()
 
 cohort_desc_dbgap_ids_p2 = 
-    cohort_dbgap_mapping |>
+    cohort_mapping |>
   pull(old_dbGaP) |>
   strsplit(",") |>
   unlist() |>
@@ -808,8 +809,12 @@ cohort_desc_dbgap_ids_p2 =
   str_extract(pattern = "^phs\\d+") |> 
   unique()
 
-cohort_desc_dbgap_ids <- unique(c(cohort_desc_dbgap_ids, cohort_desc_dbgap_ids_p2))
+cohort_desc_dbgap_ids <- unique(c(cohort_desc_dbgap_ids, 
+                                  cohort_desc_dbgap_ids_p2)
+                                )
 
+print("Checking that this matching is correct:")
+print("I.e. no dgbap ids in cohort description mapping that are not in our annotations:")
 not_found_dbgap_ids <- annotated_dbgap_ids[!c(annotated_dbgap_ids %in% cohort_desc_dbgap_ids)]
 
 not_found_dbgap_ids  <- sort(not_found_dbgap_ids)
@@ -820,11 +825,12 @@ not_found_dbgap_ids
 
 ```
 
+### Save dbgap accession and matched cohort names
 
 ```{r get_cohort_names}
 
 get_dbgap_cohort_names <- 
-cohort_dbgap_mapping |>
+cohort_mapping |>
   tidyr::separate_longer_delim(cols = c(dbGaP),
                                delim = ",")  |>
   tidyr::separate_longer_delim(cols = c(old_dbGaP),
@@ -839,16 +845,19 @@ cohort_dbgap_mapping |>
   select(-dbgap_id) |>
   distinct()
 
+print("Number of unique dbgap ids in cohort description mapping:")
 get_dbgap_cohort_names |>
   group_by(broad_dbgap) |>
   summarise(n = n(),
             cohorts = stringr::str_flatten(cohort, collapse = ", ", na.rm = T)) |>
-  filter(n > 1)
+  filter(n > 1) |>
+  arrange(desc(n)) |>
+  head()
 
 get_dbgap_cohort_names <- 
   get_dbgap_cohort_names |>
   group_by(broad_dbgap) |>
-  summarise(cohort = stringr::str_flatten(cohort, collapse = "|", na.rm = T))
+  summarise(cohort = stringr::str_flatten(cohort, collapse = "|", na.rm = T)) 
 
 dbgap_cohort_names =
 left_join(
@@ -862,7 +871,8 @@ by = c("broad_dbgap")
 ```
 
 
-```{save-dbgap-cohort-names}
+
+```{r save-dbgap-cohort-names}
 
 data.table::fwrite(dbgap_cohort_names,
                    here::here("output/gwas_cohorts/gwas_study_dbgap_cohort_names.csv")
@@ -871,24 +881,14 @@ data.table::fwrite(dbgap_cohort_names,
 ```
 
 
-
 # EGA ids
 
-```{r compare-ega-sources}
+## Get EGA ids from Europe PMC annotations
+
+```{r get-ega-ids-europe-pmc}
 
 ega_info <-
 data.table::fread(here::here("data/europe_pmc/ega.csv")) 
-
-full_text_ega_ids =
-sentences_df  |>
-  select(ega_id, pmid, pmcid) |>
-  tidyr::unnest(ega_id) |>
-  mutate(ega_id = str_trim(ega_id)) |>
-  group_by(pmid, pmcid) |>
-  summarise(ega_full_text = str_flatten(unique(sort(ega_id)), 
-                          collapse = ", ", 
-                          na.rm = TRUE)) |>
-  mutate(pmid = as.character(pmid))
 
 epmc_ega_ids =
 ega_info |>
@@ -901,6 +901,28 @@ ega_info |>
                           collapse = ", ", 
                           na.rm = TRUE))
 
+```
+
+## Get EGAs from full text 
+
+```{r get-ega-ids-full-text, warning=FALSE, message=FALSE}
+
+full_text_ega_ids =
+sentences_df  |>
+  select(ega_id, pmid, pmcid) |>
+  tidyr::unnest(ega_id) |>
+  mutate(ega_id = str_trim(ega_id)) |>
+  group_by(pmid, pmcid) |>
+  summarise(ega_full_text = str_flatten(unique(sort(ega_id)), 
+                          collapse = ", ", 
+                          na.rm = TRUE)) |>
+  mutate(pmid = as.character(pmid))
+
+```
+
+## Compare EGA ids from full text vs Europe PMC annotations
+
+```{r compare-ega-sources, message=FALSE, warning=FALSE}
 
 joined_ega =
 full_join(full_text_ega_ids,
@@ -916,38 +938,234 @@ joined_ega |>
 
 ```
 
+## Are there any EGAs ids not in our cohort description mapping?
+
 ```{r get_ega-cohort-names}
 
+cohort_desc_ega_ids = 
+  cohort_mapping |>
+  pull(EGA) |>
+  strsplit(",") |>
+  unlist() |>
+  str_trim() |>
+  str_extract(pattern = "\\bEGA[CDFS]\\d+") |> 
+  unique()
 
-get_ega_cohort_names <-
-cohort_dbgap_mapping |>
-  tidyr::separate_longer_delim(cols = c(EGA),
-                               delim = ",")  |>
-  tidyr::pivot_longer(cols = c(EGA),
-               names_to = "source",
-               values_to = "ega_id") |>
-  select(cohort, ega_id) |>
-  mutate(ega_id = str_trim(ega_id)) |>
-  filter(!is.na(ega_id)) |>
-  group_by(ega_id) |>
-  summarise(cohort = stringr::str_flatten(cohort, collapse = "|", na.rm = T)) |>
-  distinct()
+cohort_desc_ega_ids  <- cohort_desc_ega_ids[!is.na(cohort_desc_ega_ids)]
 
-joined_ega <-
-  joined_ega |>
-  tidyr::pivot_longer(cols = c(ega_full_text, ega_epmc),
-               names_to = "source",
-               values_to = "ega_id") |>
-  tidyr::separate_longer_delim(cols = c(ega_id),
-                               delim = ", ") |>
-  filter(!is.na(ega_id) & ega_id != "")
+full_text_ega_ids <-
+joined_ega |>
+  pull(ega_full_text) |>
+  strsplit(",") |>
+  unlist() |>
+  str_trim() |>
+  str_extract(pattern = "\\bEGA[CDFS]\\d+")
 
-ega_cohort_names =
-left_join(joined_ega,
-get_ega_cohort_names, 
-by = "ega_id"
-)
+epmc_ega_ids <-
+joined_ega |>
+  pull(ega_epmc) |>
+  strsplit(",") |>
+  unlist() |>
+  str_trim() |>
+  str_extract(pattern = "\\bEGA[CDFS]\\d+")
 
+ega_annotated <- unique(c(full_text_ega_ids, epmc_ega_ids))
+
+ega_annotated <- ega_annotated[!is.na(ega_annotated)]
+
+print("Number of unique EGA ids found in full text and Europe PMC annotations:")
+not_found_ega_ids <- ega_annotated[!c(ega_annotated %in% cohort_desc_ega_ids)] 
+
+not_found_ega_ids |> length()
+
+not_found_ega_ids
 
 ```
 
+## Add cohort names for EGA ids
+
+```{r get_ega_cohort_names}
+
+ega_ids_cohorts <-
+  cohort_mapping |>
+  select(cohort, full_name, EGA) |>
+  filter(!is.na(EGA)) |>
+  mutate(cohort = ifelse(is.na(cohort),
+                         str_extract(string = EGA,
+                                     pattern = "\\bEGAS\\d+"),
+                         cohort)) |>
+  tidyr::separate_longer_delim(cols = c(EGA),
+                               delim = ",")  |>
+  mutate(EGA = str_trim(EGA)) 
+
+
+joined_ega <-
+joined_ega |>
+  tidyr::separate_longer_delim(cols = c(ega_full_text, ega_epmc),
+                               delim = ", ")  |>
+  tidyr::pivot_longer(cols = c(ega_full_text, ega_epmc),
+               names_to = "source",
+               values_to = "ega_id") |>
+  mutate(ega_id = str_trim(ega_id)) |>
+  filter(!is.na(ega_id))
+
+ega_cohort_names =
+  left_join(joined_ega,
+            ega_ids_cohorts,
+            by = c("ega_id" = "EGA"),
+            relationship = "many-to-many"
+            ) |>
+  group_by(pmid, pmcid, source) |>
+  summarise(cohort = stringr::str_flatten(cohort, 
+                                          collapse = "|", 
+                                          na.rm = T
+                                          ),
+            full_name = stringr::str_flatten(full_name, 
+                                            collapse = "|", 
+                                            na.rm = T
+                                            )
+            ) |>
+  ungroup() |>
+  distinct() 
+
+ega_cohort_names |>
+  head()
+
+```
+
+## Save EGA cohort names
+
+```{r save-ega-cohort-names}
+
+data.table::fwrite(ega_cohort_names,
+                   here::here("output/gwas_cohorts/gwas_study_ega_cohort_names.csv")
+                   )
+
+```
+
+
+# JGA ids
+
+## Get JGA ids from full text
+
+```{r get-jga-ids-full-text}
+
+jga_ids_full_text =
+sentences_df  |>
+  select(jgas_id, pmid, pmcid) |>
+  tidyr::unnest(jgas_id) |>
+  mutate(jgas_id = str_trim(jgas_id))
+
+
+jga_ids_full_text
+
+```
+
+## Match JGA ids to cohort names
+
+```{r get-jga-cohort-names}
+
+jga_ids_cohorts <-
+  cohort_mapping |>
+  select(cohort, full_name, JGA) |>
+  filter(!is.na(JGA)) |>
+  mutate(cohort = ifelse(is.na(cohort),
+                         str_extract(string = JGA,
+                                     pattern = "\\bJGAS\\d+|JGAD\\d+"),
+                         cohort)) |>
+  tidyr::separate_longer_delim(cols = c(JGA),
+                               delim = ",") |>
+  mutate(cohort = ifelse(is.na(cohort),
+                         str_extract(string = JGA,
+                                     pattern = "\\bJGAS\\d+"),
+                         cohort)) |>
+  mutate(JGA = str_trim(JGA))
+
+jga_ids_cohorts <-
+left_join(
+  jga_ids_full_text,
+  jga_ids_cohorts,
+  by = c("jgas_id" = "JGA")
+)
+
+```
+
+## Save JGA cohort names
+
+```{r save-jga-cohort-names}
+
+data.table::fwrite(jga_ids_cohorts,
+                   here::here("output/gwas_cohorts/gwas_study_jga_cohort_names.csv")
+                   )
+
+```
+
+# Clinical trial ids
+
+## Get clinical trial ids from full text
+
+```{r get-clinical-trial-ids-full-text}
+
+clinical_trial_ids_full_text =
+sentences_df  |>
+  select(nct_id, pmid, pmcid) |>
+  tidyr::unnest(nct_id) |>
+  mutate(nct_id = str_trim(nct_id))
+
+print("Number of unique clinical trial ids found in full text:")
+nrow(clinical_trial_ids_full_text)
+
+print("Number of unique PMIDs with clinical trial ids found in full text:")
+clinical_trial_ids_full_text |> pull(pmid) |> unique() |> length()
+
+```
+
+## Match clinical trial ids to cohort names
+
+```{r get-clinical-trial-cohort-names}
+
+clinical_trial_ids_cohorts <-
+  cohort_mapping |>
+  select(cohort, full_name, clinical_trial_id) |>
+  filter(!is.na(clinical_trial_id)) |>
+  mutate(cohort = ifelse(is.na(cohort),
+                         str_extract(string = clinical_trial_id,
+                                     pattern = "\\bNCT\\d+"),
+                         cohort)) |>
+  tidyr::separate_longer_delim(cols = c(clinical_trial_id),
+                               delim = ",") |>
+  mutate(clinical_trial_id = str_trim(clinical_trial_id)) |>
+  mutate(cohort = ifelse(is.na(cohort),
+                         str_extract(string = clinical_trial_id,
+                                     pattern = "\\bNCT\\d+"),
+                         cohort)) |>
+  rename(nct_id = clinical_trial_id) |>
+  distinct()
+
+clinical_trial_ids_cohorts <- 
+left_join(
+  clinical_trial_ids_full_text,
+  clinical_trial_ids_cohorts,
+  by = c("nct_id")
+)
+
+print("Clinical trials associated with the most PMIDs")
+clinical_trial_ids_cohorts |>
+  select(nct_id, pmid) |>
+  distinct() |>
+  group_by(nct_id) |>
+  summarise(n_pmids = n()) |>
+  arrange(desc(n_pmids)) |>
+  head(10)
+
+```
+
+## Save clinical trial cohort names
+
+```{r save-clinical-trial-cohort-names}
+
+data.table::fwrite(clinical_trial_ids_cohorts,
+                   here::here("output/gwas_cohorts/gwas_study_clinical_trial_cohort_names.csv")
+                   )
+
+```
