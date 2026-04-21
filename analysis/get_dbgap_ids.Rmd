@@ -122,7 +122,74 @@ grep_sentences <- sentences[grepl(grep_pattern, sentences)]
 
 ```
 
-### Text file paths to load 
+### Abstract text file paths to load
+
+```{r get_abstract_text_file_paths}
+
+# get pmids and pmcids of relevant files to load
+relevant_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) 
+
+abstract_files <- list.files(here::here("output/abstracts/"), 
+                             pattern = "*.json", 
+                             full.names = FALSE
+                             ) |>
+                   sort()
+
+abstract_pmids = str_remove_all(abstract_files, "_sentences.json$")
+abstract_pmids = abstract_pmids[abstract_pmids %in% relevant_ids$PMID]
+
+abstracts <- sapply(abstract_pmids,
+                    function(file) {
+                      json_data <- jsonlite::fromJSON(here::here(paste0("output/abstracts/", file, "_sentences.json")))
+                      
+                      abstract_lines <- json_data[json_data != ""]
+                      
+                    }
+                    )
+
+keep_pmid_abstract_sentences <-
+purrr::map(abstracts, 
+           ~grep(pattern = grep_pattern, 
+                x = .x,
+                value = T)
+           ) |>
+purrr::discard(~rlang::is_empty(.x)) 
+
+abstract_sentences_df <- 
+  purrr::imap(keep_pmid_abstract_sentences,
+              ~data.frame(pmid = .y,
+                          sentence = unique(.x),
+                        stringsAsFactors = FALSE)
+              )|>
+  dplyr::bind_rows()
+            
+
+convert_pmid_df  <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) 
+
+
+abstract_sentences_df =
+  left_join(abstract_sentences_df |>
+            mutate(pmid = as.integer(pmid)),
+            convert_pmid_df |> 
+              dplyr::select(pmid = PMID,
+                            pmcid =pmcids)
+                            ,
+            by = "pmid"
+            ) 
+
+abstract_sentences_df <- abstract_sentences_df |>
+  mutate(
+    dbgap_id = str_extract_all(sentence, patterns[["dbgap"]]),
+    ega_id = str_extract_all(sentence, patterns[["ega"]]),
+    jgas_id = str_extract_all(sentence, patterns[["jgas"]]),
+    prj_id = str_extract_all(sentence, patterns[["prj"]]),
+    nct_id = str_extract_all(sentence, patterns[["clinical_trial"]])
+  )
+  
+
+```
+
+### Full text file paths to load 
 
 ```{r get_full_text_file_paths}
 
@@ -175,8 +242,6 @@ full_text_files <- here::here(paste0("output/fulltexts/",
                                      full_text_files)
                               )
 
-# get pmids and pmcids of relevant files to load
-relevant_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) 
 
 relevant_ids <- c(relevant_ids$PMID, relevant_ids$pmcids)
 
@@ -247,29 +312,6 @@ sentences_df =
   sentences_df |>
   distinct()
 
-print("Number of unique PMCIDs with dbgap / ega ids found in full text:")
-sentences_df$pmcid |> unique() |> length()
-
-# number of pubmed ids with dbgap ids found
-print("Number of unique PMCIDs with dbgap ids found in full text:")
-sentences_df %>%
-  rowwise() %>%
-  filter(!rlang::is_empty(dbgap_id)) %>%
-  filter(length(dbgap_id) > 0) %>%
-  ungroup() %>%
-  pull(pmcid) %>%
-  unique() %>%
-  length()
-
-print("Number of unique PMCIDs with EGA ids found in full text:")
-sentences_df %>%
-  rowwise() %>%
-  filter(!rlang::is_empty(ega_id)) %>%
-  filter(length(ega_id) > 0) %>%
-  pull(pmcid) %>%
-  unique() %>%
-  length()
-
 convert_pmid_df  <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")) |>
   rename(PMCID = pmcids)
 
@@ -297,6 +339,7 @@ sentences_df =
   )
 
 
+
 sentences_df = 
   left_join(sentences_df |> 
               select(-pmcid) |> 
@@ -306,6 +349,35 @@ sentences_df =
                             pmid = PMID),
             by = "pmid"
             ) 
+
+# bind with abstract sentence:
+sentences_df = 
+  bind_rows(sentences_df, 
+            abstract_sentences_df) |>
+  distinct()
+
+print("Number of unique PMCIDs with dbgap / ega ids found in full text:")
+sentences_df$pmcid |> unique() |> length()
+
+# number of pubmed ids with dbgap ids found
+print("Number of unique PMCIDs with dbgap ids found in full text:")
+sentences_df %>%
+  rowwise() %>%
+  filter(!rlang::is_empty(dbgap_id)) %>%
+  filter(length(dbgap_id) > 0) %>%
+  ungroup() %>%
+  pull(pmcid) %>%
+  unique() %>%
+  length()
+
+print("Number of unique PMCIDs with EGA ids found in full text:")
+sentences_df %>%
+  rowwise() %>%
+  filter(!rlang::is_empty(ega_id)) %>%
+  filter(length(ega_id) > 0) %>%
+  pull(pmcid) %>%
+  unique() %>%
+  length()
 
 # typo in text for PMC8486151
 # replace  "phs000" with 
@@ -1140,7 +1212,7 @@ clinical_trial_ids_cohorts <-
   tidyr::separate_longer_delim(cols = c(clinical_trial_id),
                                delim = ",") |>
   mutate(clinical_trial_id = str_trim(clinical_trial_id)) |>
-  mutate(cohort = ifelse(is.na(cohort),
+  mutate(cohort = ifelse(is.na(cohort) | cohort == "",
                          str_extract(string = clinical_trial_id,
                                      pattern = "\\bNCT\\d+"),
                          cohort)) |>
