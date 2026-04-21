@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree47f746a5edcc31761ab9912adf550a1eac4284d0targetblank47f746aa">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree58c41df8643e9f160c118367da5a163f01759293targetblank58c41dfa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/47f746a5edcc31761ab9912adf550a1eac4284d0" target="_blank">47f746a</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/58c41df8643e9f160c118367da5a163f01759293" target="_blank">58c41df</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree47f746a5edcc31761ab9912adf550a1eac4284d0targetblank47f746aa"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree58c41df8643e9f160c118367da5a163f01759293targetblank58c41dfa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/47f746a5edcc31761ab9912adf550a1eac4284d0" target="_blank">47f746a</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/58c41df8643e9f160c118367da5a163f01759293" target="_blank">58c41df</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -623,6 +623,7 @@ Ignored files:
     Ignored:    spacyr_venv/
 
 Untracked files:
+    Untracked:  analysis/compare_cohort_annot.Rmd
     Untracked:  code/correcting_for_overlapping_cohorts.R
 
 Unstaged changes:
@@ -630,6 +631,7 @@ Unstaged changes:
     Modified:   analysis/disease_trait_terms_simplify.Rmd
     Modified:   analysis/get_full_text.Rmd
     Modified:   analysis/replication_ancestry_bias.Rmd
+    Modified:   code/merge_cohort_names.R
     Modified:   code/testing_sampling_papers.R
     Modified:   code/text_mining_models/prepare_text_for_train_from_doccano.R
     Modified:   code/text_mining_models/pubmedbert_train_test.py
@@ -678,6 +680,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/58c41df8643e9f160c118367da5a163f01759293/analysis/get_dbgap_ids.Rmd" target="_blank">58c41df</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-04-20
+</td>
+<td>
+Also extract dbgap ids from abstracts
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/93895524a5e15b2d82b0d6a95677ef973a037c32/docs/get_dbgap_ids.html" target="_blank">9389552</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-04-20
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1080,8 +1116,70 @@ grep_sentences &lt;- sentences[grepl(grep_pattern, sentences)]
   return(grep_sentences)
 }</code></pre>
 </div>
-<div id="text-file-paths-to-load" class="section level3">
-<h3>Text file paths to load</h3>
+<div id="abstract-text-file-paths-to-load" class="section level3">
+<h3>Abstract text file paths to load</h3>
+<pre class="r"><code># get pmids and pmcids of relevant files to load
+relevant_ids &lt;- data.table::fread(here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;)) 
+
+abstract_files &lt;- list.files(here::here(&quot;output/abstracts/&quot;), 
+                             pattern = &quot;*.json&quot;, 
+                             full.names = FALSE
+                             ) |&gt;
+                   sort()
+
+abstract_pmids = str_remove_all(abstract_files, &quot;_sentences.json$&quot;)
+abstract_pmids = abstract_pmids[abstract_pmids %in% relevant_ids$PMID]
+
+abstracts &lt;- sapply(abstract_pmids,
+                    function(file) {
+                      json_data &lt;- jsonlite::fromJSON(here::here(paste0(&quot;output/abstracts/&quot;, file, &quot;_sentences.json&quot;)))
+                      
+                      abstract_lines &lt;- json_data[json_data != &quot;&quot;]
+                      
+                    }
+                    )
+
+keep_pmid_abstract_sentences &lt;-
+purrr::map(abstracts, 
+           ~grep(pattern = grep_pattern, 
+                x = .x,
+                value = T)
+           ) |&gt;
+purrr::discard(~rlang::is_empty(.x)) 
+
+abstract_sentences_df &lt;- 
+  purrr::imap(keep_pmid_abstract_sentences,
+              ~data.frame(pmid = .y,
+                          sentence = unique(.x),
+                        stringsAsFactors = FALSE)
+              )|&gt;
+  dplyr::bind_rows()
+            
+
+convert_pmid_df  &lt;- data.table::fread(here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;)) 
+
+
+abstract_sentences_df =
+  left_join(abstract_sentences_df |&gt;
+            mutate(pmid = as.integer(pmid)),
+            convert_pmid_df |&gt; 
+              dplyr::select(pmid = PMID,
+                            pmcid =pmcids)
+                            ,
+            by = &quot;pmid&quot;
+            ) 
+
+abstract_sentences_df &lt;- abstract_sentences_df |&gt;
+  mutate(
+    dbgap_id = str_extract_all(sentence, patterns[[&quot;dbgap&quot;]]),
+    ega_id = str_extract_all(sentence, patterns[[&quot;ega&quot;]]),
+    jgas_id = str_extract_all(sentence, patterns[[&quot;jgas&quot;]]),
+    prj_id = str_extract_all(sentence, patterns[[&quot;prj&quot;]]),
+    nct_id = str_extract_all(sentence, patterns[[&quot;clinical_trial&quot;]])
+  )</code></pre>
+</div>
+<div id="full-text-file-paths-to-load" class="section level3">
+<h3>Full text file paths to load</h3>
 <pre class="r"><code>full_text_files &lt;-
   list.files(here::here(&quot;output/fulltexts&quot;), 
              recursive = T, 
@@ -1131,8 +1229,6 @@ full_text_files &lt;- here::here(paste0(&quot;output/fulltexts/&quot;,
                                      full_text_files)
                               )
 
-# get pmids and pmcids of relevant files to load
-relevant_ids &lt;- data.table::fread(here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;)) 
 
 relevant_ids &lt;- c(relevant_ids$PMID, relevant_ids$pmcids)
 
@@ -1202,33 +1298,7 @@ sentences_df =
   sentences_df |&gt;
   distinct()
 
-print(&quot;Number of unique PMCIDs with dbgap / ega ids found in full text:&quot;)</code></pre>
-<pre><code>[1] &quot;Number of unique PMCIDs with dbgap / ega ids found in full text:&quot;</code></pre>
-<pre class="r"><code>sentences_df$pmcid |&gt; unique() |&gt; length()</code></pre>
-<pre><code>[1] 164</code></pre>
-<pre class="r"><code># number of pubmed ids with dbgap ids found
-print(&quot;Number of unique PMCIDs with dbgap ids found in full text:&quot;)</code></pre>
-<pre><code>[1] &quot;Number of unique PMCIDs with dbgap ids found in full text:&quot;</code></pre>
-<pre class="r"><code>sentences_df %&gt;%
-  rowwise() %&gt;%
-  filter(!rlang::is_empty(dbgap_id)) %&gt;%
-  filter(length(dbgap_id) &gt; 0) %&gt;%
-  ungroup() %&gt;%
-  pull(pmcid) %&gt;%
-  unique() %&gt;%
-  length()</code></pre>
-<pre><code>[1] 103</code></pre>
-<pre class="r"><code>print(&quot;Number of unique PMCIDs with EGA ids found in full text:&quot;)</code></pre>
-<pre><code>[1] &quot;Number of unique PMCIDs with EGA ids found in full text:&quot;</code></pre>
-<pre class="r"><code>sentences_df %&gt;%
-  rowwise() %&gt;%
-  filter(!rlang::is_empty(ega_id)) %&gt;%
-  filter(length(ega_id) &gt; 0) %&gt;%
-  pull(pmcid) %&gt;%
-  unique() %&gt;%
-  length()</code></pre>
-<pre><code>[1] 17</code></pre>
-<pre class="r"><code>convert_pmid_df  &lt;- data.table::fread(here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;)) |&gt;
+convert_pmid_df  &lt;- data.table::fread(here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;)) |&gt;
   rename(PMCID = pmcids)
 
 # add pmid column
@@ -1255,6 +1325,7 @@ sentences_df =
   )
 
 
+
 sentences_df = 
   left_join(sentences_df |&gt; 
               select(-pmcid) |&gt; 
@@ -1265,7 +1336,39 @@ sentences_df =
             by = &quot;pmid&quot;
             ) 
 
-# typo in text for PMC8486151
+# bind with abstract sentence:
+sentences_df = 
+  bind_rows(sentences_df, 
+            abstract_sentences_df) |&gt;
+  distinct()
+
+print(&quot;Number of unique PMCIDs with dbgap / ega ids found in full text:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of unique PMCIDs with dbgap / ega ids found in full text:&quot;</code></pre>
+<pre class="r"><code>sentences_df$pmcid |&gt; unique() |&gt; length()</code></pre>
+<pre><code>[1] 150</code></pre>
+<pre class="r"><code># number of pubmed ids with dbgap ids found
+print(&quot;Number of unique PMCIDs with dbgap ids found in full text:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of unique PMCIDs with dbgap ids found in full text:&quot;</code></pre>
+<pre class="r"><code>sentences_df %&gt;%
+  rowwise() %&gt;%
+  filter(!rlang::is_empty(dbgap_id)) %&gt;%
+  filter(length(dbgap_id) &gt; 0) %&gt;%
+  ungroup() %&gt;%
+  pull(pmcid) %&gt;%
+  unique() %&gt;%
+  length()</code></pre>
+<pre><code>[1] 97</code></pre>
+<pre class="r"><code>print(&quot;Number of unique PMCIDs with EGA ids found in full text:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of unique PMCIDs with EGA ids found in full text:&quot;</code></pre>
+<pre class="r"><code>sentences_df %&gt;%
+  rowwise() %&gt;%
+  filter(!rlang::is_empty(ega_id)) %&gt;%
+  filter(length(ega_id) &gt; 0) %&gt;%
+  pull(pmcid) %&gt;%
+  unique() %&gt;%
+  length()</code></pre>
+<pre><code>[1] 17</code></pre>
+<pre class="r"><code># typo in text for PMC8486151
 # replace  &quot;phs000&quot; with 
 # phs000.56.v1.p1
 
@@ -1340,7 +1443,7 @@ print(&quot;Number of unique PMIDs with dbgap ids found in full text, but not in
 <pre><code>[1] &quot;Number of unique PMIDs with dbgap ids found in full text, but not in Europe PMC:&quot;</code></pre>
 <pre class="r"><code>setdiff(unique(sentences_df$pmid), 
         unique(relevant_pmid_dbgaps$EXTID)) |&gt; length()</code></pre>
-<pre><code>[1] 107</code></pre>
+<pre><code>[1] 109</code></pre>
 <pre class="r"><code># 101 / 158 = 64% of pmids with dbgap ids found in full text are not found in europe pmc annotations
 
 print(&quot;Number of unique PMIDs with dbgap ids found in Europe PMC that do not have dbgap ids found in full text:&quot;)</code></pre>
@@ -2093,11 +2196,11 @@ sentences_df  |&gt;
 print(&quot;Number of unique clinical trial ids found in full text:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique clinical trial ids found in full text:&quot;</code></pre>
 <pre class="r"><code>nrow(clinical_trial_ids_full_text)</code></pre>
-<pre><code>[1] 121</code></pre>
+<pre><code>[1] 130</code></pre>
 <pre class="r"><code>print(&quot;Number of unique PMIDs with clinical trial ids found in full text:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique PMIDs with clinical trial ids found in full text:&quot;</code></pre>
 <pre class="r"><code>clinical_trial_ids_full_text |&gt; pull(pmid) |&gt; unique() |&gt; length()</code></pre>
-<pre><code>[1] 54</code></pre>
+<pre><code>[1] 56</code></pre>
 </div>
 <div id="match-clinical-trial-ids-to-cohort-names"
 class="section level2">
@@ -2113,7 +2216,7 @@ class="section level2">
   tidyr::separate_longer_delim(cols = c(clinical_trial_id),
                                delim = &quot;,&quot;) |&gt;
   mutate(clinical_trial_id = str_trim(clinical_trial_id)) |&gt;
-  mutate(cohort = ifelse(is.na(cohort),
+  mutate(cohort = ifelse(is.na(cohort) | cohort == &quot;&quot;,
                          str_extract(string = clinical_trial_id,
                                      pattern = &quot;\\bNCT\\d+&quot;),
                          cohort)) |&gt;
