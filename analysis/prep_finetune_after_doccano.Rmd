@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r setup_packages}
+```{r setup_packages, message=FALSE, warning=FALSE}
 
 library(dplyr)
 library(jsonlite)
@@ -221,6 +221,9 @@ python3 code/extract_text/sentence_embeddings.py \
 sem_similar_sentences <-
 jsonlite::fromJSON(here::here("output/doccano/hard_negatives_training.json")) 
 
+print("Nuber of non-cohort sentences selected for training based on semantic similarity")
+length(sem_similar_sentences)
+
 ```
 
 
@@ -280,44 +283,43 @@ df_doc <- df_entities |>
   )
 
 
-out_path <- "output/doccano/abstracts_with_cohort_info_reconstructed.jsonl"
-#dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+write_doccano_jsonl <- function(df_doc, out_path) {
+  dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
-con <- file(out_path, "w", encoding = "UTF-8")
-on.exit(close(con), add = TRUE)
+  con <- file(out_path, "w", encoding = "UTF-8")
+  on.exit(close(con), add = TRUE)   # now correctly scoped to this function
 
-# con <- file(out_path, "w", encoding = "UTF-8")
-# on.exit(close(con), add = TRUE)
+  for (i in seq_len(nrow(df_doc))) {
+    tryCatch({
+      obj <- list(
+        text                  = df_doc$text[[i]],
+        pubmed_id             = df_doc$pubmed_id[[i]],
+        date                  = df_doc$date[[i]],
+        country               = df_doc$country[[i]],
+        gwas_cat_cohort_label = df_doc$gwas_cat_cohort_label[[i]],
+        label                 = df_doc$label[[i]]
+      )
 
-for (i in seq_len(nrow(df_doc))) {
-  tryCatch({
-    obj <- list(
-      #id                    = df_doc$id[[i]],
-      text                  = df_doc$text[[i]],
-      pubmed_id             = df_doc$pubmed_id[[i]],
-      date                  = df_doc$date[[i]],
-      country               = df_doc$country[[i]],
-      gwas_cat_cohort_label = df_doc$gwas_cat_cohort_label[[i]],
-      label                 = df_doc$label[[i]]
-      #Comments              = df_doc$Comments[[i]]
-    )
+      json <- jsonlite::toJSON(obj,
+                               auto_unbox = TRUE,
+                               null       = "null",
+                               na         = "null")
 
-    json <- jsonlite::toJSON(obj,
-                             auto_unbox = TRUE,
-                             null       = "null",
-                             na         = "null")
+      # jsonlite serialises empty list() as {}; force [] for these two fields
+      json <- gsub('"label":{}',    '"label":[]',    json, fixed = TRUE)
+      json <- gsub('"Comments":{}', '"Comments":[]', json, fixed = TRUE)
 
-    # jsonlite serialises empty list() as {}; force [] for these two fields
-    json <- gsub('"label":{}',    '"label":[]',    json, fixed = TRUE)
-    json <- gsub('"Comments":{}', '"Comments":[]', json, fixed = TRUE)
+      writeLines(as.character(json), con, useBytes = TRUE)
+    }, error = function(e) {
+      message(sprintf("row %d (id=%s) failed: %s",
+                      i, df_doc$id[[i]], conditionMessage(e)))
+    })
+  }
 
-    writeLines(json, con, useBytes = TRUE)
-    flush(con)
-  }, error = function(e) {
-    message(sprintf("row %d (id=%s) failed: %s",
-                    i, df_doc$id[[i]], conditionMessage(e)))
-  })
+  invisible(out_path)
 }
+
+write_doccano_jsonl(df_doc, "output/doccano/abstracts_with_cohort_info_reconstructed.jsonl")
 
 ```
 
