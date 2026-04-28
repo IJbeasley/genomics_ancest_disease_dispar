@@ -1,10 +1,14 @@
 
 
+library(dplyr)
+library(jsonlite)
+library(tidyr)
+library(purrr)
 
 df <- stream_in(file(here::here("output/doccano/doccano_pt7_v5.jsonl")))
 
 
-# incase multiple uploads of the same sentences to docanno, deduplicate by pubmed_id and text
+# in case of multiple uploads of the same sentences to docanno, deduplicate by pubmed_id and text
 df  <- df |>
   group_by(pubmed_id, text) |>
   slice_sample(n = 1) |>
@@ -144,6 +148,57 @@ for (i in seq_len(nrow(df_doc))) {
 }
 
 
+# save cohort annotations per pubmed id:
+cohort_annotations_per_pubmed <-
+df_entities |>
+  filter(entity_text != "") |>
+  select(pubmed_id, text, entity_text)
+
+
+source(here::here("code/merge_cohort_names.R"))
+# standardize cohort names
+cohort_group <-
+  matched |>
+  select(cohort, full_name, synonyms, group_id) |>
+  tidyr::pivot_longer(cols = c(cohort, full_name, synonyms),
+                      names_to = "field",
+                      values_to = "COHORT") |>
+  filter(!is.na(COHORT)) |>
+  select(-field) |>
+  distinct()
+
+cohort_group <-
+  cohort_group |>
+  group_by(group_id) |>
+  # group name is the shortest cohort name in the group (after trimming whitespace)
+  mutate(group_name = COHORT[which.min(nchar(str_trim(COHORT)))][1]) |>
+  ungroup() |>
+  select(COHORT, group_name) |>
+  #mutate(across(everything(), ~ tolower(.))) |>
+  mutate(across(everything(), ~stringr::str_replace_all(., "\\s*-\\s*", "-"))) |>
+  distinct()
+
+
+cohort_annotations_per_pubmed <-
+  left_join(cohort_annotations_per_pubmed,
+            cohort_group |> rename(entity_text = COHORT),
+            by = "entity_text") |>
+  mutate(group_name = ifelse(is.na(group_name),
+                             entity_text, group_name)) |>
+  select(-entity_text) |>
+  rename(cohort = group_name)
+
+
+cohort_annotations_per_pubmed <-
+  cohort_annotations_per_pubmed |>
+  group_by(pubmed_id) |>
+  summarise(cohort_annotations = str_flatten(sort(unique(cohort)), collapse = "; "))
+
+out_annotations <- "output/gwas_cat/training_set_cohort_annotations.csv"
+
+data.table::fwrite(cohort_annotations_per_pubmed,
+                   file = out_annotations,
+                   sep = ",")
 # for (i in seq_len(nrow(df_doc))) {
 #   obj <- list(
 #     id                    = df_doc$id[[i]],

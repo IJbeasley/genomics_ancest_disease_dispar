@@ -3,21 +3,23 @@
 # aligns Doccano-style character-span labels to token-level BIO tags.
 
 
-def get_tokenized_datasets(train_dataset, val_dataset, tokenizer, label2id, id2label):
-    """Tokenize train/val datasets and align character-span labels to token-level BIO tags.
+def tokenize_dataset(dataset, tokenizer, label2id, id2label):
+    """Tokenize a single HuggingFace Dataset and align char-span labels to BIO tags.
+
+    Works for unlabeled data too: if an example has an empty `label` list, all
+    non-special tokens get label 'O' and special tokens get -100.
 
     Args:
-        train_dataset: HuggingFace Dataset with "text" and "label" columns,
-            where "label" is a list of [start, end, tag] character spans.
-        val_dataset:   HuggingFace Dataset with the same schema.
-        tokenizer:     A *fast* HuggingFace tokenizer (required for offset_mapping).
-        label2id:      Dict mapping BIO label strings to integer IDs.
-        id2label:      Dict mapping integer IDs back to BIO label strings.
+        dataset:   HuggingFace Dataset with "text" and "label" columns, where
+                   "label" is a list of [start, end, tag] character spans.
+        tokenizer: A *fast* HuggingFace tokenizer (required for offset_mapping).
+        label2id:  Dict mapping BIO label strings to integer IDs.
+        id2label:  Dict mapping integer IDs back to BIO label strings (unused
+                   here but accepted for API symmetry).
 
     Returns:
-        (tokenized_train, tokenized_val): tokenized HuggingFace Datasets ready for Trainer.
+        Tokenized HuggingFace Dataset ready for Trainer.
     """
-
     def tokenize_and_align_label(batch):
         tokenized_inputs = tokenizer(
             batch["text"],
@@ -55,16 +57,21 @@ def get_tokenized_datasets(train_dataset, val_dataset, tokenizer, label2id, id2l
         tokenized_inputs.pop("offset_mapping")
         return tokenized_inputs
 
-    tokenized_train = train_dataset.map(
+    return dataset.map(
         tokenize_and_align_label,
         batched=True,
-        remove_columns=train_dataset.column_names,
+        remove_columns=dataset.column_names,
     )
-    tokenized_val = val_dataset.map(
-        tokenize_and_align_label,
-        batched=True,
-        remove_columns=val_dataset.column_names,
-    )
+
+
+def get_tokenized_datasets(train_dataset, val_dataset, tokenizer, label2id, id2label):
+    """Tokenize train/val datasets and align character-span labels to token-level BIO tags.
+
+    Thin wrapper around `tokenize_dataset` that also prints token-level label
+    count sanity checks for both splits.
+    """
+    tokenized_train = tokenize_dataset(train_dataset, tokenizer, label2id, id2label)
+    tokenized_val = tokenize_dataset(val_dataset, tokenizer, label2id, id2label)
 
     # Token-level label count sanity check
     def count_token_labels(tokenized_dataset):
