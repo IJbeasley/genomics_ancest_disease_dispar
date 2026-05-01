@@ -42,12 +42,18 @@ def tokenize_dataset(dataset, tokenizer, label2id, id2label):
                     continue
 
                 token_label = "O"
+
                 for span_start, span_end, span_tag in spans:
                     span_start = int(span_start)
                     span_end = int(span_end)
-                    # Overlap check
                     if token_end > span_start and token_start < span_end:
-                        token_label = "B-COHORT" if token_start == span_start else "I-COHORT"
+                        prefix = "B-" if token_start == span_start else "I-"
+                        candidate = f"{prefix}{span_tag}"
+                        if candidate not in label2id:
+                            # unknown tag in input — either skip or raise
+                            token_label = "O"
+                        else:
+                            token_label = candidate
                         break
                 aligned_labels.append(label2id[token_label])
 
@@ -75,7 +81,8 @@ def get_tokenized_datasets(train_dataset, val_dataset, tokenizer, label2id, id2l
 
     # Token-level label count sanity check
     def count_token_labels(tokenized_dataset):
-        counts = {"B-COHORT": 0, "I-COHORT": 0, "O": 0}
+        counts = {label: 0 for label in label2id}
+        #counts = {"B-COHORT": 0, "I-COHORT": 0, "O": 0}
         for example in tokenized_dataset:
             for l in example["labels"]:
                 if l != -100:
