@@ -54,8 +54,13 @@ for xml_file in "$INPUT_FOLDER"/*.xml; do
     # Get filename without path and extension
     filename=$(basename "$xml_file" .xml)
 
+    # Normalise .pdf.tei suffix to _pdf_tei so GROBID output files get
+    # predictable names like {pmid}_pdf_tei_methods.txt. Must match the
+    # filename the Python extractor writes to.
+    output_name="${filename/.pdf.tei/_pdf_tei}"
+
     # Output file name
-    output_file="$OUTPUT_FOLDER/${filename}_methods.txt"
+    output_file="$OUTPUT_FOLDER/${output_name}_methods.txt"
 
     echo -n "Processing: $(basename "$xml_file")... "
 

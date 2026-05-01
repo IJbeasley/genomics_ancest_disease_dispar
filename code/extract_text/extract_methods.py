@@ -69,9 +69,10 @@ def _is_main_journal(root):
     main_journals = {
         'nature genetics',
         'human genetics and genomics advances',
+        'the american journal of human genetics',
         'american journal of human genetics',
+        'the american journal of human genetics',
         'journal of human genetics'
-        
     }
 
     if journal is not None and journal.text:
@@ -189,6 +190,32 @@ NON_METHODS_SECTIONS = {
     'supplementary', 'supplemental', 'appendix',
 }
 
+# Fallback keywords: substrings that, when they appear in a section head,
+# strongly suggest the head is a methods subsection. Used only when GROBID
+# fails to produce a top-level "Methods" head — which happens on PDFs where
+# the section hierarchy gets flattened during parsing.
+METHODS_SUBSECTION_KEYWORDS = (
+    'participants', 'subjects', 'study population', 'study subjects',
+    'cohort', 'discovery cohort', 'replication cohort',
+    'genotyping', 'genotype calling', 'quality control',
+    'imputation', 'gwas', 'genome-wide association',
+    'statistical analysis', 'statistical method',
+    'phenotype', 'phenotyping',
+    'dna extraction', 'sample collection', 'data collection',
+    'study design', 'replication study', 'meta-analysis',
+)
+
+# Heads whose lowercased title starts with any of these are clearly NOT
+# methods content — used to prevent the fallback from latching onto a
+# "Discussion of GWAS findings"-style head.
+FALLBACK_EXCLUDED_PREFIXES = (
+    'abstract', 'introduction', 'background',
+    'result', 'results', 'discussion', 'conclusion', 'conclusions',
+    'acknowledg', 'reference', 'references', 'bibliography',
+    'funding', 'disclosure', 'conflict', 'data availability',
+    'supplement', 'supplemental', 'appendix',
+)
+
 
 def extract_tei_methods(root):
     """
@@ -226,6 +253,27 @@ def extract_tei_methods(root):
             if ('method' in title and
                 not title.startswith('result') and
                 not title.startswith('discussion')):
+                methods_start = i
+                break
+
+    # Fallback: GROBID sometimes flattens the section hierarchy and drops the
+    # top-level "Methods" head, leaving only its subheadings (e.g. "Study
+    # participants", "Genotyping", "GWAS"). If the first pass found nothing,
+    # walk the divs again looking for heads that contain one of the
+    # methods-subsection keywords.
+    if methods_start is None:
+        for i, div in enumerate(divs):
+            head = div.find('tei:head', TEI_NS)
+            if head is None:
+                head = div.find('head')
+            if head is None or not head.text:
+                continue
+            title = head.text.strip().lower()
+            # Strip leading numeric prefixes like "2.1 " or "3. ".
+            title_clean = re.sub(r'^(\d+\.)*\d+\s+', '', title)
+            if any(title_clean.startswith(p) for p in FALLBACK_EXCLUDED_PREFIXES):
+                continue
+            if any(kw in title_clean for kw in METHODS_SUBSECTION_KEYWORDS):
                 methods_start = i
                 break
 
@@ -473,14 +521,25 @@ def extract_text_from_element(element, parent_tag=None):
         
         for child in element:
             # Skip citation references (xref with ref-type="bibr")
+            # <ref type="bibr" target="#b1">2</ref> 
             child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-            if child_tag == 'xref' and child.get('ref-type') == 'bibr':
+            
+            #print(child.get('target'))
+            if child.get('ref-type') == 'bibr':
+            #if child_tag == 'xref' and child.get('ref-type') == 'bibr':  
                 # Skip this citation, but keep any tail text
                 if child.tail:
                     tail_text = child.tail.strip()
                     if tail_text:
                         para_text_parts.append(tail_text)
                 continue
+          # if child.get('target') and child.get('target')="#b1" and hild.get('ref-type') == 'bibr':
+          #       # Skip this citation, but keep any tail text
+          #       if child.tail:
+          #           tail_text = child.tail.strip()
+          #           if tail_text:
+          #               para_text_parts.append(tail_text)
+          #       continue
             
             child_text = extract_text_from_element(child, current_tag)
             if child_text:
@@ -788,8 +847,17 @@ def find_all_methods_sections(root):
         for child in sec:
             if child.tag.endswith('title'):
                 title = ''.join(child.itertext()).strip().lower()
+                # Demote Nature-style "Online content" / online-methods
+                # stubs below every real methods candidate. These are
+                # short boilerplate pointers like "Any methods,
+                # additional references, ... are available at 10.1038/...".
+                if (title == 'online content' or
+                    title == 'online methods note' or
+                    title.startswith('online content') or
+                    title.startswith('online methods note')):
+                    return 6
                 # Priority 1: Clear methods titles
-                if ('methods summary' in title or 
+                if ('methods summary' in title or
                     'materials and methods' in title or
                     'methods and materials' in title):
                     return 1
@@ -827,8 +895,112 @@ def extract_methods_section(xml_file):
         - 'is_main': Boolean indicating if this is Nature Genetics fallback body text
     """
     try:
-        tree = ET.parse(xml_file)
-        root = tree.getroot()
+        try:
+            tree = ET.parse(xml_file)
+            root = tree.getroot()
+        except ET.ParseError as parse_err:
+            # Some publisher-produced JATS (e.g. SAGE/Atypon) ships malformed
+            # XML — namespace prefixes like <oasis:table> are used without
+            # being declared on the root element.  ElementTree's strict
+            # parser refuses these.  Recovery strategy:
+            #   1. Read the file as text.
+            #   2. Find every `<prefix:` used in the body but not declared
+            #      via `xmlns:prefix=` on the root.
+            #   3. Inject placeholder namespace declarations on the root
+            #      <article> element, then re-parse with ET.
+            #   4. If that still fails, fall back to lxml's recovering
+            #      parser and round-trip through serialization.
+            print(
+                f"Warning: ElementTree could not parse {xml_file} ({parse_err}); "
+                f"attempting to repair undeclared namespace prefixes",
+                file=sys.stderr,
+            )
+            raw = Path(xml_file).read_text(encoding='utf-8')
+
+            # Collect every prefix that's actually USED, both as element
+            # prefix (`<oasis:table>`) and as attribute prefix
+            # (`xlink:href="..."`).  `xml` and `xmlns` are XML's special
+            # built-in prefixes — never declare those.
+            elem_prefixes = set(re.findall(r'<\s*([A-Za-z][\w.-]*):', raw))
+            attr_prefixes = set(re.findall(r'\s([A-Za-z][\w.-]*):[A-Za-z][\w.-]*\s*=', raw))
+            used_prefixes = (elem_prefixes | attr_prefixes) - {'xml', 'xmlns'}
+
+            # Map each declared prefix to a URI seen anywhere in the file.
+            # Some publishers declare a prefix on inner subtrees only, so a
+            # different subtree using the same prefix still raises
+            # "unbound prefix".  We re-declare every used prefix on the
+            # ROOT element to make the document self-contained.  Re-using
+            # the same URI as inner declarations is harmless.
+            declared_uris = dict(
+                re.findall(r'xmlns:([A-Za-z][\w.-]*)\s*=\s*"([^"]*)"', raw)
+            )
+            # Well-known fallbacks for prefixes that publishers commonly
+            # forget to declare.
+            DEFAULT_URIS = {
+                'xlink': 'http://www.w3.org/1999/xlink',
+                'mml':   'http://www.w3.org/1998/Math/MathML',
+                'oasis': 'http://docs.oasis-open.org/ns/oasis-exchange/table',
+                'ali':   'http://www.niso.org/schemas/ali/1.0/',
+            }
+
+            patched = raw
+            if used_prefixes:
+                injections = []
+                for p in sorted(used_prefixes):
+                    uri = declared_uris.get(p) or DEFAULT_URIS.get(p) or f'urn:local:undeclared:{p}'
+                    injections.append(f' xmlns:{p}="{uri}"')
+                injection = ''.join(injections)
+                # Inject into the FIRST element opening tag (the root).
+                # Strip any existing xmlns:foo declarations on the root for
+                # the same prefixes, so our injection is authoritative.
+                def _patch_root(m):
+                    head = m.group(1)
+                    tail = m.group(2)
+                    for p in used_prefixes:
+                        head = re.sub(
+                            rf'\s+xmlns:{re.escape(p)}\s*=\s*"[^"]*"',
+                            '', head,
+                        )
+                    return head + injection + tail
+
+                patched, n = re.subn(
+                    r'(<[A-Za-z][\w.-]*\b[^>]*?)(\s*/?>)',
+                    _patch_root,
+                    patched,
+                    count=1,
+                )
+                if n:
+                    print(
+                        f"  injected xmlns declarations for: {sorted(used_prefixes)}",
+                        file=sys.stderr,
+                    )
+
+            try:
+                root = ET.fromstring(patched)
+                tree = ET.ElementTree(root)
+            except ET.ParseError as second_err:
+                # Final fallback: lxml recovering parser.  We strip
+                # namespaces from every element so the resulting tree is
+                # serializable through ET without re-triggering the same
+                # error.
+                try:
+                    from lxml import etree as LET
+                except ImportError:
+                    raise second_err
+                print(
+                    f"  namespace injection insufficient ({second_err}); "
+                    f"falling back to lxml recover=True with namespace strip",
+                    file=sys.stderr,
+                )
+                lxml_parser = LET.XMLParser(recover=True, huge_tree=True)
+                lxml_root = LET.fromstring(raw.encode('utf-8'), lxml_parser)
+                # Strip namespace from element tags so ET can serialize.
+                for elem in lxml_root.iter():
+                    if isinstance(elem.tag, str) and '}' in elem.tag:
+                        elem.tag = elem.tag.split('}', 1)[1]
+                LET.cleanup_namespaces(lxml_root)
+                root = ET.fromstring(LET.tostring(lxml_root))
+                tree = ET.ElementTree(root)
 
         # Detect format and dispatch
         fmt = detect_xml_format(root)
@@ -898,8 +1070,21 @@ def extract_methods_section(xml_file):
                         alt_text = extract_text_from_element(section).strip()
                         if alt_text and len(alt_text.split()) >= 50:
                             # Found a real methods section
-                            return alt_text
-                
+                            return {'text': alt_text, 'is_main': False}
+
+                # No alternative methods section found.  For older Nature
+                # Genetics / Cell Press / AJHG papers, the actual methods text
+                # is unsectioned in the body — the only <sec> tagged "Methods"
+                # is this online-only stub.  Fall back to the whole body, the
+                # same way we do for main-journal articles with zero methods
+                # candidates.
+                if _is_main_journal(root):
+                    body = root.find('.//{*}body')
+                    if body is not None:
+                        body_text = extract_text_from_element(body).strip()
+                        if body_text and len(body_text.split()) >= 50:
+                            return {'text': body_text, 'is_main': True}
+
                 # No alternative found, this is truly online-only
                 print("Methods are only available online (not extracted).", file=sys.stderr)
                 return {'text': None, 'is_main': False}
@@ -971,11 +1156,11 @@ def main():
             stem = output_path.stem
             suffix = output_path.suffix
             output_path = output_path.parent / f"{stem}_main{suffix}"
-            
-        # if output contains .pdf.tei, then output in format as {pmid}_pdf_tei_methods.txt
-        if output_path.suffix == '.txt' and '.pdf.tei' in output_path.stem:
-           output_path = output_path.replace(".pdf.tei.", "_pdf_tei_")
-           
+
+        # NOTE: naming for .pdf.tei.xml inputs (-> *_pdf_tei_methods.txt) is
+        # handled by the caller (batch_process_methods.sh). Keep the output
+        # path unchanged here so the caller can rely on what it passed in.
+
         output_path.write_text(methods_text, encoding='utf-8')
         print(f"Methods section extracted to: {output_path}")
     else:
