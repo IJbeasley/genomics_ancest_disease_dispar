@@ -113,6 +113,30 @@ WRAPPER_CLASS = "ac-section"
 
 
 # ---------------------------------------------------------------------------
+# Reference cleanup: Oxford Academic wraps every bibliography entry in
+# ``<div class="js-splitview-ref-item">``. Inside that wrapper the actual
+# citation text sits in a ``mixed-citation`` / ``citation`` block, but it is
+# followed by a "citation-links" panel that bs4's ``get_text()`` flattens into
+# the reference body as junk strings like
+# "Google ScholarCrossrefSearch ADS PubMedOpenURL Placeholder TextWorldCat".
+# We strip those panels (plus the empty refLink anchor that precedes the
+# citation) here so Auto-CORPus sees only the human-readable reference text.
+# Pairs with the ``data`` selectors added to ``references`` in the AC config,
+# which extract title / journal / volume into structured infons.
+# ---------------------------------------------------------------------------
+
+REF_ITEM_CLASS = "js-splitview-ref-item"
+
+# Classes inside a reference item that should be removed before AC sees them.
+# - ``citation-links``: Google Scholar / Crossref / PubMed / WorldCat panels.
+# - ``refLink-parent``: empty <a> jump-anchor block at the start of each item.
+REF_JUNK_CLASSES = {
+    "citation-links",
+    "refLink-parent",
+}
+
+
+# ---------------------------------------------------------------------------
 # Core transformation
 # ---------------------------------------------------------------------------
 
@@ -264,11 +288,36 @@ def wrap_sections_in_container(container: Tag, soup: BeautifulSoup) -> int:
     return wrappers_created
 
 
+def strip_reference_junk(soup: BeautifulSoup) -> int:
+    """Remove citation-link panels from every Oxford reference item.
+
+    Auto-CORPus extracts the reference body via ``get_text()`` on each
+    ``js-splitview-ref-item``. By default that text is followed by a flattened
+    blob of "Google ScholarCrossrefSearch ADS PubMedOpenURL Placeholder Text
+    WorldCat" because the citation-links panel sits as a sibling of the actual
+    citation. Decompose those panels (and the empty anchor block) here so the
+    BioC body is the human-readable reference only.
+
+    Returns the number of junk nodes removed (for logging).
+    """
+    removed = 0
+    for ref_item in soup.find_all("div", class_=REF_ITEM_CLASS):
+        for junk_cls in REF_JUNK_CLASSES:
+            for junk in ref_item.find_all(class_=junk_cls):
+                junk.decompose()
+                removed += 1
+    return removed
+
+
 def preprocess_soup(soup: BeautifulSoup) -> dict[str, int]:
     """Wrap sections in every relevant widget container found in ``soup``.
 
-    Returns a small summary dict: ``{widget_name: wrappers_added}``. Useful
-    for logging and for failing loudly when a file looks malformed.
+    Also strips per-reference citation-link junk (Google Scholar / Crossref /
+    PubMed / WorldCat panels) so the BioC body for each reference is clean.
+
+    Returns a small summary dict: ``{widget_name: wrappers_added}`` plus a
+    ``__refs_cleaned__`` count. Useful for logging and for failing loudly when
+    a file looks malformed.
     """
     summary: dict[str, int] = {}
     for container in soup.find_all("div", attrs={"data-widgetname": True}):
@@ -277,6 +326,7 @@ def preprocess_soup(soup: BeautifulSoup) -> dict[str, int]:
             continue
         added = wrap_sections_in_container(container, soup)
         summary[widget_name] = summary.get(widget_name, 0) + added
+    summary["__refs_cleaned__"] = strip_reference_junk(soup)
     return summary
 
 
@@ -294,9 +344,9 @@ def process_file(src: Path, dst: Path) -> dict[str, int]:
     soup = BeautifulSoup(html, "html.parser")
 
     summary = preprocess_soup(soup)
-    total = sum(summary.values())
+    wrappers_total = sum(v for k, v in summary.items() if not k.startswith("__"))
 
-    if total == 0:
+    if wrappers_total == 0:
         logger.warning(
             "no section widgets wrapped in %s "
             "(no <div data-widgetname=ArticleFulltext> with h2 headings found)",
@@ -322,7 +372,7 @@ def process_directory(input_dir: Path, output_dir: Path) -> None:
     for src in html_files:
         dst = output_dir / src.name
         summary = process_file(src, dst)
-        wrappers = sum(summary.values())
+        wrappers = sum(v for k, v in summary.items() if not k.startswith("__"))
         total_files += 1
         total_sections += wrappers
         logger.info(
