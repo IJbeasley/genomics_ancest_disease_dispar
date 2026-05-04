@@ -12,6 +12,8 @@ import argparse
 import os
 import random
 import sys
+import inspect
+import matplotlib.pyplot as plt
 
 # Make sibling modules in this directory importable regardless of cwd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -27,8 +29,8 @@ parser.add_argument(
 parser.add_argument(
     "--entity_types",
     type=str,
-    default="COHORT,REF_PANEL,FUNC_DATA",
-    help="Comma-separated list of entity types for NER (default: COHORT,REF_PANEL)"
+    default="COHORT",
+    help="Comma-separated list of entity types for NER (default: COHORT)"
 )
 parser.add_argument(
     "--seed",
@@ -48,25 +50,17 @@ parser.add_argument(
     default="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
     help="Name of the huggingface model (default PubMedBERT). " \
     "Options include:" \
-    "PubMedBERT versions:"
+    "--- PubMedBERT versions: ---" \
     "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext, " \
     "microsoft/BiomedNLP-BiomedBERT-large-uncased-abstract, " \
     "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract" \
-    "bioformer versions:"
+    "--- bioformer versions: ---"
     "bioformers/bioformer-8L" \
-    "bioformers/bioformer-16L"
+    "bioformers/bioformer-16L" \
+    "--- BioBERT options:  https://huggingface.co/collections/dmis-lab/biobert ---"
+    "dmis-lab/biobert-large-cased-v1.1" \
+    " dmis-lab/biobert-base-cased-v1.1"
 )
-#model_name = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
-# pubmedbert options:
-# microsoft/BiomedNLP-BiomedBERT-large-uncased-abstract
-# microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract
-# model_name = "microsoft/BiomedNLP-BiomedBERT-large-uncased-abstract"
-
-# biobert options:
-# https://huggingface.co/collections/dmis-lab/biobert
-# dmis-lab/biobert-large-cased-v1.1
-# dmis-lab/biobert-base-cased-v1.1
-# model_name = "dmis-lab/biobert-base-cased-v1.1"
 parser.add_argument(
     "--test-path",
     type=str,
@@ -175,13 +169,6 @@ if not args_parsed.skip_training:
         # f"Declared: {declared_entity_types}"
          )
 
-    #    seen_tags = {span[2] for ex in train_data for span in ex.get("label", [])}
-    #    unknown   = seen_tags - set(entity_types)
-    #    if unknown:
-    #        raise ValueError(
-    #            f"Found tags in training data not declared in --entity_types: {sorted(unknown)}. "
-    #            f"Declared: {entity_types}"
-    #            )
        
 
 ############## Split train/validation ##############
@@ -190,14 +177,14 @@ if not args_parsed.skip_training:
        import numpy as np
 
        # Create binary stratification target: whether sample has any COHORT labels
-       # stratify_target = np.array([1 if any(label[2] == "COHORT" for label in example.get("label", [])) else 0 
-       #                     for example in train_data])
-       # groups = np.array([example.get("pubmed_id", -1) for example in train_data])
+       stratify_target = np.array([1 if any(label[2] == "COHORT" for label in example.get("label", [])) else 0
+                           for example in train_data])
+       groups = np.array([example.get("pubmed_id", -1) for example in train_data])
 
        # Create binary stratification target: whether sample has any entity labels (any type)
-       stratify_target = np.array([1 if len(example.get("label", [])) > 0 else 0 
-                            for example in train_data])
-       groups = np.array([example.get("pubmed_id", -1) for example in train_data])
+       # stratify_target = np.array([1 if len(example.get("label", [])) > 0 else 0 
+       #                      for example in train_data])
+       # groups = np.array([example.get("pubmed_id", -1) for example in train_data])
 
        from collections import Counter
        if Counter(groups)[-1] > 0:
@@ -226,17 +213,6 @@ label_list = ["O"] + [f"B-{t}" for t in entity_types] + [f"I-{t}" for t in entit
 label2id = {label: i for i, label in enumerate(label_list)}
 id2label = {i: label for i, label in enumerate(label_list)}
 num_labels = len(label_list)
-# entity_types = getattr(args_parsed, "entity_types", None)
-# if entity_types is None:
-#     entity_types = ["COHORT"]
-# elif isinstance(entity_types, str):
-#     entity_types = [t.strip() for t in entity_types.split(",") if t.strip()]
-
-# Build BIO label list and mappings from entity_types
-# label_list = ["O"] + [f"B-{t}" for t in entity_types] + [f"I-{t}" for t in entity_types]
-# label2id = {label: i for i, label in enumerate(label_list)}
-# id2label = {i: label for i, label in enumerate(label_list)}
-# num_labels = len(label_list)
 
 # Count spans per entity (entity-agnostic)
 def count_entity_spans(dataset):
@@ -247,31 +223,6 @@ def count_entity_spans(dataset):
                 tag = span[2]
                 counts[tag] = counts.get(tag, 0) + 1
     return counts
-
-# if not args_parsed.skip_training:
-#     train_counts = count_entity_spans(train_dataset)
-#     val_counts = count_entity_spans(val_dataset)
-#     print("\n")
-#     print("Training entity spans:", train_counts)
-#     print("Validation entity spans:", val_counts)
-#     print("\n")
-
-# label_list = ["O", "B-COHORT", "I-COHORT"]
-# id2label = {i: label for i, label in enumerate(label_list)}
-# label2id = {label: i for i, label in enumerate(label_list)}
-
-# # Map label IDs back to strings
-# id2label = {0: "O", 1: "B-COHORT", 2: "I-COHORT"}
-
-# # Check number of COHORT spans in training and validation sets
-# # Check that there are COHORT spans in both datasets
-# def count_cohort_spans(dataset):
-#     counts = {"COHORT": 0}
-#     for example in dataset:
-#         for span in example.get("label", []):
-#             if len(span) == 3:
-#                 counts["COHORT"] += 1
-#     return counts
 
 if not args_parsed.skip_training:
   
@@ -376,67 +327,31 @@ def compute_metrics(p):
         "accuracy": results["overall_accuracy"],
     }
 
-# def compute_metrics(p):
-#     predictions, label = p
-#     predictions = np.argmax(predictions, axis=2)
-#     true_predictions = [
-#         [label_list[p] for (p, l) in zip(pred, lab) if l != -100]
-#         for pred, lab in zip(predictions, label)
-#     ]
-#     true_label = [
-#         [label_list[l] for (p, l) in zip(pred, lab) if l != -100]
-#         for pred, lab in zip(predictions, label)
-#     ]
-#     results = metric.compute(predictions=true_predictions, 
-#                              references=true_label)
-#     return {
-#         "precision": results["overall_precision"],
-#         "recall": results["overall_recall"],
-#         "f1": results["overall_f1"],
-#         "accuracy": results["overall_accuracy"],
-#     }
-
 
 # 8. Data collator + Trainer (built in both branches)
 data_collator = DataCollatorForTokenClassification(tokenizer)
 
+# Build TrainingArguments kwargs dynamically to support different transformers versions
 training_args = TrainingArguments(
-    output_dir="pubmedbert-cohort-ner",
-    learning_rate=1e-5,                 # rates to try: 1e-5, 3e-5, 5e-5
-    per_device_train_batch_size=16,     # rates to try: 16, 32
-    per_device_eval_batch_size=32,
-    num_train_epochs=5,                 # rates to try: 3, 5, 10
-    # weight_decay=0.1,                 # rates to try: 0.01, 0.05, 0.1
-    seed=args_parsed.seed
+    output_dir = "pubmedbert-cohort-ner",
+    learning_rate = 1e-5, # rates to try: 1e-5, 3e-5, 5e-5
+    per_device_train_batch_size = 16, # rates to try: 16, 32
+    per_device_eval_batch_size = 32,
+    num_train_epochs = 5, # rates to try: 3, 5, 10
+    logging_steps= 100, 
+    seed= args_parsed.seed,
+    eval_strategy="epoch",
+    eval_delay=0
 )
 
-trainer_kwargs = {
-    "model": model,
-    "args": training_args,
-    "data_collator": data_collator,
-    "compute_metrics": compute_metrics,
-}
-
-if not args_parsed.skip_training:
-    trainer_kwargs["train_dataset"] = tokenized_train
-    trainer_kwargs["eval_dataset"] = tokenized_val
-
-trainer = Trainer(**trainer_kwargs)
-
-# 9. Train (or skip if using pre-trained model)
-# if args_parsed.skip_training:
-#     if os.path.exists(args_parsed.model_path):
-#         print(f"\n=== Loading pre-trained model from {args_parsed.model_path} ===")
-#         model = AutoModelForTokenClassification.from_pretrained(args_parsed.model_path)
-#         tokenizer = AutoTokenizer.from_pretrained(args_parsed.model_path)
-#         model.config.id2label = id2label
-#         model.config.label2id = label2id
-#         print(f"Loaded model and tokenizer from {args_parsed.model_path}/\n")
-#     else:
-#         raise FileNotFoundError(
-#             f"Model directory {args_parsed.model_path}/ not found. "
-#             "Train first without --skip_training"
-#         )
+trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_train,
+        eval_dataset=tokenized_val,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+    )
 
 if not args_parsed.skip_training:
 # Hyperparameter tuning was performed using different values for learning rate (1e-05, 3e-5, 5e-5), 
@@ -444,6 +359,43 @@ if not args_parsed.skip_training:
 # batch size (16, 32) 
 # and dropout rate (0.1) to select the model that achieved the best loss on validation set. 
     trainer.train()
+    
+    # Create and save training loss plot
+    history = trainer.state.log_history
+    
+    # Extract training loss (only entries with 'loss' key, excluding eval_loss entries)
+    train_steps = []
+    train_loss = []
+    eval_steps = []
+    eval_loss = []
+    
+    for log in history:
+        if "loss" in log and "eval_loss" not in log:
+            train_steps.append(log.get("step", len(train_steps)))
+            train_loss.append(log["loss"])
+        if "eval_loss" in log:
+            eval_steps.append(log.get("step", len(eval_steps)))
+            eval_loss.append(log["eval_loss"])
+    
+    # Create plot
+    plt.figure(figsize=(12, 6))
+    if train_loss:
+        plt.plot(train_steps, train_loss, marker='o', linewidth=2, label='Training Loss', alpha=0.8)
+    if eval_loss:
+        plt.plot(eval_steps, eval_loss, marker='s', linewidth=2, label='Validation Loss', alpha=0.8)
+    
+    plt.xlabel('Training Step', fontsize=12)
+    plt.ylabel('Loss', fontsize=12)
+    plt.title('Training and Validation Loss Over Steps', fontsize=14)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    
+    loss_plot_path = f"{args_parsed.output_path}/training_loss.png"
+    os.makedirs(args_parsed.output_path, exist_ok=True)
+    plt.savefig(loss_plot_path, dpi=150, bbox_inches='tight')
+    print(f"\n=== Saved training loss plot to {loss_plot_path} ===")
+    print(f"    Logged {len(train_loss)} training steps and {len(eval_loss)} validation steps")
+    plt.close()
 
     # 10. Save model
     trainer.save_model(args_parsed.model_path)
