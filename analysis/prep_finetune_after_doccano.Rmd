@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
 ```{r setup_packages, message=FALSE, warning=FALSE}
@@ -23,13 +23,13 @@ library(stringr)
 
 ```{r load_doccano_annotations}
 
-df <- stream_in(file(here::here("output/doccano/doccano_pt7_v5.jsonl")))
+df <- stream_in(file(here::here("output/doccano/doccano_test_group.jsonl")))
 
 # in case of multiple uploads of the same sentences to docanno, deduplicate by pubmed_id and text
-df  <- df |>
-  group_by(pubmed_id, text) |>
-  slice_sample(n = 1) |>
-  ungroup()
+df <-
+ df |>
+  select(-id) |>
+  distinct()
 
 ```
 
@@ -72,7 +72,6 @@ df_entities <- df_entities |>
 
 ```
 
-
 ## Selecting negative (control sentences)
 
 ### Number of positives (sentences / annotated entities)
@@ -103,28 +102,6 @@ df_entities |>
   select(pubmed_id, text) |>
   group_by(pubmed_id) |>
   summarise(n = n())
-
-```
-
-
-#### Initial approach - just random sampling
-
-```{r random_sample_train, eval=F}
-
-set.seed(40)
-
-keep_non_entity_text <-
-df_entities |>
-  group_by(text) |>
-  summarise(has_entity = any(entity_text != "")) |>
-  filter(!has_entity) |>
-  slice_sample(n = ceiling(0.2 * n_has_entities)) |>
-  pull(text)
-
-df_entities <-
-  df_entities |>
-  filter(text %in% keep_non_entity_text | entity_text != "")
-
 
 ```
 
@@ -226,6 +203,121 @@ length(sem_similar_sentences)
 
 ```
 
+### Add number of participants labelling: 
+
+```{r}
+
+participant_words <- c("adults", "adolescents", "children", "infants", 
+                       "neonates",
+                       "women", "men", "female", "male","trios", 
+                       "families", "twins", "siblings", "pairs",
+                        "cases", "proband", 
+                        "controls",                        
+                        "individuals", "patients",  "participants", 
+                       "subjects", "samples", "donors")
+
+# sort by length 
+participant_words <- participant_words[order(-nchar(participant_words))]
+
+sample_size_words <- c("n", 
+                       "N", 
+                       "Neffective", "Neff",
+                       "Ncontrol", "Ncase", "ncase", "n_total")
+
+sample_size_words <- sample_size_words[order(-nchar(sample_size_words ))]
+
+
+#num <- "[0-9]{1,3}(?:[,\\s][0-9]{3})*"
+num <- "([0-9]+\\s+[0-9]+|[0-9,]+)"
+
+participant_regex <- paste0(
+  "\\b",
+  num,
+  "\\s+(",
+  paste(participant_words, collapse="|"),
+  ")\\b"
+)
+
+n_participants_regex <- paste0(
+  "\\b", 
+  "(",
+  paste(sample_size_words, collapse="|"),
+  ")",
+  "\\s*=\\s*",
+  num
+)
+  
+
+all_participant_regex <- paste0(
+  "(",
+  paste(c(
+    n_participants_regex,
+    participant_regex
+  ), collapse = "|"),
+  ")"
+)
+
+df_n_entities <-
+df_entities |>
+  select(-start, -end, entity_text) |>
+  #filter(grepl("Briefly, samples with call-rate", text)) |>
+  distinct() |>
+  #head() |>
+  mutate(participant_positions = str_locate_all(text, all_participant_regex)) |>
+  unnest_longer(participant_positions)
+
+df_n_entities$start <- df_n_entities$participant_positions[,1]
+df_n_entities$end <- df_n_entities$participant_positions[,2]
+
+df_n_entities <-
+  df_n_entities |>
+  select(-participant_positions) |>
+  mutate(label = "N_SAMPLE") |>
+  mutate(entity_text = stringr::str_sub(text, 
+                                        start, 
+                                        end)) |>
+  mutate(entity_text = ifelse(is.na(entity_text), 
+                              "", 
+                              entity_text)) |>
+  filter(grepl("[0-9]", entity_text))
+
+df_n_entities <- 
+df_n_entities |>
+  mutate(entity_number = str_extract(entity_text, num)) |>
+  mutate(entity_number = str_remove(entity_number, ",$")) |>
+  rowwise() |>
+  mutate(participant_positions = str_locate_all(text, entity_number)) |>
+  unnest_longer(participant_positions)
+         
+df_n_entities$start <- df_n_entities$participant_positions[,1]
+df_n_entities$end <- df_n_entities$participant_positions[,2]
+
+df_n_entities <-
+  df_n_entities |>
+  select(-participant_positions, -entity_number) |>
+  mutate(label = "N_SAMPLE") |>
+  mutate(entity_text = stringr::str_sub(text, 
+                                        start, 
+                                        end)) |>
+  mutate(entity_text = ifelse(is.na(entity_text), 
+                              "", 
+                              entity_text)) 
+
+too_low_values <- c(0:10,
+                    "2,")
+
+df_n_entities <-
+  df_n_entities |>
+  filter(entity_text != ",") |>
+  filter(!c(entity_text %in% too_low_values)) |>
+  mutate(start = start - 1) |>
+  distinct()
+
+df_entities <-
+  bind_rows(df_n_entities,
+            df_entities)
+
+```
 
 ```{r}
 
@@ -270,7 +362,8 @@ build_label_list <- function(start, end, label) {
 }
 
 df_doc <- df_entities |>
-  group_by(id, text, pubmed_id, date, country, gwas_cat_cohort_label) |>
+  group_by(#id, 
+           text, pubmed_id, date, country, gwas_cat_cohort_label) |>
   summarise(label = list(build_label_list(start, end, label)),
             .groups = "drop") |>
   mutate(
@@ -319,7 +412,11 @@ write_doccano_jsonl <- function(df_doc, out_path) {
   invisible(out_path)
 }
 
-write_doccano_jsonl(df_doc, "output/doccano/abstracts_with_cohort_info_reconstructed.jsonl")
+
+
+
+write_doccano_jsonl(df_doc, 
+                    here::here("output/doccano/abstracts_with_cohort_info_reconstructed.jsonl"))
 
 ```
 
