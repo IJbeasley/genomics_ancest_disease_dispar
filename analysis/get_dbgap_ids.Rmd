@@ -425,6 +425,12 @@ relevant_pmid_dbgaps = dbgap_info |>
   filter(EXTID %in% pmids) |>
   distinct() 
 
+```
+
+### Compare dbgap annotations found in Europe PMC vs full text
+
+```{r compare-europe-pmc-dbgap}
+
 print("Number of unique PMIDs with dbgap ids found in Europe PMC:")
 relevant_pmid_dbgaps |>
   pull(EXTID) |>
@@ -693,7 +699,7 @@ dbgap_accession_mapping |>
 
 ```
 
-## Save combined dbGaP mapping
+### Save dbGaP mapping thus far
 
 ```{r save-combined-dbgap-mapping, eval = F}
 
@@ -710,7 +716,7 @@ data.table::fwrite(
 
 ```
 
-## Compare dbgap retrieved via extracting full text vs via entrez
+### Compare dbgap retrieved via extracting full text vs via entrez
 
 ```{r compare-dbgap-sources}
 
@@ -760,7 +766,7 @@ joined_dbgaps |>
 
 ```
 
-# Combine and save
+## Combine and save
 
 ```{r combine-and-save}
 
@@ -773,13 +779,10 @@ sentences_df  |>
   select(dbgap_id, pmid, pmcid) |>
   tidyr::unnest(dbgap_id) |>
   mutate(dbgap_id = str_trim(dbgap_id)) |>
-  # mutate(dbgap_id = str_extract(dbgap_id, "^phs\\d+")) |>
-  # mutate(dbgap_id = str_remove(dbgap_id, "\\.v\\d+\\.p\\d+.*$")) |> 
   group_by(pmid, pmcid) |>
   summarise(dbgap_full_text = str_flatten(unique(sort(dbgap_id)), 
                           collapse = ", ", 
                           na.rm = TRUE)) |>
-#  tidyr::nest(dbgap_full_text = dbgap_id) |>
   mutate(pmid = as.character(pmid))
 
 
@@ -798,7 +801,6 @@ entrez_dbgaps <-
   rename(pmid = PUBMED_ID,
          dbgap_id = DBGAP_ACCESSION
          ) |>
-  # mutate(dbgap_id = str_extract(dbgap_id, "^phs\\d+")) |>
   filter(dbgap_id != "") |>
   group_by(pmid) |>
   summarise(dbgap_annotation = str_flatten(unique(sort(dbgap_id)), 
@@ -846,6 +848,216 @@ n_pubmeds_per_dbgap |>
   )
 
 n_pubmeds_per_dbgap$n_pubmeds |> summary()
+
+
+```
+
+## Get dbgap sample sizes 
+
+```{r get-dbgap-sample-sizes, eval = F}
+
+library(httr)
+
+all_dbgap_ids <-
+combined_annotations |>
+  pull(dbgap_id) |> 
+  unique() |>
+  sort()
+
+# need to have versions and parts to get sample size info from the API
+extracted_dbgap_ids <- grep("v\\d+\\.p\\d+", 
+                            all_dbgap_ids, 
+                            value = T)
+
+# get the relevant information from the API
+# API Information / Documentation: https://www.ncbi.nlm.nih.gov/gap/sstr/swagger/
+# API extracts this information, for e.g. https://www.ncbi.nlm.nih.gov/gap/sstr/report/phs000387.v1.p1
+get_sample_size_df_api <- function(api_link = "https://www.ncbi.nlm.nih.gov/gap/sstr/api/v1/study",
+                                   dbgap_id){
+  
+  url <- paste0(api_link, "/", 
+                dbgap_id, 
+                "/summary")
+  
+  response <- httr::GET(url, httr::timeout(60))
+  Sys.sleep(0.5)  # be polite to the API
+  
+  if (httr::status_code(response) != 200) {
+    warning("Failed to retrieve data for dbGaP ID ", dbgap_id, 
+            ". Status code: ", response$status_code)
+    return(NULL)
+  }
+  
+  result_summary <- httr::content(response)
+  
+  consent_groups_df <- result_summary$study$consent_groups |> 
+    dplyr::bind_rows() 
+  
+  return(consent_groups_df)
+  
+}
+
+# takes about ~20-30 minutes
+dbgap_consent_dfs <- purrr::map(extracted_dbgap_ids,
+                                    ~get_sample_size_df_api(dbgap_id = .x),
+                                    .progress = TRUE
+                                    )
+
+dbgap_consent_dfs <- 
+  dbgap_consent_dfs |>
+purrr::set_names(extracted_dbgap_ids)
+
+dbgap_consent_dfs <-
+  purrr::discard(dbgap_consent_dfs,
+                 ~is.null(.x))
+
+# filter out consent code 0 (not used in study)
+# and sample_count (counts some individuals twice)
+dbgap_consent_n <- purrr::imap(dbgap_consent_dfs,
+                                function(x, idx) {
+                                  x |>
+                                    dplyr::filter(code != 0) |>
+                                    dplyr::select(-sample_count) |>
+                                    dplyr::mutate(dbgap_id = idx)
+                                }
+) |>
+  dplyr::bind_rows()
+
+
+dbgap_sample_size <- 
+  dbgap_consent_n |>
+  dplyr::group_by(dbgap_id) |>
+  dplyr::summarise(n_total = sum(subject_count, na.rm = TRUE)) |>
+  arrange(dbgap_id)
+
+
+data.table::fwrite(dbgap_sample_size,
+                   here::here("output/gwas_cohorts/dbgap_sample_size.csv"))
+
+
+```
+
+
+```{r}
+
+
+dbgap_sample_size <- data.table::fread(
+                   here::here("output/gwas_cohorts/dbgap_sample_size.csv"))
+
+
+combined_annotations <- 
+left_join(
+  combined_annotations,
+  dbgap_sample_size,
+  by = "dbgap_id")
+
+
+missing_dbgap_sample_size <- 
+combined_annotations |>
+  filter(is.na(n_total)) |>
+  select(pmid, dbgap_id)
+
+print("Number of PUBMED ids for which we could not retrieve sample size information")
+missing_dbgap_sample_size$pmid |> unique() |> length()
+
+print("Number of unique dbgap ids for which we could not retrieve sample size information")
+missing_dbgap_sample_size$dbgap_id |> unique() |> length()
+
+print("Which PMIDs and dbgaps are missing sample size information?")
+combined_annotations |>
+  filter(is.na(n_total)) |>
+  filter(source !=  "epmc") |> 
+  select(pmid, dbgap_id) |>
+  distinct()
+
+```
+
+
+```{r old_dbGaP2x_get_sample_size, eval = F, results='hide', echo = F}
+
+filtered_dbgap_ids <-
+  str_extract(all_dbgap_ids, "^phs\\d+") |>
+  unique() |>
+  sort()
+
+# can only get the latest dbgap accession ids 
+latest_dbgap <- purrr::map(filtered_dbgap_ids,
+                           ~dbGaP2x::phs.version(.x)
+                           ) |> 
+  purrr::list_c()
+
+get_total_n_dbgap <- function(dbgap_id) {
+  
+  n_pop <- tryCatch({
+    dbGaP2x::n.pop(dbgap_id)
+  }, error = function(e) {
+    warning("Error getting n.pop for dbGaP ID ", dbgap_id, ": ", e$message)
+      NULL
+  })
+  
+   # Failure path: tryCatch returned NULL
+  if (is.null(n_pop) || !is.data.frame(n_pop) || nrow(n_pop) == 0) {
+    return(NA)
+  }
+  
+  if(nrow(n_pop) == 1 & ncol(n_pop) == 1 & is.character(n_pop[1,1])){
+    warning("n.pop returned a single, non_numeric value for dbGaP ID ", dbgap_id, 
+            " which is unexpected. Returning NA.")
+    return(NA)
+  }
+  
+  n_total <- n_pop |> 
+               dplyr::filter(consent_group == "TOTAL") |>
+               pull(total)
+  
+  if (length(n_total) == 0) {
+    warning("No 'TOTAL' consent group found for dbGaP ID ", 
+            dbgap_id, 
+            ". Returning NA.")
+    return(NA)
+  }
+  
+  if(length(n_total) > 1) {
+    warning(paste0("Multiple 'Total' consent groups found for dbGaP ID ", dbgap_id, 
+                ". Returning NA."))
+    return(NA)
+  }
+  
+  return(n_total)
+  
+}
+
+dbgap_sample_size <- 
+  purrr::map(latest_dbgap,
+           ~get_total_n_dbgap(.x)) |>
+  #purrr::set_names(filtered_dbgap_ids[6:8]) |>
+  #purrr::discard(~is.na(.x)) 
+  purrr::list_c() |>
+  purrr::set_names(latest_dbgap) |>
+  tibble::enframe(name = "dbgap_id", 
+                  value = "n_total") 
+
+
+data.table::fwrite(dbgap_sample_size,
+                   here::here("output/gwas_cohorts/dbgap_sample_sizes.csv")
+                   )
+
+
+# GET(paste0("http://dbgap-api.ncbi.nlm.nih.gov/fhir/x1/ResearchStudy/,
+#                    "phs000019"))
+
+# testing <- xml2::read_xml("https://ftp.ncbi.nlm.nih.gov/dbgap/studies/phs000007/phs000007.v22.p8/GapExchange_phs000007.v22.p8.xml")
+# 
+# cg <- xml2::xml_find_all(testing, "//ConsentGroup")
+# 
+# data.frame(
+#     consent_group_id   = xml2::xml_attr(cg, "groupNum"),
+#     consent_group_name = xml2::xml_attr(cg, "shortName"),
+#     stringsAsFactors = FALSE
+#   )
+# 
+#  xml2::xml_find_all(testing, "//NumSubjects")
+
 
 
 ```
@@ -1223,7 +1435,8 @@ clinical_trial_ids_cohorts <-
 left_join(
   clinical_trial_ids_full_text,
   clinical_trial_ids_cohorts,
-  by = c("nct_id")
+  by = c("nct_id"),
+  relationship = "many-to-many"
 )
 
 print("Clinical trials associated with the most PMIDs")
@@ -1237,12 +1450,92 @@ clinical_trial_ids_cohorts |>
 
 ```
 
-## Save clinical trial cohort names
+## Get sample size of clinical trials
+
+```{r get_clinical_trial_sample_sizes}
+
+library(ctrdata)
+
+nct_id <- clinical_trial_ids_cohorts$nct_id |> 
+           unique() |> 
+           sort()
+
+nct_url <- paste0("https://clinicaltrials.gov/expert-search?term=",
+              paste0(nct_id, collapse = ","))
+
+query_length = length(nct_id)
+
+result_length <- ctrLoadQueryIntoDb(
+  queryterm = nct_url, 
+  #register = "EUCTR",
+  #register = "CTGOV", # clinicaltrials.gov
+  only.count = TRUE
+)$n
+
+if(query_length != result_length) {
+  warning(paste0("Number of NCT IDs in query (", query_length, 
+                 ") does not match number of results returned (", result_length, 
+                 "). This may indicate an issue with the query or the data retrieval process."))
+}
+
+clinical_trial_test_db <- nodbi::src_duckdb(dbname = "gwas_clinical_trial.duckdb", 
+                                            collection = "gwas_catalog"
+                                            )
+ctrLoadQueryIntoDb(
+  queryterm = nct_url,
+  con = clinical_trial_test_db
+)
+
+clinical_trial_df <- ctrdata::dbGetFieldsIntoDf(
+  con = clinical_trial_test_db,
+  fields = c(#"protocolSection.conditionsModule.keywords",
+             # "protocolSection.identificationModule.secondaryIdInfos.id",
+             "protocolSection.identificationModule.briefTitle"
+             # "protocolSection.identificationModule.orgStudyIdInfo",
+             # "protocolSection.identificationModule.orgStudyIdInfo.id"
+             ),
+  calculate = c("f.sampleSize", 
+                "f.isUniqueTrial", 
+                "f.trialTitle")
+)
+
+clinical_trial_df <-
+  clinical_trial_df |>
+  rename(sample_size = .sampleSize,
+         is_unique_trial = .isUniqueTrial,
+         official_title = .trialTitle,
+         brief_title  = protocolSection.identificationModule.briefTitle,
+         nct_id = `_id`
+         )
+
+print("Clinical trials with the largest sample sizes:")
+clinical_trial_df |>
+  filter(!is.na(sample_size)) |>
+  arrange(desc(sample_size)) |>
+  select(brief_title, sample_size) |>
+  head(10)
+
+print("Clinical trials we were not able to get sample sizes for:")
+clinical_trial_df |>
+  filter(is.na(sample_size)) 
+
+full_clinical_trial_info <-
+left_join(
+  clinical_trial_ids_cohorts,
+  clinical_trial_df,
+  by = "nct_id"
+)
+               
+```
+
+## Save clinical trial cohort names and sizes
 
 ```{r save-clinical-trial-cohort-names}
 
-data.table::fwrite(clinical_trial_ids_cohorts,
+data.table::fwrite(full_clinical_trial_info,
                    here::here("output/gwas_cohorts/gwas_study_clinical_trial_cohort_names.csv")
                    )
 
 ```
+
+
