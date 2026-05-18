@@ -1,0 +1,227 @@
+---
+title: "When drop text"
+author: "Isobel Beasley"
+date: "2026-05-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(dplyr)
+library(stringr)
+
+```
+
+### Step 1: Get paper pubmeds
+
+```{r gwas_cat_load_preprocess, message=FALSE}
+
+## Step 1: 
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+# filter out infectious diseases
+gwas_study_info <- gwas_study_info |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+gwas_study_info <-
+  gwas_study_info |>
+  filter(cause != "")
+
+all_paper_pmids <- gwas_study_info$PUBMED_ID |> unique()
+
+print("Number of selected Pubmeds")
+length(all_paper_pmids)
+
+```
+
+
+## Check 1. Abstracts
+
+```{r abstracts}
+
+abstract_files <- list.files(here::here("output/abstracts/"), 
+                             pattern = "*.json", 
+                             full.names = FALSE
+                             ) |>
+                   sort()
+
+abstract_pmids = str_remove_all(abstract_files, 
+                                "_sentences.json$")
+
+downloaded_abstracts_pmids <-
+ list.files(here::here("output/abstracts")) |> 
+  stringr::str_remove_all(".txt$") 
+
+print(" ")
+print("Number of abstracts downloaded, of all papers")
+sum(all_paper_pmids %in% downloaded_abstracts_pmids)
+round(100 * sum(all_paper_pmids %in% downloaded_abstracts_pmids) / length(all_paper_pmids), 
+      digits = 2)
+
+print(" ")
+print("Number of abstract sentence documents retrived, of all papers")
+sum(all_paper_pmids %in% abstract_pmids)
+round(100 * sum(all_paper_pmids %in% abstract_pmids) / length(all_paper_pmids), 
+      digits = 2)
+
+```
+
+
+## Check 2. Methods
+
+```{r}
+
+full_text_files <-
+  list.files(here::here("output/fulltexts"),
+             recursive = T,
+             pattern = "\\.xml$|\\.pdf$|\\.html$")
+
+full_text_files <- basename(full_text_files) |> 
+  stringr::str_remove_all("\\.pdf.tei.xml$|\\.html$|\\.xml$|\\.pdf$") |>
+  stringr::str_remove_all("_bioc") |>
+  unique()
+
+converted_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv"))
+
+converted_fulltext_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% full_text_files) |>
+  pull(PMID) |>
+  unique() 
+
+full_text_files  <- c(full_text_files, 
+                      converted_fulltext_pmcids)
+
+full_text_pmids <- grep("PMC", 
+                        full_text_files, 
+                        invert = T, 
+                        value = T)
+
+print("Number of full texts downloaded, of all papers")
+sum(all_paper_pmids %in% full_text_pmids)
+round(100 * sum(all_paper_pmids %in% full_text_pmids) / length(all_paper_pmids),
+      digits = 2)
+
+full_text_xmls <-
+  list.files(here::here("output/fulltexts"),
+             recursive = T,
+             pattern = "\\.xml$")
+
+full_text_xmls <- basename(full_text_xmls) |> 
+  stringr::str_remove_all("\\.pdf.tei.xml$|\\.html$|\\.xml$|\\.pdf$") |>
+  stringr::str_remove_all("_bioc") |>
+  unique()
+
+converted_fulltext_xmls_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% full_text_xmls) |>
+  pull(PMID) |>
+  unique() 
+
+full_text_xml_pmids  <- c(full_text_xmls, 
+                      converted_fulltext_xmls_pmcids)
+
+full_text_xml_pmids <- grep("PMC", 
+                       full_text_xml_pmids, 
+                        invert = T, 
+                        value = T)
+
+print("Number of full texts xml files, of all papers")
+sum(all_paper_pmids %in% full_text_xml_pmids)
+round(100 * sum(all_paper_pmids %in% full_text_xml_pmids) / length(all_paper_pmids),
+      digits = 2)
+
+```
+
+## Check 3. Methods sections
+
+Atm, ~10 files fail the methods extraction step:
+
+```{r methods_sections}
+
+methods_files <-
+  list.files(here::here("output/methods/"),
+             recursive = T,
+             pattern = "\\.txt$")
+
+methods_files <- basename(methods_files) |> 
+  stringr::str_remove_all("_methods.txt|_methods_main.txt") |>
+  stringr::str_remove_all("_bioc|_pdf_tei") |> 
+  unique()
+
+methods_files <- methods_files[methods_files != c("failed_files.txt",
+                                                 "no_methods_files.txt")]
+
+
+# convert pmcids to pmids 
+converted_methods_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% methods_files) |>
+  pull(PMID) |>
+  unique() 
+
+methods_files  <- c(methods_files, 
+                      converted_methods_pmcids)
+
+methods_pmids <- grep("PMC", 
+                        methods_files, 
+                        invert = T, 
+                        value = T)
+
+print("Number of methods sections, of all papers")
+sum(all_paper_pmids %in% methods_pmids)
+round(100 * sum(all_paper_pmids %in% methods_pmids) / length(all_paper_pmids),
+      digits = 2)
+
+
+methods_sentences <-
+  list.files(here::here("output/methods_sentences/"),
+             recursive = T,
+             pattern = "\\.json$")
+
+
+methods_sentences <- basename(methods_sentences) |> 
+  stringr::str_remove_all("_methods_sentences.json|_methods_main_sentences.json") |>
+  stringr::str_remove_all("_bioc|_pdf_tei") |> 
+  unique()
+
+converted_methods_sentences_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% methods_sentences) |>
+  pull(PMID) |>
+  unique() 
+
+methods_sentences_files  <- c(methods_sentences, 
+                              converted_methods_sentences_pmcids)
+
+methods_sentences_pmids <- grep("PMC", 
+                       methods_sentences_files, 
+                        invert = T, 
+                        value = T)
+
+
+
+print("Number of methods sentences, of all papers")
+sum(all_paper_pmids %in% methods_sentences_files)
+round(100 * sum(all_paper_pmids %in% methods_sentences_files) / length(all_paper_pmids),
+      digits = 2)
+
+```
