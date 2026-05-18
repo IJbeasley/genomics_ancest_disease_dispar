@@ -219,40 +219,132 @@ parse_elsevier_keywords <- function(doc) {
 }
 
 # Parse Elsevier body sections
+#
+# Walks both <ce:sections> and <ce:appendices>, preserving document order and
+# capturing:
+#   - <ce:section> elements (with nested subsections recursed into)
+#   - bare <ce:para> elements that sit directly under <ce:sections> or
+#     <ce:appendices> (the previous implementation dropped these)
+#
+# Returns a list of section descriptors of the shape
+#   list(id, role, title, items = list(list(type = "para"|"sec", value)))
+# where each "sec" value has the same shape (recursive).
 parse_elsevier_body <- function(doc) {
-  # Find body sections - look for sections element, then section children
-  sections_node <- xml_find_first(doc, use_local("ce:sections"))
+  sections_node   <- xml_find_first(doc, use_local("ce:sections"))
+  appendices_node <- xml_find_first(doc, use_local("ce:appendices"))
 
-  if (is.na(sections_node)) {
-    return(list())
+  # In these Elsevier XMLs the "ce:" / "ja:" prefixes are typically NOT declared
+  # as proper namespaces, so libxml2 treats the prefix as part of the element
+  # name literally (xml_name() returns "ce:para" rather than "para", and
+  # XPath's local-name() returns the same).  Strip a leading prefix here so we
+  # can compare against bare element names.
+  local_name <- function(node) sub("^[^:]+:", "", xml_name(node))
+
+  # XPath predicate that matches either a prefixed (ce:NAME) or bare (NAME)
+  # element name, regardless of whether namespaces are properly declared.
+  is_local <- function(name) {
+    sprintf("(local-name()='%s' or local-name()='ce:%s')", name, name)
   }
 
-  # Get direct section children
-  sections <- xml_find_all(sections_node, use_local_child("ce:section"))
+  # Walks the children of `node`, emitting items in document order:
+  #   - <ce:section> children become nested sections (recursive)
+  #   - <ce:para> elements become "para" items
+  #   - <ce:section-title> is skipped (handled by the caller)
+  #   - any other element is treated as a transparent container (e.g.
+  #     <ce:display>, <ce:textbox>) so paragraphs nested inside callouts and
+  #     other wrappers are still captured.
+  walk_section_body <- function(node, items) {
+    for (child in xml_children(node)) {
+      cname <- local_name(child)
+      if (cname == "section") {
+        items[[length(items) + 1]] <- list(type = "sec",
+                                           value = parse_section(child))
+      } else if (cname == "para") {
+        txt <- safe_text(child, trim = TRUE)
+        if (has_content(txt)) {
+          items[[length(items) + 1]] <- list(type = "para", value = txt)
+        }
+      } else if (cname == "section-title") {
+        # consumed by the caller
+      } else {
+        items <- walk_section_body(child, items)
+      }
+    }
+    items
+  }
 
-  section_list <- list()
-
-  for (section in sections) {
+  # Recursively parse a <ce:section>, preserving the document order of its
+  # paragraphs and nested sections.  Paragraphs that sit inside transparent
+  # wrappers (e.g. <ce:display>, <ce:textbox>) are also captured.
+  parse_section <- function(section) {
     section_id <- xml_attr(section, "id")
-    role <- xml_attr(section, "role")
+    role       <- xml_attr(section, "role")
 
-    # Get section title
     title_node <- xml_find_first(section, use_local_child("ce:section-title"))
     title <- if (!is.na(title_node)) safe_text(title_node) else ""
 
-    # Get paragraphs (direct and nested)
-    paragraphs <- xml_find_all(section, use_local("ce:para"))
-    para_texts <- sapply(paragraphs, function(p) {
-      safe_text(p, trim = TRUE)
-    })
-    para_texts <- para_texts[has_content(para_texts)]
+    items <- walk_section_body(section, list())
 
-    section_list[[length(section_list) + 1]] <- list(
-      id = section_id,
-      role = role,
+    list(
+      id    = section_id,
+      role  = role,
       title = title,
-      paragraphs = para_texts
+      items = items
     )
+  }
+
+  # Collect direct <ce:section> children of a container while also capturing
+  # any bare <ce:para> elements that sit at the same level.  Bare paragraphs
+  # are emitted as an untitled leading section so they appear in the JATS body
+  # (otherwise valid JATS forbids <p> directly under <body>).
+  collect_under <- function(container, default_role = NULL) {
+    out <- list()
+    intro <- list()
+
+    flush_intro <- function() {
+      if (length(intro) == 0) return(invisible())
+      items <- lapply(intro, function(t) list(type = "para", value = t))
+      out[[length(out) + 1]] <<- list(
+        id    = NULL,
+        role  = default_role,
+        title = "",
+        items = items
+      )
+      intro <<- list()
+    }
+
+    children <- xml_find_all(
+      container,
+      paste0("./*[", is_local("para"), " or ", is_local("section"), "]")
+    )
+    for (child in children) {
+      cname <- local_name(child)
+      if (cname == "para") {
+        txt <- safe_text(child, trim = TRUE)
+        if (has_content(txt)) {
+          intro[[length(intro) + 1]] <- txt
+        }
+      } else if (cname == "section") {
+        flush_intro()
+        sec <- parse_section(child)
+        if (!is.null(default_role) &&
+            (is.null(sec$role) || !has_content(sec$role))) {
+          sec$role <- default_role
+        }
+        out[[length(out) + 1]] <- sec
+      }
+    }
+    flush_intro()
+    out
+  }
+
+  section_list <- list()
+  if (!is.na(sections_node)) {
+    section_list <- c(section_list, collect_under(sections_node))
+  }
+  if (!is.na(appendices_node)) {
+    section_list <- c(section_list,
+                      collect_under(appendices_node, default_role = "appendix"))
   }
 
   return(section_list)
@@ -578,28 +670,40 @@ convert_elsevier_to_jats <- function(elsevier_file, output_file) {
     }
   }
 
+  # Recursively write a parsed section into a JATS <body> (or parent <sec>).
+  # Handles nested subsections so that titles like "Methods" survive even when
+  # they appear inside a parent section in the Elsevier source.
+  write_jats_section <- function(parent, section) {
+    sec_attrs <- list()
+    if (!is.null(section$id) && has_content(section$id)) {
+      sec_attrs$id <- section$id
+    }
+    if (!is.null(section$role) && has_content(section$role)) {
+      sec_attrs$"sec-type" <- section$role
+    }
+    sec <- do.call(xml_add_child,
+                   c(list(.x = parent, .value = "sec"), sec_attrs))
+
+    if (has_content(section$title)) {
+      xml_add_child(sec, "title", section$title)
+    }
+
+    items <- section$items
+    if (is.null(items)) items <- list()
+    for (item in items) {
+      if (identical(item$type, "para")) {
+        xml_add_child(sec, "p", item$value)
+      } else if (identical(item$type, "sec")) {
+        write_jats_section(sec, item$value)
+      }
+    }
+  }
+
   # Body content
   if (length(body_sections) > 0) {
     body <- xml_add_child(jats_doc, "body")
-
     for (section in body_sections) {
-      sec_attrs <- list()
-      if (!is.null(section$id) && has_content(section$id)) {
-        sec_attrs$id <- section$id
-      }
-      if (!is.null(section$role) && has_content(section$role)) {
-        sec_attrs$"sec-type" <- section$role
-      }
-
-      sec <- do.call(xml_add_child, c(list(.x = body, .value = "sec"), sec_attrs))
-
-      if (has_content(section$title)) {
-        xml_add_child(sec, "title", section$title)
-      }
-
-      for (para_text in section$paragraphs) {
-        xml_add_child(sec, "p", para_text)
-      }
+      write_jats_section(body, section)
     }
   }
 
