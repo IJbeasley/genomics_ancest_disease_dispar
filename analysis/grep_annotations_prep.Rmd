@@ -1,0 +1,510 @@
+---
+title: "Grep search patterns for annotations"
+author: "Isobel Beasley"
+date: "2026-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+library(dplyr)
+library(stringr)
+
+```
+
+```{r gwas_cat_load_preprocess, message=FALSE}
+
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+# filter out infectious diseases
+gwas_study_info <- gwas_study_info |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+gwas_study_info <-
+  gwas_study_info |>
+  filter(cause != "")
+
+```
+
+
+# Cohort context terms 
+
+Combine multiple sources of terms for cohort context matching. 
+
+#### Source of terms: GWAS Catalog Ancestry Metadata
+
+GWAS ancestry data.frame contains: country of recruitment, ancestry label, population descriptors
+
+```{r gwas_cat_load_ncestry_info}
+
+gwas_ancest_info <-  data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2025-07-21.tsv"),
+                           sep = "\t",
+                           quote = "")
+
+gwas_ancest_info = gwas_ancest_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+```
+
+##### Countries 
+
+```{r get_countries_gwas_cat, eval = F}
+
+countries <- 
+gwas_ancest_info$COUNTRY_OF_RECRUITMENT |>
+  stringr::str_split("\\,") |>
+  unlist() |>
+  str_trim() |>
+  unique() 
+  
+countries <- countries[countries != "NR"]
+countries <- c(countries, 
+               "United States", 
+               "United Kingdom",
+               "Korea",
+               "America",
+               "USA",
+               "United States of America",
+               "Latin America")
+
+
+```
+
+##### Population descriptors
+
+```{r get_population_descriptors_gwas_cat, eval = F}
+
+population_descriptors <- 
+  c(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY, gwas_ancest_info$ADDITIONAL_ANCESTRY_DESCRIPTION) |>
+  str_replace_all("Recruitment in North, Central, and South America, Asia, and Europe", 
+                  "North America, Central America, Asia, Europe") |>
+  #stringr::str_split("\\,|;|heritage:\\|") |>
+  stringr::str_split("\\,|;|heritage:|\\(|\\)|\\/|\\ - |\\: |\\band\\b") |>
+  unlist() |>
+  str_trim() 
+
+# processing population descriptors to remove extra information and get more general terms to match cohort descriptions in abstracts (e.g. "European" instead of "European (non-Finnish)")
+population_descriptors <- population_descriptors |>
+  str_remove_all("\\.$")  |> # Escape the dot to make it literal
+  str_remove_all("^and ") |> 
+  str_remove_all(" \\(founder/genetic isolate\\)$|\\(founder/genetic isolate$") |>
+  #str_remove_all("^[0-9+]% ") |>
+  str_remove_all("^\\d+% ") |>  # \d is shorthand for [0-9]
+  str_remove_all("^[‡†*]+") |> # Remove dagger symbols at start 
+  str_remove_all(" - Korea Association Resource \\(KARE\\)$") |>
+  str_remove_all("or unknown ancestry$|\\(middle eastern$") |>
+  str_remove_all("\\(see Springelkamp 2017\\)") |>
+  str_remove_all("parents & grandparents born in ") |>
+  str_remove_all(" cell lines$| cell line$") |>
+  str_remove_all(" cohort$") |>
+  str_remove_all(" population$") |> 
+  str_remove_all("^Erasmus Rucphen in |^Erasmus Rucphen") |>
+  str_remove_all("^including ") |>
+  str_remove_all("\\(Middle Eastern$") |>
+  unique() 
+
+# exclude population descriptors containing numbers 
+population_descriptors <- population_descriptors[!str_detect(population_descriptors, "\\d")]
+
+# exclude uninformative population descriptors 
+uninform_pop_desc <- c("NR", "N.R", 
+                       "Other", "other", 
+                       "", "unspecified", 
+                       "Mixed", "mixed", "Multiple", "multiple", 
+                       "Split", "split") 
+
+population_descriptors <- population_descriptors[!c(population_descriptors %in% uninform_pop_desc)]
+
+# exclude disease descriptors that are not valid to match cohort descriptions in abstracts (e.g. "Asthma", "Type 2 diabetes")
+disease_descriptors <- grep("cases|Bipolar|controls|Schizophrenia|disorder", 
+                            population_descriptors, 
+                            ignore.case = T,
+                            value = T)
+
+population_descriptors <- population_descriptors[!(population_descriptors %in% disease_descriptors
+                                                     )]
+
+# exclude cohort names 
+cohort_names <- c("UKB", "UKBB", "DECODE", "Controls from UKBiobank", "UKBB and deCODE", 
+                  "NHAPC", "GeneID-I", " Family", "KARE", "Mayo")
+
+population_descriptors <- population_descriptors[!(population_descriptors %in% cohort_names)]
+
+# exclude weird paper related terms 
+grep("for|see|et al", population_descriptors, ignore.case = T, value = T)
+
+population_descriptors <- population_descriptors[!grepl(population_descriptors, "for|see", ignore.case = T)]
+
+# add directions
+directions <- c("North", 
+                "South",
+                "East", 
+                "West",
+                "Central",
+                "Southeast",
+                "Northeast",
+                "Northwest",
+                "Southwest")
+
+population_descriptors <- c(population_descriptors, 
+                            "multiracial")
+
+population_descriptors <- unique(c(population_descriptors, directions))
+
+population_descriptors <- population_descriptors |> str_trim() |> unique()
+
+```
+
+#### Source of terms: hancestro ontology of human ancestry terms
+
+```{r get_hancestro_terms, eval = F}
+
+# Get all terms in one go (if total < 500)
+response <- GET("https://www.ebi.ac.uk/ols4/api/ontologies/hancestro/terms?size=1000")
+data <- fromJSON(content(response, "text"), flatten = TRUE)
+hancestro_terms <- data$`_embedded`$terms$label
+
+# Remove terms with specific biobanks / datasets in brackets, as these are unlikely to be used in cohort descriptions in abstracts / texts
+hancestro_terms <- str_remove_all(hancestro_terms, 
+                                  " \\(SGDP\\)$| \\(1KGP\\)$| \\(HGDP\\)$| \\(GGVP\\)$")
+
+# Remove obsolete terms
+hancestro_terms <- grep("obsolete|obsolescence", 
+                        hancestro_terms, 
+                        value = TRUE, 
+                        invert = TRUE)
+
+# remove terms with specific regions in brackets, as these are unlikely to be used in cohort descriptions in abstracts / texts
+hancestro_terms <- str_remove_all(hancestro_terms, pattern = "\\(Carmel\\)$|\\(pre1989\\)$|\\(Bergamo\\)$|\\(Negev\\)$|\\(Central\\)|\\(Caucasus\\)")
+
+# replace underscores with spaces
+hancestro_terms <- str_replace_all(hancestro_terms, 
+                                   pattern = "_", 
+                                   replacement = " ")
+
+hancestro_terms <- unique(hancestro_terms)
+
+# specific hancestro terms to exclude: 
+terms_to_exclude <- c("ancestry category",
+                      "ancestry status",
+                      "BFO 0000006",
+                      "Country",
+                      "continent",
+                      "continuant",
+                      "curation status specification",
+                      "denotator type",
+                      "entity",
+                      "ethnicity category",
+                      "ethnicity descriptor",
+                      "geographic location",
+                      "geographic descriptor",
+                      "geography-based population category",
+                      "immaterial entity",
+                      "independent continuant",
+                      "!Kung",
+                      "material entity",
+                      "quality",
+                      "reference population",
+                      "region",
+                      "organization",
+                      "population",
+                      "specifically dependent continuant",
+                      "Thing",
+                      "uncategorised population",
+                      "undefined ancestry population")
+
+hancestro_terms <- hancestro_terms[!c(hancestro_terms %in% terms_to_exclude)]
+
+hancestro_terms <- 
+hancestro_terms |>
+  str_split("\\(|\\)") |>
+  unlist() |>
+  str_trim() |>
+  unique() 
+
+```
+
+#### ? Other possible sources
+
+Country R packages 
+Population descriptors in: https://pmc.ncbi.nlm.nih.gov/articles/PMC8715140/#sec2
+
+
+#### Terms to identify sentence identifying / describing cohort
+
+```{r get_cohort_descriptor_terms,}
+
+participant_words <- c("adults", "adolescents", "children", "infants", "neonates",
+                       "women", "men", "female", "male",
+                       "trios", "families", "twins", "siblings", 
+                        "cases", "probands", "affected", 
+                        "controls", "unaffected", "healthy",                        
+                       "genomes",  "individuals", "patients",  "participants", 
+                       "subjects", "samples", "donors", "volunteers")
+
+# words that indicate sample or cohort is being discussed:
+sample_terms <- c(
+  participant_words,
+  # demographic / population descriptor terms
+  "ancestry", "ancestral", "origin", "descent",  "lineage",  "heritage", 
+  "admixed", "admixture",
+  "ethnic", "ethnicity",  "multi-ethnic",
+  "racial", "multi-racial", "multiracial", "race",
+  "demographic", "self-identified", "self-reported",
+  "age", "aged", "years",
+  "founder", "isolate", "isolated", "population", "populations",
+  
+  # cohort/sample related terms
+  "biobank", "cohort", "cohorts", "consortium", "consortia",
+  "registry", "sample", "study", "trial",
+  
+  # enrollment related terms
+   "enroll", "enrolled", "enrollment", "enrollees",
+   "recruitment", "recruited", 
+   "volunteer", "volunteered", 
+   "sampling", "sampled", 
+   "ascertained", "residing",
+  
+  # Types of study
+  "case-control", "prospective", "longitudinal", "cross-sectional",  "nationwide",
+  "meta-analysis", "pooled",
+  "replication", "discovery", "validation",
+  
+  # Subsets 
+  "subgroup", "subset", "subcohort"
+  
+)
+
+
+```
+
+#### Combine sources 
+
+```{r combine_cohort_context_terms, eval = F}
+
+# combine terms from different sources, and add some extra terms based on looking at cohort descriptions in abstracts
+cohort_context_terms <-
+c(countries, 
+  hancestro_terms, 
+  population_descriptors,
+  sample_terms) |> 
+  unique() |>
+  sort()
+
+
+# more terms to exclude:
+cohort_context_terms <- cohort_context_terms[!cohort_context_terms %in% c("San", "Split", "Han")]
+
+# terms to remove ... "Qatar", "UK", "Taiwan", "Korean"
+# cohort_context_terms <- cohort_context_terms[!cohort_context_terms %in% c("population", 
+#                                                                           "mixed",
+#                                                                           "split")]
+
+# replace brackets with \\( & and \\)
+cohort_context_terms <- cohort_context_terms |> 
+  str_replace_all(pattern = "\\(", replacement = "\\\\(") |>
+  str_replace_all(pattern = "\\)", replacement = "\\\\)")
+
+# cohort_context_terms <- c(cohort_context_terms, 
+#                           "UK\\b(?! Biobank)",
+#                           "UK\\b\\(?! Biobank\\)",
+#                           "Qatar\\b\\(?! Biobank\\)",
+#                           "Taiwan\\b\\(?! Biobank\\)",
+#                           "Korean\\b\\(?! Biobank\\)"
+#                           )
+
+
+# remove single character terms
+cohort_context_terms <- cohort_context_terms[nchar(cohort_context_terms) > 2]
+
+# sort by length of term (longest first) to match longest names first
+cohort_context_terms <- cohort_context_terms[order(-nchar(cohort_context_terms))]
+
+print("Number of cohort context terms:")
+length(cohort_context_terms)
+
+writeLines(cohort_context_terms, 
+           here::here("output/gwas_cat/ancestry_population_terms.txt"))
+
+```
+
+# Cohort names
+
+### GWAS Catalog Cohort information
+
+```{r gwas_cat_add_cohort_info}
+
+gwas_study_info_cohort =
+  data.table::fread(here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"))
+
+gwas_study_info_cohort =
+  gwas_study_info_cohort |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info_cohort =
+  gwas_study_info_cohort |>
+  select(PUBMED_ID,
+         COHORT) |>
+  distinct()
+
+print("Check adding cohort information has only added columns, not rows:")
+print("Before adding:")
+dim(gwas_study_info)
+
+gwas_study_info =
+  left_join(gwas_study_info,
+            gwas_study_info_cohort,
+            by = "PUBMED_ID"
+  )
+
+print("After adding:")
+dim(gwas_study_info)
+
+
+print("Check adding cohort information has not increaed number of unique pubmed ids:")
+gwas_study_info |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+print("Number of unique pubmed ids for disease studies with cohort info:")
+gwas_study_info |>
+  filter(COHORT != "") |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+```
+
+### Dictionary of cohort names 
+
+```{r get_cohort_names}
+
+# this xlsx was built from looking at acrynyms / cohort names in the gwas catalog
+# and finding the corresponding full names / details of cohorts
+
+cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
+                                 sheet = 1) |>
+  mutate(across(everything(), 
+                ~stringr::str_replace_all(.x,
+                                          pattern = "\u00A0",
+                                          replacement = " "))
+         ) 
+
+
+cohort_full_names = cohort_names$full_name[!is.na(cohort_names$full_name)]
+cohort_full_names <- str_trim(cohort_full_names)
+cohort_full_names <- iconv(cohort_full_names, to = "UTF-8")
+cohort_full_names <- gsub("[\u00A0\r\n]", " ", cohort_full_names)  # replace non-breaking spaces, CR, LF with space
+cohort_full_names <- str_squish(cohort_full_names)  # trims and removes extra spaces
+# sort by length of name (longest first) to match longest names first
+cohort_full_names <- cohort_full_names[order(-nchar(cohort_full_names))]
+cohort_full_names <- cohort_full_names[cohort_full_names != "Not Reported"]
+cohort_full_names <- unique(cohort_full_names)
+
+cohort_full_names <- cohort_full_names[cohort_full_names != "Japan"]
+cohort_full_names <- cohort_full_names[cohort_full_names != "Coronary Artery Disease"]
+
+print("Number of unique cohort full names:")
+length(cohort_full_names)
+
+
+cohort_abbr_names = cohort_names$cohort[!is.na(cohort_names$cohort)]
+cohort_abbr_names <- str_trim(cohort_abbr_names)
+cohort_abbr_names <- iconv(cohort_abbr_names, to = "UTF-8")
+cohort_abbr_names <- gsub("[\u00A0\r\n]", " ", cohort_abbr_names)  # replace non-breaking spaces, CR, LF with space
+cohort_abbr_names <- str_squish(cohort_abbr_names)  # trims and removes extra spaces
+
+# remove abbreviations that are too short
+# cohort_abbr_names <- cohort_abbr_names[nchar(cohort_abbr_names) >= 4]
+# small_abbr_to_keep <- c("C4D", 
+#                         "BBJ", 
+#                         "UKB", 
+#                         "MVP", 
+#                         "TWB", 
+#                         "QBB",
+#                         "MEC",
+#                         "WHI"
+#                         )
+
+# cohort_abbr_names <- unique(c(cohort_abbr_names, 
+#                               small_abbr_to_keep
+#                               ))
+
+cohort_abbr_names <- cohort_abbr_names[!str_detect(pattern = "\\?", 
+                                                   cohort_abbr_names)]
+# sort by length of name (longest first) to match longest names first
+cohort_abbr_names <- cohort_abbr_names[order(-nchar(cohort_abbr_names))]
+
+
+# add cohort names from GWAS catalog not yet added to data-dictionary
+gwas_cat_cohorts = gwas_study_info_cohort$COHORT
+gwas_cat_cohorts = unlist(strsplit(gwas_cat_cohorts, "\\|"))
+gwas_cat_cohorts = gwas_cat_cohorts[!(gwas_cat_cohorts %in% c("", "other", "multiple"))]
+
+cohort_abbr_names = unique(c(cohort_abbr_names,
+                           gwas_cat_cohorts))
+
+# remove small abbreviations that are likely to be false positives
+small_abbrev = c("CFRD",
+                 "ALS",
+                 "UK", 
+                 "US",
+                 "NZ",
+                 "DN",
+                 "CHB",
+                 "FG",
+                 "HTN",
+                 "ICH",
+                 "GD",
+                 "MD",
+                 "UC",
+                 "DC",
+                 "ACE",
+                 "Japan",
+                 "Nigeria",
+                 "Ghana",
+                 "YRI",
+                 "CEU",
+                 "Columbia",
+                 "York",
+                 "Icelandic")
+
+
+cohort_abbr_names <- cohort_abbr_names[!c(cohort_abbr_names %in% small_abbrev)]
+
+print("Number of unique cohort abbreviation names:")
+length(cohort_abbr_names)
+
+```
+
+```{r save_cohort_terms}
+
+writeLines(cohort_abbr_names,
+           here::here("output/gwas_cat/cohort_abbrev_names.txt"))
+
+writeLines(cohort_full_names,
+           here::here("output/gwas_cat/cohort_full_names.txt"))
+
+```
+
+
