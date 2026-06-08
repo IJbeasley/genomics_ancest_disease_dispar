@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(dplyr)
 library(stringr)
+library(httr)
+library(jsonlite)
 
 ```
 
@@ -67,7 +69,7 @@ gwas_ancest_info = gwas_ancest_info |>
 
 ##### Countries 
 
-```{r get_countries_gwas_cat, eval = F}
+```{r get_countries_gwas_cat}
 
 countries <- 
 gwas_ancest_info$COUNTRY_OF_RECRUITMENT |>
@@ -91,7 +93,7 @@ countries <- c(countries,
 
 ##### Population descriptors
 
-```{r get_population_descriptors_gwas_cat, eval = F}
+```{r get_population_descriptors_gwas_cat}
 
 population_descriptors <- 
   c(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY, gwas_ancest_info$ADDITIONAL_ANCESTRY_DESCRIPTION) |>
@@ -176,7 +178,7 @@ population_descriptors <- population_descriptors |> str_trim() |> unique()
 
 #### Source of terms: hancestro ontology of human ancestry terms
 
-```{r get_hancestro_terms, eval = F}
+```{r get_hancestro_terms}
 
 # Get all terms in one go (if total < 500)
 response <- GET("https://www.ebi.ac.uk/ols4/api/ontologies/hancestro/terms?size=1000")
@@ -251,7 +253,7 @@ Population descriptors in: https://pmc.ncbi.nlm.nih.gov/articles/PMC8715140/#sec
 
 #### Terms to identify sentence identifying / describing cohort
 
-```{r get_cohort_descriptor_terms,}
+```{r get_cohort_descriptor_terms}
 
 participant_words <- c("adults", "adolescents", "children", "infants", "neonates",
                        "women", "men", "female", "male",
@@ -299,7 +301,7 @@ sample_terms <- c(
 
 #### Combine sources 
 
-```{r combine_cohort_context_terms, eval = F}
+```{r combine_cohort_context_terms}
 
 # combine terms from different sources, and add some extra terms based on looking at cohort descriptions in abstracts
 cohort_context_terms <-
