@@ -1,0 +1,585 @@
+---
+title: "Selecting training and validation sets"
+author: "Isobel Beasley"
+date: "2026-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(engine.opts = list(bash = "-l"))
+```
+
+```{r, message=FALSE}
+
+library(stringr)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+```
+
+### Get text embeddings 
+
+```{bash get_embeddings}
+
+source spacyr_venv/bin/activate
+
+python3 code/text_embeddings/get_text_embeddings.py \
+        -m ncbi/MedCPT-Article-Encoder \
+        -t output/abstracts \
+        -o output/clustering/abstracts_ \
+        --gwas-csv output/icd_map/gwas_study_gbd_causes.csv 
+        
+
+python3 code/text_embeddings/get_text_embeddings.py \
+        -m ncbi/MedCPT-Article-Encoder \
+        -t output/methods_sentences \
+        -o output/clustering/methods_ \
+        --gwas-csv output/icd_map/gwas_study_gbd_causes.csv 
+
+```
+
+
+# What are the major axes of variation in embeddings for these papers?
+
+```{r gwas_cat_load_preprocess, message=FALSE}
+
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+# filter out infectious diseases
+gwas_study_info <- gwas_study_info |>
+    dplyr::filter(!cause %in% c("HIV/AIDS",
+                             "Tuberculosis",
+                             "Malaria",
+                             "Lower respiratory infections",
+                             "Diarrhoeal diseases",
+                             "Neonatal disorders",
+                             "Tetanus",
+                             "Diphtheria",
+                             "Pertussis" ,
+                             "Measles",
+                             "Maternal disorders"))
+
+gwas_study_info <-
+  gwas_study_info |>
+  filter(cause != "")
+
+```
+
+
+
+```{r get_lancet_conditions}
+
+# group conditions into broader categories to ensure we have enough papers in each category for sampling
+# lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
+#                                      sheet = 1) |>
+#   dplyr::rename_with(~ gsub(" ", "_", .x))
+# 
+# gwas_study_info <- gwas_study_info |>
+#   left_join(lancet_cause_mapping |> select(cause = mapped_gbd_term,
+#                                            lancet_condition), 
+#             by = "cause",
+#             relationship = "many-to-many") 
+
+gwas_study_info <-
+gwas_study_info |>
+  select(PUBMED_ID, YEAR, lancet_condition) |>
+  distinct() 
+
+gwas_study_info_grouped <- gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(
+    YEAR = paste(unique(YEAR), collapse = "|"),
+    lancet_condition = paste(sort(unique(lancet_condition)), collapse = " & ")
+  ) |>
+  mutate(lancet_condition_group = case_when(
+    str_detect(pattern = "&", lancet_condition) ~ "Multiple",
+    TRUE ~ lancet_condition
+  ))
+
+gwas_study_info_grouped |>
+  group_by(lancet_condition) |>
+  summarise(n = n()) |>
+  arrange(desc(n))
+
+# most papers study one lancet_condition 
+
+```
+
+## Abstract embeddings
+
+```{r training_set_features}
+
+# get medcpt article embeddings for all disease studies
+abstract_embeddings <- data.table::fread(here::here("output/clustering/abstracts_medcpt_embeddings.csv"))
+
+PCA_test <- prcomp(abstract_embeddings, 
+                   center = TRUE, 
+                   scale. = TRUE) 
+
+pca_table <-
+data.frame(PC1 = PCA_test$x[,1], 
+           PC2 = PCA_test$x[,2], 
+           PC3 = PCA_test$x[,3], 
+           PC4 = PCA_test$x[,4], 
+           PC5 = PCA_test$x[,5], 
+           PC6 = PCA_test$x[,6], 
+           PC7 = PCA_test$x[,7], 
+           PC8 = PCA_test$x[,8], 
+           PC9 = PCA_test$x[,9], 
+           PC10 = PCA_test$x[,10],
+           PUBMED_ID = abstract_embeddings$PUBMED_ID) 
+
+
+var_exp <- PCA_test$sdev^2 / sum(PCA_test$sdev^2)
+
+data.frame(PC = paste0("PC", 1:length(var_exp)),
+           PC_n = 1:length(var_exp),
+           Variance_Explained = var_exp) |>
+  filter(PC_n <= 10) |>
+  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  geom_col() +
+  labs(x = "Principal Component", 
+       y = "Proportion of Variance Explained", 
+       title = "Variance explained by each principal component") + 
+  theme_bw()
+
+```
+
+### Distribution of GWAS Catalog Text Embeddings By Year (Abstracts)
+
+PC1 clearly separates / cluster GWAS Catalog abstract embeddings by year (higher PC1 score for more recent years).
+
+```{r plot_abstract_pca_year}
+
+pca_plot_table <- 
+  pca_table |>
+  left_join(gwas_study_info_grouped |> 
+  select(PUBMED_ID, 
+         YEAR,
+         lancet_condition,
+         lancet_condition_group), 
+  by = "PUBMED_ID") |>
+  mutate(YEAR = as.factor(YEAR)) 
+
+n_years <- pca_plot_table$YEAR |> unique() |> length()
+
+pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = YEAR)) +
+  geom_point() +
+  scale_color_manual(values = viridisLite::plasma(n = n_years)) +
+  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Publication Year"
+  ) +
+       #title = "PCA of GWAS Catalog abstract embeddings, colored by publication year") + 
+  theme_bw()
+
+
+pca_plot_table |>
+    ggplot(aes(x = PC2, 
+               y = PC3, 
+               color = YEAR)) +
+    geom_point() +
+    scale_color_manual(values = viridisLite::plasma(n = n_years)) +
+    labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Publication Year"
+  ) + 
+  theme_bw()
+  
+  
+
+```
+
+### Distribution of GWAS Catalog Text Embeddings By Lancet Condition Category (Abstracts)
+
+PC's 2 & 3 clearly separate / cluster GWAS Catalog abstract embeddings by Lancet Condition Category. 
+
+```{r plot_abstract_pca_lancent_condition_category}
+
+  pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = lancet_condition_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
+
+
+  pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = lancet_condition_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
+
+```
+
+```{r}
+
+library(ComplexHeatmap)
+
+gwas_cond_comb_mat = gwas_study_info |>
+  mutate(study = 1) |>
+  
+  tidyr::pivot_wider(names_from = lancet_condition, 
+                     values_from = study, 
+                     values_fill = 0) |>
+  select(-PUBMED_ID, -YEAR) 
+
+gwas_cond_comb_mat <- make_comb_mat(gwas_cond_comb_mat)
+
+# create an upset plot
+UpSet(gwas_cond_comb_mat,
+      comb_order = order(comb_size(gwas_cond_comb_mat), 
+                         decreasing = TRUE)
+      )
+
+papers_with_multiple_cond <- pca_plot_table |>
+  filter(lancet_condition_group == "Multiple") |> 
+  pull(PUBMED_ID)
+
+pca_plot_table_ungrouped <- 
+  pca_table |>
+  left_join(gwas_study_info,
+            by = "PUBMED_ID") |>
+  mutate(YEAR = as.factor(YEAR)) 
+
+pca_plot_table_ungrouped <-
+  pca_plot_table_ungrouped |>
+  mutate(N_conditions = ifelse(PUBMED_ID %in% papers_with_multiple_cond, 
+                                         "Multiple",
+                                         "Single")) 
+
+
+pca_plot_table_ungrouped |>
+    ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = N_conditions)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Number of Lancent Categories"
+  )  + 
+  facet_wrap(~lancet_condition) + 
+  theme_bw()
+
+
+```
+
+
+```{r}
+
+  pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = lancet_condition_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
+
+```
+
+```{r}
+
+# if PC2 > 0, PC3 > 
+
+pca_plot_table |>
+# mutate(lancet_cat = case_when(
+#   grepl("^Diabetes", lancet_condition) ~ "Diabetes",
+# )
+mutate(multiple = ifelse(lancet_condition_group == "Multiple",
+                         "Multiple",
+                         "Single Category")) |>
+    ggplot(aes(x = PC2, 
+               y = PC3, 
+               color = lancet_condition)) +
+    geom_point() +
+    scale_color_manual(values = viridisLite::plasma(n = 19)) +
+  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+    facet_wrap(~multiple) + 
+    theme_bw()
+  
+```
+
+This analysis suggests YEAR and lancet_condition are important axes of variation in text, and therefore important axes to sample across to create a representative training sample. 
+
+## Methods embeddings
+
+```{r}
+
+# get medcpt article embeddings for all disease studies
+methods_embeddings <- data.table::fread(here::here("output/clustering/methods_medcpt_embeddings.csv"))
+
+PCA_test <- prcomp(methods_embeddings, 
+                   center = TRUE, 
+                   scale = TRUE) 
+
+pca_table <-
+data.frame(PC1 = PCA_test$x[,1], 
+           PC2 = PCA_test$x[,2], 
+           PC3 = PCA_test$x[,3], 
+           PC4 = PCA_test$x[,4], 
+           PC5 = PCA_test$x[,5], 
+           PC6 = PCA_test$x[,6], 
+           PC7 = PCA_test$x[,7], 
+           PC8 = PCA_test$x[,8], 
+           PC9 = PCA_test$x[,9], 
+           PC10 = PCA_test$x[,10],
+           PUBMED_ID = methods_embeddings$PUBMED_ID) 
+
+
+var_exp <- PCA_test$sdev^2 / sum(PCA_test$sdev^2)
+
+data.frame(PC = paste0("PC", 1:length(var_exp)),
+           PC_n = 1:length(var_exp),
+           Variance_Explained = var_exp) |>
+  filter(PC_n <= 10) |>
+  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  geom_col() +
+  labs(x = "Principal Component", 
+       y = "Proportion of Variance Explained", 
+       title = "Variance explained by each principal component") + 
+  theme_bw()
+
+```
+
+### Distribution of GWAS Catalog Text Embeddings By Year (Methods)
+
+```{r plot_methods_pca_year}
+
+pca_plot_table <- 
+  pca_table |>
+  left_join(gwas_study_info_grouped |> 
+  select(PUBMED_ID, 
+         YEAR,
+         lancet_condition,
+         lancet_condition_group), 
+  by = "PUBMED_ID") |>
+  mutate(YEAR = as.factor(YEAR)) 
+
+n_years <- pca_plot_table$YEAR |> unique() |> length()
+
+pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = YEAR)) +
+  geom_point() +
+  scale_color_manual(values = viridisLite::plasma(n = n_years)) +
+  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Publication Year"
+  ) +
+       #title = "PCA of GWAS Catalog abstract embeddings, colored by publication year") + 
+  theme_bw()
+
+pca_plot_table |>
+    ggplot(aes(x = PC2, 
+               y = PC3, 
+               color = YEAR)) +
+    geom_point() +
+    scale_color_manual(values = viridisLite::plasma(n = n_years)) +
+    labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Publication Year"
+  ) + 
+  theme_bw()
+  
+
+
+
+```
+
+### Distribution of GWAS Catalog Text Embeddings By Lancet Condition Category (Methods)
+
+```{r plot_methods_pca_lancent_condition_category}
+
+  pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = lancet_condition_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
+
+
+  pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = lancet_condition_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
+
+```
+
+```{r}
+
+papers_with_multiple_cond <- pca_plot_table |>
+  filter(lancet_condition_group == "Multiple") |> 
+  pull(PUBMED_ID)
+
+pca_plot_table_ungrouped <- 
+  pca_table |>
+  left_join(gwas_study_info,
+            by = "PUBMED_ID") |>
+  mutate(YEAR = as.factor(YEAR)) 
+
+pca_plot_table_ungrouped <-
+  pca_plot_table_ungrouped |>
+  mutate(N_conditions = ifelse(PUBMED_ID %in% papers_with_multiple_cond, 
+                                         "Multiple",
+                                         "Single")) 
+
+
+pca_plot_table_ungrouped |>
+    ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = N_conditions)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Number of Lancent Categories"
+  )  + 
+  facet_wrap(~lancet_condition) + 
+  theme_bw()
+
+
+```
+
+
+
+
+# Create the training set
+
+```{r get_training_sample}
+
+set.seed(500)
+
+training_sample = gwas_study_info |>
+  select(YEAR, 
+         PUBMED_ID,
+         lancet_condition) |>
+  # tidyr::separate_longer_delim(lancet_condition, 
+  #                              delim = " & ") |>
+  distinct() |>
+  dplyr::group_by(YEAR,lancet_condition) |>
+  dplyr::slice_sample(prop = 0.25) |>
+  pull(PUBMED_ID) |>
+  unique()
+
+# writeLines(
+#   as.character(training_sample),
+#   here::here("output/gwas_cat/training_sample_pmids.txt"))
+# 
+# training_sample <- readLines(here::here("output/gwas_cat/training_sample_pmids.txt"))
+
+print("Number of selected training pubmed ids for disease studies:")
+training_sample |> 
+  unique() |> 
+  length()
+
+```
+
+# Create the validation set
+
+```{r}
+
+# now let's select 44 papers for the validation set, 
+# this is ~ 20% of the training set
+# also stratified by 
+
+set.seed(892)
+
+validation_set <- sample(as.character(training_sample), 
+                         size = 44)
+
+writeLines(
+  validation_set,
+  here::here("output/gwas_cat/validation_set_pmids.txt"))
+
+```
