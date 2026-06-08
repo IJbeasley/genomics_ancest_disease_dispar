@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+import os
 from pyprojroot import here
 from transformers import AutoModel, AutoTokenizer
 
@@ -56,7 +57,14 @@ parser.add_option(
         dest="model_name",
         help="Name/path of the huggingface model used to embed text." 
     )
-  
+parser.add_option(
+        "--mapping_file",
+        default = str(here("output/fulltexts/pmid_to_pmcid_mapping.csv")),
+        type="string",
+        dest="mapping_file",
+        help="Name/path of the file that provides pmid to pmid mapping" 
+    )
+    
 opts, _ = parser.parse_args()
 
 # ---------------------------------------------------------------------------
@@ -80,7 +88,10 @@ model_str = model_str.lower()
 
 out_path  = here(opts.out_path)
 
-emb_csv = out_path / f"{model_str}_embeddings.csv"
+if os.path.isdir(out_path):
+   emb_csv = out_path / f"{model_str}_embeddings.csv"
+else: 
+   emb_csv = here(opts.out_path + model_str + "_embeddings.csv")
 
 
 if opts.gwas_csv is None:
@@ -91,6 +102,18 @@ if opts.text_dir is None:
     
 gwas_csv = here(opts.gwas_csv)
 text_dir = here(opts.text_dir)
+
+# create mapping key
+map_df = pd.read_csv(opts.mapping_file)
+
+# keep only rows where pmcid exists
+map_df = map_df.dropna(subset=["pmcids"])
+
+map_df["pmcids"] = map_df["pmcids"].astype(str).str.strip()
+map_df["PMID"] = map_df["PMID"].astype(str)
+
+# build mapping: PMCID -> PMID
+pmcid_to_pmid = dict(zip(map_df["pmcids"], map_df["PMID"]))
 
 # ---------------------------------------------------------------------------
 # Data loading
@@ -111,7 +134,13 @@ def load_text(
 ) -> tuple[list[str], list[str]]:
     pmids, texts = [], []
     for jf in sorted(text_dir.glob("*_sentences.json")):
-        pmid = jf.name.replace("_sentences.json", "")
+        article_id = jf.name.split("_", 1)[0]
+        
+        if article_id.startswith("PMC"):
+           pmid = pmcid_to_pmid.get(article_id)
+        else:
+           pmid = article_id
+        
         if pmid not in study_pmids:
             continue
         try:
