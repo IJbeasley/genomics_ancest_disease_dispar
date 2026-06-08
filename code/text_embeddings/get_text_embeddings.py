@@ -1,7 +1,7 @@
 """
-Embed GWAS-study abstracts with NCBI's MedCPT Article Encoder.
+Embed GWAS-study text with NCBI's MedCPT Article Encoder.
 
-Outputs (in output/clustering/):
+Outputs (default: output/clustering/):
   - medcpt_embeddings.npy
   - medcpt_embeddings.csv   (PUBMED_ID + V1..Vn columns, for R / other tools)
   - medcpt_pmids.txt
@@ -9,28 +9,60 @@ Outputs (in output/clustering/):
 from __future__ import annotations
 
 import json
+from optparse import OptionParser
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
+from pyprojroot import here
 from transformers import AutoModel, AutoTokenizer
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[1]
-GWAS_CSV = REPO_ROOT / "output" / "icd_map" / "gwas_study_gbd_causes.csv"
-ABSTRACT_DIR = REPO_ROOT / "output" / "abstracts"
-OUT_DIR = REPO_ROOT / "output" / "clustering"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-EMB_OUT = OUT_DIR / "medcpt_embeddings.npy"
-EMB_CSV = OUT_DIR / "medcpt_embeddings.csv"
-PMID_OUT = OUT_DIR / "medcpt_pmids.txt"
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+parser = OptionParser(
+        usage="usage: %prog [options]",
+        description=(
+            "Embed GWAS-study text with NCBI's MedCPT Article Encoder. "
+            "Paths default to project-root-relative locations resolved via "
+            "pyprojroot."
+        ),
+    )
+parser.add_option(
+        "-g", "--gwas-csv",
+        dest="gwas_csv",
+        type="string",
+        help="Path to GWAS Catalog Study CSV (relative path)",
+    )
+parser.add_option(
+        "-t", "--text-dir",
+        dest="text_dir",
+        type="string",
+        help="Directory of *_sentences.json text files (relative path)",
+    )
+parser.add_option(
+        "-o", "--out-path",
+        dest="out_path",
+        type="string",
+        default=str(here("output/clustering")),
+        help="Output directory for embeddings [default: %default] (relative path)",
+    )
+parser.add_option(
+        "-m", "--model",
+        default = "ncbi/MedCPT-Article-Encoder",
+        type="string",
+        dest="model_name",
+        help="Name/path of the huggingface model used to embed text." 
+    )
+  
+opts, _ = parser.parse_args()
 
+# ---------------------------------------------------------------------------
+# Defaults (resolved relative to the project root via pyprojroot)
+# ---------------------------------------------------------------------------
 # ---- Embedding ----
-MODEL_NAME = "ncbi/MedCPT-Article-Encoder"
 BATCH_SIZE = 16
 MAX_LEN = 512
 
@@ -41,24 +73,44 @@ INFECTIOUS_CAUSES = {
     "Pertussis", "Measles", "Maternal disorders",
 }
 
+# model string name (for saving output files)
+MODEL_NAME = opts.model_name
+model_str = MODEL_NAME.split("/")[-1].split("-")[0]
+model_str = model_str.lower()
+
+out_path  = here(opts.out_path)
+
+emb_csv = out_path / f"{model_str}_embeddings.csv"
+
+
+if opts.gwas_csv is None:
+    parser.error("--gwas-csv is required")
+
+if opts.text_dir is None:
+    parser.error("--text-dir is required")
+    
+gwas_csv = here(opts.gwas_csv)
+text_dir = here(opts.text_dir)
 
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
-def load_study_pmids() -> set[str]:
+def load_study_pmids(gwas_csv: Path) -> set[str]:
     try:
-        df = pd.read_csv(GWAS_CSV, encoding="utf-8")
+        df = pd.read_csv(gwas_csv, encoding="utf-8")
     except UnicodeDecodeError:
-        df = pd.read_csv(GWAS_CSV, encoding="latin-1")
+        df = pd.read_csv(gwas_csv, encoding="latin-1")
     df.columns = [c.replace(" ", "_") for c in df.columns]
     df = df[~df["cause"].isin(INFECTIOUS_CAUSES)]
     df = df[df["cause"].fillna("") != ""]
     return {str(p) for p in df["PUBMED_ID"].dropna().unique()}
 
 
-def load_abstracts(study_pmids: set[str]) -> tuple[list[str], list[str]]:
+def load_text(
+    text_dir: Path, study_pmids: set[str]
+) -> tuple[list[str], list[str]]:
     pmids, texts = [], []
-    for jf in sorted(ABSTRACT_DIR.glob("*_sentences.json")):
+    for jf in sorted(text_dir.glob("*_sentences.json")):
         pmid = jf.name.replace("_sentences.json", "")
         if pmid not in study_pmids:
             continue
@@ -114,18 +166,18 @@ def embed_texts(texts: list[str]) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def main() -> None:
-    study_pmids = load_study_pmids()
+def main(gwas_csv, text_dir, emb_csv) -> None:
+    
+    study_pmids = load_study_pmids(gwas_csv)
+    
     print(f"Eligible studies after filtering: {len(study_pmids)}")
-    pmids, texts = load_abstracts(study_pmids)
-    print(f"Abstracts available for embedding: {len(pmids)}")
+    pmids, texts = load_text(text_dir, study_pmids)
+    
+    print(f"Texts available for embedding: {len(pmids)}")
     if not pmids:
-        raise SystemExit("No abstracts to embed.")
-
+        raise SystemExit("No texts to embed.")
+      
     embeddings = embed_texts(texts)
-
-    np.save(EMB_OUT, embeddings)
-    PMID_OUT.write_text("\n".join(pmids))
 
     # CSV for R / other tools: PUBMED_ID + V1..Vn embedding columns
     emb_df = pd.DataFrame(
@@ -133,12 +185,10 @@ def main() -> None:
         columns=[f"V{i + 1}" for i in range(embeddings.shape[1])],
     )
     emb_df.insert(0, "PUBMED_ID", pmids)
-    emb_df.to_csv(EMB_CSV, index=False)
+    emb_df.to_csv(emb_csv, index=False)
 
-    print(f"Saved embeddings -> {EMB_OUT}")
-    print(f"Saved embeddings (CSV) -> {EMB_CSV}")
-    print(f"Saved PMIDs -> {PMID_OUT}")
+    print(f"Saved embeddings (CSV) -> {emb_csv}")
 
 
 if __name__ == "__main__":
-    main()
+    main(gwas_csv, text_dir, emb_csv)
