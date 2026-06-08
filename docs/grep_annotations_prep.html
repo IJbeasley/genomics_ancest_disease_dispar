@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree166cb454a89ed6d31c89d6cd70ce3749f7155123targetblank166cb45a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree90ec332adbe0e896c2f16e143aa6be1ac7a6faa0targetblank90ec332a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/166cb454a89ed6d31c89d6cd70ce3749f7155123" target="_blank">166cb45</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/90ec332adbe0e896c2f16e143aa6be1ac7a6faa0" target="_blank">90ec332</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree166cb454a89ed6d31c89d6cd70ce3749f7155123targetblank166cb45a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree90ec332adbe0e896c2f16e143aa6be1ac7a6faa0targetblank90ec332a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/166cb454a89ed6d31c89d6cd70ce3749f7155123" target="_blank">166cb45</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/90ec332adbe0e896c2f16e143aa6be1ac7a6faa0" target="_blank">90ec332</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -680,6 +680,40 @@ Message
 Rmd
 </td>
 <td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/90ec332adbe0e896c2f16e143aa6be1ac7a6faa0/analysis/grep_annotations_prep.Rmd" target="_blank">90ec332</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-06-08
+</td>
+<td>
+Add separate script for getting list of annotations to grep
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/f713dd2465517de51013b88100fbe0cb08e05094/docs/grep_annotations_prep.html" target="_blank">f713dd2</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-06-08
+</td>
+<td>
+Build site.
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
 <a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/166cb454a89ed6d31c89d6cd70ce3749f7155123/analysis/grep_annotations_prep.Rmd" target="_blank">166cb45</a>
 </td>
 <td>
@@ -708,7 +742,9 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <pre><code>The following objects are masked from &#39;package:base&#39;:
 
     intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>library(stringr)</code></pre>
+<pre class="r"><code>library(stringr)
+library(httr)
+library(jsonlite)</code></pre>
 <pre class="r"><code># get only relevant disease studies
 gwas_study_info &lt;- data.table::fread(here::here(&quot;output/icd_map/gwas_study_gbd_causes.csv&quot;))
 
@@ -824,11 +860,12 @@ cohort_names &lt;- c(&quot;UKB&quot;, &quot;UKBB&quot;, &quot;DECODE&quot;, &quo
 population_descriptors &lt;- population_descriptors[!(population_descriptors %in% cohort_names)]
 
 # exclude weird paper related terms 
-grep(&quot;for|see|et al&quot;, population_descriptors, ignore.case = T, value = T)
-
-population_descriptors &lt;- population_descriptors[!grepl(population_descriptors, &quot;for|see&quot;, ignore.case = T)]
-
-# add directions
+grep(&quot;for|see|et al&quot;, population_descriptors, ignore.case = T, value = T)</code></pre>
+<pre><code>[1] &quot;See Locke&quot;   &quot;for BMI&quot;     &quot;for WHR&quot;     &quot;See Wu J. H&quot;</code></pre>
+<pre class="r"><code>population_descriptors &lt;- population_descriptors[!grepl(population_descriptors, &quot;for|see&quot;, ignore.case = T)]</code></pre>
+<pre><code>Warning in grepl(population_descriptors, &quot;for|see&quot;, ignore.case = T): argument
+&#39;pattern&#39; has length &gt; 1 and only the first element will be used</code></pre>
+<pre class="r"><code># add directions
 directions &lt;- c(&quot;North&quot;, 
                 &quot;South&quot;,
                 &quot;East&quot;, 
@@ -852,8 +889,9 @@ class="section level4">
 <h4>Source of terms: hancestro ontology of human ancestry terms</h4>
 <pre class="r"><code># Get all terms in one go (if total &lt; 500)
 response &lt;- GET(&quot;https://www.ebi.ac.uk/ols4/api/ontologies/hancestro/terms?size=1000&quot;)
-data &lt;- fromJSON(content(response, &quot;text&quot;), flatten = TRUE)
-hancestro_terms &lt;- data$`_embedded`$terms$label
+data &lt;- fromJSON(content(response, &quot;text&quot;), flatten = TRUE)</code></pre>
+<pre><code>No encoding supplied: defaulting to UTF-8.</code></pre>
+<pre class="r"><code>hancestro_terms &lt;- data$`_embedded`$terms$label
 
 # Remove terms with specific biobanks / datasets in brackets, as these are unlikely to be used in cohort descriptions in abstracts / texts
 hancestro_terms &lt;- str_remove_all(hancestro_terms, 
@@ -1003,10 +1041,11 @@ cohort_context_terms &lt;- cohort_context_terms[nchar(cohort_context_terms) &gt;
 # sort by length of term (longest first) to match longest names first
 cohort_context_terms &lt;- cohort_context_terms[order(-nchar(cohort_context_terms))]
 
-print(&quot;Number of cohort context terms:&quot;)
-length(cohort_context_terms)
-
-writeLines(cohort_context_terms, 
+print(&quot;Number of cohort context terms:&quot;)</code></pre>
+<pre><code>[1] &quot;Number of cohort context terms:&quot;</code></pre>
+<pre class="r"><code>length(cohort_context_terms)</code></pre>
+<pre><code>[1] 1400</code></pre>
+<pre class="r"><code>writeLines(cohort_context_terms, 
            here::here(&quot;output/gwas_cat/ancestry_population_terms.txt&quot;))</code></pre>
 </div>
 </div>
@@ -1190,15 +1229,16 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] stringr_1.6.0   dplyr_1.1.4     workflowr_1.7.2
+[1] jsonlite_2.0.0  httr_1.4.7      stringr_1.6.0   dplyr_1.1.4    
+[5] workflowr_1.7.2
 
 loaded via a namespace (and not attached):
- [1] jsonlite_2.0.0      compiler_4.3.2      BiocManager_1.30.26
- [4] renv_1.1.8          promises_1.3.3      tidyselect_1.2.1   
- [7] Rcpp_1.1.0          git2r_0.36.2        callr_3.7.6        
-[10] later_1.4.4         jquerylib_0.1.4     readxl_1.4.5       
-[13] yaml_2.3.10         fastmap_1.2.0       here_1.0.1         
-[16] R6_2.6.1            generics_0.1.4      knitr_1.50         
+ [1] compiler_4.3.2      BiocManager_1.30.26 renv_1.1.8         
+ [4] promises_1.3.3      tidyselect_1.2.1    Rcpp_1.1.0         
+ [7] git2r_0.36.2        callr_3.7.6         later_1.4.4        
+[10] jquerylib_0.1.4     readxl_1.4.5        yaml_2.3.10        
+[13] fastmap_1.2.0       here_1.0.1          R6_2.6.1           
+[16] generics_0.1.4      curl_7.0.0          knitr_1.50         
 [19] tibble_3.3.0        rprojroot_2.1.0     bslib_0.9.0        
 [22] pillar_1.11.1       rlang_1.1.6         cachem_1.1.0       
 [25] stringi_1.8.7       httpuv_1.6.16       xfun_0.55          
@@ -1208,8 +1248,7 @@ loaded via a namespace (and not attached):
 [37] rstudioapi_0.17.1   lifecycle_1.0.4     vctrs_0.6.5        
 [40] data.table_1.17.8   evaluate_1.0.5      glue_1.8.0         
 [43] cellranger_1.1.0    whisker_0.4.1       rmarkdown_2.30     
-[46] httr_1.4.7          tools_4.3.2         pkgconfig_2.0.3    
-[49] htmltools_0.5.8.1  </code></pre>
+[46] tools_4.3.2         pkgconfig_2.0.3     htmltools_0.5.8.1  </code></pre>
 </div>
 </div>
 </div>
