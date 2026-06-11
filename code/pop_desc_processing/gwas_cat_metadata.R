@@ -137,7 +137,7 @@ get_ancestry_from_sample_desc = function(sample_description){
     'Finnland founder',
     '[Nn]on-[Ff]innish European',
     '(?<![Nn]on-)[Ff]innish',
-    'French [Cc]andian',
+    'French [Cc]anadian',
     'French(?= ancestry)',
     '(?<![Ff]innish )(?<!with )European',
     'Greek(?= ancestry)',
@@ -217,7 +217,7 @@ group_pop_labels <- function(study_desc) {
     # "African American or Afro-Caribbean, African unspecified"
     study_desc %in% c('African, African American',
                       'African American, African',
-                      'African or African American'
+                      'African Or African American'
     ) ~ "African American or Afro-Caribbean, African unspecified",
 
     #  African American or Afro-Caribbean, Asian unspecified, European, Hispanic or Latin American, Oceanian, Other
@@ -229,12 +229,12 @@ group_pop_labels <- function(study_desc) {
       'African American or Afro-Caribbean, NR, South Asian',
 
     # "African American or Afro-Caribbean, European"
-    study_desc %in% c('European or African American') ~
+    study_desc %in% c('European Or African American') ~
       "African American or Afro-Caribbean, European",
 
     # "African American or Afro-Caribbean, European, Hispanic or Latin American"
     study_desc %in% c('European, African American, South Asian And Hispanic',
-                      'European ancestry, African American or Afro-Caribbean, Hispanic or Latin American') ~
+                      'European Ancestry, African American Or Afro-Caribbean, Hispanic Or Latin American') ~
       "African American or Afro-Caribbean, European, Hispanic or Latin American",
 
 
@@ -356,7 +356,7 @@ group_pop_labels <- function(study_desc) {
                       'Non-Finnish European',
                       'Finnish',
                       'Findland founder',
-                      'Finnland founder'
+                      'Finnland founder',
                       'French Canadian',
                       'French',
                       'Greek',
@@ -365,7 +365,7 @@ group_pop_labels <- function(study_desc) {
                       'Mylopotamos',
                       'Old Order Amish',
                       'Polish',
-                      'Scottish'
+                      'Scottish',
                       'Slavic',
                       'Spanish',
                       'Swedish',
@@ -373,7 +373,7 @@ group_pop_labels <- function(study_desc) {
                       ) ~ 'European',
 
     #  Greater Middle Eastern
-    study_desc %in% c('Greater Middle Eastern (Middle Eastern, North African or Persian)',
+    study_desc %in% c('Greater Middle Eastern (Middle Eastern, North African Or Persian)',
                       'North African',
                       'Saudi Arab',
                       'Saudi Arabian',
@@ -420,10 +420,13 @@ group_pop_labels <- function(study_desc) {
     study_desc %in% c("Native American",
                       "Alaskan Native",
                       'American Indian'
+                      'American Indian/Alaskan Native',
+                      'Pima Indian'
     ) ~ "Native American",
 
     # Not reported
     study_desc %in% c("NR",
+                      'Nr',
                       "Unknown") ~ "NR",
 
     # Oceanian
@@ -438,7 +441,7 @@ group_pop_labels <- function(study_desc) {
     study_desc %in% c('Other-Admixed',
                       'Admixed American',
                       'Other Admixed') ~
-      "Other admixed ancestry"
+      "Other admixed ancestry",
 
     TRUE~"Nothing"
   )
