@@ -1,0 +1,1194 @@
+---
+title: "Non-ontology based trait collapsing"
+author: "Isobel Beasley"
+date: "2025-09-06"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+# Set up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r required_fns, message = F, warning= F}
+
+library(dplyr)
+library(data.table)
+library(stringr)
+
+```
+
+
+```{r setup_2, message = FALSE, warning= FALSE}
+
+gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_trait_cat.csv"))
+
+```
+
+# Initial summary
+
+## Objectives of this analysis:
+
+- Collapsing and standardizing disease trait terms in GWAS study metadata without relying on ontology mappings.
+- Initial harmonization of disease trait terms (fixing spelling, collapsing studies that study different aspects of the same disease)
+
+
+# Number of studies per trait - before any grouping 
+
+Let's look at the number of studies associated with each unique disease/trait term before any grouping or collapsing.
+
+```{r initial_number_sum}
+
+n_studies_trait = gwas_study_info |>
+  dplyr::filter(DISEASE_STUDY == T) |>
+  dplyr::select(all_disease_terms, PUBMED_ID) |>
+  dplyr::distinct() |>
+  dplyr::group_by(all_disease_terms) |>
+  dplyr::summarise(n_studies = dplyr::n()) |>
+  dplyr::arrange(desc(n_studies))
+
+head(n_studies_trait)
+
+dim(n_studies_trait)
+
+```
+
+# Disease trait collapsing and cleaning
+
+```{r initial_cleaning}
+# Basic cleaning of disease terms
+# Removes trailing commas, 
+gwas_study_info$all_disease_terms = sub(",$", "", gwas_study_info$all_disease_terms)
+
+# trims whitespace
+gwas_study_info$all_disease_terms = stringr::str_trim(gwas_study_info$all_disease_terms)
+
+# remove apostrophes
+gwas_study_info$all_disease_terms = stringr::str_remove_all(gwas_study_info$all_disease_terms, "'|’")
+
+# initializes a new column (collected_all_disease_terms) to standardized traits
+# collapse more traits 
+gwas_study_info = gwas_study_info |> 
+  mutate(collected_all_disease_terms = all_disease_terms) 
+
+```
+
+
+## Where a study investigates a given aspect of of disease, reduce this to a study of this disease
+
+### Disease susceptibility 
+
+#### Susceptibility to X measurement, decreased susceptibility to)
+
+```{r sus_x_measurement}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                    "susceptibility to (.*?) measurement(?=,|$)", "\\1")
+
+         ) |>
+    mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                    "susceptibility to (.*?) (.*?) measurement(?=,|$)", "\\1 \\2")
+
+         )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_remove(collected_all_disease_terms, 
+                   pattern = "(?<=^|, )susceptibility to "
+         )
+  )
+
+```
+
+#### Decreased susceptibility to X
+
+```{r decreased_sus_x}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_remove_all(collected_all_disease_terms,
+                       pattern = "(?<=^|, )decreased susceptibility to")
+  )
+
+```
+
+#### Predisposition 
+
+```{r predisposition}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_remove_all(collected_all_disease_terms,
+                       pattern = " predisposition measurement(?=,|$)")
+  )
+
+```
+
+#### Specific examples / changes to make - bruisability
+
+```{r bruisability}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                    "(?<=^|, )bruising susceptibility(?=,|$)",
+                    "bruisability")
+    )
+  
+
+```
+
+### Disease severity 
+
+#### Severity / symptom severity / exacerbation 
+
+```{r disease_severity_initial}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_remove(collected_all_disease_terms, " symptom severity measurement(?=,|$)")
+         ) 
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+          stringr::str_remove(collected_all_disease_terms, " severity measurement(?=,|$)")
+         ) 
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+          stringr::str_remove(collected_all_disease_terms, " exacerbation measurement(?=,|$)")
+         ) 
+
+```
+
+#### Specific example: psoriasis area and severity index
+
+```{r psoriasis_area_severity_index}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_remove(collected_all_disease_terms, ", psoriasis area and severity index(?=,|$)")
+         )
+
+```
+
+#### Specific example: uveal melanoma disease severity
+
+```{r uveal_melanoma}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_replace_all(collected_all_disease_terms,
+                           "(?<=^|, )uveal melanoma disease severity(?=,|$)",
+                           "uveal melanoma"
+          )
+         )
+
+```
+
+### Disease symptom measurement
+
+```{r symptom_measurement_initial}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_remove_all(collected_all_disease_terms,
+                         " symptom measurement(?=,|$)")
+         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_remove_all(collected_all_disease_terms,
+                         " symptoms measurement(?=,|$)")
+         )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_remove_all(collected_all_disease_terms,
+                         " symptom count(?=,|$)")
+         )
+
+
+```
+
+### General measurement
+
+```{r general_measurement}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                        " measurement(?=,|$)", "")
+  )
+
+# gwas_study_info = gwas_study_info |>
+#   mutate(collected_all_disease_terms = 
+#         str_replace_all(collected_all_disease_terms, 
+#                     "(.*?) (.*?) measurement(?=,|$) ", "\\1 \\2")
+#   )
+
+```
+
+#### borderline personality disorder symptom -> borderline personality disorder
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "borderline personality disorder symptom",
+                           replacement = "borderline personality disorder",
+                           string = collected_all_disease_terms))
+
+
+```
+
+#### suicide behaviour measurement -> suicide 
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "suicide behaviour measurement|suicide ideation measurement",
+                           replacement = "suicide",
+                           string = collected_all_disease_terms)
+         )
+
+```
+
+#### sars-cov-2 antibody measurement -> covid-19 
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "sars-cov-2 antibody measurement",
+                           replacement = "covid-19",
+                           string = collected_all_disease_terms))
+
+
+```
+
+#### Dependence / addiction / withdrawal measurement 
+
+```{r dependence_addiction_withdrawal}
+# dependence measurement -> dependence
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           "\\bdependence\\s+measurement(?=,|$)",
+                           "dependence")) 
+
+# addiction measurement -> addiction
+gwas_study_info = gwas_study_info |> 
+  mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           "\\baddiction\\s+measurement(?=,|$)",
+                           "addiction"))
+
+# withdrawal measurement -> withdrawal
+gwas_study_info = gwas_study_info |> 
+  mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           "\\bwithdrawal\\s+measurement(?=,|$)",
+                           "withdrawal"))
+
+```
+
+#### Syndrome / disorder measurement
+
+```{r syndrome_disorder_measurement}
+
+gwas_study_info = gwas_study_info |>
+      mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           "\\bsyndrome\\s+measurement(?=,|$)",
+                           "syndrome"))
+
+gwas_study_info = gwas_study_info |> 
+      mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           "\\bdisorder\\s+measurement(?=,|$)",
+                           "disorder")) 
+
+```
+
+#### Allergy measurement
+
+```{r allergy_measurement}
+
+# allergy measurement -> allergy
+gwas_study_info = gwas_study_info |> 
+  mutate(collected_all_disease_terms =
+           str_replace_all(collected_all_disease_terms,
+                           "\\ballergy\\s+measurement(?=,|$)",
+                           "allergy")) 
+
+```
+
+#### emphysema pattern measurement -> emphysema
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "emphysema pattern measurement|emphysema imaging measurement",
+                           replacement = "emphysema",
+                           string = collected_all_disease_terms))
+
+
+```
+
+#### 	time to remission of covid-19 symptoms -> covid-19
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "time to remission of covid-19 symptoms",
+                           replacement = "covid-19",
+                           string = collected_all_disease_terms))
+
+
+```
+
+#### vascular brain injury measurement -> vascular brain injury
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "vascular brain injury measurement",
+                           replacement = "vascular brain injury",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### Symptom measurement
+
+```{r symptom_measurement}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_remove_all(collected_all_disease_terms,
+                         " symptom measurement(?=,|$)")
+         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_remove_all(collected_all_disease_terms,
+                         " symptoms measurement(?=,|$)")
+         )
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_remove_all(collected_all_disease_terms,
+                         " symptom count(?=,|$)")
+         )
+
+```
+
+#### Specific example: autism 
+
+```{r autism_symptom}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            "(?<=^|, )autism spectrum disorder symptom(?=,|$)",
+                            "autism")
+         ) 
+
+```
+
+#### Specific example: respiratory symptom change
+
+```{r resp_symptom_change}
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          ", respiratory symptom change measurement(?=,|$)"
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "respiratory symptom change(?=,|$)",
+                          "respiratory symptom" 
+         ))
+
+```
+
+## Age of onset of
+
+#### Non-specific correction 
+
+```{r age_onset}
+
+gwas_study_info = gwas_study_info |>
+      mutate(collected_all_disease_terms = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                              pattern = "(?<=^|, )age of onset of ")
+         )
+
+```
+
+#### Specific correction: febrile seizure
+
+```{r febrile_seizure}
+
+# febrile seizure (within the age range of 3 months to 6 years)
+gwas_study_info = gwas_study_info |> 
+ mutate(collected_all_disease_terms  = 
+          stringr::str_replace_all(collected_all_disease_terms ,
+                                  pattern = "febrile seizure \\(within the age range of 3 months to 6 years\\)",
+                                   "febrile seizure"
+                          )  
+        )
+
+```
+
+## Family history of 
+
+#### Non-specific example
+
+```{r family_history}
+
+gwas_study_info = gwas_study_info |>
+      mutate(collected_all_disease_terms = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                         pattern = "(?<=^|, )family history of "))
+
+```
+
+
+## Disease progression
+
+
+### Disease progression measurement
+
+```{r dis_progress_measure}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          "(?<=^|, )disease progression measurement(?=,|$)"
+         ))
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_remove_all(collected_all_disease_terms,
+                          "disease progression measurement"
+         ))
+
+```
+
+## Time to remission
+
+### COVID
+
+```{r covid_remission}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )time to remission of covid-19 symptoms(?=,|$)",
+                          "covid-19"
+         ))
+
+```
+
+## Alzheimer's disease - additional examples
+
+### Neuropathological change
+
+```{r alz_dis_neuropath}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )alzheimers disease neuropathologic change(?=,|$)",
+                          "alzheimers disease"
+         ))
+
+```
+
+### Biomarker measurement
+
+```{r alz_dis_biomarker}
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )alzheimers disease biomarker measurement(?=,|$)",
+                          "alzheimers disease"
+         ))
+
+```
+
+## Cancer aggressiveness measurement
+
+```{r cancer_aggression}
+
+gwas_study_info = 
+gwas_study_info |> 
+ mutate(collected_all_disease_terms  = 
+          stringr::str_remove_all(collected_all_disease_terms,
+                                  pattern = "(?<=^|, )cancer aggressiveness measurement(?=,|$)"
+                          )
+ ) 
+
+```
+
+
+## Other specific / non-defined measurement
+
+### Anxiety
+
+```{r anxiety_measure}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )anxiety measurement(?=,|$)",
+                          "anxiety"
+         ))
+
+```
+
+### Coronary atherosclerosis
+
+```{r coronary_athero_measure}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )coronary atherosclerosis measurement(?=,|$)",
+                          "coronary atherosclerosis"
+         ))
+
+```
+
+## Cutaneous psoriasis 
+
+```{r cutaneous_psoriasis_measure}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )cutaneous psoriasis measurement(?=,|$)",
+                          "cutaneous psoriasis"
+         ))
+
+```
+
+### Depressive episode
+
+```{r depressive_episode_measure}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )depressive episode measurement(?=,|$)",
+                          "depressive episode"
+         ))
+
+```
+
+### Insomnia 
+
+```{r insomnia_measure}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )insomnia measurement(?=,|$)",
+                          "insomnia"
+         ))
+
+```
+
+### Lewy body dementia
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "lewy body dementia measurement(?=,|$)",
+                          "lewy body dementia"
+         ))
+
+```
+
+### Sleep apnea
+
+```{r sleep_apnea_measure}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )sleep apnea measurement(?=,|$)",
+                          "sleep apnea"
+         ))
+
+# during rem sleep
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )sleep apnea measurement during rem sleep(?=,|$)",
+                          "sleep apnea"
+         ))
+
+# during non-rem sleep
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )sleep apnea measurement during non-rem sleep(?=,|$)",
+                          "sleep apnea"
+         ))
+
+```
+
+
+### Substance abuse measurement
+
+### Alcohol
+
+```{r alcohol_use_disorder}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )alcohol withdrawal delirium(?=,|$)",
+                          "alcohol withdrawal"
+         ))
+
+
+alcohol_use_disorder_terms <- c("(?<=^|, )alcohol dependence(?=,|$)",
+                             "(?<=^|, )alcohol withdrawal(?=,|$)",
+                             "(?<=^|, )alcohol abuse(?=,|$)",
+                             "(?<=^|, )alcohol use disorder(?=,|$)",
+                             "(?<=^|, )addictive alcohol use(?=,|$)"
+                             )
+
+gwas_study_info = gwas_study_info |>
+      mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            paste0(alcohol_use_disorder_terms, collapse = "|"),
+                            "alcohol-related disorders"
+           ))
+
+```
+
+
+### Cocaine
+
+```{r cocaine_use_disorder}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "cocaine use disorder(?=,|$)|cocaine dependence(?=,|$)",
+                          "cocaine-related disorders"
+         ))
+
+
+```
+
+
+### Nicotine 
+
+```{r nicotine_use_disorder}
+
+nicotine_use_disorder_terms <- c("(?<=^|, )nicotine dependence(?=,|$)",
+                             "(?<=^|, )nicotine withdrawal(?=,|$)",
+                             "(?<=^|, )nicotine addiction(?=,|$)"
+                             )
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          paste0(nicotine_use_disorder_terms, collapse = "|"),
+                          "nicotine-related disorders"
+         ))
+
+
+```
+
+
+## Methamphetamine use disorders 
+
+```{r methamphetamine_use_disorders}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )methamphetamine dependence(?=,|$)|(?<=^|, )methamphetamine-induced psychosis(?=,|$)",
+                          "methamphetamine use disorders"
+         ))
+
+```
+
+## Deal with basic synonyms
+
+### ADHD = attention deficit hyperactivity disorder
+  
+```{r adhd_synonym}
+
+gwas_study_info = gwas_study_info |> 
+    mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            "(?<=^|, )attention deficit hyperactivity disorder(?=,|$)",
+                            "adhd"
+         ))
+
+```
+
+### Anemia (phenotype) -> anemia
+
+```{r anemia_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms =
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )anemia \\(phenotype\\)(?=,|$)",
+                          "anemia"
+         ))
+
+```
+
+### Autism = Autism Spectrum Disorder = Asperger Syndrome
+
+```{r autism_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_replace_all(collected_all_disease_terms,
+                         "(?<=^|, )autism spectrum disorder(?=,|$)",
+                         "autism")
+        ) |>
+    mutate(collected_all_disease_terms = 
+        stringr::str_replace_all(collected_all_disease_terms,
+                         "(?<=^|, )asperger syndrome(?=,|$)",
+                         "autism")
+        )
+
+```
+
+### Carcinoma = Cancer
+
+```{r carcinoma_cancer_synonym}
+
+gwas_study_info = gwas_study_info |>
+      mutate(collected_all_disease_terms = 
+           stringr::str_replace_all(collected_all_disease_terms,
+                            "\\bcarcinoma",
+                            "cancer")
+         )
+
+```
+
+### Coronary artery disease = coronary atherosclerosis 
+
+https://www.ebi.ac.uk/ols4/ontologies/efo/classes/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001645
+
+```{r coronary_artery_disease_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )coronary atherosclerosis(?=,|$)",
+                          "coronary artery disease"
+         ))
+
+```
+
+### Head and neck cancer = head and neck malignant neoplasia
+
+```{r head_neck_cancer_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )head and neck malignant neoplasia(?=,|$)",
+                          "head and neck cancer"
+         ))
+
+```
+
+### Hepatitis virus infection = hepatitis infection
+
+```{r hepatitis_virus_infection_synonym}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )hepatitis a virus infection(?=,|$)",
+                          "hepatitis a infection"
+         )) |>
+      mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )hepatitis b virus infection(?=,|$)",
+                          "hepatitis b infection"
+         )) |>
+        mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )hepatitis c virus infection(?=,|$)",
+                          "hepatitis c infection"
+         ))
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )chronic hepatitis c virus infection(?=,|$)",
+                          "chronic hepatitis, hepatitis c infection"
+         )) |>
+      mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )chronic hepatitis b virus infection(?=,|$)",
+                          "chronic hepatitis, hepatitis b infection"
+         ))
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )hepatitis virus-related liver cancer(?=,|$)",
+                          "hepatitis, liver cancer"
+         ))
+
+
+```
+
+### Narcolepsy = Narcolepsy without cataplexy
+
+```{r narcolepsy_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )narcolepsy without cataplexy(?=,|$)",
+                          "narcolepsy"
+         ))
+
+```
+
+### Mumps virus infection = mumps
+
+```{r mumps_virus_infection_synonym}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )mumps virus infectious disease(?=,|$)",
+                          "mumps"
+         ))
+
+
+```
+
+### Renal cancer = kidney cancer
+
+```{r renal_cancer_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )renal cancer(?=,|$)",
+                          "kidney cancer"
+         ))
+  
+```  
+
+### Rubella infect = rubella
+
+```{r rubella_infection_synonym}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )rubella infection(?=,|$)",
+                          "rubella"
+         ))
+
+
+```
+
+
+### Type 1 diabetes = type 1 diabetes mellitus
+
+```{r type1_diabetes_synonym}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+        stringr::str_replace_all(collected_all_disease_terms,
+                         "(?<=^|, )type 1 diabetes(?=,|$)",
+                         "type 1 diabetes mellitus")
+        )
+
+```
+
+### Type 1 diabetes mellitus nephropathy = type 1 diabetes nephropathy
+
+```{r type1_diabetes_nephropathy_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        stringr::str_replace_all(collected_all_disease_terms,
+                         "(?<=^|, )type 1 diabetes mellitus nephropathy(?=,|$)",
+                         "type 1 diabetes nephropathy")
+        )
+
+```
+
+
+
+
+### Von willebrand disease (hereditary or acquired) = von willebrand disease
+
+```{r vwf_synonym}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms =
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )von willebrand disease \\(hereditary or acquired\\)(?=,|$)",
+                          "von willebrand disease"
+         ))
+
+```
+
+
+## Typos 
+
+### Alzheimer -> alzheimers
+
+```{r alzheimers_typo}
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms =
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )alzheimer disease(?=,|$)",
+                          "alzheimers disease"
+         ))
+```
+
+### Parkinson -> parkinsons
+
+```{r parkinsons_typo}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms =
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )parkinson disease(?=,|$)",
+                          "parkinsons disease"
+         ))
+
+```
+
+## Other
+
+### attempted suicide -> suicide
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "^attempted suicide$",
+                           replacement = "suicide",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### benign -> benign neoplasm 
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "^benign$",
+                           replacement = "benign neoplasm",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### cardiovascular disease biomarker measurement -> cardiovascular disease
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "cardiovascular disease biomarker measurement",
+                           replacement = "cardiovascular disease",
+                           string = collected_all_disease_terms))
+
+
+```
+
+#### cancer biomarker measurement -> cancer
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "cancer biomarker measurement",
+                           replacement = "cancer",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### diabetes mellitus biomarker -> diabetes mellitus
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "diabetes mellitus biomarker",
+                           replacement = "diabetes mellitus",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### hiv-1 infection -> hiv infection
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "hiv-1 infection",
+                           replacement = "hiv infection",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### hiv mother to child transmission -> hiv infection
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "hiv mother to child transmission",
+                           replacement = "hiv infection",
+                           string = collected_all_disease_terms))
+
+
+```
+
+#### osteoarthritis biomarker measurement -> osteoarthritis
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "osteoarthritis biomarker measurement",
+                           replacement = "osteoarthritis",
+                           string = collected_all_disease_terms))
+
+
+```
+
+### suicide behaviour -> suicide
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "suicide behaviour",
+                           replacement = "suicide",
+                           string = collected_all_disease_terms))
+
+```
+
+
+# Putting it all together
+
+```{r, eval = F, include=F}
+
+gwas_study_info$collected_all_disease_terms = stringr::str_trim(gwas_study_info$collected_all_disease_terms)
+gwas_study_info$collected_all_disease_terms = sub(",$", "", gwas_study_info$collected_all_disease_terms)
+gwas_study_info$collected_all_disease_terms = stringr::str_replace_all(gwas_study_info$collected_all_disease_terms, "^, ", "")
+
+```
+
+
+## Final summary - number of unique diseases studied
+
+```{r}
+
+diseases <- stringr::str_split(pattern = ", ", 
+                               gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |> 
+            unlist() |>
+            stringr::str_trim()
+
+length(unique(diseases))
+
+```
+
+## Frequency of unique disease terms after harmonization
+
+```{r freq_table}
+
+# make frequency table
+freq <- table(as.factor(diseases))
+
+# sort in decreasing order
+freq_sorted <- sort(freq, decreasing = TRUE)
+
+# show top N, e.g. top 10
+print("Top 5 most frequent disease terms after harmonization:")
+head(freq_sorted, 5)
+
+print("Number of unique disease terms after harmonization:")
+sum(freq[freq == 1])
+
+print("Average number of studies per disease term after harmonization:")
+mean(freq)
+
+```
+
+
+## Save the updated gwas_study_info with repaired / harmonized disease terms
+
+```{r save}
+
+data.table::fwrite(
+  gwas_study_info,
+   here::here("output/gwas_cat/gwas_study_info_disease_trait_simplified.csv")
+  )
+
+```
+
