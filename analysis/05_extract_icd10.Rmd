@@ -1,0 +1,337 @@
+---
+title: "Extract Author provided ICD10 Codes from GWAS Catalog Studies"
+author: "Isobel Beasley"
+output: html_document
+---
+
+# Set up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_packages, message=FALSE}
+
+library(dplyr)
+library(stringr)
+library(data.table)
+
+```
+
+### Load Data
+
+```{r load_data}
+
+gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_all_group.csv"))
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = stringi::stri_trans_general(collected_all_disease_terms, "Latin-ASCII")
+           )
+
+```
+
+# Automatic mapping of GWAS traits to ICD 10
+
+## Create a mapping table
+
+```{r create_mapping_table}
+
+disease_mapping <- gwas_study_info |>
+  filter(DISEASE_STUDY == T) |>
+  tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
+                               delim = ", ") |>
+  select(`DISEASE/TRAIT`, 
+         collected_all_disease_terms, 
+         PUBMED_ID,
+         YEAR,
+         STUDY_ACCESSION) |>
+  distinct()
+
+disease_mapping =
+  disease_mapping |>
+  filter(collected_all_disease_terms != "")
+
+print("Number of unique disease trait & study pairs")
+nrow(disease_mapping)
+
+diseases <- stringr::str_split(pattern = ", ",
+                               gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != ""])  |>
+  unlist() |>
+  stringr::str_trim()
+
+diseases <- unique(diseases)
+
+print("Number of unique disease terms")
+print(length(diseases))
+
+```
+
+## Get ICD10 codes from author provided DISEASE/TRAIT column 
+
+```{r add_icd10_from_trait}
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(grepl("ICD10", `DISEASE/TRAIT`),
+                             str_extract(`DISEASE/TRAIT`, 
+                                         "(?<=ICD10 )[^:]+(?=:)|(?<=ICD10 )[^ ]+"),
+                             NA),
+         icd10_code_origin = ifelse(grepl("ICD10", `DISEASE/TRAIT`),
+                                    "Study Provided",
+                                    NA)
+)
+
+# fix weird ICD10 codes: R11.103.11 -> R11
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = stringr::str_replace(icd10_code, 
+                                         pattern = "R11.103.11",
+                                         replacement = "R11")
+         )
+
+# fix weird ICD10 codes: D63.165.8 -> D63, N18.3-N18.9
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = stringr::str_replace(icd10_code, 
+                                         pattern = "D63.165.8",
+                                         replacement = "D63, N18.3-N18.9")
+         ) 
+
+# Additionally, some studies provide ICD10 codes in the DISEASE/TRAIT column without the "ICD10" prefix
+# e.g. Source of report of K76 (other diseases of liver) (UKB data field 131671)
+# let's try to capture these too
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(is.na(icd10_code) &
+                             grepl("Source of report of", `DISEASE/TRAIT`),
+                             str_extract(`DISEASE/TRAIT`,
+                                         "(?<=Source of report of\\s)[A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?\\b"),
+                             icd10_code),
+         icd10_code_origin = ifelse(grepl("Source of report of", 
+                                          `DISEASE/TRAIT`),
+                                    "Study Provided",
+                                    icd10_code_origin)
+) |>
+  mutate(icd10_code = str_remove_all(icd10_code, 
+                                     pattern = "Source of report of ")
+         )
+
+# Another example where  some studies provide ICD10 codes in the DISEASE/TRAIT column without the "ICD10" prefix
+# e.g. Insulin-dependent diabetes mellitus (Union E10)
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(is.na(icd10_code) &
+                             grepl("Union", `DISEASE/TRAIT`),
+                             str_extract(`DISEASE/TRAIT`, 
+                                         "Union [A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?\\b"),
+                             icd10_code),
+         icd10_code_origin = ifelse(grepl("Union", 
+                                          `DISEASE/TRAIT`),
+                                    "Study Provided",
+                                    icd10_code_origin)
+) |>
+  mutate(icd10_code = str_remove_all(icd10_code, 
+                                     pattern = "Union ")
+  )
+
+disease_mapping =
+  disease_mapping |>
+  mutate(icd10_code = ifelse(is.na(icd10_code) &
+                             grepl("ICD [A-Z][0-9]|ICD-10 [A-Z][0-9]", 
+                                   `DISEASE/TRAIT`),
+                        str_match(`DISEASE/TRAIT`,
+                                  "ICD(?:-10|10)?\\s*([A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?)")[,2],
+                             icd10_code),
+         icd10_code_origin = ifelse(grepl("ICD [A-Z][0-9]|ICD-10 [A-Z][0-9]",
+                                          `DISEASE/TRAIT`),
+                                    "Study Provided",
+                                    icd10_code_origin)
+)
+
+n_study_provided = 
+disease_mapping |>
+  filter(icd10_code_origin == "Study Provided") |>
+  nrow()
+
+n_studies =
+  disease_mapping |>
+  nrow()
+
+print("Percentage of studies that provide ICD10 codes:")
+print(round(n_study_provided / n_studies * 100, 2))
+
+```
+
+
+## Get ICD10 codes from author provided PheCodes 
+
+### Get Phecodes for diseases
+
+```{r get_phecodes}
+
+disease_mapping <- disease_mapping |>
+  mutate(
+    phecode = str_extract(`DISEASE/TRAIT`, "(?<=PheCode )[^)]+")
+  ) |>
+  mutate(phecode = as.numeric(phecode))
+
+```
+
+### Convert Phecodes to ICD10
+
+```{r convert_phecodes_to_icd10, message=FALSE}
+
+# phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
+
+phecodes <- fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+
+phecode_icd_map =
+  phecodes |>
+  select(icd10_code = ICD10, 
+         phecode = PheCode
+         ) |>
+  filter(!is.na(phecode))
+
+phecode_icd_map =
+  phecode_icd_map |>
+  filter(phecode %in% unique(disease_mapping$phecode))
+
+# if more than one ICD10 code per phecode, collapse into a single row
+phecode_icd_map =
+  phecode_icd_map |>
+group_by(phecode) |>
+  summarise(icd10_code = 
+            str_flatten(unique(icd10_code), 
+                        collapse = ", ", 
+                        na.rm = T), 
+            .groups = "drop")
+
+# label the origin of these ICD10 codes as "Study PheCode Mapping"
+phecode_icd_map =
+  phecode_icd_map |>
+  mutate(icd10_code_origin = "Study PheCode Mapping")
+
+disease_mapping =
+  rows_patch(disease_mapping,
+              phecode_icd_map,
+              by = c("phecode"),
+              unmatched = "ignore",
+              )
+print("Number of ICD10 code obtained")
+disease_mapping |>
+    filter(!is.na(icd10_code)) |> 
+  group_by(icd10_code_origin) |> 
+  summarise(n = n(), 
+            percent = n()/n_studies *100)
+
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  nrow()
+
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  head()
+
+# per pubmed id, are there multiple icd10 code origins?
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  group_by(PUBMED_ID) |>
+  summarise(n_icd10_code_origins = n_distinct(icd10_code_origin)) |>
+  pull(n_icd10_code_origins) |>
+  summary()
+
+# which pubmed ids have multiple icd10 code origins?
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  group_by(PUBMED_ID) |>
+  summarise(n_icd10_code_origins = n_distinct(icd10_code_origin)) |>
+  filter(n_icd10_code_origins > 1)
+
+# per study accession, are there multiple icd10 code origins?
+disease_mapping |>
+  filter(!is.na(icd10_code_origin)) |>
+  group_by(STUDY_ACCESSION) |>
+  summarise(n_icd10_code_origins = n_distinct(icd10_code_origin)) |>
+  pull(n_icd10_code_origins) |>
+  summary()
+
+```
+
+### Complete PheCode to ICD10 mappings
+
+Some Phecodes do not have ICD10 mappings in the above Phecode to ICD10 mapping file.
+Here we've created a file with manual mappings for these missing Phecodes.
+
+```{r manual_phecodes_to_icd10_mapping}
+
+# how many missing ICD10 codes for PheCodes?
+disease_mapping |>
+    filter(is.na(icd10_code) & !is.na(phecode)) |> 
+    nrow()
+
+# load manual mapping file
+phecode_icd_manual = 
+  readxl::read_xlsx(here::here("data/icd/phecode_to_icd10_manual_mapping_v5.xlsx"))
+
+to_add = phecode_icd_manual |>
+  mutate(phecode = as.numeric(phecode),
+         icd10_code_origin = "Study PheCode (Manual Mapping)") |>
+  select(-phenotype) |>
+  distinct()
+
+disease_mapping =
+  rows_patch(disease_mapping,
+             to_add,
+             unmatched = "ignore")
+  
+```
+
+# (?) Extract UK Biobank Term Numbers
+
+Possibly to add: 
+
+```{r}
+
+disease_mapping |>
+    filter(is.na(icd10_code_origin)) |> filter(grepl("UKB", `DISEASE/TRAIT`)) |> pull(PUBMED_ID) |> unique() |> length()
+
+
+disease_mapping |>
+    filter(is.na(icd10_code_origin)) |> filter(grepl("[0-9+]_[0-9+]", `DISEASE/TRAIT`)) |> pull(PUBMED_ID) |> unique() |> length()
+
+```
+
+# How many disease terms can we map to ICD-10 codes by extracting author provided ICD-10 or PheCodes?
+
+```{r}
+
+n_disease_mapping = nrow(disease_mapping)
+
+disease_mapping  |> 
+group_by(icd10_code_origin) |>
+  summarise(n = n(),
+          percent = round(100 * n/n_disease_mapping, 
+                          digits = 2)
+          ) |> 
+arrange(icd10_code_origin, desc(n))
+
+
+# how many papers with at least one ICD-10 Code mapping
+disease_mapping |>
+ filter(!is.na(icd10_code_origin)) |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
+  
+
+```
+
+# Save
+
+```{r save_disease_mapping_part}
+
+data.table::fwrite(disease_mapping,
+                   here::here("output/gwas_cat/gwas_author_provided_icd10.csv"))
+
+```
+
