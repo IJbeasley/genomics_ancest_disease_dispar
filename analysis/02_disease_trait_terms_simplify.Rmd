@@ -83,6 +83,247 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
+## Convert seropositivity to disease terms
+
+```{r convert}
+
+## ---------------------------------------------------------------------------
+## Recode "* seropositivity" GWAS trait terms -> infection / disease terms
+##
+## Design notes:
+##  * Matching is on the WHOLE term, not a substring, because many terms are
+##    substrings of others ("virus seropositivity", "bacillus seropositivity",
+##    "seropositivity measurement", ...). Sequential str_replace_all() calls
+##    on these will silently mangle each other.
+##  * Cells may hold several comma-separated terms; each is mapped separately
+##    and the result de-duplicated.
+##  * Terms that are NOT human disease (gut-commensal and anti-phage antibody
+##    panels, plant pathogens, non-specific measurements) are given
+##    disease_term = NA and a term_class you can filter on.
+## ---------------------------------------------------------------------------
+
+sero_map <- tribble(
+  ~term,                                                 ~disease_term,                        ~term_class,
+  ## ---- viruses -----------------------------------------------------------
+  "adenoviridae virus seropositivity",                   "adenovirus infection",               "viral_infection",
+  "alphapapillomavirus 9 virus seropositivity",          "human papillomavirus infection",     "viral_infection",
+  "bk polyomavirus seropositivity",                      "bk polyomavirus infection",          "viral_infection",
+  "calicivirus seropositivity",                          "calicivirus infection",              "viral_infection",
+  "chikungunya virus seropositivity",                    "chikungunya",                        "viral_infection",
+  "coxsackievirus seropositivity",                       "coxsackievirus infection",           "viral_infection",
+  "cytomegalovirus seropositivity",                      "cytomegalovirus infection",          "viral_infection",
+  "dengue virus seropositivity",                         "dengue",                             "viral_infection",
+  "epstein barr viral capsid antigen seropositivity",    "epstein-barr virus infection",       "viral_infection",
+  "epstein barr virus nuclear antigen-1 seropositivity", "epstein-barr virus infection",       "viral_infection",
+  "epstein-barr virus early antigen seropositivity",     "epstein-barr virus infection",       "viral_infection",
+  "foot-and-mouth disease virus seropositivity",           "foot-and-mouth disease",           "viral_infection",
+  "epstein-barr virus seropositivity",                   "epstein-barr virus infection",       "viral_infection",
+  "hepatitis b virus (core|surface) antigen seropositivity",  "hepatitis b",                        "viral_infection",
+  "anti-hepatitis b virus antibody",                     "hepatitis b",                        "viral_infection",
+  "hepatitis a virus seropositivity",                    "hepatitis a",                        "viral_infection",
+  "hepatitis c virus seropositivity",                    "hepatitis c",                        "viral_infection",
+  "hepatitis e virus seropositivity",                    "hepatitis e",                        "viral_infection",
+  "anti-hepatitis e virus antibody",                     "hepatitis e",                        "viral_infection",
+  "herpes simplex virus 2 seropositivity",               "herpes simplex virus 2 infection",   "viral_infection",
+  "anti-human herpes virus 7 antibody",                  "human herpesvirus 7 infection",      "viral_infection",
+  "anti-herpes simplex virus 1 antibody",                "herpes simplex virus 6 infection",   "viral_infection",
+  "herpes virus seropositivity",                         "herpesvirus infection",              "viral_infection",
+  "hsv1 seropositivity",                                 "herpes simplex virus 1 infection",   "viral_infection",
+  "hpv seropositivity",                                  "human papillomavirus infection",     "viral_infection",
+  "human herpesvirus 6 seropositivity",                  "human herpesvirus 6 infection",      "viral_infection",
+  "human herpesvirus 7 seropositivity",                  "human herpesvirus 7 infection",      "viral_infection",
+  "human polyomavirus 6 seropositivity",                 "human polyomavirus 6 infection",     "viral_infection",
+  "influenza a seropositivity",                          "influenza a",                        "viral_infection",
+  "influenza b seropositivity",                          "influenza b",                        "viral_infection",
+  "merkel cell virus seropositivity",                    "merkel cell polyomavirus infection", "viral_infection",
+  "measles virus seropositivity",                         "measles",                           "viral_infection",
+  "mumps virus seropositivity",                          "mumps",                              "viral_infection",
+  "pneumoviridae seropositivity",                        "pneumovirus infection",              "viral_infection",
+  "pneumoviridae virus seropositivity",                  "pneumovirus infection",              "viral_infection",
+  "poliovirus seropositivity",                           "poliovirus infection",               "viral_infection",
+  "polyomavirus 2 seropositivity",                       "jc polyomavirus infection",          "viral_infection",
+  "rubella virus seropositivity",                        "rubella",                            "viral_infection",
+  "respiratory syncytial virus seropositivity",          "respiratory syncytial virus infection", "viral_infection",
+  "sars-cov-2 antibody",                                 "covid-19",                           "viral_infection",
+  "sars-cov-2 neutralizing antibody",                    "covid-19",                           "viral_infection",
+  "sars coronavirus seropositivity",                     "sars",                               "viral_infection",
+  "varicella zoster virus seropositivity",               "varicella zoster virus infection",   "viral_infection",
+  "virus seropositivity",                                "viral infectious disease",           "viral_infection",
+
+  ## ---- bacterial pathogens ----------------------------------------------
+  "bacteria seropositivity",                             "bacterial infection",                "bacterial_infection",
+  "bartonella seropositivity",                           "bartonellosis",                      "bacterial_infection",
+  "bordetella seropositivity",                           "pertussis",                          "bacterial_infection",
+  "campylobacter seropositivity",                        "campylobacteriosis",                 "bacterial_infection",
+  "chlamydia trachomatis seropositivity",                 "chlamydia trachomatis infection",    "bacterial_infection",
+  "haemophilus influenzae seropositivity",               "haemophilus influenzae infection",   "bacterial_infection",
+  "helicobacter pylori seropositivity",                  "helicobacter pylori infection",      "bacterial_infection",
+  "listeria seropositivity",                             "listeriosis",                        "bacterial_infection",
+  "legionella seropositivity",                          "legionnaires disease",                 "bacterial_infection",
+  "mycobacterium tuberculosis seropositivity",           "tuberculosis",                       "bacterial_infection",
+  "mycoplasma pneumoniae seropositivity",                "mycoplasma pneumoniae infection",    "bacterial_infection",
+  "neisseria meningitidis seropositivity",               "meningococcal infection",            "bacterial_infection",
+  "porphyromonas gingivalis seropositivity",             "porphyromonas gingivalis infection", "bacterial_infection",
+  "salmonella seropositivity",                           "salmonellosis",                      "bacterial_infection",
+  "shigella seropositivity",                             "shigellosis",                        "bacterial_infection",
+  "staphylococcus seropositivity",                       "staphylococcal infection",           "bacterial_infection",
+  "streptococcus seropositivity",                        "streptococcal infection",            "bacterial_infection",
+  "yersinia seropositivity",                             "yersiniosis",                        "bacterial_infection",
+
+  ## ---- opportunists / commensals that can also be pathogens -------------
+  ## Mapped to an infection term but flagged: in microbiome serology panels
+  ## these are colonisation markers, not infection. Check the source study.
+  "enterobacteriaceae seropositivity",                   "enterobacteriaceae infection",       "ambiguous_bacterial",
+  "enterococcus faecalis seropositivity",                "enterococcus faecalis infection",    "ambiguous_bacterial",
+  "escherichia seropositivity",                          "escherichia coli infection",         "ambiguous_bacterial",
+  "haemophilus parainfluenzae seropositivity",           "haemophilus parainfluenzae infection", "ambiguous_bacterial",
+  "pseudomonadaceae seropositivity",                     "pseudomonas infection",              "ambiguous_bacterial",
+
+  ## ---- fungi and parasites ----------------------------------------------
+  "aspergillus seropositivity",                          "aspergillosis",                      "fungal_infection",
+  "fungus seropositivity",                               "fungal infectious disease",          "fungal_infection",
+  "plasmodium falciparum seropositivity",                "malaria",                            "parasitic_infection",
+  "protozoan seropositivity",                            "protozoan infectious disease",       "parasitic_infection",
+  "toxoplasma gondii seropositivity",                    "toxoplasmosis",                      "parasitic_infection",
+  "trypanosoma cruzi seropositivity",                    "chagas disease",                     "parasitic_infection",
+
+  ## ---- autoimmune / allergy ---------------------------------------------
+  "anti-citrullinated protein antibody seropositivity",  "rheumatoid arthritis",               "autoimmune",
+  "rheumatoid factor seropositivity",                    "autoimmune disease",               "autoimmune",
+  "plant allergen seropositivity",                       "plant allergy",                      "allergy",
+  "animal allergen seropositivity" ,                       "animal allergy",                     "allergy",
+
+  ## ---- NOT disease: gut commensal antibody panels ------------------------
+  "akkermansia seropositivity",                          NA, "microbiota_antibody",
+  "alistipes seropositivity",                            NA, "microbiota_antibody",
+  "bacillaceae seropositivity",                          NA, "microbiota_antibody",
+  "bacilli seropositivity",                              NA, "microbiota_antibody",
+  "bacillus seropositivity",                             NA, "microbiota_antibody",
+  "bacteroidaceae seropositivity",                       NA, "microbiota_antibody",
+  "bacteroidales seropositivity",                        NA, "microbiota_antibody",
+  "bacteroides seropositivity",                          NA, "microbiota_antibody",
+  "barnesiella seropositivity",                          NA, "microbiota_antibody",
+  "bifidobacterium seropositivity",                      NA, "microbiota_antibody",
+  "blautia seropositivity",                              NA, "microbiota_antibody",
+  "butyrivibrio seropositivity",                         NA, "microbiota_antibody",
+  "clostridiales seropositivity",                        NA, "microbiota_antibody",
+  "coprococcus seropositivity",                          NA, "microbiota_antibody",
+  "dorea seropositivity",                                NA, "microbiota_antibody",
+  "eubacterium seropositivity",                          NA, "microbiota_antibody",
+  "faecalibacterium seropositivity",                     NA, "microbiota_antibody",
+  "firmicutes seropositivity",                           NA, "microbiota_antibody",
+  "lachnospiraceae seropositivity",                      NA, "microbiota_antibody",
+  "lactobacillales seropositivity",                      NA, "microbiota_antibody",
+  "lactobacillus seropositivity",                        NA, "microbiota_antibody",
+  "odoribacter seropositivity",                          NA, "microbiota_antibody",
+  "parabacteroides seropositivity",                      NA, "microbiota_antibody",
+  "prevotella seropositivity",                           NA, "microbiota_antibody",
+  "roseburia seropositivity",                            NA, "microbiota_antibody",
+  "ruminococcaceae seropositivity",                      NA, "microbiota_antibody",
+  "flagellin seropositivity",                            NA, "microbiota_antibody",
+
+  ## ---- NOT disease: anti-phage (gut virome) antibody panels --------------
+  "bacillus phage virus seropositivity",                 NA, "phage_antibody",
+  "bacteriodes phage virus seropositivity",              NA, "phage_antibody",
+  "campylobacter phage virus seropositivity",            NA, "phage_antibody",
+  "clostridium phage virus seropositivity",              NA, "phage_antibody",
+  "enterobacter phage virus seropositivity",             NA, "phage_antibody",
+  "enterococcus phage virus seropositivity",             NA, "phage_antibody",
+  "escherichia phage virus seropositivity",              NA, "phage_antibody",
+  "geobacillus phage virus seropositivity",              NA, "phage_antibody",
+  "klebsiella phage virus seropositivity",               NA, "phage_antibody",
+  "lactobacillus phage virus seropositivity",            NA, "phage_antibody",
+  "lactococcus phage virus seropositivity",              NA, "phage_antibody",
+  "listeria phage virus seropositivity",                 NA, "phage_antibody",
+  "pelagibacter phage virus seropositivity",             NA, "phage_antibody",
+  "phage seropositivity",                                NA, "phage_antibody",
+  "proteus phage virus seropositivity",                  NA, "phage_antibody",
+  "pseudomonas phage virus seropositivity",              NA, "phage_antibody",
+  "salmonella phage virus seropositivity",               NA, "phage_antibody",
+  "shigella phage virus seropositivity",                 NA, "phage_antibody",
+  "staphylococcus phage virus seropositivity",           NA, "phage_antibody",
+  "streptococcus virus phage virus seropositivity",      NA, "phage_antibody",
+
+  ## ---- NOT human disease: plant pathogens --------------------------------
+  "ralstonia solanacearum seropositivity",               NA, "plant_pathogen",
+  "xanthomonas seropositivity",                          NA, "plant_pathogen",
+
+  ## ---- NOT disease: non-specific / other serology ------------------------
+  "fibronectin seropositivity",                          NA, "other_autoantibody"
+)
+
+## Sanity check: no duplicated source terms
+stopifnot(!any(duplicated(sero_map$term)))
+
+## ---------------------------------------------------------------------------
+## Recoding helper
+##
+## For each cell: try a whole-cell exact match first (this preserves any
+## curated multi-term string), otherwise split on commas, map each part, and
+## paste the unique results back together. Unmapped parts pass through
+## unchanged so nothing is silently lost.
+## ---------------------------------------------------------------------------
+
+lookup_term  <- setNames(sero_map$disease_term, sero_map$term)
+lookup_class <- setNames(sero_map$term_class,   sero_map$term)
+
+recode_sero <- function(x, what = c("term", "class")) {
+  what <- match.arg(what)
+  tbl  <- if (what == "term") lookup_term else lookup_class
+
+  purrr::map_chr(x, function(cell) {
+    if (is.na(cell)) return(NA_character_)
+    cell <- str_squish(str_to_lower(cell))
+
+    if (cell %in% names(tbl)) return(tbl[[cell]])
+
+    parts <- str_squish(str_split_1(cell, ",\\s*"))
+    out <- purrr::map_chr(parts, function(p) {
+      if (p %in% names(tbl)) {
+        tbl[[p]]
+      } else if (what == "term") {
+        p                      # not a seropositivity term: leave alone
+      } else {
+        NA_character_          # no class for non-seropositivity terms
+      }
+    })
+    out <- unique(out[!is.na(out)])
+    if (length(out) == 0) NA_character_ else paste(out, collapse = ", ")
+  })
+}
+
+## ---------------------------------------------------------------------------
+## Apply. Keeps the original column so the mapping stays auditable.
+## ---------------------------------------------------------------------------
+
+gwas_study_info <- gwas_study_info |>
+  mutate(
+    collected_all_disease_terms_raw = collected_all_disease_terms,
+    sero_term_class = recode_sero(collected_all_disease_terms, "class"),
+    collected_all_disease_terms = recode_sero(collected_all_disease_terms, "term")
+  )
+
+## Check what happened
+gwas_study_info |>
+  filter(grepl("seropos", collected_all_disease_terms_raw)) |>
+  select(collected_all_disease_terms_raw) |> 
+  distinct() |>
+  nrow()
+
+gwas_study_info |>
+  filter(grepl("seropos", collected_all_disease_terms_raw)) |>
+  select(collected_all_disease_terms, collected_all_disease_terms_raw) |> 
+  distinct() |>
+  head()
+
+## Anything still containing "seropos" after mapping = a term missing from sero_map
+gwas_study_info |>
+  filter(grepl("seropos", collected_all_disease_terms)) |>
+  distinct(collected_all_disease_terms)
+
+```
+
+
 ## Where a study investigates a given aspect of of disease, reduce this to a study of this disease
 
 ### Disease susceptibility 
@@ -544,9 +785,24 @@ gwas_study_info = gwas_study_info |>
          stringr::str_replace_all(collected_all_disease_terms,
                           "(?<=^|, )alzheimers disease biomarker measurement(?=,|$)",
                           "alzheimers disease"
+         )) |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )alzheimers disease biomarker(?=,|$)",
+                          "alzheimers disease"
+         ))
+
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+         stringr::str_replace_all(collected_all_disease_terms,
+                          "(?<=^|, )liver disease biomarker(?=,|$)",
+                          "alzheimers disease"
          ))
 
 ```
+
+
 
 ## Cancer aggressiveness measurement
 
@@ -1042,11 +1298,13 @@ gwas_study_info =
 
 gwas_study_info =
   gwas_study_info |>
-  mutate(collected_all_disease_terms = 
-           str_replace_all(pattern = "cardiovascular disease biomarker measurement",
-                           replacement = "cardiovascular disease",
-                           string = collected_all_disease_terms))
-
+  mutate(
+    collected_all_disease_terms = str_replace_all(
+      pattern = "cardiovascular disease biomarker(?: measurement)?",
+      replacement = "cardiovascular disease",
+      string = collected_all_disease_terms
+    )
+  )
 
 ```
 
@@ -1057,10 +1315,9 @@ gwas_study_info =
 gwas_study_info =
   gwas_study_info |>
   mutate(collected_all_disease_terms = 
-           str_replace_all(pattern = "cancer biomarker measurement",
+           str_replace_all(pattern = "cancer biomarker(?: measurement)?",
                            replacement = "cancer",
                            string = collected_all_disease_terms))
-
 
 ```
 
