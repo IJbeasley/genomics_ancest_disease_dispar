@@ -158,7 +158,11 @@ gwas_study_info =
   gwas_study_info |>
   mutate(MAPPED_TRAIT = ifelse(MAPPED_TRAIT == "",
                                NA,
-                               MAPPED_TRAIT))
+                               MAPPED_TRAIT),
+         MAPPED_TRAIT_URI = ifelse(MAPPED_TRAIT_URI == "",
+                                   NA,
+                                   MAPPED_TRAIT_URI)
+         )
 
 gwas_study_info =
   gwas_study_info |>
@@ -1189,6 +1193,12 @@ gwas_study_info =
                                                  ", "),
          MAPPED_BACKGROUND_TRAIT = stringr::str_replace_all(MAPPED_BACKGROUND_TRAIT, 
                                                           pattern = "\\* ", 
+                                                          ", "),
+         MAPPED_BACKGROUND_TRAIT_URI = stringr::str_replace_all(MAPPED_BACKGROUND_TRAIT_URI, 
+                                                          pattern = "\\* ", 
+                                                          ", "),
+         MAPPED_TRAIT_URI = stringr::str_replace_all(MAPPED_TRAIT_URI,
+                                                          pattern = "\\* ", 
                                                           ", ")
          )
 
@@ -1218,17 +1228,25 @@ length(all_gwas_terms)
 
 ```{r combine_disease_terms}
 
+# EFO 'Disease' descendants
 efo_descendants <- readLines(here::here("output/trait_ontology/efo_0000408_descendants.txt"))
-
+# Mondo 'Human Disease' descendants
 mondo_descendants <- readLines(here::here("output/trait_ontology/mondo_0700096_descendants.txt"))
-
+# NCIT (Disease or Disorder) descendants
 ncit_descendants <- readLines(here::here("output/trait_ontology/ncit_C2991_descendants.txt"))
-
+# Orphanet Disorder descendants
 orphanet_descendants <- readLines(here::here("output/trait_ontology/orphanet_557493_descendants.txt"))
-
+# Age of onset of disease descendants
 age_of_onset_descendants <- readLines(here::here("output/trait_ontology/oba_2020000_descendants.txt"))
-
+# Disease measurement terms
 disease_measurement_terms <- readLines(here::here("output/trait_ontology/efo_0001444_disease_measurement_terms.txt"))
+# Sign or symptom 
+sign_or_symptom_terms <- readLines(here::here("output/trait_ontology/efo_0003765_descendants.txt"))
+# Injury
+injury <- readLines(here::here("output/trait_ontology/efo_0000546_descendants.txt"))
+injury = stringr::str_trim(tolower(injury))
+injury <- c(injury,
+            "fall")
 
 disease_typos = c("Alzheimer disease",
                   "late-onset Alzheimers disease",
@@ -1237,89 +1255,45 @@ disease_typos = c("Alzheimer disease",
                   "Iron deficiency anemia"
                   )
 
-biomarker_terms <- c("cardiovascular disease biomarker measurement",
-                     "cancer biomarker measurement",
-                     "diabetes mellitus biomarker",
-                     "osteoarthritis biomarker measurement",
-                     "liver disease biomarker",
-                     "alzheimer's disease biomarker measurement",
-                     "iron deficiency anemia (disorder)"
-                     )
-
-other_disorders <- c(
-           "Allergic disease", 
-           "Churg-Strauss syndrome",
-           "Iridocyclitis",
-           "Phlebitis",
-           "pregnancy induced alloimmunization",
-           "somnambulism",
-           "suicide",
-           "attempted suicide",
-           "suicide behaviour",
-           "suicide ideation measurement",
-           "suicide behaviour measurement",
-           "Lewy body dementia",
-           "Lewy body attribute",
-           "non-Hodgkins lymphoma",
-           "Ischemic Stroke",
-           "Lung disease",
-           "Respiratory System Disease",
-           "Alzheimer disease, APOE carrier status",
-           "Genital neoplasm, female",
-           "HIV-associated neurocognitive disorder",
-           "encephalopathy acute infection-induced",
-           "anomalous atrioventricular excitation (disorder)",
-           "scleritis and episcleritis (disorder)",
-           "atopic march",
-           "infection",
-           "neural tube defects, susceptibility to",
-           "migraine without aura, susceptibility to, 4",
-           "hiv mother to child transmission",
-           "hemolysis",
-           "chromosomal aberration",
-           "dna methylation",
-           "gata1 gene mutation",
-           "atropy",
-           "premature birth",
-           "growth delay",
-           "reduced left ventricular ejection fraction",
-           "hepatitis b",
-           "vascular brain injury measurement",
-           "borderline personality disorder symptom",
-           "miscarriage",
-           "emphysema pattern measurement",
-           "emphysema imaging measurement",
-           "persistent staphylococcus aureus carrier status",
-           "intermittent staphylococcus aureus carrier status",
-           "influenza a severity measurement",
-           "pneumonia severity measurement",
-           "hsv2 virologic severity measurement",
-           "opioid overdose severity measurement",
-           "nausea and vomiting of pregnancy severity measurement",
-           "myopic maculopathy severity measurement",
-           "hepatitis C virus infection"
-)
- 
- 
- disease_status_terms <- c(
- "benign",
- "remission",
- "disease recurrence",
- "complicated disease course",
- "disease prognosis measurement",
- "mild disease course",
- "disease free survival",
- "progression free survival",
- "survival time",
- "overall survival",
- "illness severity status"
- )
-
 family_disease_terms <- c("family history of breast cancer",
                           "family history of cancer",
                           "family history of prostate cancer",
                           "family history of upper gastrointestinal cancer",
                           "family history of uterine fibroids")
+
+ disease_status_terms <- c(
+ "benign",
+ "remission",
+ "disease recurrence",
+ "atopic march",
+ "complicated disease course",
+ "mild disease course"
+ )
+ 
+ other_disorders <- c(
+           "pregnancy induced alloimmunization",
+           "somnambulism",
+           "attempted suicide",
+           "suicide behaviour",
+           "suicide",
+           "suicide ideation",
+           "suicidal ideation",
+           "lewy body attribute",
+           "alzheimer disease, apoe carrier status",
+           "encephalopathy acute infection-induced",
+           "anomalous atrioventricular excitation (disorder)",
+           "scleritis and episcleritis (disorder)",
+           "infection",
+           "neural tube defects, susceptibility to",
+           "migraine without aura, susceptibility to, 4",
+           "hiv mother to child transmission",
+           "hemolysis",
+           "premature birth",
+           "spontaneous preterm birth",
+           "growth delay"
+)
+
+
 
 disease_terms = c(mondo_descendants,
                   efo_descendants,
@@ -1327,12 +1301,13 @@ disease_terms = c(mondo_descendants,
                   orphanet_descendants,
                   age_of_onset_descendants,
                   disease_measurement_terms,
-                  family_disease_terms,
+                  sign_or_symptom_terms,
                   disease_typos,
-                  biomarker_terms,
+                  family_disease_terms,
                   disease_status_terms,
-                  other_disorders) |>
-                  unique()
+                  other_disorders,
+                  injury
+                  )
 
 
 disease_terms = stringr::str_trim(tolower(disease_terms))
@@ -1521,34 +1496,6 @@ round(100 * length(not_accounted_for) / length(all_gwas_terms),
 
 
 ```
-
-### Find seropositivity terms in GWAS traits
-
-```{r seropositivity_terms_in_gwas}
-
-seropositivity_terms <- grep("seropositivity|antibody", measurement, value = T)
-seropositivity_terms <- c(seropositivity_terms,
-                          "foot-and-mouth disease virus seropositivity",
-                          "bacillus phage virus seropositivity")
-
-measurement <- measurement[!(measurement %in% seropositivity_terms)]
-
-seropositivity_gwas = not_accounted_for[not_accounted_for %in% seropositivity_terms]
-
-print("Number of GWAS traits under seropositivity terms")
-length(seropositivity_gwas)
-
-print("Percentage of GWAS traits under seropositivity terms")
-round(100 * length(seropositivity_gwas) / length(all_gwas_terms),
-      digits = 1)
-
-not_accounted_for = not_accounted_for[!not_accounted_for %in% seropositivity_gwas]
-print("Percentage of GWAS traits not accounted for by disease, disorder or seropositivity terms")
-round(100 * length(not_accounted_for) / length(all_gwas_terms),
-      digits = 1)
-
-```
-
 ### General measurement terms 
 
 ```{r general_measurement_terms_in_gwas}
@@ -1695,32 +1642,6 @@ round(100 * length(behavior_gwas) / length(all_gwas_terms),
       digits = 1)
 
 not_accounted_for = not_accounted_for[!not_accounted_for %in% behavior_gwas]
-
-print("Percentage of GWAS traits not accounted for so far")
-round(100 * length(not_accounted_for) / length(all_gwas_terms),
-      digits = 1)
-
-print("Number of GWAS traits not accounted for so far")
-length(not_accounted_for)
-
-```
-
-## Injury
-
-```{r find_injury_terms_in_gwas}
-
-injury <- readLines(here::here("output/trait_ontology/efo_0000546_descendants.txt"))
-injury = stringr::str_trim(tolower(injury))
-injury <- c(injury,
-            "fall")
-
-injury_gwas = not_accounted_for[not_accounted_for %in% injury]
-
-print("Percentage of GWAS traits under injury terms")
-round(100 * length(injury_gwas) / length(all_gwas_terms),
-      digits = 1)
-
-not_accounted_for = not_accounted_for[!not_accounted_for %in% injury_gwas]
 
 print("Percentage of GWAS traits not accounted for so far")
 round(100 * length(not_accounted_for) / length(all_gwas_terms),
@@ -1966,8 +1887,7 @@ not_accounted_for = not_accounted_for[!not_accounted_for %in% cell_line_gwas]
 ```{r disease_terms}
 
 disease_or_disorder <- c(disease_gwas,
-                          pheno_abnorm_gwas,
-                          seropositivity_gwas
+                          pheno_abnorm_gwas
                           )
 
 
@@ -2049,7 +1969,6 @@ gwas_study_info |>
                                                          MAPPED_TRAIT == "" ~ NA,
                                                          tolower(MAPPED_TRAIT) %in% disease_or_disorder ~ "Disease/Disorder",
                                                          #tolower(MAPPED_TRAIT) %in% pheno_abnorm_gwas ~ "Phenotypic Abnormality",
-                                                         tolower(MAPPED_TRAIT) %in% seropositivity_gwas ~ "Seropositivity",
                                                          tolower(MAPPED_TRAIT) %in% bmi_weight_gwas ~ "BMI/Weight/Body Fat Measurement",
                                                          tolower(MAPPED_TRAIT) %in% lipid_cholesterol_gwas ~ "Lipid/Cholesterol Measurement",
                                                          tolower(MAPPED_TRAIT) %in% brain_measurement_terms ~ "Brain Measurement",
@@ -2058,7 +1977,6 @@ gwas_study_info |>
                                                          tolower(MAPPED_TRAIT) %in% response_gwas ~ "Response",
                                                          tolower(MAPPED_TRAIT) %in% mental_gwas ~ "Mental Process",
                                                          tolower(MAPPED_TRAIT) %in% behavior_gwas ~ "Behavior",
-                                                         tolower(MAPPED_TRAIT) %in% injury_gwas ~ "Injury",
                                                          tolower(MAPPED_TRAIT) %in% phenotype_gwas ~ "Phenotype",
                                                          tolower(MAPPED_TRAIT) %in% medical_procedure_gwas ~ "Medical Procedure",
                                                          tolower(MAPPED_TRAIT) %in% enviro_factors_gwas ~ "Environmental Factor",
@@ -2244,7 +2162,6 @@ gwas_study_info |>
   dplyr::mutate(DISEASE_STUDY = 
                    case_when(MAPPED_TRAIT_CATEGORY == "Disease/Disorder" | 
                              MAPPED_TRAIT_CATEGORY == "Phenotypic Abnormality" |  
-                             MAPPED_TRAIT_CATEGORY == "Seropositivity" |
                              BACKGROUND_TRAIT_CATEGORY == "Disease/Disorder" | 
                              BACKGROUND_TRAIT_CATEGORY == "Phenotypic Abnormality" ~ T,
                              T ~ F )
@@ -3328,28 +3245,28 @@ gwas_study_info |>
 
 # Saving:
 
-## Save manually-curated disease ontology terms
+## Save all disease, disorder, condition related-terms ontology terms
 
 ```{r save_manual_disease_ontology_terms}
 
-# manually-curated list of disease terms 
-manually_curated_disease_terms <- 
-  c(family_disease_terms,
-    disease_typos,
-    biomarker_terms,
-    disease_status_terms,
-    other_disorders,
-    disease_measurement_terms,
-    seropositivity_gwas
-  ) 
+all_disease_terms <- c(
+  gwas_study_info |> 
+    filter(DISEASE_STUDY == T) |> 
+    select(all_disease_terms) |> 
+    pull() |>
+    str_split(pattern = "; ") |>
+    unlist() |>
+    unique()
+)
 
-print("Number of manually-curated disease ontology terms")
-print(length(manually_curated_disease_terms))
+print("Number of all disease ontology terms")
+
+print(length(all_disease_terms))
   
-manually_curated_disease_terms <- data.frame(disease_terms = manually_curated_disease_terms) 
+all_disease_terms <- data.frame(disease_terms = all_disease_terms) 
 
-writexl::write_xlsx(path = here::here("output/trait_ontology/manually_curated_disease_terms.xlsx"),
-                    manually_curated_disease_terms
+writexl::write_xlsx(path = here::here("output/trait_ontology/all_disease_terms.xlsx"),
+                    all_disease_terms
                     )
 
 ```
