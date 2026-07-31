@@ -214,8 +214,6 @@ disease_course_descendants[1:5]
 
 writeLines(disease_course_descendants, here::here("output/trait_ontology/ogms_0000063_descendants.txt"))
 
-
-
 ```
 
 ## Age of onset of disease (http://purl.obolibrary.org/obo/OBA_2020000)
@@ -294,21 +292,20 @@ writeLines(hp_descendants, here::here("output/trait_ontology/hp_0000118_descenda
 
 ```
 
-# Get trait ontology terms relating to 'Measurement'
+## Get trait ontology terms for sign or symptom (EFO:0003765)
 
-## Measurement terms (<http://www.ebi.ac.uk/efo/EFO_0001444>)
+```{r sign_or_symptom, eval = F}
 
-```{r measurement_descendants, eval = F}
-# Define the API endpoint
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001444/descendants"
+url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0003765/descendants"
 
-measurement_descendants <- c()
+efo_descendants <- c()
+
 repeat {
   res <- GET(url)
   stop_for_status(res)
   data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
   
-  measurement_descendants <- c(measurement_descendants, data$`_embedded`$terms$label)
+  efo_descendants <- c(efo_descendants, data$`_embedded`$terms$label)
   
   # check if there is a next page
   if (!is.null(data$`_links`$`next`$href)) {
@@ -318,47 +315,169 @@ repeat {
   }
 }
 
-length(measurement_descendants)
-measurement_descendants[1:5]
+length(efo_descendants)
+efo_descendants[1:5]
 
-disease_measurement_grep_terms = c("age of onset",
-                                   "alcohol use",
-                                   "allergy",
-                                   "anemia (phenotype)",
-                                  "anxiety",
-                                  "cancer aggressiveness",
-                                  "coronary atherosclerosis",
-                                  "dependence",
-                                  "depressive",
-                                  "psoriasis 14,pustular",
-                                  "disease progression",
-                                  "disease severity",
-                                  "exacerbation",
-                                  "family history",
-                                  "food addiction",
-                                  "insomnia",
-                                  "lung disease",
-                                  "lewy body dementia",                                  
-                                  "preeclampsia",
-                                  "rosacea",
-                                  "stroke outcome",
-                                  "sleep apnea",
-                                  "susceptibility to",
-                                  "symptom",
-                                  "oppositional defiant",
-                                  "withdrawal",
-                                  "psoriasis",
-                                  "psychosis"
-                                  )
+writeLines(efo_descendants, here::here("output/trait_ontology/efo_0003765_descendants.txt"))
+
+```
+
+# Get trait ontology terms relating to 'Measurement'
+
+## Measurement terms (<http://www.ebi.ac.uk/efo/EFO_0001444>)
+
+```{r measurement_descendants, eval = F}
+
+base <- paste0("http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/",
+               "http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001444/descendants")
+
+get_page <- function(p, size = 500) {
+  res <- GET(base, query = list(page = p, size = size))
+  stop_for_status(res)
+  fromJSON(content(res, as = "text", encoding = "UTF-8"))
+}
+
+first <- get_page(0)
+first$page          # <- look at totalElements / totalPages before anything else
+
+out <- vector("list", first$page$totalPages)
+for (p in seq_len(first$page$totalPages) - 1L) {
+  d <- get_page(p)
+  out[[p + 1L]] <- data.frame(
+    iri        = d$`_embedded`$terms$iri,
+    short_form = d$`_embedded`$terms$short_form,
+    label      = d$`_embedded`$terms$label,
+    stringsAsFactors = FALSE
+  )
+}
+measurement_descendants <- do.call(rbind, out)
+measurement_descendants <- measurement_descendants$label
+
+disease_measurement_grep_terms <- c("age at",
+                                    "addiction",
+                                    "allergy",
+                                    "allergic",
+                                    "alcohol use disorder",
+                                    "alzheimer's disease",
+                                    "anxiety",
+                                    "autoimmune disease",
+                                    #"biomarker",
+                                    "brain injury",
+                                    "cancer biomarker",
+                                    "cancer aggressiveness",
+                                    "coronary atherosclerosis",
+                                    "cardiovascular disease",
+                                    "diagnosis",
+                                    "diabetes mellitus",
+                                    "dementia",
+                                    "dependence",
+                                    "depressive",
+                                    "disease activity score",
+                                    "distant metastasis free survival",
+                                    "disease progression",
+                                    "disease prognosis",
+                                    "disease free survival",
+                                    "metastasis free survival",
+                                    "emphysema",
+                                    "exacerbation",
+                                    "event free survival time",
+                                    "family history",
+                                    "infection",
+                                    "insomnia",
+                                    "liver disease",
+                                    "mental or behavioural disorder",
+                                    "miscarriage",
+                                    "onset",
+                                    "osteoarthritis",
+                                    "oppositional defiant disorder",
+                                    "progression free survival",
+                                    "post-traumatic stress disorder",
+                                    "predisposition",
+                                    "psoriasis",
+                                    "respiratory disease",
+                                    "severity",
+                                    "susceptibility to",
+                                    "suicide",
+                                    "survival time",
+                                    "staphylococcus aureus carrier",
+                                    "stillbirth",
+                                    "sleep apnea",
+                                    "squamous cell carcinoma",
+                                    "symptom",
+                                    "withdrawal"
+                                    )
+
+seropositivity_terms <- grep("seropositivity|antibody", 
+                             measurement_descendants, 
+                             value = T,
+                             ignore.case = T)
+
+# --- seropositivity terms to exclude: ---- #
+gut_virome <-   grep("phage", 
+                     seropositivity_terms, 
+                     value = T) 
+# gut commensal antibody panels
+gut_commensal <- c(
+  "akkermansia seropositivity",   
+  "alistipes seropositivity",
+  "bacillaceae seropositivity",   
+  "bacilli seropositivity",  
+  "bacillus seropositivity", 
+  "bacteroidaceae seropositivity",
+  "bacteroidales seropositivity", 
+  "bacteroides seropositivity",   
+  "barnesiella seropositivity",   
+  "bifidobacterium seropositivity",
+  "blautia seropositivity",  
+  "butyrivibrio seropositivity",  
+  "clostridiales seropositivity", 
+  "coprococcus seropositivity",   
+  "dorea seropositivity",    
+  "eubacterium seropositivity",   
+  "faecalibacterium seropositivity",
+  "firmicutes seropositivity",    
+  "lachnospiraceae seropositivity",
+  "lactobacillales seropositivity",
+  "lactobacillus seropositivity", 
+  "odoribacter seropositivity",   
+  "parabacteroides seropositivity",
+  "prevotella seropositivity",    
+  "roseburia seropositivity",
+  "ruminococcaceae seropositivity",
+  "flagellin seropositivity"
+)
+
+ ## ---- opportunists / commensals that can also be pathogens ------------- ###
+gut_commensal_opportunists <- c(
+  "enterobacteriaceae seropositivity",
+  "enterococcus faecalis seropositivity",
+  "escherichia seropositivity",
+  "haemophilus parainfluenzae seropositivity",
+  "pseudomonadaceae seropositivity"
+)
+
+other_sero_excl <- 
+  c("ralstonia solanacearum seropositivity",
+    "xanthomonas seropositivity",
+    "fibronectin seropositivity"
+    )
+
+seropositivity_terms <- seropositivity_terms[!(seropositivity_terms %in% c(gut_virome, 
+                                                     gut_commensal, 
+                                                     gut_commensal_opportunists,
+                                                     other_sero_excl))]
 
 disease_measurement_terms = 
-grep(pattern = paste0(disease_measurement_grep_terms, collapse = "|"),
-     measurement,
-      value = T
-      )
+grep(pattern = paste0(disease_measurement_grep_terms, 
+                      collapse = "|"),
+     measurement_descendants,
+      value = T,
+     ignore.case = T)
+
+disease_measurement_terms <- c(disease_measurement_terms, 
+                               seropositivity_terms)
 
 measurement_descendants = measurement_descendants[!measurement_descendants %in% disease_measurement_terms]
-
 
 writeLines(measurement_descendants, here::here("output/trait_ontology/efo_0001444_descendants.txt"))
 
