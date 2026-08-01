@@ -856,9 +856,11 @@ gbd_2019 <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"
 gbd_2019 =
   gbd_2019 |>
   select(cause = gbd_term,
-         icd10 = gbd_non_fatal_icd_10,
-         cause_hierarchy_level = gbd_level)
+         lancet_group)
 
+disease_mapping_with_cause = 
+  disease_mapping_with_cause |>
+  left_join(gbd_2019, by = "cause")
 
 data.table::fwrite(
 disease_mapping_with_cause,
