@@ -145,8 +145,6 @@ below:
 -   [Extract author-provided ICD-10 terms](05_extract_icd10.html)
 -   [Mapping all traits to ICD-10 codes](06_map_trait_to_icd10.html)
 
-[Manually mapped traits ](manual_trait_map_icd10.html)
-
 <br>
 
 ## Find GWAS publications of Lancet Commission Priority Diseases
@@ -155,17 +153,22 @@ Use the above mapping of disease traits to ICD-10 codes to find GWAS Catalog stu
 
 -   [Matching GWAS traits to GBD causes / diseases](gwas_to_gbd.html)
 
-```{r}
+```{r, include=FALSE}
 
-print("Number of papers studying at least one Lancet Commission Priority Disease")
+
 gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
 
+n_lancet_studies =
 gwas_study_info |> 
   dplyr::filter(cause != "") |> 
   dplyr::pull(PUBMED_ID) |>
   unique() |>
   length()
 
+print(paste0("Number of papers studying at least one Lancet Commission Priority Disease", 
+             n_lancet_studies))
+
+n_ncd7_studies =
 gwas_study_info |> 
   dplyr::filter(cause != "") |> 
   dplyr::filter(lancet_group == "NCD-7") |>
@@ -176,7 +179,9 @@ gwas_study_info |>
   unique() |>
   length()
 
-
+print(paste0("Number of papers studying at least one of the selected Lancet Priority Diseases",
+             "(NCD-7, excl. Suicide, Road injury)",
+             n_ncd7_studies))
 
 ```
 
