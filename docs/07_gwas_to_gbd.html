@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreedf2b88956f15d1f2baa4c532a2619bb212ce22a3targetblankdf2b889a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefb70b7ec7c6559f5bef32863f23765498d181c6atargetblankfb70b7ea">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/df2b88956f15d1f2baa4c532a2619bb212ce22a3" target="_blank">df2b889</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fb70b7ec7c6559f5bef32863f23765498d181c6a" target="_blank">fb70b7e</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreedf2b88956f15d1f2baa4c532a2619bb212ce22a3targetblankdf2b889a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreefb70b7ec7c6559f5bef32863f23765498d181c6atargetblankfb70b7ea"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/df2b88956f15d1f2baa4c532a2619bb212ce22a3" target="_blank">df2b889</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/fb70b7ec7c6559f5bef32863f23765498d181c6a" target="_blank">fb70b7e</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -551,7 +551,6 @@ Ignored files:
     Ignored:    FormatConverter.jar
     Ignored:    FormatConverter.zip
     Ignored:    analysis/.DS_Store
-    Ignored:    analysis/figure/
     Ignored:    ancestry_dispar_env/
     Ignored:    code/.DS_Store
     Ignored:    code/extract_text/__pycache__/
@@ -689,6 +688,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/fb70b7ec7c6559f5bef32863f23765498d181c6a/analysis/07_gwas_to_gbd.Rmd" target="_blank">fb70b7e</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-07-31
+</td>
+<td>
+Update trait cleaning
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/684783ad806e5028475e30c4764b9d6e85bbddec/docs/07_gwas_to_gbd.html" target="_blank">684783a</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-07-31
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1563,7 +1596,6 @@ disease_mapping_with_cause |&gt;
 10  34662886 ICD10 J38.7: Other disease… laryngeal disease      J38.7 J38.7     
 # ℹ 24 more rows
 # ℹ abbreviated name: ¹​collected_all_disease_terms</code></pre>
-<pre class="r"><code># !!!!!!!!!!!! Maybe caught one! </code></pre>
 </div>
 <div id="heart-disease" class="section level2">
 <h2>Heart disease</h2>
@@ -1660,148 +1692,20 @@ Adding missing grouping variables: `STUDY_ACCESSION`</code></pre>
 # ℹ 123 more rows
 # ℹ abbreviated name: ¹​collected_all_disease_terms
 # ℹ 1 more variable: cause &lt;chr&gt;</code></pre>
-<pre class="r"><code># problems with GCST90079743, GCST90083729 study provided mapping
-
-# pubmed id 29703844 - should map to type 2 diabetes
-#  genome-wide association study (GWAS) of DKD in type 2 diabetes (T2D)
-
-
-# ? idk: 27670767</code></pre>
-<div id="checking-hierarchy-levels" class="section level3">
-<h3>Checking hierarchy levels</h3>
-<pre class="r"><code># disease_mapping_with_cause = 
-#   disease_mapping_with_cause |&gt;
-#   filter(!is.na(cause))
-
-# filtering na to deal with pivoting 
-# disease_mapping_with_cause_grouped = 
-# disease_mapping_with_cause |&gt;
-# select(-icd10_code_num) |&gt;
-# tidyr::pivot_wider(
-#             id_cols = c(&quot;collected_all_disease_terms&quot;, 
-#                         &quot;icd10_code&quot;, 
-#                         &quot;icd10_description&quot;),
-#             names_from = cause_hierarchy_level, 
-#             names_glue = &quot;l{.name}_{.value}&quot;,
-#             values_from = cause,
-#             values_fn = ~str_flatten(unique(.x), collapse = &quot;, &quot;, na.rm = TRUE)
-#             )</code></pre>
-<pre class="r"><code># check which l2 causes are NA but l3 causes are not NA
-# can use l3 causes therefore to fill in l2 causes
-# disease_mapping_with_cause_grouped |&gt; 
-#   rowwise() |&gt; 
-#   filter(is.na(l2_cause) &amp; !is.na(l3_cause)) |&gt;
-#   head()
-# 
-# neoplasms = c(&quot;Other neoplasms&quot;, 
-#                                     &quot;Hodgkin lymphoma&quot;,
-#                                     &quot;Leukemia&quot;,
-#                                     &quot;Non-Hodgkin lymphoma&quot;,
-#               &quot;Multiple myeloma&quot;)
-# 
-# disease_mapping_with_cause_grouped = 
-#   disease_mapping_with_cause_grouped |&gt;
-#   rowwise() |&gt;
-#   mutate(l2_cause = 
-#            list(ifelse(is.na(l2_cause),
-#                   case_when(map_lgl(l3_cause, ~ .x %in% neoplasms) ~ &quot;Neoplasms&quot;,
-#                             map_lgl(l3_cause, ~ .x %in% &quot;Neonatal disorders&quot;) ~ &quot;Maternal and neonatal disorders&quot;,
-#                             map_lgl(l3_cause, ~ .x %in% &quot;Other cardiovascular and circulatory diseases&quot;) ~ &quot;Cardiovascular diseases&quot;
-#                             ),
-#                   l2_cause
-#            )
-#            )) |&gt;
-#   ungroup()
-          
-
-# to_map_manually &lt;- 
-# disease_mapping_with_cause_grouped |&gt; 
-#   rowwise() |&gt; 
-#   filter(is.null(l2_cause)) |&gt; 
-#   pull(collected_all_disease_terms) |&gt; 
-#   unique()
-# 
-# 
-# update_unmapped_cause = function(df, 
-#                                  unmapped_term, 
-#                                  l2_cause_rep, 
-#                                  l3_cause_rep){
-#   
-#   df = 
-#   df |&gt;
-#     mutate(l3_cause = 
-#            ifelse(collected_all_disease_terms == unmapped_term,
-#                   l3_cause_rep,
-#                   l3_cause
-#            )) |&gt;
-#     mutate(l2_cause = 
-#            ifelse(collected_all_disease_terms == unmapped_term,
-#                   l2_cause_rep,
-#                   l2_cause
-#            ))    
-#            
-#     return(df)
-#            
-# }
-# 
-# disease_mapping_with_cause_grouped = 
-# update_unmapped_cause(disease_mapping_with_cause_grouped, 
-#                       &quot;bone cancer&quot;,
-#                       &quot;Neoplasms&quot;,
-#                       &quot;Malignant neoplasms of bone and articular cartilage&quot;)</code></pre>
-</div>
 </div>
 </div>
 <div id="save-combine-with-gwas-data" class="section level1">
 <h1>Save + combine with GWAS data</h1>
-<pre class="r"><code># disease_mapping_orig &lt;- data.table::fread(
-# here::here(&quot;output/icd_map/gwas_disease_to_icd10_mapping.csv&quot;)
-# )
-# 
-# disease_mapping_with_cause_grouped =
-#   disease_mapping_with_cause_grouped |&gt;
-#   tidyr::unnest_longer(c(&quot;l3_cause&quot;, &quot;l4_cause&quot;)) 
+<pre class="r"><code>gbd_2019 &lt;- readxl::read_xlsx(here::here(&quot;data/icd/lancet_conditions_icd10.xlsx&quot;))
 
-disease_mapping_final =  disease_mapping_with_cause
-  # left_join(
-  #   disease_mapping_orig,
-  #   disease_mapping_with_cause,
-  #   by = c(&quot;collected_all_disease_terms&quot;, 
-  #          &quot;icd10_code&quot;, 
-  #          &quot;icd10_description&quot;)
-  # )
+gbd_2019 =
+  gbd_2019 |&gt;
+  select(cause = gbd_term,
+         icd10 = gbd_non_fatal_icd_10,
+         cause_hierarchy_level = gbd_level)
 
-# gwas_study_info &lt;- fread(here::here(&quot;output/gwas_cat/gwas_study_info_group_v2.csv&quot;))
-# 
-# gwas_study_info =
-#   gwas_study_info |&gt;
-#   select(`DISEASE/TRAIT`, PUBMED_ID, STUDY_ACCESSION, COHORT)
-# 
-# disease_mapping_final =
-#   left_join(
-#     disease_mapping_final,
-#     gwas_study_info
-#   )
-
-
-# disease_mapping_final = 
-#   disease_mapping_final |&gt;
-#   group_by(STUDY_ACCESSION, collected_all_disease_terms) |&gt;
-#   summarise(
-#     PUBMED_ID = paste0(unique(PUBMED_ID), collapse = &quot;; &quot;),
-#     COHORT = paste0(unique(COHORT), collapse = &quot;; &quot;),
-#     icd10_code = paste0(unique(icd10_code), collapse = &quot;; &quot;),
-#     icd10_description = paste0(unique(icd10_description), collapse = &quot;; &quot;),
-#     # l2_cause = str_flatten(unique(str_split(l2_cause, &quot;, &quot;)), # add separation step here ... 
-#     #                        collapse = &quot;; &quot;, na.rm = TRUE),
-#     l3_cause = str_flatten(unique(str_split(l3_cause, &quot;, &quot;)), 
-#                            collapse = &quot;; &quot;, na.rm = TRUE),
-#     l4_cause = str_flatten(unique(str_split(l4_cause, &quot;, &quot;)), 
-#                            collapse = &quot;; &quot;, na.rm = TRUE)
-#   ) 
 
 data.table::fwrite(
-# disease_mapping_final,
 disease_mapping_with_cause,
 here::here(&quot;output/icd_map/gwas_study_gbd_causes.csv&quot;)
 )</code></pre>
