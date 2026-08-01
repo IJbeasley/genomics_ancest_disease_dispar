@@ -781,8 +781,6 @@ disease_mapping_with_cause |>
                                 na.rm = T))
 
 
-# !!!!!!!!!!!! Maybe caught one! 
-
 ```
 
 ## Heart disease
@@ -846,163 +844,23 @@ disease_mapping_with_cause |>
   distinct()
 
 
-# problems with GCST90079743, GCST90083729 study provided mapping
-
-# pubmed id 29703844 - should map to type 2 diabetes
-#  genome-wide association study (GWAS) of DKD in type 2 diabetes (T2D)
-
-
-# ? idk: 27670767
-
 ```
 
-
-### Checking hierarchy levels
-
-```{r check_hierarchy_levels}
-
-# disease_mapping_with_cause = 
-#   disease_mapping_with_cause |>
-#   filter(!is.na(cause))
-
-# filtering na to deal with pivoting 
-# disease_mapping_with_cause_grouped = 
-# disease_mapping_with_cause |>
-# select(-icd10_code_num) |>
-# tidyr::pivot_wider(
-#             id_cols = c("collected_all_disease_terms", 
-#                         "icd10_code", 
-#                         "icd10_description"),
-#             names_from = cause_hierarchy_level, 
-#             names_glue = "l{.name}_{.value}",
-#             values_from = cause,
-#             values_fn = ~str_flatten(unique(.x), collapse = ", ", na.rm = TRUE)
-#             )
-
-
-```
-
-```{r fill_in_l2_causes}
-
-# check which l2 causes are NA but l3 causes are not NA
-# can use l3 causes therefore to fill in l2 causes
-# disease_mapping_with_cause_grouped |> 
-#   rowwise() |> 
-#   filter(is.na(l2_cause) & !is.na(l3_cause)) |>
-#   head()
-# 
-# neoplasms = c("Other neoplasms", 
-#                                     "Hodgkin lymphoma",
-#                                     "Leukemia",
-#                                     "Non-Hodgkin lymphoma",
-#               "Multiple myeloma")
-# 
-# disease_mapping_with_cause_grouped = 
-#   disease_mapping_with_cause_grouped |>
-#   rowwise() |>
-#   mutate(l2_cause = 
-#            list(ifelse(is.na(l2_cause),
-#                   case_when(map_lgl(l3_cause, ~ .x %in% neoplasms) ~ "Neoplasms",
-#                             map_lgl(l3_cause, ~ .x %in% "Neonatal disorders") ~ "Maternal and neonatal disorders",
-#                             map_lgl(l3_cause, ~ .x %in% "Other cardiovascular and circulatory diseases") ~ "Cardiovascular diseases"
-#                             ),
-#                   l2_cause
-#            )
-#            )) |>
-#   ungroup()
-          
-
-# to_map_manually <- 
-# disease_mapping_with_cause_grouped |> 
-#   rowwise() |> 
-#   filter(is.null(l2_cause)) |> 
-#   pull(collected_all_disease_terms) |> 
-#   unique()
-# 
-# 
-# update_unmapped_cause = function(df, 
-#                                  unmapped_term, 
-#                                  l2_cause_rep, 
-#                                  l3_cause_rep){
-#   
-#   df = 
-#   df |>
-#     mutate(l3_cause = 
-#            ifelse(collected_all_disease_terms == unmapped_term,
-#                   l3_cause_rep,
-#                   l3_cause
-#            )) |>
-#     mutate(l2_cause = 
-#            ifelse(collected_all_disease_terms == unmapped_term,
-#                   l2_cause_rep,
-#                   l2_cause
-#            ))    
-#            
-#     return(df)
-#            
-# }
-# 
-# disease_mapping_with_cause_grouped = 
-# update_unmapped_cause(disease_mapping_with_cause_grouped, 
-#                       "bone cancer",
-#                       "Neoplasms",
-#                       "Malignant neoplasms of bone and articular cartilage")
-
-
-```
 
 # Save + combine with GWAS data
 
 ```{r save_final_gwas_gbd_mapping}
 
-# disease_mapping_orig <- data.table::fread(
-# here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
-# )
-# 
-# disease_mapping_with_cause_grouped =
-#   disease_mapping_with_cause_grouped |>
-#   tidyr::unnest_longer(c("l3_cause", "l4_cause")) 
+gbd_2019 <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
 
-disease_mapping_final =  disease_mapping_with_cause
-  # left_join(
-  #   disease_mapping_orig,
-  #   disease_mapping_with_cause,
-  #   by = c("collected_all_disease_terms", 
-  #          "icd10_code", 
-  #          "icd10_description")
-  # )
+gbd_2019 =
+  gbd_2019 |>
+  select(cause = gbd_term,
+         icd10 = gbd_non_fatal_icd_10,
+         cause_hierarchy_level = gbd_level)
 
-# gwas_study_info <- fread(here::here("output/gwas_cat/gwas_study_info_group_v2.csv"))
-# 
-# gwas_study_info =
-#   gwas_study_info |>
-#   select(`DISEASE/TRAIT`, PUBMED_ID, STUDY_ACCESSION, COHORT)
-# 
-# disease_mapping_final =
-#   left_join(
-#     disease_mapping_final,
-#     gwas_study_info
-#   )
-
-
-# disease_mapping_final = 
-#   disease_mapping_final |>
-#   group_by(STUDY_ACCESSION, collected_all_disease_terms) |>
-#   summarise(
-#     PUBMED_ID = paste0(unique(PUBMED_ID), collapse = "; "),
-#     COHORT = paste0(unique(COHORT), collapse = "; "),
-#     icd10_code = paste0(unique(icd10_code), collapse = "; "),
-#     icd10_description = paste0(unique(icd10_description), collapse = "; "),
-#     # l2_cause = str_flatten(unique(str_split(l2_cause, ", ")), # add separation step here ... 
-#     #                        collapse = "; ", na.rm = TRUE),
-#     l3_cause = str_flatten(unique(str_split(l3_cause, ", ")), 
-#                            collapse = "; ", na.rm = TRUE),
-#     l4_cause = str_flatten(unique(str_split(l4_cause, ", ")), 
-#                            collapse = "; ", na.rm = TRUE)
-#   ) 
 
 data.table::fwrite(
-# disease_mapping_final,
 disease_mapping_with_cause,
 here::here("output/icd_map/gwas_study_gbd_causes.csv")
 )
