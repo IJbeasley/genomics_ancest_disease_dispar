@@ -243,6 +243,248 @@ gwas_study_info = gwas_study_info |>
          )
   )
 
+
+non_specific_cancer <-
+gwas_study_info |>
+  filter(collected_all_disease_terms == "cancer") |>
+  filter(!grepl("ICD", `DISEASE/TRAIT`, ignore.case = TRUE)) |>
+  filter(!grepl("PheCode", `DISEASE/TRAIT`, ignore.case = TRUE)) 
+
+studies_with_mapped_cancers <-
+ gwas_study_info |>
+filter(STUDY_ACCESSION %in% non_specific_cancer$STUDY_ACCESSION) |>
+filter(grepl("cancer", collected_all_disease_terms, ignore.case = TRUE))  |>
+filter(collected_all_disease_terms != "cancer")
+
+studies_with_mapped_cancers 
+
+# remove non-specific cancer reference for these studies, as specific cancers are mapped in the same study
+ gwas_study_info  <-
+  gwas_study_info |>
+  filter(!(collected_all_disease_terms == "cancer" & 
+         STUDY_ACCESSION %in% studies_with_mapped_cancers$STUDY_ACCESSION))
+
+non_specific_cancer <-
+   non_specific_cancer |>
+    filter(!(collected_all_disease_terms == "cancer" & 
+         STUDY_ACCESSION %in% studies_with_mapped_cancers$STUDY_ACCESSION))
+
+
+non_specific_cancer |>
+  filter(grepl("Prostate|PCA3 expression", `DISEASE/TRAIT`, ignore.case = TRUE))  |>
+  select(`DISEASE/TRAIT`) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  # replace non-specific 'cancer' with 'prostate cancer' where disease/trait contains 'prostate'
+  mutate(collected_all_disease_terms = ifelse(grepl("Prostate|PCA3 expression", 
+                                                    `DISEASE/TRAIT`, 
+                                                    ignore.case = TRUE) &
+                                               collected_all_disease_terms == "cancer",
+                                 "prostate cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+non_specific_cancer |>
+  filter(grepl("Breast", `DISEASE/TRAIT`, ignore.case = TRUE))  |>
+  select(`DISEASE/TRAIT`) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  # replace non-specific 'cancer' with 'breast cancer' where disease/trait contains 'breast'
+  mutate(collected_all_disease_terms = ifelse(grepl("Breast", 
+                                                    `DISEASE/TRAIT`, 
+                                                    ignore.case = TRUE) &
+                                               collected_all_disease_terms == "cancer",
+                                 "breast cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+
+non_specific_cancer |>
+  filter(grepl("Bowel|Colon", `DISEASE/TRAIT`, ignore.case = TRUE))  |>
+  select(`DISEASE/TRAIT`) |>
+  distinct()
+
+
+gwas_study_info = gwas_study_info |>
+  # replace non-specific 'cancer' with 'colorectal cancer' where disease/trait contains 'bowel or colon'
+  mutate(collected_all_disease_terms = ifelse(grepl("Bowel|Colon", 
+                                                    `DISEASE/TRAIT`, 
+                                                    ignore.case = TRUE) &
+                                               collected_all_disease_terms == "cancer",
+                                 "colorectal cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+
+non_specific_cancer |>
+  filter(grepl("Lung", `DISEASE/TRAIT`, ignore.case = TRUE))  |>
+  select(`DISEASE/TRAIT`) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  # replace non-specific 'cancer' with 'lung cancer' where disease/trait contains 'lung'
+  mutate(collected_all_disease_terms = ifelse(grepl("Lung", 
+                                                    `DISEASE/TRAIT`, 
+                                                    ignore.case = TRUE) &
+                                               collected_all_disease_terms == "cancer",
+                                 "lung cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+non_specific_cancer |>
+  filter(grepl("Skin", `DISEASE/TRAIT`, ignore.case = TRUE))  |>
+  select(`DISEASE/TRAIT`) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  # replace non-specific 'cancer' with "non-melanoma skin cancer"  and "malignant melanoma of skin" 
+  # where disease/trait contains 'skin'
+  mutate(collected_all_disease_terms = ifelse(grepl("Skin", 
+                                                    `DISEASE/TRAIT`, 
+                                                    ignore.case = TRUE) &
+                                               collected_all_disease_terms == "cancer",
+                                 "non-melanoma skin cancer; malignant melanoma of skin",
+                                 collected_all_disease_terms
+                                 )
+         ) 
+
+
+# 26546620
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "26546620" &
+                                               collected_all_disease_terms == "cancer",
+                                 "renal cell carcinoma; soft tissue sarcoma; ovarian cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 31597885
+# breast cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "31597885" &
+                                               collected_all_disease_terms == "cancer",
+                                 "breast cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 34390503
+# multiple myeloma
+# solid metastatic cancers: 
+# breast cancer
+# lung cancer
+# prostate cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "34390503" &
+                                               collected_all_disease_terms == "cancer",
+                                 "multiple myeloma; breast cancer; lung cancer; prostate cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+
+# 34528705
+# pancreatic cancer 
+# breast cancer 
+# colorectal cancer
+# ovarian cancer 
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "34528705" &
+                                               collected_all_disease_terms == "cancer",
+                                 "pancreatic cancer ; breast cancer;  colorectal cancer; ovarian cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 29299148
+# colorectal cancer
+# breast cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "29299148" &
+                                               collected_all_disease_terms == "cancer",
+                                 "breast cancer;  colorectal cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 28044437
+# gastrointestinal cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "28044437" &
+                                               collected_all_disease_terms == "cancer",
+                                 "gastrointestinal cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 35729236 
+# hormone sensitive cancers
+# breast, prostate, uterine, ovarian, and thyroid cancers.
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "35729236" &
+                                               collected_all_disease_terms == "cancer",
+                                 "breast cancer; prostate cancer; uterine cancer; ovarian cancer; thyroid cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 35752658
+# leukemia
+# lymphoma
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "35752658" &
+                                               collected_all_disease_terms == "cancer",
+                                 "leukemia; lymphoma",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# 37862240
+# prostate, head and neck, breast, or lung
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "37862240" &
+                                               collected_all_disease_terms == "cancer",
+                                 "prostate cancer; head and neck cancer; breast cancer; lung cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+
+# 36268685
+#  lung cancer, malignant melanoma, head and neck cancer, gastric cancer, kidney cancer, Hodgkin’s lymphoma, carcinoma of unknown primary, esophageal cancer, rectal cancer, malignant mesothelioma, bone cancer and gastroesophageal junction cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "36268685" &
+                                               collected_all_disease_terms == "cancer",
+                                 "lung cancer; malignant melanoma of the skin; head and neck cancer; gastric cancer; kidney cancer; hodgkins lymphoma; carcinoma of unknown primary; esophageal cancer; rectal cancer; malignant mesothelioma; bone cancer; gastroesophageal junction cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(grepl("Illnesses of mother - cancer (UKB data field 20110)",
+                                                    `DISEASE/TRAIT`) &
+                                               collected_all_disease_terms == "cancer",
+                                 "breast cancer; colorectal cancer; lung cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+# for 36929942, see table 1
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "36929942" &
+                                               collected_all_disease_terms == "cancer",
+                                 "breast cancer; colorectal cancer, lung cancer; endometrial cancer; esophageal cancer; glioma; head and neck cancer; malignant melanoma of the skin; ovarian cancer; pancreatic cancer; prostate cancer; kidney cancer",
+                                 collected_all_disease_terms
+                                 )
+         )
+
+
 ```
 
 ### Childhood cancer
