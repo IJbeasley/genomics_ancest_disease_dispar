@@ -507,15 +507,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree503d10a4ff09bb798c3d3fa4005c01c7439aee1etargetblank503d10aa">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree21db70ab41d5f47456fa7b45d2e3882073bce09dtargetblank21db70aa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/503d10a4ff09bb798c3d3fa4005c01c7439aee1e" target="_blank">503d10a</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/21db70ab41d5f47456fa7b45d2e3882073bce09d" target="_blank">21db70a</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree503d10a4ff09bb798c3d3fa4005c01c7439aee1etargetblank503d10aa"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree21db70ab41d5f47456fa7b45d2e3882073bce09dtargetblank21db70aa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -525,7 +525,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/503d10a4ff09bb798c3d3fa4005c01c7439aee1e" target="_blank">503d10a</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/21db70ab41d5f47456fa7b45d2e3882073bce09d" target="_blank">21db70a</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -590,10 +590,7 @@ Ignored files:
     Ignored:    data/icd/semiautomatic_ICD-pheno.txt
     Ignored:    data/icd/semiautomatic_ICD-pheno_UKB_subset.txt
     Ignored:    data/icd/umls-2025AA-mrconso.zip
-    Ignored:    data/icd/~$IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
-    Ignored:    data/icd/~$IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
-    Ignored:    data/icd/~$lancet_conditions_icd10.xlsx
-    Ignored:    data/icd/~$manual_disease_mappings_v2.xlsx
+    Ignored:    data/icd/~$phecode_to_icd10_manual_mapping_v5.xlsx
     Ignored:    disease_mapping_partway.csv
     Ignored:    doccano_venv/
     Ignored:    figures/
@@ -694,6 +691,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/21db70ab41d5f47456fa7b45d2e3882073bce09d/analysis/05_extract_icd10.Rmd" target="_blank">21db70a</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-19
+</td>
+<td>
+Update author provided ICD-10 extraction
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/68c53c80a8d454cb4d6d099a04617fd28dd61a85/docs/05_extract_icd10.html" target="_blank">68c53c8</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-19
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -801,6 +832,10 @@ print(&quot;Number of unique disease terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique disease terms&quot;</code></pre>
 <pre class="r"><code>print(length(diseases))</code></pre>
 <pre><code>[1] 1993</code></pre>
+<pre class="r"><code>print(&quot;Number of disease papers&quot;)</code></pre>
+<pre><code>[1] &quot;Number of disease papers&quot;</code></pre>
+<pre class="r"><code>print(length(unique(disease_mapping$PUBMED_ID)))</code></pre>
+<pre><code>[1] 4707</code></pre>
 </div>
 <div id="get-icd10-codes-from-author-provided-diseasetrait-column"
 class="section level2">
@@ -810,27 +845,22 @@ class="section level2">
   mutate(icd10_code = ifelse(grepl(&quot;ICD10&quot;, `DISEASE/TRAIT`),
                              str_extract(`DISEASE/TRAIT`, 
                                          &quot;(?&lt;=ICD10 )[^:]+(?=:)|(?&lt;=ICD10 )[^ ]+&quot;),
-                             NA),
-         icd10_code_origin = ifelse(grepl(&quot;ICD10&quot;, `DISEASE/TRAIT`),
-                                    &quot;Study Provided&quot;,
-                                    NA)
-)
-
-# fix weird ICD10 codes: R11.103.11 -&gt; R11
-disease_mapping =
-  disease_mapping |&gt;
-  mutate(icd10_code = stringr::str_replace(icd10_code, 
-                                         pattern = &quot;R11.103.11&quot;,
-                                         replacement = &quot;R11&quot;)
+                             NA)
+         ) |&gt;
+    mutate(icd10_code = ifelse(is.na(icd10_code),
+                             str_extract(`DISEASE/TRAIT`, 
+                                         &quot;(?&lt;=ICD-10\\s)[A-Z]{1}[0-9]{2}&quot;),
+                             icd10_code)
+         ) |&gt;
+      mutate(icd10_code = ifelse(is.na(icd10_code),
+                             str_extract(`DISEASE/TRAIT`, 
+                                         &quot;(?&lt;=ICD\\s)[A-Z]{1}[0-9]{2}&quot;),
+                             icd10_code)
+         ) |&gt;
+  mutate(icd10_code = ifelse(icd10_code == &quot;no&quot;, 
+                             NA,
+                             icd10_code)
          )
-
-# fix weird ICD10 codes: D63.165.8 -&gt; D63, N18.3-N18.9
-disease_mapping =
-  disease_mapping |&gt;
-  mutate(icd10_code = stringr::str_replace(icd10_code, 
-                                         pattern = &quot;D63.165.8&quot;,
-                                         replacement = &quot;D63, N18.3-N18.9&quot;)
-         ) 
 
 # Additionally, some studies provide ICD10 codes in the DISEASE/TRAIT column without the &quot;ICD10&quot; prefix
 # e.g. Source of report of K76 (other diseases of liver) (UKB data field 131671)
@@ -841,61 +871,279 @@ disease_mapping =
                              grepl(&quot;Source of report of&quot;, `DISEASE/TRAIT`),
                              str_extract(`DISEASE/TRAIT`,
                                          &quot;(?&lt;=Source of report of\\s)[A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?\\b&quot;),
-                             icd10_code),
-         icd10_code_origin = ifelse(grepl(&quot;Source of report of&quot;, 
-                                          `DISEASE/TRAIT`),
-                                    &quot;Study Provided&quot;,
-                                    icd10_code_origin)
-) |&gt;
-  mutate(icd10_code = str_remove_all(icd10_code, 
-                                     pattern = &quot;Source of report of &quot;)
-         )
+                             icd10_code)
+  )
 
-# Another example where  some studies provide ICD10 codes in the DISEASE/TRAIT column without the &quot;ICD10&quot; prefix
+# Additionally, there are examples where  some studies provide ICD10 codes in the DISEASE/TRAIT column without the &quot;ICD10&quot; prefix
 # e.g. Insulin-dependent diabetes mellitus (Union E10)
 disease_mapping =
   disease_mapping |&gt;
   mutate(icd10_code = ifelse(is.na(icd10_code) &amp;
                              grepl(&quot;Union&quot;, `DISEASE/TRAIT`),
                              str_extract(`DISEASE/TRAIT`, 
-                                         &quot;Union [A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?\\b&quot;),
-                             icd10_code),
-         icd10_code_origin = ifelse(grepl(&quot;Union&quot;, 
-                                          `DISEASE/TRAIT`),
-                                    &quot;Study Provided&quot;,
-                                    icd10_code_origin)
-) |&gt;
-  mutate(icd10_code = str_remove_all(icd10_code, 
-                                     pattern = &quot;Union &quot;)
+                                         &quot;(?&lt;=Union\\s)[A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?\\b&quot;),
+                             icd10_code)
   )
 
-disease_mapping =
+# note the source of the ICD-10 codes
+disease_mapping &lt;-
   disease_mapping |&gt;
-  mutate(icd10_code = ifelse(is.na(icd10_code) &amp;
-                             grepl(&quot;ICD [A-Z][0-9]|ICD-10 [A-Z][0-9]&quot;, 
-                                   `DISEASE/TRAIT`),
-                        str_match(`DISEASE/TRAIT`,
-                                  &quot;ICD(?:-10|10)?\\s*([A-Z][0-9]{1,2}(?:\\.[0-9A-Z]+)?)&quot;)[,2],
-                             icd10_code),
-         icd10_code_origin = ifelse(grepl(&quot;ICD [A-Z][0-9]|ICD-10 [A-Z][0-9]&quot;,
-                                          `DISEASE/TRAIT`),
-                                    &quot;Study Provided&quot;,
-                                    icd10_code_origin)
-)
+  mutate(icd10_code_match = ifelse(!is.na(icd10_code),
+                             &quot;DISEASE/TRAIT&quot;,
+                             NA),
+         icd10_code_origin = ifelse(!is.na(icd10_code),
+                                    &quot;Study ICD10&quot;,
+                                    NA)
+         )</code></pre>
+<pre class="r"><code># cleaning up weird icd-10 codes: 
+disease_mapping &lt;-
+  disease_mapping |&gt;
+  mutate(icd10_code = icd10_code |&gt;
+           # adding commas where only spaces between codes are provided
+                      str_replace_all(pattern = &quot;(?&lt;!,) &quot;, 
+                                     replacement = &quot;,&quot;) |&gt;
+           # putting an extra space after commas if not already present
+                      str_replace_all(pattern = &quot;\\,(?! )&quot;, 
+                                     replacement = &quot;, &quot;) |&gt;
+           # removing extra decimals at the end of codes
+                       str_remove_all(pattern = &quot;\\.$&quot;) |&gt;
+           # removing decimals where they should be commas
+                       str_replace_all(pattern = &quot;\\.,&quot;, 
+                                   replacement = &quot;,&quot;)
+         )
+  
 
-n_study_provided = 
 disease_mapping |&gt;
-  filter(icd10_code_origin == &quot;Study Provided&quot;) |&gt;
+  filter(icd10_code == &quot;D63.165.8&quot;) |&gt;
+  distinct(`DISEASE/TRAIT`, icd10_code)</code></pre>
+<pre><code>                                                          DISEASE/TRAIT
+1 ICD10 D63.165.8: Anemia in chronic kidney disease (Gene-based burden)
+2                     ICD10 D63.165.8: Anemia in chronic kidney disease
+  icd10_code
+1  D63.165.8
+2  D63.165.8</code></pre>
+<pre class="r"><code># D63.165.8 
+# should be D63,8, N18.3-N18.9
+disease_mapping  &lt;-
+  disease_mapping  |&gt;
+  mutate(icd10_code = ifelse(icd10_code ==  &quot;D63.165.8&quot;, 
+                              &quot;D63.8, N18.3, N18.4, N18.5, N18.9&quot;,
+                              icd10_code)
+         )
+
+# 127.0
+# Should be I27.0
+disease_mapping |&gt;
+  filter(icd10_code == &quot;D63.165.8&quot;) |&gt;
+  distinct(`DISEASE/TRAIT`, icd10_code)</code></pre>
+<pre><code>[1] DISEASE/TRAIT icd10_code   
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<pre class="r"><code>disease_mapping  &lt;-
+  disease_mapping  |&gt;
+  mutate(icd10_code = ifelse(icd10_code == &quot;127.0&quot;,
+                             &quot;I27.0&quot;,
+                             icd10_code))
+
+# K05.30-K05.31
+# should be K05.3
+disease_mapping |&gt;
+  filter(icd10_code == &quot;K05.30-31&quot;) |&gt;
+  distinct(`DISEASE/TRAIT`, icd10_code)</code></pre>
+<pre><code>                           DISEASE/TRAIT icd10_code
+1 ICD10 K05.30-31: Chronic periodontitis  K05.30-31</code></pre>
+<pre class="r"><code>disease_mapping  &lt;-
+  disease_mapping  |&gt;
+  mutate(icd10_code = ifelse(icd10_code == &quot;K05.30-31&quot;,
+                             &quot;K05.3&quot;,
+                             icd10_code))
+
+# in some cases the decimal is missing, e.g. &quot;T780&quot; should be &quot;T78.0&quot;
+disease_mapping |&gt;
+    filter(!is.na(icd10_code)) |&gt;
+    filter(str_detect(icd10_code, &quot;^[A-Z]{1}[0-9]{3,5}$&quot;)) |&gt;
+    distinct(`DISEASE/TRAIT`, icd10_code)</code></pre>
+<pre><code>                                                                 DISEASE/TRAIT
+1                                            ICD10 H029: Eye or eyelid problem
+2                                                  ICD10 S824: fracture fibula
+3                                                 ICD10 S6260: fracture finger
+4                                                    ICD10 S022: fracture nose
+5                                                  ICD10 S8220: fracture tibia
+6                                                ICD10 F430: nervous breakdown
+7                                                         ICD10 R091: pleurisy
+8                         ICD10 T887: allergy or anaphylactic reaction to drug
+9                         ICD10 T780: allergy or anaphylactic reaction to food
+10                     ICD10 N390: Urinary tract infection or kidney infection
+11                                       ICD10 R5382: chronic fatigue syndrome
+12                                                    ICD10 S223: fracture rib
+13                                         ICD10 R87619: abnormal smear cervix
+14                                    ICD10 R091: pleurisy (Gene-based burden)
+15                     ICD10 R87619: abnormal smear cervix (Gene-based burden)
+16                                ICD10 S223: fracture rib (Gene-based burden)
+17                             ICD10 S8220: fracture tibia (Gene-based burden)
+18                             ICD10 S824: fracture fibula (Gene-based burden)
+19                            ICD10 S6260: fracture finger (Gene-based burden)
+20                               ICD10 S022: fracture nose (Gene-based burden)
+21                       ICD10 H029: Eye or eyelid problem (Gene-based burden)
+22                   ICD10 R5382: chronic fatigue syndrome (Gene-based burden)
+23                               ICD10 N814: vaginal prolapse uterine prolapse
+24    ICD10 T887: allergy or anaphylactic reaction to drug (Gene-based burden)
+25    ICD10 T780: allergy or anaphylactic reaction to food (Gene-based burden)
+26 ICD10 N390: Urinary tract infection or kidney infection (Gene-based burden)
+27           ICD10 N814: vaginal prolapse uterine prolapse (Gene-based burden)
+28                           ICD10 F430: nervous breakdown (Gene-based burden)
+   icd10_code
+1        H029
+2        S824
+3       S6260
+4        S022
+5       S8220
+6        F430
+7        R091
+8        T887
+9        T780
+10       N390
+11      R5382
+12       S223
+13     R87619
+14       R091
+15     R87619
+16       S223
+17      S8220
+18       S824
+19      S6260
+20       S022
+21       H029
+22      R5382
+23       N814
+24       T887
+25       T780
+26       N390
+27       N814
+28       F430</code></pre>
+<pre class="r"><code>disease_mapping &lt;- 
+disease_mapping |&gt;
+  mutate(
+    icd10_code = ifelse(
+      str_detect(icd10_code, &quot;^[A-Z][0-9]{3}$&quot;),
+      str_replace(
+        icd10_code,
+        pattern = &quot;^([A-Z][0-9]{2})([0-9])$&quot;,
+        replacement = &quot;\\1.\\2&quot;
+      ),
+      icd10_code
+    )
+  )
+
+disease_mapping &lt;- 
+disease_mapping |&gt;
+  mutate(
+    icd10_code = ifelse(
+      str_detect(icd10_code, &quot;^[A-Z][0-9]{4}$&quot;),
+      str_replace(
+        icd10_code,
+        pattern = &quot;^([A-Z][0-9]{2})([0-9]{2})$&quot;,
+        replacement = &quot;\\1.\\2&quot;
+      ),
+      icd10_code
+    )
+  )
+
+disease_mapping &lt;- 
+disease_mapping |&gt;
+  mutate(
+    icd10_code = ifelse(
+      str_detect(icd10_code, &quot;^[A-Z][0-9]{5}$&quot;),
+      str_replace(
+        icd10_code,
+        pattern = &quot;^([A-Z][0-9]{2})([0-9]{3})$&quot;,
+        replacement = &quot;\\1.\\2&quot;
+      ),
+      icd10_code
+    )
+  )
+
+
+# remove surplus period in ICD10 codes, e.g. J98.457.6 should be J98.457
+disease_mapping |&gt;
+  filter(str_detect(icd10_code, &quot;^[A-Z][0-9]{2}\\.[0-9]{3}\\.[0-9]{1,3}$&quot;)) |&gt;
+  distinct(`DISEASE/TRAIT`, icd10_code)</code></pre>
+<pre><code>                                                                                                                                          DISEASE/TRAIT
+1  ICD10 E11.329.9: Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye (Gene-based burden)
+2                                                                       ICD10 T81.815.013.: Other complications of procedures, not elsewhere classified
+3                                                                                            ICD10 T81.149.88: Postprocedural shock (Gene-based burden)
+4                                                   ICD10 T81.815.013.: Other complications of procedures, not elsewhere classified (Gene-based burden)
+5                                                                                                                            ICD10 R11.103.11: Vomiting
+6                                                                                                              ICD10 J98.457.6: Other disorders of lung
+7                                                                                          ICD10 J98.457.6: Other disorders of lung (Gene-based burden)
+8                      ICD10 E11.329.9: Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye
+9                                                                                                                ICD10 T81.149.88: Postprocedural shock
+10                                                                                                       ICD10 R11.103.11: Vomiting (Gene-based burden)
+    icd10_code
+1    E11.329.9
+2  T81.815.013
+3   T81.149.88
+4  T81.815.013
+5   R11.103.11
+6    J98.457.6
+7    J98.457.6
+8    E11.329.9
+9   T81.149.88
+10  R11.103.11</code></pre>
+<pre class="r"><code>disease_mapping &lt;- 
+disease_mapping |&gt;
+  mutate(
+    icd10_code = ifelse(
+      str_detect(icd10_code, &quot;^[A-Z][0-9]{2}\\.[0-9]{3}\\.[0-9]{1,3}$&quot;),
+      str_extract(
+        icd10_code,
+        pattern = &quot;^[A-Z][0-9]{2}\\.[0-9]{3}&quot;,
+      ),
+      icd10_code
+    )
+  )
+  
+
+icd10_re &lt;- &quot;^[A-Z][0-9][0-9A-Z](\\.[0-9A-Z]{1,4})?$&quot;
+
+# check that all ICD10 codes are now valid
+disease_mapping |&gt;
+    filter(!is.na(icd10_code)) |&gt;
+    filter(!str_detect(icd10_code, icd10_re))  |&gt; 
+    tidyr::separate_longer_delim(icd10_code,delim = &quot;, &quot;)  |&gt;
+    filter(!str_detect(icd10_code, icd10_re))  |&gt; 
+    distinct(`DISEASE/TRAIT`, icd10_code) </code></pre>
+<pre><code>[1] DISEASE/TRAIT icd10_code   
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<pre class="r"><code>n_study_provided = 
+disease_mapping |&gt;
+  filter(icd10_code_origin == &quot;Study ICD10&quot;) |&gt;
+  distinct(STUDY_ACCESSION) |&gt;
   nrow()
 
 n_studies =
   disease_mapping |&gt;
+  distinct(STUDY_ACCESSION) |&gt;
   nrow()
 
 print(&quot;Percentage of studies that provide ICD10 codes:&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of studies that provide ICD10 codes:&quot;</code></pre>
 <pre class="r"><code>print(round(n_study_provided / n_studies * 100, 2))</code></pre>
-<pre><code>[1] 8.87</code></pre>
+<pre><code>[1] 10.83</code></pre>
+<pre class="r"><code>n_paper_provided = 
+disease_mapping |&gt;
+  filter(icd10_code_origin == &quot;Study ICD10&quot;) |&gt;
+  distinct(PUBMED_ID) |&gt;
+  nrow()
+
+n_papers =
+  disease_mapping |&gt;
+  distinct(PUBMED_ID) |&gt;
+  nrow()
+
+print(&quot;Percentage of papers that provide ICD10 codes:&quot;)</code></pre>
+<pre><code>[1] &quot;Percentage of papers that provide ICD10 codes:&quot;</code></pre>
+<pre class="r"><code>print(round(n_paper_provided / n_papers * 100, 2))</code></pre>
+<pre><code>[1] 0.32</code></pre>
 </div>
 <div id="get-icd10-codes-from-author-provided-phecodes"
 class="section level2">
@@ -938,7 +1186,8 @@ group_by(phecode) |&gt;
 # label the origin of these ICD10 codes as &quot;Study PheCode Mapping&quot;
 phecode_icd_map =
   phecode_icd_map |&gt;
-  mutate(icd10_code_origin = &quot;Study PheCode Mapping&quot;)
+  mutate(icd10_code_origin = &quot;Study PheCode (PheCode Map)&quot;,
+         icd10_code_match = &quot;DISEASE/TRAIT&quot;)
 
 disease_mapping =
   rows_patch(disease_mapping,
@@ -946,6 +1195,8 @@ disease_mapping =
               by = c(&quot;phecode&quot;),
               unmatched = &quot;ignore&quot;,
               )
+
+
 print(&quot;Number of ICD10 code obtained&quot;)</code></pre>
 <pre><code>[1] &quot;Number of ICD10 code obtained&quot;</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
@@ -954,14 +1205,14 @@ print(&quot;Number of ICD10 code obtained&quot;)</code></pre>
   summarise(n = n(), 
             percent = n()/n_studies *100)</code></pre>
 <pre><code># A tibble: 2 × 3
-  icd10_code_origin         n percent
-  &lt;chr&gt;                 &lt;int&gt;   &lt;dbl&gt;
-1 Study PheCode Mapping  6976   14.2 
-2 Study Provided         4345    8.87</code></pre>
+  icd10_code_origin               n percent
+  &lt;chr&gt;                       &lt;int&gt;   &lt;dbl&gt;
+1 Study ICD10                  4343    11.1
+2 Study PheCode (PheCode Map)  6976    17.8</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 11321</code></pre>
+<pre><code>[1] 11319</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
   head()</code></pre>
@@ -979,22 +1230,24 @@ print(&quot;Number of ICD10 code obtained&quot;)</code></pre>
 4                 sarcoidosis  36779085 2022    GCST90103387        D86
 5              hypothyroidism  36779085 2022    GCST90103388        E03
 6    type 1 diabetes mellitus  36779085 2022    GCST90103390        E10
-  icd10_code_origin phecode
-1    Study Provided      NA
-2    Study Provided      NA
-3    Study Provided      NA
-4    Study Provided      NA
-5    Study Provided      NA
-6    Study Provided      NA</code></pre>
+  icd10_code_match icd10_code_origin phecode
+1    DISEASE/TRAIT       Study ICD10      NA
+2    DISEASE/TRAIT       Study ICD10      NA
+3    DISEASE/TRAIT       Study ICD10      NA
+4    DISEASE/TRAIT       Study ICD10      NA
+5    DISEASE/TRAIT       Study ICD10      NA
+6    DISEASE/TRAIT       Study ICD10      NA</code></pre>
 <pre class="r"><code># per pubmed id, are there multiple icd10 code origins?
 disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
+  distinct(PUBMED_ID, icd10_code_origin) |&gt;
   group_by(PUBMED_ID) |&gt;
-  summarise(n_icd10_code_origins = n_distinct(icd10_code_origin)) |&gt;
-  pull(n_icd10_code_origins) |&gt;
-  summary()</code></pre>
-<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  1.000   1.000   1.000   1.059   1.000   2.000 </code></pre>
+  summarise(n_icd10_code_origins = n()) |&gt;
+  filter(n_icd10_code_origins &gt; 1)</code></pre>
+<pre><code># A tibble: 1 × 2
+  PUBMED_ID n_icd10_code_origins
+      &lt;int&gt;                &lt;int&gt;
+1  34737426                    2</code></pre>
 <pre class="r"><code># which pubmed ids have multiple icd10 code origins?
 disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
@@ -1023,23 +1276,38 @@ these missing Phecodes.</p>
 <pre class="r"><code># how many missing ICD10 codes for PheCodes?
 disease_mapping |&gt;
     filter(is.na(icd10_code) &amp; !is.na(phecode)) |&gt; 
-    nrow()</code></pre>
-<pre><code>[1] 957</code></pre>
-<pre class="r"><code># load manual mapping file
+    pull(phecode) |&gt; 
+    unique() |&gt; 
+    length()</code></pre>
+<pre><code>[1] 239</code></pre>
+<pre class="r"><code>missing_icd_phecodes &lt;- disease_mapping |&gt;
+    filter(is.na(icd10_code) &amp; !is.na(phecode)) |&gt; 
+    pull(phecode) |&gt; 
+    unique() 
+
+# load manual mapping file
 phecode_icd_manual = 
   readxl::read_xlsx(here::here(&quot;data/icd/phecode_to_icd10_manual_mapping_v5.xlsx&quot;))
 
 to_add = phecode_icd_manual |&gt;
   mutate(phecode = as.numeric(phecode),
-         icd10_code_origin = &quot;Study PheCode (Manual Mapping)&quot;) |&gt;
+         icd10_code_origin = &quot;Study PheCode (Manual Map)&quot;,
+         icd10_code_match = &quot;DISEASE/TRAIT&quot;) |&gt;
   select(-phenotype) |&gt;
   distinct()
 
 disease_mapping =
   rows_patch(disease_mapping,
              to_add,
-             unmatched = &quot;ignore&quot;)</code></pre>
-<pre><code>Matching, by = &quot;phecode&quot;</code></pre>
+             unmatched = &quot;ignore&quot;,
+             by = &quot;phecode&quot;)
+
+disease_mapping |&gt;
+    filter(is.na(icd10_code) &amp; !is.na(phecode)) |&gt; 
+    pull(phecode) |&gt;
+    unique() |&gt;
+   length()</code></pre>
+<pre><code>[1] 8</code></pre>
 </div>
 </div>
 </div>
@@ -1068,12 +1336,12 @@ group_by(icd10_code_origin) |&gt;
           ) |&gt; 
 arrange(icd10_code_origin, desc(n))</code></pre>
 <pre><code># A tibble: 4 × 3
-  icd10_code_origin                  n percent
-  &lt;chr&gt;                          &lt;int&gt;   &lt;dbl&gt;
-1 Study PheCode (Manual Mapping)   875    1.79
-2 Study PheCode Mapping           6976   14.2 
-3 Study Provided                  4345    8.87
-4 &lt;NA&gt;                           36781   75.1 </code></pre>
+  icd10_code_origin               n percent
+  &lt;chr&gt;                       &lt;int&gt;   &lt;dbl&gt;
+1 Study ICD10                  4343    8.87
+2 Study PheCode (Manual Map)    933    1.9 
+3 Study PheCode (PheCode Map)  6976   14.2 
+4 &lt;NA&gt;                        36725   75.0 </code></pre>
 <pre class="r"><code># how many papers with at least one ICD-10 Code mapping
 disease_mapping |&gt;
  filter(!is.na(icd10_code_origin)) |&gt;
@@ -1081,6 +1349,15 @@ disease_mapping |&gt;
   unique() |&gt;
   length()</code></pre>
 <pre><code>[1] 17</code></pre>
+<pre class="r"><code># check that all ICD10 codes are now valid
+disease_mapping |&gt;
+    filter(!is.na(icd10_code)) |&gt;
+    filter(!str_detect(icd10_code, icd10_re))  |&gt; 
+    tidyr::separate_longer_delim(icd10_code,delim = &quot;, &quot;)  |&gt;
+    filter(!str_detect(icd10_code, icd10_re))  |&gt; 
+    distinct(`DISEASE/TRAIT`, icd10_code) </code></pre>
+<pre><code>[1] DISEASE/TRAIT icd10_code   
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
 </div>
 <div id="save" class="section level1">
 <h1>Save</h1>
