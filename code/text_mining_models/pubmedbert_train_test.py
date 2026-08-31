@@ -1,5 +1,5 @@
 from datasets import Dataset, Features, Value, Sequence
-from transformers import AutoTokenizer, AutoModelForTokenClassification, AutoConfig, TrainingArguments, Trainer, DataCollatorForTokenClassification
+from transformers import AutoTokenizer, AutoModelForTokenClassification, AutoConfig, TrainingArguments, Trainer, DataCollatorForTokenClassification, EarlyStoppingCallback
 from torch import tensor
 import warnings
 import transformers 
@@ -14,6 +14,7 @@ import random
 import sys
 import inspect
 import matplotlib.pyplot as plt
+import itertools, json, copy
 
 # Make sibling modules in this directory importable regardless of cwd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -62,7 +63,7 @@ parser.add_argument(
     " dmis-lab/biobert-base-cased-v1.1"
 )
 parser.add_argument(
-    "--test-path",
+    "--test_path",
     type=str,
     default=None,
     help=(
@@ -86,6 +87,13 @@ parser.add_argument(
     default="output/text_mining_predictions",
     help=(
         "Path to save model predictions"
+    ),
+)
+parser.add_argument(
+    "--grid_search",
+    action="store_true",
+    help=(
+        "Whether to perform a hyperparameter grid search"
     ),
 )
 
@@ -270,11 +278,25 @@ else:
         raise FileNotFoundError(
             f"Model directory {args_parsed.model_path}/ not found. "
             "Train first without --skip_training"
-        )      
-  
+        )
 
-model.config.id2label = id2label
-model.config.label2id = label2id
+   # The fine-tuned checkpoint may have been trained with a wider set of
+   # entity types than --entity_types declares (it's a model artifact, not a
+   # user-supplied schema). Rebuild label_list / id2label / label2id / num_labels
+   # from the saved config so decoding lines up with the model's output head.
+   saved_id2label = model.config.id2label or {}
+   # config.id2label keys are strings when loaded from JSON; normalize to ints
+   id2label   = {int(k): v for k, v in saved_id2label.items()}
+   label_list = [id2label[i] for i in range(len(id2label))]
+   label2id   = {label: i for i, label in id2label.items()}
+   num_labels = len(label_list)
+
+
+if not args_parsed.skip_training:
+    # Only overwrite when we built id2label/label2id from --entity_types; in
+    # skip-training mode we just sourced them FROM the loaded config above.
+    model.config.id2label = id2label
+    model.config.label2id = label2id
 
 # If --test-path is provided alongside --skip_training, load and tokenize a
 # test JSONL and use it (instead of the validation split) for final evaluation
@@ -331,34 +353,161 @@ def compute_metrics(p):
 # 8. Data collator + Trainer (built in both branches)
 data_collator = DataCollatorForTokenClassification(tokenizer)
 
-# Build TrainingArguments kwargs dynamically to support different transformers versions
-training_args = TrainingArguments(
-    output_dir = "pubmedbert-cohort-ner",
-    learning_rate = 1e-5, # rates to try: 1e-5, 3e-5, 5e-5
-    per_device_train_batch_size = 16, # rates to try: 16, 32
-    per_device_eval_batch_size = 32,
-    num_train_epochs = 5, # rates to try: 3, 5, 10
-    logging_steps= 100, 
-    seed= args_parsed.seed,
-    eval_strategy="epoch",
-    eval_delay=0
+# Default TrainingArguments kwargs. Kept as a dict so grid-search trials can
+# build their own TrainingArguments by overriding individual keys, without
+# trying to deep-copy/mutate a TrainingArguments instance (which is a frozen-ish
+# dataclass and doesn't support item assignment).
+default_ta_kwargs = dict(
+    output_dir                 = "pubmedbert-cohort-ner",
+    learning_rate              = 5e-5,  # try: 1e-5, 3e-5, 5e-5
+    per_device_train_batch_size= 16,     # try: 16, 32
+    per_device_eval_batch_size = 16,
+    num_train_epochs           = 5,      # try: 3, 5, 10
+    weight_decay = 0.2,
+    logging_steps              = 100,
+    seed                       = args_parsed.seed,
+    eval_strategy              = "epoch",
+    eval_delay                 = 0, 
+    # Save a checkpoint at the end of every epoch (must match eval_strategy
+    # for load_best_model_at_end to work).
+    save_strategy              = "epoch",
+    # Keep only the 2 most recent checkpoints on disk so save_strategy="epoch"
+    # doesn't fill up the workspace; the best-by-F1 checkpoint is always kept.
+    save_total_limit           = 2,
+    # After training, restore the checkpoint with the best validation F1.
+    load_best_model_at_end     = True,
+    metric_for_best_model      = "eval_f1",
+    greater_is_better          = True,
 )
 
-trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=tokenized_train,
-        eval_dataset=tokenized_val,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics,
-    )
+ta_kwargs = copy.deepcopy(default_ta_kwargs)
+if args_parsed.skip_training:
+    # No training loop is going to run, so the epoch-based eval/save strategies
+    # (and load_best_model_at_end / early stopping) are meaningless and Trainer
+    # rejects them when there's no eval_dataset. Disable them.
+    ta_kwargs["eval_strategy"]          = "no"
+    ta_kwargs["save_strategy"]          = "no"
+    ta_kwargs["load_best_model_at_end"] = False
+    ta_kwargs.pop("metric_for_best_model", None)
+    ta_kwargs.pop("greater_is_better", None)
+
+training_args = TrainingArguments(**ta_kwargs)
+
+trainer_kwargs = dict(
+    model=model,
+    args=training_args,
+    data_collator=data_collator,
+    compute_metrics=compute_metrics,
+)
+if not args_parsed.skip_training:
+    trainer_kwargs["train_dataset"] = tokenized_train
+    trainer_kwargs["eval_dataset"] = tokenized_val
+    # EarlyStopping requires load_best_model_at_end=True, which we disable above
+    # in skip-training mode — so only attach it when actually training.
+    trainer_kwargs["callbacks"] = [EarlyStoppingCallback(early_stopping_patience=2)]
+
+trainer = Trainer(**trainer_kwargs)
+
 
 if not args_parsed.skip_training:
-# Hyperparameter tuning was performed using different values for learning rate (1e-05, 3e-5, 5e-5), 
-# sequence length (128, 256, 512), 
-# batch size (16, 32) 
-# and dropout rate (0.1) to select the model that achieved the best loss on validation set. 
-    trainer.train()
+    # Hyperparameter tuning notes:
+    #   learning rate    (1e-5, 3e-5, 5e-5)
+    #   sequence length  (128, 256, 512)   <-- needs re-tokenisation; not swept here
+    #   batch size       (16, 32)
+    #   dropout rate     (0.1, 0.2)
+    # The model that achieves the best F1 on the validation set is kept.
+
+    if args_parsed.grid_search:
+        # The hyperparameters you want to sweep.
+        # NB: max_length lives in tokenise_data.py — to sweep it you'd have to
+        # parametrise tokenize_dataset(..., max_length=...) and re-tokenise per trial.
+        param_grid = {
+            "learning_rate":               [1e-5, 3e-5, 5e-5],
+            "per_device_train_batch_size": [16, 32],
+            "num_train_epochs":            [3, 5],
+            "hidden_dropout_prob":         [0.1, 0.2],
+        }
+        keys, values = zip(*param_grid.items())
+        trials = [dict(zip(keys, combo)) for combo in itertools.product(*values)]
+        print(f"\n=== Grid search: {len(trials)} trials ===")
+
+        best = {"score": -float("inf"), "config": None, "trainer": None}
+        results = []
+
+        for trial_idx, hp in enumerate(trials):
+            print(f"\n========== Trial {trial_idx + 1}/{len(trials)}: {hp} ==========")
+
+            # Fresh TrainingArguments per trial (start from defaults, override the
+            # swept fields). copy.deepcopy on the dict — NOT on TrainingArguments.
+            trial_ta_kwargs = copy.deepcopy(default_ta_kwargs)
+            trial_ta_kwargs["learning_rate"]               = hp["learning_rate"]
+            trial_ta_kwargs["per_device_train_batch_size"] = hp["per_device_train_batch_size"]
+            trial_ta_kwargs["num_train_epochs"]            = hp["num_train_epochs"]
+            trial_ta_kwargs["output_dir"]                  = f"pubmedbert-grid/trial_{trial_idx}"
+            trial_args = TrainingArguments(**trial_ta_kwargs)
+            if getattr(trial_args, "eval_delay", 0) is None:
+                trial_args.eval_delay = 0
+
+            # Fresh model + config so each trial restarts from the pre-trained
+            # checkpoint and uses the trial's dropout rate.
+            trial_config = AutoConfig.from_pretrained(
+                model_name,
+                num_labels=num_labels,
+                hidden_dropout_prob=hp["hidden_dropout_prob"],
+                attention_probs_dropout_prob=hp["hidden_dropout_prob"],
+            )
+            trial_model = AutoModelForTokenClassification.from_pretrained(
+                model_name, config=trial_config
+            )
+            trial_model.config.id2label = id2label
+            trial_model.config.label2id = label2id
+
+            trial_trainer = Trainer(
+                model=trial_model,
+                args=trial_args,
+                train_dataset=tokenized_train,
+                eval_dataset=tokenized_val,
+                data_collator=data_collator,
+                compute_metrics=compute_metrics,
+                callbacks=[EarlyStoppingCallback(early_stopping_patience=2)],
+            )
+            trial_trainer.train()
+            metrics = trial_trainer.evaluate()
+
+            score = metrics["eval_f1"]   # use -metrics["eval_loss"] to optimise loss instead
+            results.append({
+                "trial":          trial_idx,
+                **hp,
+                "eval_loss":      metrics.get("eval_loss"),
+                "eval_f1":        metrics.get("eval_f1"),
+                "eval_precision": metrics.get("eval_precision"),
+                "eval_recall":    metrics.get("eval_recall"),
+                "eval_accuracy":  metrics.get("eval_accuracy"),
+            })
+
+            # Persist the leaderboard incrementally so you can inspect progress
+            # mid-sweep and don't lose anything if a later trial blows up.
+            os.makedirs(args_parsed.output_path, exist_ok=True)
+            leaderboard_path = f"{args_parsed.output_path}/grid_search_results.csv"
+            pd.DataFrame(results).sort_values("eval_f1", ascending=False).to_csv(
+                leaderboard_path, index=False
+            )
+
+            if score > best["score"]:
+                best = {"score": score, "config": hp, "trainer": trial_trainer}
+                print(f"  *** New best: F1={score:.4f} ***")
+
+        print(f"\n=== Grid search complete ===")
+        print(f"Leaderboard: {leaderboard_path}")
+        print(f"Best config: {best['config']}  eval_f1={best['score']:.4f}")
+
+        # Promote the best trial's trainer/model so the rest of the script
+        # (loss-plot logic, save_model, eval, prediction CSVs) operates on the
+        # winning model.
+        trainer = best["trainer"]
+        model = trainer.model
+    else:
+        trainer.train()
     
     # Create and save training loss plot
     history = trainer.state.log_history
@@ -417,12 +566,20 @@ print(f"Overall Accuracy:  {eval_results['eval_accuracy']:.4f}")
 # Recompute full results to get per-entity breakdown
 predictions, labels, _ = trainer.predict(eval_dataset_tokenized)
 pred_labels = np.argmax(predictions, axis=2)
+
+# id2label-based lookup with an "O" fallback so any unexpected label ID
+# (e.g. left over from a stale tokenized cache built with a wider entity set)
+# becomes "O" instead of raising IndexError.
+_id2label_safe = {i: label for i, label in enumerate(label_list)}
+def _decode(stream_id):
+    return _id2label_safe.get(int(stream_id), "O")
+
 true_predictions = [
-    [label_list[p] for (p, l) in zip(pred, lab) if l != -100]
+    [_decode(p) for (p, l) in zip(pred, lab) if l != -100]
     for pred, lab in zip(pred_labels, labels)
 ]
 true_label = [
-    [label_list[l] for (p, l) in zip(pred, lab) if l != -100]
+    [_decode(l) for (p, l) in zip(pred, lab) if l != -100]
     for pred, lab in zip(pred_labels, labels)
 ]
 full_results = metric.compute(predictions=true_predictions, references=true_label)
@@ -457,23 +614,63 @@ df_conf.to_csv(conf_csv_path, index=False)
 # Also get confidence for each training example
 
 if not args_parsed.skip_training:
-    train_predictions, labels, _  = trainer.predict(tokenized_train)
+    # NB: use a separate variable name for training labels so we don't clobber
+    # the validation `labels` array, which is still referenced downstream.
+    train_predictions, train_labels, _ = trainer.predict(tokenized_train)
     train_probs = scipy.special.softmax(train_predictions, axis=2)
+    train_pred_label_ids = np.argmax(train_predictions, axis=2)
+
+    # Decode BIO labels for the TRAINING set (do NOT reuse `true_predictions`/
+    # `true_label` from the validation block — those have validation length and
+    # would raise IndexError when iterated over the larger training set).
+    #
+    # Use _decode (id2label.get(..., "O")) rather than label_list[l] so any
+    # unexpected label ID (e.g. left over from a stale tokenized cache built
+    # with a wider set of entity types) gracefully falls back to "O" instead
+    # of raising IndexError: list index out of range.
+    train_true_predictions = [
+        [_decode(p) for (p, l) in zip(pred, lab) if l != -100]
+        for pred, lab in zip(train_pred_label_ids, train_labels)
+    ]
+    train_true_label = [
+        [_decode(l) for (p, l) in zip(pred, lab) if l != -100]
+        for pred, lab in zip(train_pred_label_ids, train_labels)
+    ]
+
+    # One-time diagnostic: warn if the training labels contain any IDs we
+    # don't recognise (i.e. anything other than -100 or a key of _id2label_safe).
+    _unknown = sorted({
+        int(l) for lab in train_labels for l in lab
+        if int(l) != -100 and int(l) not in _id2label_safe
+    })
+    if _unknown:
+        warnings.warn(
+            "Training labels contain unexpected ID(s) "
+            f"{_unknown} not present in id2label={_id2label_safe}. "
+            "These are being treated as 'O'. This usually means a stale HF "
+            "datasets cache is being reused — try clearing "
+            "~/.cache/huggingface/datasets and re-running, or re-tokenising "
+            "the training set from scratch."
+        )
+
     train_per_example_conf = []
-    for i, (prob_seq, lab_seq) in enumerate(zip(train_probs, labels)):
+    for i, (prob_seq, lab_seq) in enumerate(zip(train_probs, train_labels)):
         entity_mask = (lab_seq != -100) & (lab_seq != 0)
         if entity_mask.any():
             conf = prob_seq[entity_mask].max(axis=1).mean()
         else:
             conf = 1.0
         train_per_example_conf.append(conf)
+
     # save train confidences to a CSV
+    n_train = len(train_per_example_conf)
     df_train_conf = pd.DataFrame({
-        "text": [train_data[i]["text"] for i in range(len(train_per_example_conf))],
-        "pred_label": [true_predictions[i] for i in range(len(train_per_example_conf))],
-        "true_label": [true_label[i] for i in range(len(train_per_example_conf))],
-        "confidence": train_per_example_conf})
-    
+        "text":       [train_data[i]["text"]            for i in range(n_train)],
+        "pred_label": [train_true_predictions[i]        for i in range(n_train)],
+        "true_label": [train_true_label[i]              for i in range(n_train)],
+        "confidence": train_per_example_conf,
+    })
+
     train_conf_csv_path = f"{args_parsed.output_path}/training_confidences.csv"
     print(f"\n=== Saving per-example training confidences to {train_conf_csv_path} ===")
     df_train_conf.to_csv(train_conf_csv_path, index=False)
@@ -489,15 +686,81 @@ for entity_type in entity_types:
         print(f"  F1:        {entity_metrics.get('f1', 0):.4f}")
 
 
-# Flatten all tokens for confusion matrix
-flat_true = [t for seq in true_label for t in seq]
-flat_pred = [t for seq in true_predictions for t in seq]
-
+# === Entity-level confusion matrix ===========================================
+# Token-level CMs are dominated by 'O' tokens and don't tell you whether an
+# entity was correctly recognised. We build an entity-level CM instead:
+#   - Walk each BIO sequence to extract (start, end, type) spans.
+#   - Match predicted spans to true spans by EXACT (start, end) position
+#     (this matches seqeval's "strict" scoring convention).
+#   - For each example, emit (true_type, pred_type) pairs:
+#       both spans match span-wise        -> (true_type, pred_type)
+#                                            (these are TPs when types agree,
+#                                             type-confusions when they don't)
+#       true span has no matching pred    -> (true_type, "O")     [FN]
+#       pred span has no matching true    -> ("O", pred_type)     [FP]
+# Rows = true entity type, cols = predicted entity type.
 from sklearn.metrics import confusion_matrix
-labels_cm = sorted(set(flat_true) | set(flat_pred))
-cm = confusion_matrix(flat_true, flat_pred, labels=labels_cm)
-print("\n=== Confusion Matrix (token-level) ===")
-print(pd.DataFrame(cm, index=labels_cm, columns=labels_cm))
+
+
+def _bio_to_spans(tags):
+    """Convert a BIO tag sequence into a list of (start, end_exclusive, type) spans."""
+    spans = []
+    cur_start, cur_type = None, None
+    for i, tag in enumerate(tags):
+        if tag == "O" or tag.startswith("B-"):
+            if cur_start is not None:
+                spans.append((cur_start, i, cur_type))
+                cur_start, cur_type = None, None
+            if tag.startswith("B-"):
+                cur_start, cur_type = i, tag[2:]
+        elif tag.startswith("I-"):
+            t = tag[2:]
+            if cur_type == t and cur_start is not None:
+                pass  # extend current span
+            else:
+                # Dangling I-: treat as the start of a new span
+                if cur_start is not None:
+                    spans.append((cur_start, i, cur_type))
+                cur_start, cur_type = i, t
+    if cur_start is not None:
+        spans.append((cur_start, len(tags), cur_type))
+    return spans
+
+
+entity_true, entity_pred = [], []
+for true_tags, pred_tags in zip(true_label, true_predictions):
+    true_spans = {(s, e): t for s, e, t in _bio_to_spans(true_tags)}
+    pred_spans = {(s, e): t for s, e, t in _bio_to_spans(pred_tags)}
+
+    for span in set(true_spans) | set(pred_spans):
+        entity_true.append(true_spans.get(span, "O"))   # "O" if predicted span has no gold match
+        entity_pred.append(pred_spans.get(span, "O"))   # "O" if gold span has no predicted match
+
+# Order the axes: real entity types first (alphabetical), then "O" last so the
+# FP / FN row+column live in the bottom-right corner of the matrix.
+entity_axes = sorted(
+    {lab for lab in entity_true + entity_pred if lab != "O"}
+) + ["O"]
+
+cm = confusion_matrix(entity_true, entity_pred, labels=entity_axes)
+cm_df = pd.DataFrame(cm, index=entity_axes, columns=entity_axes)
+cm_df.index.name = "true \\ pred"
+
+print("\n=== Confusion Matrix (entity-level, strict span match) ===")
+print(cm_df)
+print(
+    "Reading the matrix:\n"
+    "  diagonal cells (excluding the 'O' row/col) are correctly recognised entities (TP)\n"
+    "  off-diagonal cells (excluding 'O') are TYPE confusions on a correctly located span\n"
+    "  row 'O', col X      = spurious predictions of type X (false positives)\n"
+    "  row X, col 'O'      = missed gold entities of type X (false negatives)\n"
+    "  cell ('O','O')      = 0 by construction (we don't count 'no entity in either')"
+)
+
+cm_csv_path = f"{args_parsed.output_path}/{output_prefix}_entity_confusion_matrix.csv"
+os.makedirs(args_parsed.output_path, exist_ok=True)
+cm_df.to_csv(cm_csv_path)
+print(f"=== Saved entity-level confusion matrix to {cm_csv_path} ===")
 
 # Detailed per-label metrics
 if "eval_overall_precision" not in eval_results:  # sometimes keys vary
@@ -725,3 +988,44 @@ df_entity = pd.DataFrame(entity_records)
 df_entity.to_csv(entity_csv_path, index=False)
 
 print(f"Saved {len(entity_records)} entity-level predictions to {entity_csv_path} and {entity_jsonl_path}")
+
+
+# === Save PubMedBERT annotations in Doccano JSONL format =====================
+# Mirrors the input file's schema (text, pubmed_id, date, country,
+# gwas_cat_cohort_label, label) but replaces `label` with the model's predicted
+# character-level spans [[start, end, TAG], ...]. Spans are reconstructed by
+# re-tokenising each example with offset_mapping and walking BIO tags — same
+# logic used above for entity-level predictions.
+annotations_jsonl_path = f"{args_parsed.output_path}/pubmedbert_annotations.jsonl"
+
+with open(annotations_jsonl_path, "w", encoding="utf-8") as f:
+    for i in range(len(eval_raw_data)):
+        original_text = eval_raw_data[i]["text"]
+
+        # Re-extract predicted spans for this example (true_spans is unused here).
+        _, pred_spans = extract_entity_spans(
+            original_text,
+            tokenizer,
+            labels[i],
+            pred_labels[i],
+            id2label,
+        )
+
+        # extract_entity_spans returns (surface_text, label, start_char, end_char);
+        # Doccano format expects [start, end, TAG]. Match the input file's
+        # stringified-offsets convention.
+        pred_label_field = [
+            [str(s[2]), str(s[3]), s[1]] for s in pred_spans
+        ]
+
+        record = {
+            "text":                  original_text,
+            "pubmed_id":             eval_raw_data[i].get("pubmed_id", ""),
+            "date":                  eval_raw_data[i].get("date", ""),
+            "country":               eval_raw_data[i].get("country", ""),
+            "gwas_cat_cohort_label": eval_raw_data[i].get("gwas_cat_cohort_label", ""),
+            "label":                 pred_label_field,
+        }
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+print(f"Saved {len(eval_raw_data)} PubMedBERT annotations (Doccano format) to {annotations_jsonl_path}")
