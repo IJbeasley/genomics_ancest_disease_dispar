@@ -1,12 +1,12 @@
 #!/bin/bash
-# Batch process all XML files in a folder using extract_methods.py
-# Usage: ./batch_process.sh input_folder output_folder
+# Batch process all XML files in a folder using extract_results.py
+# Usage: ./batch_process_results.sh input_folder output_folder
 
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <input_folder> <output_folder>"
     echo ""
     echo "Example:"
-    echo "  $0 ./xml_files ./output_texts"
+    echo "  $0 output/fulltexts/europe_pmc output/fulltexts/results_sections"
     exit 1
 fi
 
@@ -60,17 +60,17 @@ for xml_file in "$INPUT_FOLDER"/*.xml; do
     filename=$(basename "$xml_file" .xml)
 
     # Normalise .pdf.tei suffix to _pdf_tei so GROBID output files get
-    # predictable names like {pmid}_pdf_tei_methods.txt. Must match the
+    # predictable names like {pmid}_pdf_tei_results.txt. Must match the
     # filename the Python extractor writes to.
     output_name="${filename/.pdf.tei/_pdf_tei}"
 
     # Output file name
-    output_file="$OUTPUT_FOLDER/${output_name}_methods.txt"
+    output_file="$OUTPUT_FOLDER/${output_name}_results.txt"
 
-    # extract_methods.py appends '_main' to the stem when it fell back to the
-    # whole <body> (Nature-style "Main" articles, letters to the editor), so
-    # the file it actually wrote may be ${output_name}_methods_main.txt.
-    main_file="$OUTPUT_FOLDER/${output_name}_methods_main.txt"
+    # extract_results.py appends '_main' to the stem when it had to fall back
+    # to the whole <body> (Nature-style "Main" articles, letters to the
+    # editor), so the actual file written may be ${output_name}_results_main.txt
+    main_file="$OUTPUT_FOLDER/${output_name}_results_main.txt"
 
     echo -n "Processing: $(basename "$xml_file")... "
 
@@ -78,18 +78,18 @@ for xml_file in "$INPUT_FOLDER"/*.xml; do
     # Two input folders can map to the same output name (e.g. elsevier/ and
     # elsevier/elsevier_xml/ hold the same PMIDs), so a file left by an
     # earlier article -- or an earlier run -- would otherwise be read as this
-    # article's success. The extractor prints "Methods section extracted to:
+    # article's success. The extractor prints "Results section extracted to:
     # <path>" on stdout only when it actually wrote a file, and explains on
     # stderr why it did not; it exits 1 for every "nothing to extract" case,
     # so the exit code alone cannot tell those apart from a real crash.
-    run_output=$(python3 "$SCRIPT_DIR/extract_methods.py" "$xml_file" -o "$output_file" 2>&1)
+    run_output=$(python3 "$SCRIPT_DIR/extract_results.py" "$xml_file" -o "$output_file" 2>&1)
 
-    if echo "$run_output" | grep -q "Methods section extracted to: .*_main\.txt"; then
+    if echo "$run_output" | grep -q "Results section extracted to: .*_main\.txt"; then
         echo "✓ SUCCESS (whole-body fallback)"
         SUCCESS=$((SUCCESS + 1))
         MAIN_FALLBACK=$((MAIN_FALLBACK + 1))
         MAIN_FALLBACK_FILES+=("$(basename "$xml_file")")
-    elif echo "$run_output" | grep -q "Methods section extracted to:"; then
+    elif echo "$run_output" | grep -q "Results section extracted to:"; then
         echo "✓ SUCCESS"
         SUCCESS=$((SUCCESS + 1))
     elif echo "$run_output" | grep -q "only available online"; then
@@ -100,8 +100,8 @@ for xml_file in "$INPUT_FOLDER"/*.xml; do
         echo "⚠ IN SUPPLEMENT"
         SUPPLEMENTARY=$((SUPPLEMENTARY + 1))
         SUPPLEMENTARY_FILES+=("$(basename "$xml_file")")
-    elif echo "$run_output" | grep -q "No methods section found"; then
-        echo "⚠ NO METHODS SECTION"
+    elif echo "$run_output" | grep -q "No results section found"; then
+        echo "⚠ NO RESULTS SECTION"
         NO_SECTION=$((NO_SECTION + 1))
         NO_SECTION_FILES+=("$(basename "$xml_file")")
     else
@@ -123,7 +123,7 @@ echo "Successfully processed: $SUCCESS"
 echo "  of which whole-body:  $MAIN_FALLBACK"
 echo "Online only:            $ONLINE_ONLY"
 echo "In supplement:          $SUPPLEMENTARY"
-echo "No methods section:     $NO_SECTION"
+echo "No results section:     $NO_SECTION"
 echo "Failed (errors):        $FAILED"
 echo "Total files:            $TOTAL"
 echo ""
@@ -151,19 +151,19 @@ if [ ${#FAILED_FILES[@]} -gt 0 ]; then
 fi
 
 if [ ${#NO_SECTION_FILES[@]} -gt 0 ]; then
-    write_list "no_methods_files.txt" "No methods section list" "${NO_SECTION_FILES[@]}"
+    write_list "no_results_files.txt" "No results section list" "${NO_SECTION_FILES[@]}"
 fi
 
 if [ ${#ONLINE_ONLY_FILES[@]} -gt 0 ]; then
-    write_list "online_only_files.txt" "Online-only methods list" "${ONLINE_ONLY_FILES[@]}"
+    write_list "online_only_files.txt" "Online-only results list" "${ONLINE_ONLY_FILES[@]}"
 fi
 
 if [ ${#SUPPLEMENTARY_FILES[@]} -gt 0 ]; then
-    write_list "supplementary_methods_files.txt" "Methods-in-supplement list" "${SUPPLEMENTARY_FILES[@]}"
+    write_list "supplementary_results_files.txt" "Results-in-supplement list" "${SUPPLEMENTARY_FILES[@]}"
 fi
 
 # Whole-body fallbacks are worth eyeballing: they hold the full article body
-# rather than a scoped methods section.
+# rather than a scoped results section.
 if [ ${#MAIN_FALLBACK_FILES[@]} -gt 0 ]; then
     write_list "main_fallback_files.txt" "Whole-body fallback list" "${MAIN_FALLBACK_FILES[@]}"
 fi

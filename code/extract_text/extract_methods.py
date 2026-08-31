@@ -282,40 +282,31 @@ def extract_tei_methods(root):
 
     # Collect this div and all subsequent sibling divs until a non-methods section
     text_parts = []
-    for div in divs[methods_start:]:
+    for i, div in enumerate(divs[methods_start:], start=methods_start):
         head = div.find('tei:head', TEI_NS)
         if head is None:
             head = div.find('head')
 
+        clean_title = ''
         if head is not None and head.text:
-            title = head.text.strip().lower()
+            # Normalise the head before doing anything with it: strip leading
+            # numbering ("2.1 ") and trailing punctuation.  GROBID routinely
+            # emits heads with a trailing period ("GWAS.", "VISP participants."),
+            # and without the rstrip those heads (a) never match the stop words
+            # below, so collection runs past the end of the methods section, and
+            # (b) produce ".." once the ". " separator is appended.
+            clean_title = re.sub(r'^(\d+\.)*\d+\s+', '', head.text.strip()).rstrip(' .;,:')
+            title = clean_title.lower()
+
             # Stop if we've hit a non-methods section (but not on the first div)
-            if div != divs[methods_start] and title in NON_METHODS_SECTIONS:
-                break
-            # Also stop on common non-methods patterns
-            if div != divs[methods_start]:
-                for stop_word in NON_METHODS_SECTIONS:
-                    if title == stop_word or title.startswith(stop_word + ' '):
-                        break
-                else:
-                    # No stop word matched — add section title
-                    # Remove leading numbering from title
-                    clean_title = re.sub(r'^(\d+\.)*\d+\s+', '', head.text.strip())
-                    if clean_title:
-                        text_parts.append(clean_title + '. ')
-                    # Fall through to extract paragraphs
-                    for p in div.findall('tei:p', TEI_NS) or div.findall('p'):
-                        para_text = ''.join(p.itertext()).strip()
-                        if para_text:
-                            text_parts.append(clean_extracted_text(para_text) + ' ')
-                    continue
-                # A stop word matched — break out of outer loop
-                break
-            else:
-                # First div (the Methods header itself)
-                clean_title = re.sub(r'^(\d+\.)*\d+\s+', '', head.text.strip())
-                if clean_title:
-                    text_parts.append(clean_title + '. ')
+            if i > methods_start and title:
+                if title in NON_METHODS_SECTIONS or any(
+                        title.startswith(stop_word + ' ')
+                        for stop_word in NON_METHODS_SECTIONS):
+                    break
+
+        if clean_title:
+            text_parts.append(clean_title + '. ')
 
         # Extract paragraphs from this div
         for p in div.findall('tei:p', TEI_NS) or div.findall('p'):
@@ -323,7 +314,10 @@ def extract_tei_methods(root):
             if para_text:
                 text_parts.append(clean_extracted_text(para_text) + ' ')
 
-    result = ' '.join(text_parts).strip()
+    # Clean the joined string, not just the individual parts: artifacts that
+    # straddle a join (a citation stripped across a paragraph boundary leaving
+    # " ;", doubled spaces) are invisible to the per-part cleaning above.
+    result = clean_extracted_text(' '.join(text_parts))
     return result if result else None
 
 
