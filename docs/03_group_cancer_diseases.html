@@ -377,7 +377,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2026-08-31
+<strong>Last updated:</strong> 2026-09-01
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -509,15 +509,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree879f7cfed17c20c1f18aa5574e536c190d62a9cctargetblank879f7cfa">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea98a3d8bfc3d1cf026e62a4138bcc9fce7d32632targetblanka98a3d8a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/879f7cfed17c20c1f18aa5574e536c190d62a9cc" target="_blank">879f7cf</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a98a3d8bfc3d1cf026e62a4138bcc9fce7d32632" target="_blank">a98a3d8</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree879f7cfed17c20c1f18aa5574e536c190d62a9cctargetblank879f7cfa"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea98a3d8bfc3d1cf026e62a4138bcc9fce7d32632targetblanka98a3d8a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -527,7 +527,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/879f7cfed17c20c1f18aa5574e536c190d62a9cc" target="_blank">879f7cf</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a98a3d8bfc3d1cf026e62a4138bcc9fce7d32632" target="_blank">a98a3d8</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -618,9 +618,11 @@ Ignored files:
 Untracked files:
     Untracked:  analysis/compare_cohort_annot.Rmd
     Untracked:  code/correcting_for_overlapping_cohorts.R
+    Untracked:  data/ontology/
+    Untracked:  disease_term_pipeline_review.md
 
 Unstaged changes:
-    Modified:   analysis/05_extract_icd10.Rmd
+    Modified:   analysis/04_group_non_cancer_diseases.Rmd
     Modified:   analysis/06_map_trait_to_icd10.Rmd
     Modified:   analysis/07_gwas_to_gbd.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
@@ -630,6 +632,7 @@ Unstaged changes:
     Modified:   analysis/prep_finetune_after_doccano.Rmd
     Modified:   analysis/replication_ancestry_bias.Rmd
     Modified:   analysis/specific_aims_stats.Rmd
+    Modified:   code/get_term_descendants.R
     Modified:   code/merge_cohort_names.R
     Modified:   code/pop_desc_processing/gwas_cat_metadata.R
     Modified:   code/testing_sampling_papers.R
@@ -678,6 +681,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/a98a3d8bfc3d1cf026e62a4138bcc9fce7d32632/analysis/03_group_cancer_diseases.Rmd" target="_blank">a98a3d8</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-01
+</td>
+<td>
+Update ontology searching for using archive
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/db5112d831d95c727c837745ad854a025491cc6b/docs/03_group_cancer_diseases.html" target="_blank">db5112d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-31
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -871,8 +908,8 @@ head(n_studies_trait)</code></pre>
 2 breast cancer                     142
 3 schizophrenia                     142
 4 major depressive disorder         141
-5 alzheimers disease                133
-6 asthma                            122</code></pre>
+5 alzheimers disease                131
+6 asthma                            123</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
 <pre><code>[1] 2710    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms"
@@ -886,7 +923,7 @@ with multiple terms</h2>
 
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2344</code></pre>
+<pre><code>[1] 2336</code></pre>
 <pre class="r"><code>test &lt;- data.frame(trait = unique(diseases))</code></pre>
 </div>
 </div>
@@ -1026,27 +1063,33 @@ specified</h3>
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == &quot;cancer&quot; &amp; 
-                grepl(&quot;ICD10 Z85.4&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                grepl(&quot;ICD10 Z85.4&quot;, `DISEASE/TRAIT`, ignore.case = T, fixed = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;cancer&quot;),
                           &quot;urogenital cancer&quot;),
                 collected_all_disease_terms
          )
-  )
-
-# ICD10 Z85.1: Personal history of malignant neoplasm of trachea, bronchus and lung 
+  )</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `collected_all_disease_terms = ifelse(...)`.
+Caused by warning in `grepl()`:
+! argument &#39;ignore.case = TRUE&#39; will be ignored</code></pre>
+<pre class="r"><code># ICD10 Z85.1: Personal history of malignant neoplasm of trachea, bronchus and lung 
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == &quot;cancer&quot; &amp; 
-                grepl(&quot;ICD10 Z85.1&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                grepl(&quot;ICD10 Z85.1&quot;, `DISEASE/TRAIT`, ignore.case = T, fixed = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;cancer&quot;),
                            &quot;tracheal bronchus and lung cancer&quot;),
                 collected_all_disease_terms
          )
-  )
-
-# ICD10 Z85.0: Personal history of malignant neoplasm of digestive organs
+  )</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `collected_all_disease_terms = ifelse(...)`.
+Caused by warning in `grepl()`:
+! argument &#39;ignore.case = TRUE&#39; will be ignored</code></pre>
+<pre class="r"><code># ICD10 Z85.0: Personal history of malignant neoplasm of digestive organs
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == &quot;cancer&quot; &amp; 
@@ -1076,16 +1119,18 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == &quot;cancer&quot; &amp; 
-                grepl(&quot;PheCode 159$&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                grepl(&quot;(PheCode 159)&quot;, `DISEASE/TRAIT`, ignore.case = T, fixed = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;cancer&quot;),
                           &quot;digestive system cancer, peritoneum cancer&quot;),
                 collected_all_disease_terms
          )
-  )
-
-
-non_specific_cancer &lt;-
+  )</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `collected_all_disease_terms = ifelse(...)`.
+Caused by warning in `grepl()`:
+! argument &#39;ignore.case = TRUE&#39; will be ignored</code></pre>
+<pre class="r"><code>non_specific_cancer &lt;-
 gwas_study_info |&gt;
   filter(collected_all_disease_terms == &quot;cancer&quot;) |&gt;
   filter(!grepl(&quot;ICD&quot;, `DISEASE/TRAIT`, ignore.case = TRUE)) |&gt;
@@ -1517,7 +1562,7 @@ non_specific_cancer |&gt;
                                                     `DISEASE/TRAIT`, 
                                                     ignore.case = TRUE) &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;non-melanoma skin cancer; malignant melanoma of skin&quot;,
+                                 &quot;non-melanoma skin cancer, malignant melanoma of skin&quot;,
                                  collected_all_disease_terms
                                  )
          ) 
@@ -1527,7 +1572,7 @@ non_specific_cancer |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;26546620&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;renal cell carcinoma; soft tissue sarcoma; ovarian cancer&quot;,
+                                 &quot;renal cell carcinoma, soft tissue sarcoma; ovarian cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1551,7 +1596,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;34390503&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;multiple myeloma; breast cancer; lung cancer; prostate cancer&quot;,
+                                 &quot;multiple myeloma, breast cancer, lung cancer, prostate cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1565,7 +1610,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;34528705&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;pancreatic cancer ; breast cancer;  colorectal cancer; ovarian cancer&quot;,
+                                 &quot;pancreatic cancer, breast cancer,  colorectal cancer, ovarian cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1576,7 +1621,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;29299148&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;breast cancer;  colorectal cancer&quot;,
+                                 &quot;breast cancer,  colorectal cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1597,7 +1642,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;35729236&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;breast cancer; prostate cancer; uterine cancer; ovarian cancer; thyroid cancer&quot;,
+                                 &quot;breast cancer, prostate cancer, uterine cancer, ovarian cancer, thyroid cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1608,7 +1653,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;35752658&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;leukemia; lymphoma&quot;,
+                                 &quot;leukemia, lymphoma&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1618,7 +1663,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;37862240&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;prostate cancer; head and neck cancer; breast cancer; lung cancer&quot;,
+                                 &quot;prostate cancer, head and neck cancer, breast cancer, lung cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1629,16 +1674,17 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;36268685&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;lung cancer; malignant melanoma of the skin; head and neck cancer; gastric cancer; kidney cancer; hodgkins lymphoma; carcinoma of unknown primary; esophageal cancer; rectal cancer; malignant mesothelioma; bone cancer; gastroesophageal junction cancer&quot;,
+                                 &quot;lung cancer, malignant melanoma of skin, head and neck cancer, gastric cancer, kidney cancer, hodgkins lymphoma, carcinoma of unknown primary, esophageal cancer, rectal cancer, malignant mesothelioma, bone cancer, gastroesophageal junction cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
 
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(grepl(&quot;Illnesses of mother - cancer (UKB data field 20110)&quot;,
-                                                    `DISEASE/TRAIT`) &amp;
+                                                    `DISEASE/TRAIT`,
+                                                    fixed = T) &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;breast cancer; colorectal cancer; lung cancer&quot;,
+                                 &quot;breast cancer, colorectal cancer, lung cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )
@@ -1647,7 +1693,7 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == &quot;36929942&quot; &amp;
                                                collected_all_disease_terms == &quot;cancer&quot;,
-                                 &quot;breast cancer; colorectal cancer, lung cancer; endometrial cancer; esophageal cancer; glioma; head and neck cancer; malignant melanoma of the skin; ovarian cancer; pancreatic cancer; prostate cancer; kidney cancer&quot;,
+                                 &quot;breast cancer, colorectal cancer, lung cancer, endometrial cancer, esophageal cancer, glioma, head and neck cancer, malignant melanoma of skin, ovarian cancer, pancreatic cancer, prostate cancer, kidney cancer&quot;,
                                  collected_all_disease_terms
                                  )
          )</code></pre>
@@ -1676,7 +1722,7 @@ gwas_study_info = gwas_study_info |&gt;
 # for pubmed id 29059430
 # Table 1: https://pmc-ncbi-nlm-nih-gov.ucsf.idm.oclc.org/articles/PMC6059172/#sec9
 # replace childhood cancer with
-# &quot;retinoblastoma, leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
+# &quot;retinoblastoma, leukemia, hodgkins lymphoma, non-hodgkins lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, bone cancer, kidney cancer, other cancer&quot;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(PUBMED_ID == &quot;29059430&quot;,
@@ -1695,7 +1741,7 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(PUBMED_ID == &quot;26237429&quot;,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;childhood cancer&quot;),
-                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, osteosarcoma, rhabdomyosarcoma, ewing sarcoma, hepatoblastoma, neuroblastoma, kidney cancer, sarcoma, other cancer&quot;
+                          &quot;leukemia, hodgkins lymphoma, non-hodgkins lymphoma, osteosarcoma, rhabdomyosarcoma, ewing sarcoma, hepatoblastoma, neuroblastoma, kidney cancer, sarcoma, other cancer&quot;
          ),
          collected_all_disease_terms
          )
@@ -1735,7 +1781,7 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(PUBMED_ID == &quot;33338273&quot;,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;childhood cancer&quot;),
-                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, kidney cancer, other cancer&quot;
+                          &quot;leukemia, hodgkins lymphoma, non-hodgkins lymphoma, neuroblastoma, soft tissue sarcoma, central nervous system cancer, kidney cancer, other cancer&quot;
          ),
          collected_all_disease_terms
          )
@@ -1749,7 +1795,7 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(PUBMED_ID == &quot;38652878&quot;,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;childhood cancer&quot;),
-                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, osteosarcoma, kidney cancer, germ cell tumor, hepatoblastoma, rhabdomyosarcoma, soft tissue sarcoma, ewing sarcoma, other cancer&quot;
+                          &quot;leukemia, hodgkins lymphoma, non-hodgkins lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, osteosarcoma, kidney cancer, germ cell tumor, hepatoblastoma, rhabdomyosarcoma, soft tissue sarcoma, ewing sarcoma, other cancer&quot;
          ),
          collected_all_disease_terms
          )
@@ -1763,7 +1809,7 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(PUBMED_ID == &quot;34286861&quot;,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;childhood cancer&quot;),
-                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, osteosarcoma, kidney cancer, germ cell tumor, hepatoblastoma, rhabdomyosarcoma, soft tissue sarcoma, ewing sarcoma, other cancer&quot;
+                          &quot;leukemia, hodgkins lymphoma, non-hodgkins lymphoma, neuroblastoma, retinoblastoma, central nervous system cancer, osteosarcoma, kidney cancer, germ cell tumor, hepatoblastoma, rhabdomyosarcoma, soft tissue sarcoma, ewing sarcoma, other cancer&quot;
          ),
          collected_all_disease_terms
          )
@@ -1777,7 +1823,7 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(PUBMED_ID == &quot;35313970&quot;,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;childhood cancer&quot;),
-                          &quot;leukemia, hodgkin lymphoma, non-hodgkin lymphoma, neuroblastoma, ewing sarcoma, osteosarcoma, rhabdomyosarcoma, sarcoma, hepatoblastoma, retinoblastoma, central nervous system cancer, bone cancer, kidney cancer, germ cell tumor, malignant melanoma of skin, other cancer&quot;
+                          &quot;leukemia, hodgkins lymphoma, non-hodgkins lymphoma, neuroblastoma, ewing sarcoma, osteosarcoma, rhabdomyosarcoma, sarcoma, hepatoblastoma, retinoblastoma, central nervous system cancer, bone cancer, kidney cancer, germ cell tumor, malignant melanoma of skin, other cancer&quot;
          ),
          collected_all_disease_terms
          )
@@ -1805,7 +1851,7 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(PUBMED_ID == &quot;34262104&quot;,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;childhood cancer&quot;),
-                          &quot;hodgkin lymphoma, central nervous system cancer, non-hodgkin lymphoma, bone cancer, soft tissue sarcoma, other cancer, neuroblastoma, hepatoblastoma, osteosarcoma, germ cell tumor&quot;
+                          &quot;hodgkins lymphoma, central nervous system cancer, non-hodgkins lymphoma, bone cancer, soft tissue sarcoma, other cancer, neuroblastoma, hepatoblastoma, osteosarcoma, germ cell tumor&quot;
          ),
          collected_all_disease_terms
          )
@@ -1960,6 +2006,16 @@ neoplasm</h3>
          ifelse(collected_all_disease_terms == &quot;eye neoplasm&quot; &amp; 
                  grepl(&quot;cancer&quot;, `DISEASE/TRAIT`, ignore.case = T),
                  &quot;ocular cancer&quot;,
+                 collected_all_disease_terms
+         )
+         )
+
+gwas_study_info = gwas_study_info |&gt;
+    mutate(collected_all_disease_terms =
+         ifelse(collected_all_disease_terms == 
+                 str_replace_all(collected_all_disease_terms,
+                                 pattern = vec_to_grep_pattern(&quot;ocular melanoma&quot;), 
+                                 &quot;ocular cancer&quot;),
                  collected_all_disease_terms
          )
          )</code></pre>
@@ -2145,7 +2201,7 @@ gwas_study_info |&gt;
                     DISEASE/TRAIT STUDY_ACCESSION
                            &lt;char&gt;          &lt;char&gt;
 1: Glioma (pediatric/youth onset)      GCST008912</code></pre>
-<pre class="r"><code># from paper; seems malignant
+<pre class="r"><code># from paper seems malignant
 # https://pubmed.ncbi.nlm.nih.gov/31040135/
 
 gwas_study_info = 
@@ -2784,6 +2840,8 @@ neoplasm</h4>
 bone_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 232
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 232
 [1] &quot;\n Some example terms&quot;
 [1] &quot;acute myeloid leukemia with abnormal bone marrow eosinophils inv(16)(p13q22) or t(16;16)(p13;q22)&quot;
 [2] &quot;acute myeloid leukemia and myelodysplastic syndromes related to topoisomerase type 2 inhibitor&quot;   
@@ -2791,10 +2849,11 @@ bone_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;acute myeloid leukemia and myelodysplastic syndromes related to radiation&quot;                        
 [5] &quot;therapy related acute myeloid leukemia and myelodysplastic syndrome&quot;                              </code></pre>
 <pre class="r"><code>bone_cancer_terms = stringr::str_replace_all(bone_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-bone_cancer_terms = c(&quot;malignant bone neoplasm&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>bone_cancer_terms = c(&quot;malignant bone neoplasm&quot;,
                       &quot;ewing sarcoma&quot;,
                       &quot;osteosarcoma&quot;,
                       bone_cancer_terms)</code></pre>
@@ -2815,6 +2874,8 @@ bone_cancer_terms = c(&quot;malignant bone neoplasm&quot;,
 bladder_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 33
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 33
 [1] &quot;\n Some example terms&quot;
 [1] &quot;micropapillary variant infiltrating bladder urothelial carcinoma&quot;
 [2] &quot;lymphoma-like variant infiltrating bladder urothelial carcinoma&quot; 
@@ -2822,8 +2883,10 @@ bladder_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;infiltrating bladder urothelial carcinoma sarcomatoid variant&quot;   
 [5] &quot;microcystic variant infiltrating bladder urothelial carcinoma&quot;   </code></pre>
 <pre class="r"><code>bladder_cancer_terms = stringr::str_replace_all(bladder_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
           stringr::str_replace_all(collected_all_disease_terms ,
@@ -2869,6 +2932,8 @@ of blood vessel</h4>
 benign_blood_vessel_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 87
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 87
 [1] &quot;\n Some example terms&quot;
 [1] &quot;abnormal vision due to superficial infantile hemangioma of periorbital region (disorder)&quot;
 [2] &quot;cavernous hemangiomas of face and supraumbilical midline raphe (disorder)&quot;               
@@ -2876,11 +2941,11 @@ benign_blood_vessel_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;capillary hemangioma of bilateral orbital regions (disorder)&quot;                            
 [5] &quot;capillary hemangioma of right orbit region (disorder)&quot;                                   </code></pre>
 <pre class="r"><code>benign_blood_vessel_terms &lt;- stringr::str_replace_all(benign_blood_vessel_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-
-gwas_study_info = gwas_study_info |&gt;
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
  mutate(collected_all_disease_terms = 
         stringr::str_replace_all(collected_all_disease_terms, 
                     vec_to_grep_pattern(benign_blood_vessel_terms),
@@ -2891,7 +2956,9 @@ gwas_study_info = gwas_study_info |&gt;
 number="3.0.4.2">
 <h4><span class="header-section-number">3.0.4.2</span> Labelled benign
 neoplasms</h4>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+<pre class="r"><code>before &lt;- unique(gwas_study_info$collected_all_disease_terms)
+
+gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
         str_replace_all(collected_all_disease_terms, 
                     &quot;(?&lt;=^|, )benign neoplasm of (.*?)(?=,|$)|(?&lt;=^|, )benign neoplasm of (.*?) (.*?)(?=,|$)&quot;, 
@@ -2906,24 +2973,28 @@ gwas_study_info = gwas_study_info |&gt;
          ) 
 
 
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        str_replace_all(collected_all_disease_terms, 
-                    &quot;(?&lt;=^|, )(.*?) benign neoplasm(?=,|$)|(.*?) (.*?) neoplasm(?=,|$)&quot;, 
-                    &quot;benign neoplasm&quot;)
-         ) 
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = str_replace_all(
+      collected_all_disease_terms,
+      &quot;(?&lt;=^|, )benign(?: [^,]+)? neoplasm(?=,|$)|(?&lt;=^|, )benign neoplasm of [^,]+(?=,|$)|(?&lt;=^|, )[^,]+ benign neoplasm(?=,|$)&quot;,
+      &quot;benign neoplasm&quot;))
+
+after &lt;- unique(gwas_study_info$collected_all_disease_terms)
+
+stopifnot(!any(grepl(&quot;malignant&quot;, before) &amp; after == &quot;benign neoplasm&quot;))</code></pre>
+<pre><code>Warning in grepl(&quot;malignant&quot;, before) &amp; after == &quot;benign neoplasm&quot;: longer
+object length is not a multiple of shorter object length</code></pre>
+<pre class="r"><code># then handle the malignant ones explicitly, e.g.
+malignant_nos &lt;- c(&quot;secondary malignant neoplasm&quot;, &quot;metastatic malignant neoplasm&quot;)
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = str_replace_all(
+      collected_all_disease_terms, vec_to_grep_pattern(malignant_nos),
+      &quot;secondary malignant neoplasm&quot;))
 
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
         str_replace_all(collected_all_disease_terms, 
                     &quot;(?&lt;=^|, )polyp of (.*?)(?=,|$)|(?&lt;=^|, )polyp of (.*?) (.*?)(?=,|$)&quot;, 
-                    &quot;benign neoplasm&quot;)
-         ) 
-
-gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        str_replace_all(collected_all_disease_terms, 
-                    &quot;(?&lt;=^|, ) (.*?) polyp(?=,|$)|(?&lt;=^|, )(.*?) (.*?) polyp (?=,|$)&quot;, 
                     &quot;benign neoplasm&quot;)
          ) </code></pre>
 </div>
@@ -2976,16 +3047,26 @@ gwas_study_info = gwas_study_info |&gt;
 number="3.0.5">
 <h3><span class="header-section-number">3.0.5</span> Central nervous
 system cancer</h3>
-<pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000326/descendants&quot;
+<pre class="r"><code># url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000326/descendants&quot;
+
+url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002714/descendants&quot;
 
 cns_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 0
+[1] 229
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 229
 [1] &quot;\n Some example terms&quot;
-[1] NA NA NA NA NA</code></pre>
+[1] &quot;childhood supratentorial embryonal tumor with multilayered rosettes, c19mc-altered&quot;
+[2] &quot;central nervous system ewing sarcoma/peripheral primitive neuroectodermal tumor&quot;   
+[3] &quot;malignant central nervous system mesenchymal, non-meningothelial neoplasm&quot;         
+[4] &quot;diffuse pediatric-type high-grade glioma, h3-wildtype and idh-wildtype&quot;            
+[5] &quot;childhood central nervous system primitive neuroectodermal neoplasm&quot;               </code></pre>
 <pre class="r"><code>cns_cancer_terms = stringr::str_replace_all(cns_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>pattern = vec_to_grep_pattern(cns_cancer_terms)
 
 gwas_study_info = gwas_study_info |&gt;
@@ -3024,6 +3105,8 @@ cancer</h3>
 cervical_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 37
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 37
 [1] &quot;\n Some example terms&quot;
 [1] &quot;signet ring cell variant cervical mucinous adenocarcinoma&quot;
 [2] &quot;villoglandular variant cervical mucinous adenocarcinoma&quot;  
@@ -3031,10 +3114,11 @@ cervical_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;intestinal variant cervical mucinous adenocarcinoma&quot;      
 [5] &quot;endocervical type cervical mucinous adenocarcinoma&quot;       </code></pre>
 <pre class="r"><code>cervical_cancer_terms = stringr::str_replace_all(cervical_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-cervical_cancer_terms = c(&quot;cervical intraepithelial neoplasia grade 2/3&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>cervical_cancer_terms = c(&quot;cervical intraepithelial neoplasia grade 2/3&quot;,
                           &quot;uterine cervical cancer in situ&quot;,
                           cervical_cancer_terms)
 
@@ -3063,6 +3147,8 @@ cancer</h3>
 colorectal_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 106
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 106
 [1] &quot;\n Some example terms&quot;
 [1] &quot;pold1-related polyposis and colorectal cancer syndrome&quot;
 [2] &quot;pole-related polyposis and colorectal cancer syndrome&quot; 
@@ -3070,10 +3156,11 @@ colorectal_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;colorectal cancer, hereditary nonpolyposis, type 7&quot;    
 [5] &quot;colon mucosa-associated lymphoid tissue lymphoma&quot;      </code></pre>
 <pre class="r"><code>colorectal_cancer_terms = stringr::str_replace_all(colorectal_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-colorectal_cancer_terms= c(&quot;metastatic colorectal cancer&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>colorectal_cancer_terms= c(&quot;metastatic colorectal cancer&quot;,
                              &quot;rectum cancer&quot;,
                           colorectal_cancer_terms)</code></pre>
 <pre class="r"><code>gwas_study_info = 
@@ -3125,6 +3212,8 @@ cancer</h3>
 endometrial_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 23
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 23
 [1] &quot;\n Some example terms&quot;
 [1] &quot;endometrial endometrioid adenocarcinoma with spindled epithelial cells&quot;
 [2] &quot;ovarian endometrioid adenocarcinoma with squamous differentiation&quot;     
@@ -3136,8 +3225,10 @@ endometrial_cancer_terms = c(&quot;endometrial endometrioid carcinoma&quot;,
                              endometrial_cancer_terms)
 
 endometrial_cancer_terms = stringr::str_replace_all(endometrial_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
           stringr::str_replace_all(collected_all_disease_terms ,
@@ -3168,6 +3259,8 @@ gwas_study_info = gwas_study_info |&gt;
 ocular_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 76
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 76
 [1] &quot;\n Some example terms&quot;
 [1] &quot;lacrimal gland carcinoma ex pleomorphic adenoma&quot;
 [2] &quot;intermediate cell type ciliary body melanoma&quot;   
@@ -3175,8 +3268,10 @@ ocular_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;ocular melanoma with extraocular extension&quot;     
 [5] &quot;medium/large size posterior uveal melanoma&quot;     </code></pre>
 <pre class="r"><code>ocular_cancer_terms = stringr::str_replace_all(ocular_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
           stringr::str_replace_all(collected_all_disease_terms ,
@@ -3197,8 +3292,8 @@ biliary tract cancer</h3>
          )
          )</code></pre>
 </div>
-<div id="hodgkin-lymphoma" class="section level3" number="3.0.12">
-<h3><span class="header-section-number">3.0.12</span> Hodgkin
+<div id="hodgkins-lymphoma" class="section level3" number="3.0.12">
+<h3><span class="header-section-number">3.0.12</span> Hodgkin’s
 lymphoma</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -3233,6 +3328,8 @@ number="3.0.14">
 kidney_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 51
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 51
 [1] &quot;\n Some example terms&quot;
 [1] &quot;eosinophilic variant of chromophobe renal cell carcinoma&quot;
 [2] &quot;childhood renal cell carcinoma with mit translocations&quot;  
@@ -3245,10 +3342,11 @@ kidney_cancer_terms &lt;- get_descendants(url)</code></pre>
                        kidney_cancer_terms)
 
 kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-kidney_cancer_terms =  stringr::str_replace_all(kidney_cancer_terms,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>kidney_cancer_terms =  stringr::str_replace_all(kidney_cancer_terms,
                           vec_to_grep_pattern(&quot;renal cancer&quot;),
                           &quot;kidney cancer&quot;)</code></pre>
 <pre class="r"><code>gwas_study_info = 
@@ -3283,14 +3381,18 @@ gwas_study_info |&gt;
 leukemia_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 0
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 0
 [1] &quot;\n Some example terms&quot;
 [1] NA NA NA NA NA</code></pre>
 <pre class="r"><code>leukemia_terms &lt;- c(&quot;b-cell acute lymphoblastic leukemia with t\\(1;19\\)\\(q23;p13.3\\); e2a-pbx1 \\(tcf3-pbx1\\)&quot;,
                     leukemia_terms)
 
 leukemia_terms = stringr::str_replace_all(leukemia_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
@@ -3306,13 +3408,29 @@ number="3.0.18">
 cavity cancer</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005570/descendants&quot;
 
-lip_oral_cavity_cancer_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 0
-[1] &quot;\n Some example terms&quot;
-[1] NA NA NA NA NA</code></pre>
-<pre class="r"><code>lip_oral_cavity_cancer_terms = stringr::str_replace_all(lip_oral_cavity_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+# this term is now obselete, so we use relevant archive version of EFO ontology to get descendants of EFO_0000408
+# taken from: https://github.com/EBISPOT/efo/releases/tag/v3.81.0
+
+
+
+library(ontologyIndex)   # NB: masks your own get_descendants() — qualify calls</code></pre>
+<pre><code>
+Attaching package: &#39;ontologyIndex&#39;</code></pre>
+<pre><code>The following object is masked _by_ &#39;.GlobalEnv&#39;:
+
+    get_descendants</code></pre>
+<pre class="r"><code>efo &lt;- get_ontology(here::here(&quot;data/ontology/efo_3.81.0.obo&quot;),
+                    propagate_relationships = &quot;is_a&quot;,
+                    extract_tags = &quot;everything&quot;)
+
+ids &lt;- ontologyIndex::get_descendants(efo, 
+                                      roots = &quot;efo:EFO_0005570&quot;,
+                                      exclude_roots = FALSE)
+
+lip_oral_cavity_cancer_terms &lt;- stringr::str_squish(tolower(efo$name[ids]))
+
+lip_oral_cavity_cancer_terms = stringr::str_replace_all(lip_oral_cavity_cancer_terms,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
@@ -3329,6 +3447,8 @@ lip_oral_cavity_cancer_terms &lt;- get_descendants(url)</code></pre>
 liver_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 76
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 76
 [1] &quot;\n Some example terms&quot;
 [1] &quot;squamous cell carcinoma of gallbladder and extrahepatic biliary tract&quot;
 [2] &quot;undifferentiated carcinoma of liver and intrahepatic biliary tract&quot;   
@@ -3336,11 +3456,11 @@ liver_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;adenocarcinoma of gallbladder and extrahepatic biliary tract&quot;         
 [5] &quot;combined hepatocellular carcinoma and cholangiocarcinoma&quot;             </code></pre>
 <pre class="r"><code>liver_cancer_terms = stringr::str_replace_all(liver_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-
-liver_cancer_terms = c(&quot;hepatitis virus-related liver cancer&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>liver_cancer_terms = c(&quot;hepatitis virus-related liver cancer&quot;,
                        liver_cancer_terms)</code></pre>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
@@ -3367,6 +3487,8 @@ gwas_study_info |&gt;
 lung_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 63
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 63
 [1] &quot;\n Some example terms&quot;
 [1] &quot;mixed mucinous and nonmucinous bronchioloalveolar adenocarcinoma&quot;
 [2] &quot;well-differentiated fetal adenocarcinoma of the lung&quot;            
@@ -3374,8 +3496,10 @@ lung_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;primary pulmonary diffuse large b-cell lymphoma&quot;                 
 [5] &quot;nonmucinous bronchioloalveolar adenocarcinoma&quot;                   </code></pre>
 <pre class="r"><code>lung_cancer_terms = stringr::str_replace_all(lung_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
@@ -3388,12 +3512,10 @@ gwas_study_info |&gt;
 <h4><span class="header-section-number">3.0.20.1</span> Small cell
 cancer</h4>
 <pre class="r"><code>gwas_study_info |&gt;
-    filter(grepl(&quot;\\bsmall cell cancer&quot;, collected_all_disease_terms)) |&gt;
+    filter(grepl(&quot;\\bsmall cell cancer&quot;, collected_all_disease_terms, fixed = T)) |&gt;
     select(`DISEASE/TRAIT`, collected_all_disease_terms) |&gt;
     distinct()</code></pre>
-<pre><code>            DISEASE/TRAIT collected_all_disease_terms
-                   &lt;char&gt;                      &lt;char&gt;
-1: Small-cell lung cancer           small cell cancer</code></pre>
+<pre><code>Empty data.table (0 rows and 2 cols): DISEASE/TRAIT,collected_all_disease_terms</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(`DISEASE/TRAIT` == &quot;Small-cell lung cancer&quot;,
@@ -3413,6 +3535,8 @@ cancer</h3>
 ovarian_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 77
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 77
 [1] &quot;\n Some example terms&quot;
 [1] &quot;theca steroid-producing cell malignant tumor of ovary, not further specified&quot;
 [2] &quot;ovarian endometrioid adenocarcinoma with squamous differentiation&quot;           
@@ -3420,10 +3544,11 @@ ovarian_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;malignant non-dysgerminomatous germ cell tumor of ovary&quot;                     
 [5] &quot;malignant dysgerminomatous germ cell tumor of ovary&quot;                         </code></pre>
 <pre class="r"><code>ovarian_cancer_terms = stringr::str_replace_all(ovarian_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-ovarian_cancer_terms = c(&quot;high grade serous ovarian cancer&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>ovarian_cancer_terms = c(&quot;high grade serous ovarian cancer&quot;,
                          &quot;high grade ovarian serous adenocarcinoma&quot;,
                          &quot;high grade ovarian cancer&quot;,
                          &quot;high grade ovarian cancers&quot;,
@@ -3457,6 +3582,8 @@ cancer</h3>
 pancreatic_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 37
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 37
 [1] &quot;\n Some example terms&quot;
 [1] &quot;pancreatic intraductal papillary-mucinous neoplasm with an associated invasive carcinoma&quot;
 [2] &quot;pancreatic intraductal papillary-mucinous neoplasm with high grade dysplasia&quot;            
@@ -3464,8 +3591,10 @@ pancreatic_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;pancreatic mucinous-cystic neoplasm with an associated invasive carcinoma&quot;               
 [5] &quot;undifferentiated pancreatic carcinoma with osteoclast-like giant cells&quot;                  </code></pre>
 <pre class="r"><code>pancreatic_cancer_terms = stringr::str_replace_all(pancreatic_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
           stringr::str_replace_all(collected_all_disease_terms ,
@@ -3483,6 +3612,8 @@ system cancer</h3>
 peripheral_nervous_system_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 42
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 42
 [1] &quot;\n Some example terms&quot;
 [1] &quot;malignant melanocytic peripheral nerve sheath tumor of mediastinum&quot;
 [2] &quot;melanotic psammomatous malignant peripheral nerve sheath tumor&quot;    
@@ -3490,8 +3621,10 @@ peripheral_nervous_system_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;peripheral primitive neuroectodermal tumor of soft tissues&quot;        
 [5] &quot;malignant glandular tumor of peripheral nerve sheath&quot;              </code></pre>
 <pre class="r"><code>peripheral_nervous_system_cancer_terms = stringr::str_replace_all(peripheral_nervous_system_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
           stringr::str_replace_all(collected_all_disease_terms ,
@@ -3519,6 +3652,8 @@ cancer</h3>
 prostate_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 21
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 21
 [1] &quot;\n Some example terms&quot;
 [1] &quot;lymphoepithelioma-like acinar prostate adenocarcinoma&quot;
 [2] &quot;prostate signet ring cell adenocarcinoma&quot;             
@@ -3526,10 +3661,11 @@ prostate_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;prostate transitional cell carcinoma&quot;                 
 [5] &quot;prostate embryonal rhabdomyosarcoma&quot;                  </code></pre>
 <pre class="r"><code>prostate_cancer_terms = stringr::str_replace_all(prostate_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-prostate_cancer_terms = c(&quot;grade iii prostatic intraepithelial neoplasia&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>prostate_cancer_terms = c(&quot;grade iii prostatic intraepithelial neoplasia&quot;,
                           &quot;metastatic prostate cancer&quot;,
                           prostate_cancer_terms)</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
@@ -3578,15 +3714,16 @@ lymphoma</h3>
 nhl_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 0
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 0
 [1] &quot;\n Some example terms&quot;
 [1] NA NA NA NA NA</code></pre>
 <pre class="r"><code>nhl_terms = stringr::str_replace_all(nhl_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-
-
-nhl_terms = c(&quot;central nervous system non-hodgkin lymphoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>nhl_terms = c(&quot;central nervous system non-hodgkin lymphoma&quot;,
               &quot;lymphoblastic lymphoma&quot;,
               &quot;extranodal nasal nk/t cell lymphoma&quot;, # https://www.ebi.ac.uk/ols4/ontologies/ordo/classes/http%253A%252F%252Fwww.orpha.net%252FORDO%252FOrphanet_86879
               &quot;follicular lymphoma&quot;, # http://purl.obolibrary.org/obo/DOID_0050873
@@ -3626,11 +3763,13 @@ cancer</h3>
 non_melanoma_skin_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 1
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 1
 [1] &quot;\n Some example terms&quot;
 [1] &quot;keratinocyte carcinoma&quot; NA                       NA                      
 [4] NA                       NA                      </code></pre>
 <pre class="r"><code>non_melanoma_skin_cancer_terms = stringr::str_replace_all(non_melanoma_skin_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
@@ -3674,6 +3813,8 @@ cancer</h3>
 other_pharynx_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 17
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 17
 [1] &quot;\n Some example terms&quot;
 [1] &quot;oropharyngeal squamous cell carcinoma&quot;
 [2] &quot;pharynx squamous cell carcinoma&quot;      
@@ -3681,10 +3822,11 @@ other_pharynx_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;tonsil squamous cell carcinoma&quot;       
 [5] &quot;adenoid basal cell carcinoma&quot;         </code></pre>
 <pre class="r"><code>other_pharynx_cancer_terms = stringr::str_replace_all(other_pharynx_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-other_pharynx_cancer_terms = c(&quot;hypopharyngeal cancer&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>other_pharynx_cancer_terms = c(&quot;hypopharyngeal cancer&quot;,
                                &quot;oropharyngeal cancer&quot;,
                                other_pharynx_cancer_terms)</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
@@ -3700,13 +3842,15 @@ other_pharynx_cancer_terms = c(&quot;hypopharyngeal cancer&quot;,
 sarcoma</h3>
 <pre class="r"><code>url &lt;- &quot;http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001968/descendants&quot;
 
-soft_tissue_sarcoma_terms &lt;- get_descendants(url)</code></pre>
-<pre><code>[1] &quot;Number of terms collected:&quot;
-[1] 0
-[1] &quot;\n Some example terms&quot;
-[1] NA NA NA NA NA</code></pre>
-<pre class="r"><code>soft_tissue_sarcoma_terms = stringr::str_replace_all(soft_tissue_sarcoma_terms,
-                            &quot;\\bcarcinoma&quot;,
+# EFO_1001968 is now obselete, so we use relevant archive version of EFO ontology to get descendants of EFO_1001968
+ids &lt;- ontologyIndex::get_descendants(efo, 
+                                      roots = &quot;efo:EFO_1001968&quot;,
+                                      exclude_roots = FALSE)
+
+soft_tissue_sarcoma_terms &lt;- stringr::str_squish(tolower(efo$name[ids]))
+
+soft_tissue_sarcoma_terms = stringr::str_replace_all(soft_tissue_sarcoma_terms,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)
 
 soft_tissue_sarcoma_terms = c(&quot;kaposis sarcoma&quot;,
@@ -3736,6 +3880,8 @@ cancer</h3>
 stomach_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 32
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 32
 [1] &quot;\n Some example terms&quot;
 [1] &quot;gastric signet ring cell adenocarcinoma&quot;
 [2] &quot;malignant gastric granular cell tumor&quot;  
@@ -3743,10 +3889,11 @@ stomach_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;malignant gastric germ cell tumor&quot;      
 [5] &quot;gastric papillary adenocarcinoma&quot;       </code></pre>
 <pre class="r"><code>stomach_cancer_terms = stringr::str_replace_all(stomach_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-stomach_cancer_terms = c(
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>stomach_cancer_terms = c(
                           &quot;diffuse stomach cancer&quot;,
                           &quot;diffuse gastric adenocarcinoma&quot;, 
                           &quot;gastric cancer&quot;,
@@ -3793,6 +3940,8 @@ cancer</h3>
 thyroid_cancer_terms &lt;- get_descendants(url)</code></pre>
 <pre><code>[1] &quot;Number of terms collected:&quot;
 [1] 25
+[1] &quot;Number of IRI URLs collected:&quot;
+[1] 25
 [1] &quot;\n Some example terms&quot;
 [1] &quot;thyroid gland mixed medullary and follicular cell-derived carcinoma&quot;
 [2] &quot;thyroid gland spindle epithelial tumor with thymus-like elements&quot;   
@@ -3800,10 +3949,11 @@ thyroid_cancer_terms &lt;- get_descendants(url)</code></pre>
 [4] &quot;diffuse sclerosing papillary thyroid carcinoma&quot;                     
 [5] &quot;differentiated high-grade thyroid carcinoma&quot;                        </code></pre>
 <pre class="r"><code>thyroid_cancer_terms = stringr::str_replace_all(thyroid_cancer_terms,
-                            &quot;\\bcarcinoma&quot;,
-                            &quot;cancer&quot;)
-
-thyroid_cancer_terms = c(&quot;differentiated thyroid cancer&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
+                            &quot;cancer&quot;)</code></pre>
+<pre><code>Warning in stri_replace_all_regex(string, pattern,
+fix_replacement(replacement), : argument is not an atomic vector; coercing</code></pre>
+<pre class="r"><code>thyroid_cancer_terms = c(&quot;differentiated thyroid cancer&quot;,
                          thyroid_cancer_terms)</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
  mutate(collected_all_disease_terms  = 
@@ -3912,15 +4062,21 @@ gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(grepl(&quot;in situ&quot;, collected_all_disease_terms) &amp; 
-                grepl(&quot;ICD10 D04|PheCode 172.3&quot;, `DISEASE/TRAIT`, ignore.case = T),
+                grepl(&quot;ICD10 D04|PheCode 172.3&quot;, 
+                      `DISEASE/TRAIT`, 
+                      ignore.case = T, 
+                      fixed = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;skin cancer in situ&quot;),
                           &quot;non-melanoma skin cancer&quot;),
                 collected_all_disease_terms
          )
-  )
-
-# in situ cancer -&gt; to cancer
+  )</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `collected_all_disease_terms = ifelse(...)`.
+Caused by warning in `grepl()`:
+! argument &#39;ignore.case = TRUE&#39; will be ignored</code></pre>
+<pre class="r"><code># in situ cancer -&gt; to cancer
 
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
@@ -4041,14 +4197,18 @@ gwas_study_info = gwas_study_info |&gt;
          ifelse(collected_all_disease_terms == &quot;melanoma&quot; &amp;
                 grepl(paste0(malignant_skin_melanoma, collapse = &quot;|\\b&quot;),
                       `DISEASE/TRAIT`, 
-                      ignore.case = T),
+                      ignore.case = T,
+                      fixed = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;melanoma&quot;),
                           &quot;malignant melanoma of skin&quot;),
                 collected_all_disease_terms
-         ))
-
-# UKBB malignant melanoma of skin
+         ))</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `collected_all_disease_terms = ifelse(...)`.
+Caused by warning in `grepl()`:
+! argument &#39;ignore.case = TRUE&#39; will be ignored</code></pre>
+<pre class="r"><code># UKBB malignant melanoma of skin
 # gwas_study_info = gwas_study_info |&gt;
 #   mutate(collected_all_disease_terms  = 
 #          ifelse(collected_all_disease_terms == &quot;melanoma&quot; &amp;
@@ -4064,14 +4224,17 @@ gwas_study_info = gwas_study_info |&gt;
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == &quot;melanoma&quot; &amp; 
-                grepl(&quot;\\bcutaneous melanoma&quot;, STUDY, ignore.case = T),
+                grepl(&quot;\\bcutaneous melanoma&quot;, STUDY, ignore.case = T, fixed = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;melanoma&quot;), 
                           &quot;malignant melanoma of skin&quot;),
                 collected_all_disease_terms
-         ))
-
-gwas_study_info = gwas_study_info |&gt;
+         ))</code></pre>
+<pre><code>Warning: There was 1 warning in `mutate()`.
+ℹ In argument: `collected_all_disease_terms = ifelse(...)`.
+Caused by warning in `grepl()`:
+! argument &#39;ignore.case = TRUE&#39; will be ignored</code></pre>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == &quot;melanoma&quot; &amp; 
                 grepl(&quot;Malignant melanoma&quot;, `DISEASE/TRAIT`, ignore.case = T),
@@ -4225,33 +4388,24 @@ cancer</h3>
     filter(grepl(&quot;squamous cell cancer&quot;, collected_all_disease_terms)) |&gt;
     select(`DISEASE/TRAIT`, collected_all_disease_terms) |&gt;
     distinct()</code></pre>
-<pre><code>                                                                          DISEASE/TRAIT
-                                                                                 &lt;char&gt;
- 1:                                                       Multiple keratinocyte cancers
- 2:                                                             Squamous cell carcinoma
- 3:                                                   Esophageal cancer (squamous cell)
- 4:                                Esophageal squamous cell cancer (length of survival)
- 5:                                                                         Lung cancer
- 6:                         Pre-treatment pain in head and neck squamous cell carcinoma
- 7:                                               Head and neck squamous cell carcinoma
- 8:         Multiple cancers (lung cancer, gastric cancer, and squamous cell carcinoma)
- 9:                                       Squamous cell carcinoma antigen (SCCA) levels
-10:                                                         Pan-squamous cell carcinoma
-11:     Cancer code, self-reported: squamous cell carcinoma (UKB data field 20001_1062)
-12:                                            Squamous cell carcinoma (PheCode 172.22)
-13:     Oral microbiota abundance (Lachnoanaerobaculum) in oral squamous cell carcinoma
-14:                Oral microbiota abundance (Kingella) in oral squamous cell carcinoma
-15:              Oral microbiota abundance (Parvimonas) in oral squamous cell carcinoma
-16:         Oral microbiota abundance (Aggregatibacter) in oral squamous cell carcinoma
-17:       Oral microbiome alpha diversity (Chao1 index) in oral squamous cell carcinoma
-18:     Oral microbiome alpha diversity (Shannon index) in oral squamous cell carcinoma
-19: Oral microbiome beta diversity (Euclidian distance) in oral squamous cell carcinoma
-20:        Oral microbiome beta diversity (Bray-Curtis) in oral squamous cell carcinoma
-21:                                      Squamous cell carcinoma (UKB data field 20001)
-22:                  Squamous cell carcinoma (UKB data field 20001) (Gene-based burden)
-23:        Head and neck squamous cell carcinoma (adjusted for environmental exposures)
-24:                                                      Squamous cell carcinoma (MTAG)
-                                                                          DISEASE/TRAIT
+<pre><code>                                                                      DISEASE/TRAIT
+                                                                             &lt;char&gt;
+ 1:                                                   Multiple keratinocyte cancers
+ 2:                                                         Squamous cell carcinoma
+ 3:                                               Esophageal cancer (squamous cell)
+ 4:                            Esophageal squamous cell cancer (length of survival)
+ 5:                                                                     Lung cancer
+ 6:                     Pre-treatment pain in head and neck squamous cell carcinoma
+ 7:                                           Head and neck squamous cell carcinoma
+ 8:     Multiple cancers (lung cancer, gastric cancer, and squamous cell carcinoma)
+ 9:                                   Squamous cell carcinoma antigen (SCCA) levels
+10:                                                     Pan-squamous cell carcinoma
+11: Cancer code, self-reported: squamous cell carcinoma (UKB data field 20001_1062)
+12:                                        Squamous cell carcinoma (PheCode 172.22)
+13:                                  Squamous cell carcinoma (UKB data field 20001)
+14:              Squamous cell carcinoma (UKB data field 20001) (Gene-based burden)
+15:    Head and neck squamous cell carcinoma (adjusted for environmental exposures)
+16:                                                  Squamous cell carcinoma (MTAG)
                          collected_all_disease_terms
                                               &lt;char&gt;
  1:                             squamous cell cancer
@@ -4266,19 +4420,10 @@ cancer</h3>
 10:                             squamous cell cancer
 11:                             squamous cell cancer
 12:                             squamous cell cancer
-13:                        oral squamous cell cancer
-14:                        oral squamous cell cancer
-15:                        oral squamous cell cancer
-16:                        oral squamous cell cancer
-17:                        oral squamous cell cancer
-18:                        oral squamous cell cancer
-19:                        oral squamous cell cancer
-20:                        oral squamous cell cancer
-21:                             squamous cell cancer
-22:                             squamous cell cancer
-23:       head and neck cancer, squamous cell cancer
-24:                             squamous cell cancer
-                         collected_all_disease_terms</code></pre>
+13:                             squamous cell cancer
+14:                             squamous cell cancer
+15:       head and neck cancer, squamous cell cancer
+16:                             squamous cell cancer</code></pre>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -4326,24 +4471,45 @@ cancer</h3>
          all_disease_terms, 
          collected_all_disease_terms) |&gt; 
   distinct()</code></pre>
-<pre><code>                                                                                                                   STUDY
-                                                                                                                  &lt;char&gt;
-1: Efficiently controlling for case-control imbalance and sample relatedness in large-scale genetic association studies.
-2:                                             A generalized linear mixed model association tool for biobank-scale data.
-3:                           Diversity and scale: Genetic architecture of 2068 traits in the VA Million Veteran Program.
-4:                           Diversity and scale: Genetic architecture of 2068 traits in the VA Million Veteran Program.
-                                                         DISEASE/TRAIT
-                                                                &lt;char&gt;
-1:                                           Skin cancer (PheCode 172)
-2: Cancer code, self-reported: skin cancer (UKB data field 20001_1003)
-3:                                                         Skin cancer
-4:                                   Takes medication for skin cancer?
-   all_disease_terms collected_all_disease_terms
-              &lt;char&gt;                      &lt;char&gt;
-1:       skin cancer                 skin cancer
-2:    skin carcinoma                 skin cancer
-3:       skin cancer                 skin cancer
-4:       skin cancer                 skin cancer</code></pre>
+<pre><code>                                                                                                                    STUDY
+                                                                                                                   &lt;char&gt;
+ 1: Efficiently controlling for case-control imbalance and sample relatedness in large-scale genetic association studies.
+ 2: Efficiently controlling for case-control imbalance and sample relatedness in large-scale genetic association studies.
+ 3:                                             A generalized linear mixed model association tool for biobank-scale data.
+ 4:                                             A generalized linear mixed model association tool for biobank-scale data.
+ 5:                                             A generalized linear mixed model association tool for biobank-scale data.
+ 6:                                             A generalized linear mixed model association tool for biobank-scale data.
+ 7:                                             A generalized linear mixed model association tool for biobank-scale data.
+ 8:                                             A generalized linear mixed model association tool for biobank-scale data.
+ 9:                           Diversity and scale: Genetic architecture of 2068 traits in the VA Million Veteran Program.
+10:                           Diversity and scale: Genetic architecture of 2068 traits in the VA Million Veteran Program.
+11:                           Diversity and scale: Genetic architecture of 2068 traits in the VA Million Veteran Program.
+                                                                    DISEASE/TRAIT
+                                                                           &lt;char&gt;
+ 1:                                                     Skin cancer (PheCode 172)
+ 2:                                     Carcinoma in situ of skin (PheCode 172.3)
+ 3:           Cancer code, self-reported: skin cancer (UKB data field 20001_1003)
+ 4: ICD10 D04.3: Carcinoma in situ of skin of other and unspecified parts of face
+ 5:                               ICD10 D04.5: Carcinoma in situ of skin of trunk
+ 6:      ICD10 D04.6: Carcinoma in situ of skin of upper limb, including shoulder
+ 7:           ICD10 D04.7: Carcinoma in situ of skin of lower limb, including hip
+ 8:                           ICD10 D04.9: Carcinoma in situ of skin, unspecified
+ 9:                                     Carcinoma in situ of skin (PheCode 172.3)
+10:                                                                   Skin cancer
+11:                                             Takes medication for skin cancer?
+         all_disease_terms collected_all_disease_terms
+                    &lt;char&gt;                      &lt;char&gt;
+ 1:            skin cancer                 skin cancer
+ 2: skin carcinoma in situ         skin cancer in situ
+ 3:         skin carcinoma                 skin cancer
+ 4: skin carcinoma in situ         skin cancer in situ
+ 5: skin carcinoma in situ         skin cancer in situ
+ 6: skin carcinoma in situ         skin cancer in situ
+ 7: skin carcinoma in situ         skin cancer in situ
+ 8: skin carcinoma in situ         skin cancer in situ
+ 9: skin carcinoma in situ         skin cancer in situ
+10:            skin cancer                 skin cancer
+11:            skin cancer                 skin cancer</code></pre>
 <pre class="r"><code># make them listed under both malignant melanoma of skin and non-melanoma skin cancer
 
 gwas_study_info = gwas_study_info |&gt;
@@ -4405,14 +4571,14 @@ gwas_study_info = gwas_study_info |&gt;
                       ignore.case = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;lymphoma&quot;),
-                          &quot;non-hodgkin lymphoma&quot;),
+                          &quot;non-hodgkins lymphoma&quot;),
                 collected_all_disease_terms
          )
          )
 
 
-# Non-follicular lymphoma (UKB data field 40006) likely non-hodgkin lymphoma
-# as ICD10 C83: Non-follicular lymphoma is non-hodgkin lymphoma
+# Non-follicular lymphoma (UKB data field 40006) likely non-hodgkins lymphoma
+# as ICD10 C83: Non-follicular lymphoma is non-hodgkins lymphoma
 
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
@@ -4423,14 +4589,14 @@ gwas_study_info = gwas_study_info |&gt;
                       ignore.case = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;lymphoma&quot;),
-                          &quot;non-hodgkin lymphoma&quot;),
+                          &quot;non-hodgkins lymphoma&quot;),
                 collected_all_disease_terms
          )
          )
 
 
 # Cancer code, self-reported: lymphoma (UKB data field 20001_1047)
-# includes both hodgkin and non-hodgkin lymphoma
+# includes both hodgkin and non-hodgkins lymphoma
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
          ifelse(grepl(&quot;lymphoma&quot;, collected_all_disease_terms, ignore.case = T) &amp; 
@@ -4440,7 +4606,7 @@ gwas_study_info = gwas_study_info |&gt;
                       ignore.case = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;lymphoma&quot;),
-                          &quot;non-hodgkin lymphoma, hodgkin lymphoma&quot;),
+                          &quot;non-hodgkins lymphoma, hodgkins lymphoma&quot;),
                 collected_all_disease_terms
          )
          )
@@ -4448,7 +4614,7 @@ gwas_study_info = gwas_study_info |&gt;
 # for pubmed id: 34594039
 # from sup table 1; 
 # Malignant lymphoma    Malignant_Lymphoma  is defined PheCodes 201/202 CD2_NONFOLLICULAR_LYMPHOMA
-# thus includes both hodgkin and non-hodgkin lymphoma
+# thus includes both hodgkin and non-hodgkins lymphoma
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
          ifelse(grepl(&quot;lymphoma&quot;, collected_all_disease_terms, ignore.case = T) &amp; 
@@ -4456,13 +4622,13 @@ gwas_study_info = gwas_study_info |&gt;
                 PUBMED_ID == 34594039,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;lymphoma&quot;),
-                          &quot;non-hodgkin lymphoma, hodgkin lymphoma&quot;),
+                          &quot;non-hodgkins lymphoma, hodgkins lymphoma&quot;),
                 collected_all_disease_terms
          )
          )
 
 # pubmed id: 23349640
-# includes both hodgkin and non-hodgkin lymphoma
+# includes both hodgkin and non-hodgkins lymphoma
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
          ifelse(grepl(&quot;lymphoma&quot;, collected_all_disease_terms, ignore.case = T) &amp; 
@@ -4470,13 +4636,13 @@ gwas_study_info = gwas_study_info |&gt;
                 PUBMED_ID == 23349640,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;lymphoma&quot;),
-                          &quot;non-hodgkin lymphoma, hodgkin lymphoma&quot;),
+                          &quot;non-hodgkins lymphoma, hodgkins lymphoma&quot;),
                 collected_all_disease_terms
          )
          )
 
 # not entirely sure for pubmed id: 36344522
-# perhaps need to read further in, but seems like it is both hodgkin and non-hodgkin lymphoma
+# perhaps need to read further in, but seems like it is both hodgkin and non-hodgkins lymphoma
 gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms =
          ifelse(grepl(&quot;lymphoma&quot;, collected_all_disease_terms, ignore.case = T) &amp; 
@@ -4484,7 +4650,7 @@ gwas_study_info = gwas_study_info |&gt;
                 PUBMED_ID == 36344522,
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern(&quot;lymphoma&quot;),
-                          &quot;non-hodgkin lymphoma, hodgkin lymphoma&quot;),
+                          &quot;non-hodgkins lymphoma, hodgkins lymphoma&quot;),
                 collected_all_disease_terms
          )
          )</code></pre>
@@ -4510,11 +4676,15 @@ terms created during grouping</h3>
 number="6.0.2">
 <h3><span class="header-section-number">6.0.2</span> Deal with hanging
 commas and spaces</h3>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = stringr::str_remove_all(collected_all_disease_terms, &quot;^,|,$&quot;)
-         ) |&gt;
-  mutate(collected_all_disease_terms = stringr::str_trim(collected_all_disease_terms)
-         ) </code></pre>
+<pre class="r"><code>tidy_terms &lt;- function(x){
+  x |&gt; str_replace_all(&quot;,\\s*,&quot;, &quot;,&quot;) |&gt;
+       str_replace_all(&quot;^\\s*,\\s*&quot;, &quot;&quot;) |&gt;
+       str_replace_all(&quot;\\s*,\\s*$&quot;, &quot;&quot;) |&gt;
+       str_squish() |&gt;
+       vapply(\(s) paste(unique(str_trim(str_split_1(s, &quot;,\\s*&quot;))), collapse = &quot;, &quot;), character(1))
+}
+
+gwas_study_info$collected_all_disease_terms = tidy_terms(gwas_study_info$collected_all_disease_terms)</code></pre>
 </div>
 <div id="final-summary---number-of-unique-study-terms-pairs"
 class="section level2" number="6.1">
@@ -4533,13 +4703,13 @@ head(n_studies_trait)</code></pre>
   collected_all_disease_terms n_studies
   &lt;chr&gt;                           &lt;int&gt;
 1 type 2 diabetes mellitus          175
-2 breast cancer                     154
+2 breast cancer                     153
 3 schizophrenia                     142
 4 major depressive disorder         141
-5 alzheimers disease                133
-6 asthma                            124</code></pre>
+5 alzheimers disease                131
+6 asthma                            123</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2521    2</code></pre>
+<pre><code>[1] 2578    2</code></pre>
 <div id="when-separate-studies-with-multiple-terms-1"
 class="section level3" number="6.1.1">
 <h3><span class="header-section-number">6.1.1</span> When separate
@@ -4553,7 +4723,7 @@ studies with multiple terms</h3>
 test &lt;- data.frame(trait = unique(diseases))
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2162</code></pre>
+<pre><code>[1] 2197</code></pre>
 <pre class="r"><code># make frequency table
 freq &lt;- table(as.factor(diseases))
 
@@ -4563,16 +4733,14 @@ freq_sorted &lt;- sort(freq, decreasing = TRUE)
 # show top N, e.g. top 10
 head(freq_sorted, 10)</code></pre>
 <pre><code>
-central nervous system cancer        chronic kidney disease 
-                       110735                         10853 
-                 hypertension      type 2 diabetes mellitus 
-                         7035                           955 
-              benign neoplasm                 breast cancer 
-                          553                           537 
-    major depressive disorder       coronary artery disease 
-                          506                           469 
-                schizophrenia             colorectal cancer 
-                          429                           426 </code></pre>
+   chronic kidney disease              hypertension  type 2 diabetes mellitus 
+                    10853                      7035                       955 
+            breast cancer major depressive disorder   coronary artery disease 
+                      545                       506                       469 
+            schizophrenia        alzheimers disease           benign neoplasm 
+                      429                       419                       394 
+        colorectal cancer 
+                      391 </code></pre>
 </div>
 <div id="save-the-updated-gwas_study_info-with-harmonized-disease-terms"
 class="section level3" number="6.1.2">
@@ -4608,8 +4776,8 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] jsonlite_2.0.0    httr_1.4.7        stringr_1.6.0     data.table_1.17.8
-[5] dplyr_1.1.4       workflowr_1.7.2  
+[1] ontologyIndex_2.12 jsonlite_2.0.0     httr_1.4.7         stringr_1.6.0     
+[5] data.table_1.17.8  dplyr_1.1.4        workflowr_1.7.2   
 
 loaded via a namespace (and not attached):
  [1] compiler_4.3.2      BiocManager_1.30.26 renv_1.1.8         
