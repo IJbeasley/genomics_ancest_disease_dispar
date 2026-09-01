@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2026-08-31
+<strong>Last updated:</strong> 2026-09-01
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree4e195de8f8f12dc181602b4a9a90a4966de46fcctargetblank4e195dea">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreef27967a3fb8db8a0226df9fab6e2e05446d7384dtargetblankf27967aa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/4e195de8f8f12dc181602b4a9a90a4966de46fcc" target="_blank">4e195de</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/f27967a3fb8db8a0226df9fab6e2e05446d7384d" target="_blank">f27967a</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree4e195de8f8f12dc181602b4a9a90a4966de46fcctargetblank4e195dea"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreef27967a3fb8db8a0226df9fab6e2e05446d7384dtargetblankf27967aa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/4e195de8f8f12dc181602b4a9a90a4966de46fcc" target="_blank">4e195de</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/f27967a3fb8db8a0226df9fab6e2e05446d7384d" target="_blank">f27967a</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -549,6 +549,7 @@ Ignored files:
     Ignored:    FormatConverter.jar
     Ignored:    FormatConverter.zip
     Ignored:    analysis/.DS_Store
+    Ignored:    analysis/figure/
     Ignored:    ancestry_dispar_env/
     Ignored:    code/.DS_Store
     Ignored:    code/extract_text/__pycache__/
@@ -617,11 +618,12 @@ Ignored files:
 Untracked files:
     Untracked:  analysis/compare_cohort_annot.Rmd
     Untracked:  code/correcting_for_overlapping_cohorts.R
+    Untracked:  disease_term_pipeline_review.md
 
 Unstaged changes:
     Modified:   analysis/02_disease_trait_terms_simplify.Rmd
     Modified:   analysis/03_group_cancer_diseases.Rmd
-    Modified:   analysis/05_extract_icd10.Rmd
+    Modified:   analysis/04_group_non_cancer_diseases.Rmd
     Modified:   analysis/06_map_trait_to_icd10.Rmd
     Modified:   analysis/07_gwas_to_gbd.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
@@ -679,6 +681,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/f27967a3fb8db8a0226df9fab6e2e05446d7384d/analysis/01_trait_ontology_categorization.Rmd" target="_blank">f27967a</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-01
+</td>
+<td>
+Cleaning up bugs
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/c49f1438d4d5f7ef7f4c448c8250661f4cb04d9a/docs/01_trait_ontology_categorization.html" target="_blank">c49f143</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-31
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -832,7 +868,8 @@ Organise Rmd file names
 library(data.table)
 library(dplyr)
 library(ggplot2)
-library(stringr)</code></pre>
+library(stringr)
+source(here::here(&quot;code/get_term_descendants.R&quot;))</code></pre>
 <div id="get-data.frame-of-gwas-traits" class="section level2"
 number="1.1">
 <h2><span class="header-section-number">1.1</span> Get data.frame of
@@ -2125,8 +2162,6 @@ disease_terms = c(mondo_descendants,
                   )
 
 
-
-
 disease_terms = stringr::str_trim(tolower(disease_terms))
 disease_terms = unique(disease_terms)
 
@@ -2147,14 +2182,33 @@ excl_terms &lt;- c(&quot;skeletal age&quot;,
                 &quot;mother&#39;s age at death&quot;,
                 &quot;age at initiation of smoking&quot;,
                 &quot;age at first birth measurement&quot;,
-                &quot;age at last pregnancy measurement&quot;)
+                &quot;age at last pregnancy measurement&quot;,
+                &quot;attached earlobe&quot;,
+                &quot;facial wrinkling&quot;,
+                &quot;handedness&quot;,
+                &quot;suntan&quot;,
+                &quot;accessory eyelid&quot;,
+                &quot;widow&#39;s peak&quot;)
 
 disease_terms &lt;- disease_terms[!c(disease_terms %in% excl_terms)]
+
+vec_ontology_terms_check &lt;- function(vec){
+  
+  vec &lt;- vec[!is.na(vec) &amp; vec != &quot;&quot;]
+  vec &lt;- stringr::str_squish(vec)
+  vec &lt;- vec[nzchar(vec)] 
+  vec &lt;- unique(vec)
+  
+  return(vec)
+  
+}
+
+disease_terms &lt;- vec_ontology_terms_check(disease_terms)
 
 print(&quot;Number of ontology terms found related to disease or disorder&quot;)</code></pre>
 <pre><code>[1] &quot;Number of ontology terms found related to disease or disorder&quot;</code></pre>
 <pre class="r"><code>length(disease_terms)</code></pre>
-<pre><code>[1] 45345</code></pre>
+<pre><code>[1] 45342</code></pre>
 </div>
 <div id="find-disease-terms-in-gwas-traits" class="section level3"
 number="2.2.2">
@@ -2196,24 +2250,42 @@ pheno_abnorm &lt;- c(&quot;abnormal pap smear&quot;,
                   &quot;abnormal result of diagnostic imaging&quot;,
                   pheno_abnorm)
 
+pheno_abnorm &lt;- pheno_abnorm[!c(pheno_abnorm %in% excl_terms)]
+
+pheno_abnorm &lt;- vec_ontology_terms_check(pheno_abnorm)
+
 pheno_abnorm_gwas &lt;- not_accounted_for[not_accounted_for %in% pheno_abnorm]
 
 print(&quot;Percentage of GWAS traits under phenotype abnormality terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under phenotype abnormality terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(pheno_abnorm_gwas) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1.9</code></pre>
+<pre><code>[1] 1.8</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% pheno_abnorm_gwas]
 
 print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 87.5</code></pre>
+<pre><code>[1] 87.6</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 17485</code></pre>
+<pre><code>[1] 17492</code></pre>
+<pre class="r"><code>disease_or_disorder &lt;- c(disease_gwas,
+                          pheno_abnorm_gwas
+  )
+
+gwas_study_info &lt;- 
+  gwas_study_info |&gt;
+  #rowwise() |&gt;
+  dplyr::mutate(
+    disease_terms = 
+      ifelse(MAPPED_TRAIT %in% disease_or_disorder,
+             MAPPED_TRAIT,
+             NA)
+  ) |&gt;
+  ungroup()</code></pre>
 </div>
 <div
 id="measurement-overlap-how-many-gwas-traits-fall-within-measurement-terms"
@@ -2238,7 +2310,9 @@ measurement &lt;- c(&quot;cerebrospinal fluid composition attribute&quot;,
                  measurement)
 
 measurement = stringr::str_trim(tolower(measurement))
-measurement = unique(measurement)</code></pre>
+measurement = unique(measurement)
+
+measurement = vec_ontology_terms_check(measurement)</code></pre>
 </div>
 <div id="bmi-weight-terms-body-fat-terms" class="section level3"
 number="2.4.2">
@@ -2268,7 +2342,7 @@ print(&quot;Percentage of GWAS traits not accounted for by disease, disorder or 
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, disorder or BMI / weight / body fat terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 87.4</code></pre>
+<pre><code>[1] 87.5</code></pre>
 </div>
 <div id="lipid-cholesterol-measurement-terms" class="section level3"
 number="2.4.3">
@@ -2361,15 +2435,13 @@ terms</h3>
                     &quot;exercise&quot;
                     )
 
-behavior_measurement&lt; grep(paste0(behavior_measurement, 
+behavior_measurement&lt;- grep(paste0(behavior_measurement, 
                                   collapse = &quot;|&quot;), 
                             measurement,
                             value = T
-                           )</code></pre>
-<pre><code> [1] FALSE  TRUE  TRUE FALSE  TRUE  TRUE FALSE  TRUE  TRUE  TRUE FALSE  TRUE
-[13] FALSE FALSE  TRUE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE FALSE  TRUE FALSE
-[25]  TRUE FALSE  TRUE FALSE  TRUE  TRUE FALSE  TRUE  TRUE  TRUE  TRUE</code></pre>
-<pre class="r"><code>measurement &lt;- measurement[!(measurement %in% behavior_measurement)]
+                           )
+
+measurement &lt;- measurement[!(measurement %in% behavior_measurement)]
 
 measurement &lt;- grep(&quot;emphysema|eye colour|lifestyle&quot;, 
                     measurement, 
@@ -2381,23 +2453,23 @@ measurement_gwas &lt;- not_accounted_for[not_accounted_for %in% measurement]
 print(&quot;Number of GWAS traits under measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits under measurement terms&quot;</code></pre>
 <pre class="r"><code>length(measurement_gwas)</code></pre>
-<pre><code>[1] 16675</code></pre>
+<pre><code>[1] 16644</code></pre>
 <pre class="r"><code>print(&quot;Percentage of GWAS traits under measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under measurement terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(measurement_gwas) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 83.5</code></pre>
+<pre><code>[1] 83.3</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% measurement_gwas]
 
 print(&quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 2.7</code></pre>
+<pre><code>[1] 2.9</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 534</code></pre>
+<pre><code>[1] 572</code></pre>
 </div>
 </div>
 <div id="response-to-stimulus" class="section level2" number="2.5">
@@ -2415,8 +2487,7 @@ response &lt;- c(go_response,
 
 response &lt;- unique(response)
 
-response = stringr::str_trim(tolower(response))
-response = unique(response)</code></pre>
+response &lt;- vec_ontology_terms_check(response)</code></pre>
 <pre class="r"><code>response_gwas &lt;- not_accounted_for[not_accounted_for %in% response]
 
 #additional_response &lt;- not_accounted_for[not_accounted_for %in% response]
@@ -2426,18 +2497,18 @@ print(&quot;Percentage of GWAS traits under response terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under response terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(response_gwas) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 0.9</code></pre>
+<pre><code>[1] 0.8</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% response_gwas]
 
 print(&quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1.8</code></pre>
+<pre><code>[1] 2</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 358</code></pre>
+<pre><code>[1] 403</code></pre>
 </div>
 </div>
 <div id="mental-process" class="section level2" number="2.6">
@@ -2453,6 +2524,8 @@ mental &lt;- c(mental,
           &quot;cognitive function measurement&quot;
           )
 
+mental &lt;- vec_ontology_terms_check(mental)
+
 mental_gwas = not_accounted_for[not_accounted_for %in% mental]
 
 print(&quot;Percentage of GWAS traits under mental process terms&quot;)</code></pre>
@@ -2466,11 +2539,11 @@ print(&quot;Percentage of GWAS traits not accounted for thus far&quot;)</code></
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for thus far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1.7</code></pre>
+<pre><code>[1] 1.9</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for thus far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for thus far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 340</code></pre>
+<pre><code>[1] 384</code></pre>
 </div>
 <div id="behavior" class="section level2" number="2.7">
 <h2><span class="header-section-number">2.7</span> Behavior</h2>
@@ -2481,24 +2554,26 @@ behavior &lt;- c(behavior,
               behavior_measurement,
               &quot;physical activity&quot;)
 
+behavior &lt;- vec_ontology_terms_check(behavior)
+
 behavior_gwas = not_accounted_for[not_accounted_for %in% behavior]
 
 print(&quot;Percentage of GWAS traits under behavouir terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under behavouir terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(behavior_gwas) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 0.1</code></pre>
+<pre><code>[1] 0.2</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% behavior_gwas]
 
 print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1.6</code></pre>
+<pre><code>[1] 1.7</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 319</code></pre>
+<pre><code>[1] 336</code></pre>
 </div>
 <div id="phenotype" class="section level2" number="2.8">
 <h2><span class="header-section-number">2.8</span> Phenotype</h2>
@@ -2529,13 +2604,15 @@ phenotype &lt;- unique(c(phenotype,
                       &quot;voice quality trait&quot;)
 )
 
+phenotype &lt;- vec_ontology_terms_check(phenotype)
+
 phenotype_gwas = not_accounted_for[not_accounted_for %in% phenotype]
 
 print(&quot;Percentage of GWAS traits under phenotype terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of GWAS traits under phenotype terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(phenotype_gwas) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 0.2</code></pre>
+<pre><code>[1] 0.3</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% phenotype_gwas]
 
 print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pre>
@@ -2546,7 +2623,7 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 275</code></pre>
+<pre><code>[1] 286</code></pre>
 </div>
 <div id="medical-procedure" class="section level2" number="2.9">
 <h2><span class="header-section-number">2.9</span> Medical
@@ -2579,6 +2656,7 @@ medical_procedure = unique(c(medical_procedure,
                            )
 
 
+medical_procedure &lt;- vec_ontology_terms_check(medical_procedure)
 
 medical_procedure_gwas = not_accounted_for[not_accounted_for %in% medical_procedure]
 
@@ -2592,11 +2670,11 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1.1</code></pre>
+<pre><code>[1] 1.2</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 222</code></pre>
+<pre><code>[1] 233</code></pre>
 </div>
 <div id="environmental-factors" class="section level2" number="2.10">
 <h2><span class="header-section-number">2.10</span> Environmental
@@ -2620,6 +2698,7 @@ factors</h2>
 &quot;townsend deprivation index&quot;
 )
 
+enviro_factors &lt;- vec_ontology_terms_check(enviro_factors)
 
 enviro_factors_gwas = not_accounted_for[not_accounted_for %in% enviro_factors]
 
@@ -2634,11 +2713,11 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1</code></pre>
+<pre><code>[1] 1.1</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 209</code></pre>
+<pre><code>[1] 220</code></pre>
 </div>
 <div id="other" class="section level2" number="2.11">
 <h2><span class="header-section-number">2.11</span> Other</h2>
@@ -2665,11 +2744,11 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre><code>[1] &quot;Percentage of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(all_gwas_terms),
       digits = 1)</code></pre>
-<pre><code>[1] 1</code></pre>
+<pre><code>[1] 1.1</code></pre>
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 204</code></pre>
+<pre><code>[1] 215</code></pre>
 </div>
 <div id="traditional-medicine-constitutional-types"
 class="section level3" number="2.11.2">
@@ -2705,7 +2784,7 @@ print(&quot;Percentage of GWAS traits not accounted for so far&quot;)</code></pr
 <pre class="r"><code>print(&quot;Number of GWAS traits not accounted for so far&quot;)</code></pre>
 <pre><code>[1] &quot;Number of GWAS traits not accounted for so far&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 195</code></pre>
+<pre><code>[1] 206</code></pre>
 </div>
 <div id="ancestry-info" class="section level3" number="2.11.3">
 <h3><span class="header-section-number">2.11.3</span> Ancestry-info</h3>
@@ -2724,89 +2803,9 @@ not_accounted_for = not_accounted_for[!not_accounted_for %in% cell_line_gwas]</c
 <div id="add-categories-to-gwas-info" class="section level1" number="3">
 <h1><span class="header-section-number">3</span> Add Categories to GWAS
 Info</h1>
-<div
-id="add-disease-phenotypic-abnormality-terms-to-gwas-study-info-dataset"
-class="section level2" number="3.1">
-<h2><span class="header-section-number">3.1</span> Add disease &amp;
-phenotypic abnormality terms to GWAS study info dataset</h2>
-<pre class="r"><code>disease_or_disorder &lt;- c(disease_gwas,
-                          pheno_abnorm_gwas
-                          )
-
-
-disease_progress_measure &lt;- 
-gwas_study_info |&gt; 
-filter(MAPPED_TRAIT == &quot;disease prognosis measurement&quot;) |&gt;
-pull(STUDY_ACCESSION) |&gt;
-unique()
-
-# for all GWAS Catalog studies with trait, &quot;disease prognosis measurement&quot;
-# the actual disease is captured / recorded in trait, so we can remove disease prognosis measurement and safely capture all disease studies
-gwas_study_info |&gt;
-filter(STUDY_ACCESSION %in% disease_progress_measure) |&gt;
-select(STUDY_ACCESSION, MAPPED_TRAIT, MAPPED_BACKGROUND_TRAIT)</code></pre>
-<pre><code>  STUDY_ACCESSION                  MAPPED_TRAIT    MAPPED_BACKGROUND_TRAIT
-1      GCST004053 disease prognosis measurement            crohn&#39;s disease
-2      GCST008222     urinary bladder carcinoma                           
-3      GCST008222 disease prognosis measurement                           
-4    GCST90014045 non-small cell lung carcinoma smoking status measurement
-5    GCST90014045 disease prognosis measurement smoking status measurement
-6      GCST009878 disease prognosis measurement            crohn&#39;s disease</code></pre>
-<pre class="r"><code># similarly for: 
-# disease free survival
-# complicated disease course
-# mild disease course
-# remission
-# progression free survival
-# illness severity status
-unneeded_disease_progress_terms &lt;-
-  c(&quot;disease prognosis measurement&quot;,
-&quot;complicated disease course&quot;,
-&quot;mild disease course&quot;,
-&quot;remission&quot;,
-&quot;disease free survival&quot;,
-&quot;survival time&quot;,
-&quot;overall survival&quot;,
-&quot;progression free survival&quot;,
-&quot;illness severity status&quot;
-)
-
-# accessory eyelid
-# dna methylation
-# tube feeding
-# widow&#39;s peak
-# gata1 gene mutation
-other_not_disease_terms &lt;- 
-  c(
-&quot;anti-drug antibody measurement&quot;,
-&quot;accessory eyelid&quot;,
-&quot;dna methylation&quot;,
-&quot;tube feeding&quot;,
-&quot;widow&#39;s peak&quot;,
-&quot;gata1 gene mutation&quot;
-  )
-
-
-disease_or_disorder &lt;-
-  disease_or_disorder[!(disease_or_disorder %in% 
-                        c(unneeded_disease_progress_terms,
-                          other_not_disease_terms
-                        )
-                        )]
-
-gwas_study_info &lt;- 
-  gwas_study_info |&gt; 
-  #dplyr::rowwise() |&gt;
-  dplyr::mutate(
-    disease_terms = 
-      ifelse(MAPPED_TRAIT %in% disease_or_disorder,
-             MAPPED_TRAIT,
-             NA)
-  )</code></pre>
-</div>
 <div id="map-gwas-traits-to-high-level-categories"
-class="section level2" number="3.2">
-<h2><span class="header-section-number">3.2</span> Map GWAS traits to
+class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Map GWAS traits to
 high-level categories</h2>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt;
@@ -2877,7 +2876,7 @@ print(&quot;Percentage of background GWAS traits under phenotype abnormality ter
 <pre><code>[1] &quot;Percentage of background GWAS traits under phenotype abnormality terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(pheno_abnorm_gwas) / length(gwas_background),
       digits = 1)</code></pre>
-<pre><code>[1] 128.4</code></pre>
+<pre><code>[1] 126</code></pre>
 <pre class="r"><code>not_accounted_for = not_accounted_for[!not_accounted_for %in% pheno_abnorm_gwas]
 
 print(&quot;Percentage of background GWAS traits not accounted for so far&quot;)</code></pre>
@@ -2891,7 +2890,7 @@ print(&quot;Percentage of background GWAS traits not accounted for so far&quot;)
 <pre><code>[1] 82</code></pre>
 </div>
 <div
-id="add-disease-phenotypic-abnormality-terms-to-gwas-study-info-dataset-1"
+id="add-disease-phenotypic-abnormality-terms-to-gwas-study-info-dataset"
 class="section level2" number="4.3">
 <h2><span class="header-section-number">4.3</span> Add disease &amp;
 phenotypic abnormality terms to GWAS study info dataset</h2>
@@ -2921,11 +2920,11 @@ print(&quot;Percentage of background GWAS traits not accounted for by disease, d
 <pre><code>[1] &quot;Percentage of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(gwas_background),
       digits = 1)</code></pre>
-<pre><code>[1] 12.5</code></pre>
+<pre><code>[1] 14.2</code></pre>
 <pre class="r"><code>print(&quot;Number of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of background GWAS traits not accounted for by disease, disorder or measurement terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 36</code></pre>
+<pre><code>[1] 41</code></pre>
 </div>
 <div id="response-traits" class="section level2" number="4.5">
 <h2><span class="header-section-number">4.5</span> Response traits</h2>
@@ -2945,12 +2944,12 @@ print(&quot;Percentage of background GWAS traits under response terms&quot;)</co
 <pre class="r"><code>print(&quot;Number of background GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of background GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 30</code></pre>
+<pre><code>[1] 35</code></pre>
 <pre class="r"><code>print(&quot;Percentage of background GWAS traits not accounted for by disease, measurement or response terms&quot;)</code></pre>
 <pre><code>[1] &quot;Percentage of background GWAS traits not accounted for by disease, measurement or response terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(gwas_background),
       digits = 1)</code></pre>
-<pre><code>[1] 10.4</code></pre>
+<pre><code>[1] 12.1</code></pre>
 </div>
 <div id="medical-procedure-traits" class="section level2" number="4.6">
 <h2><span class="header-section-number">4.6</span> Medical procedure
@@ -2963,11 +2962,11 @@ print(&quot;Percentage of background GWAS traits not accounted for by disease, m
 <pre><code>[1] &quot;Percentage of background GWAS traits not accounted for by disease, measurement, response or medical procedure terms&quot;</code></pre>
 <pre class="r"><code>round(100 * length(not_accounted_for) / length(gwas_background),
       digits = 1)</code></pre>
-<pre><code>[1] 6.6</code></pre>
+<pre><code>[1] 8.3</code></pre>
 <pre class="r"><code>print(&quot;Number of background GWAS traits not accounted for by disease, measurement, response or medical procedure terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of background GWAS traits not accounted for by disease, measurement, response or medical procedure terms&quot;</code></pre>
 <pre class="r"><code>length(not_accounted_for)</code></pre>
-<pre><code>[1] 19</code></pre>
+<pre><code>[1] 24</code></pre>
 </div>
 <div id="background-trait-categories" class="section level2"
 number="4.7">
@@ -2999,18 +2998,18 @@ disease studies (and studies of each kind of trait)</h1>
   arrange(desc(n_studies))</code></pre>
 <pre><code># A tibble: 48 × 3
 # Groups:   MAPPED_TRAIT_CATEGORY [13]
-   MAPPED_TRAIT_CATEGORY           BACKGROUND_TRAIT_CATEGORY n_studies
-   &lt;chr&gt;                           &lt;chr&gt;                         &lt;int&gt;
- 1 Measurement                     &lt;NA&gt;                          91659
- 2 Disease/Disorder                &lt;NA&gt;                          27539
- 3 Measurement                     Disease/Disorder              18685
- 4 Brain Measurement               &lt;NA&gt;                           7143
- 5 Lipid/Cholesterol Measurement   &lt;NA&gt;                           4044
- 6 Other                           &lt;NA&gt;                           2274
- 7 Medical Procedure               &lt;NA&gt;                           1266
- 8 Disease/Disorder                Disease/Disorder                853
- 9 Response                        &lt;NA&gt;                            845
-10 BMI/Weight/Body Fat Measurement &lt;NA&gt;                            726
+   MAPPED_TRAIT_CATEGORY         BACKGROUND_TRAIT_CATEGORY n_studies
+   &lt;chr&gt;                         &lt;chr&gt;                         &lt;int&gt;
+ 1 Measurement                   &lt;NA&gt;                          90058
+ 2 Disease/Disorder              &lt;NA&gt;                          27532
+ 3 Measurement                   Disease/Disorder              18660
+ 4 Brain Measurement             &lt;NA&gt;                           7143
+ 5 Lipid/Cholesterol Measurement &lt;NA&gt;                           4044
+ 6 Other                         &lt;NA&gt;                           2334
+ 7 Behavior                      &lt;NA&gt;                           1472
+ 8 Medical Procedure             &lt;NA&gt;                           1266
+ 9 Disease/Disorder              Disease/Disorder                905
+10 Response                      &lt;NA&gt;                            764
 # ℹ 38 more rows</code></pre>
 <pre class="r"><code>gwas_study_info = 
 gwas_study_info |&gt;
@@ -3035,16 +3034,16 @@ print(&quot;Number of studies of each kind of trait&quot;)</code></pre>
 # Groups:   DISEASE_STUDY, MAPPED_TRAIT_CATEGORY [24]
    DISEASE_STUDY MAPPED_TRAIT_CATEGORY           BACKGROUND_TRAIT_CATEGORY     n
    &lt;lgl&gt;         &lt;chr&gt;                           &lt;chr&gt;                     &lt;int&gt;
- 1 FALSE         BMI/Weight/Body Fat Measurement Measurement                   7
- 2 FALSE         BMI/Weight/Body Fat Measurement Other                         6
- 3 FALSE         BMI/Weight/Body Fat Measurement &lt;NA&gt;                        726
- 4 FALSE         Behavior                        Measurement                   2
- 5 FALSE         Behavior                        &lt;NA&gt;                        230
- 6 FALSE         Blood Pressure Measurement      &lt;NA&gt;                        531
- 7 FALSE         Brain Measurement               Measurement                   1
- 8 FALSE         Brain Measurement               Response                      6
- 9 FALSE         Brain Measurement               &lt;NA&gt;                       7143
-10 FALSE         Environmental Factor            &lt;NA&gt;                        179
+ 1 FALSE         BMI/Weight/Body Fat Measurement Other                        13
+ 2 FALSE         BMI/Weight/Body Fat Measurement &lt;NA&gt;                        726
+ 3 FALSE         Behavior                        Measurement                   4
+ 4 FALSE         Behavior                        &lt;NA&gt;                       1472
+ 5 FALSE         Blood Pressure Measurement      &lt;NA&gt;                        531
+ 6 FALSE         Brain Measurement               Measurement                   1
+ 7 FALSE         Brain Measurement               Response                      6
+ 8 FALSE         Brain Measurement               &lt;NA&gt;                       7143
+ 9 FALSE         Environmental Factor            &lt;NA&gt;                        179
+10 FALSE         Lipid/Cholesterol Measurement   Measurement                 334
 # ℹ 38 more rows</code></pre>
 <pre class="r"><code># Number of papers with at least one disease study
 print(&quot;Number of papers with at least one disease study&quot;)</code></pre>
@@ -3057,8 +3056,8 @@ print(&quot;Number of papers with at least one disease study&quot;)</code></pre>
 <pre><code># A tibble: 2 × 2
   DISEASE_STUDY     n
   &lt;lgl&gt;         &lt;int&gt;
-1 FALSE          2684
-2 TRUE           4642</code></pre>
+1 FALSE          2694
+2 TRUE           4632</code></pre>
 <pre class="r"><code># ~ 60% of papers have at least one disease study
 
 gwas_study_info |&gt; 
@@ -3096,7 +3095,7 @@ we missed</h1>
 print(&quot;Number of papers with no disease study&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2684</code></pre>
+<pre><code>[1] 2694</code></pre>
 <div id="cancer" class="section level2" number="6.1">
 <h2><span class="header-section-number">6.1</span> Cancer</h2>
 <pre class="r"><code>gwas_study_info |&gt; 
@@ -3291,7 +3290,7 @@ print(&quot;Papers mentioning cancer in DISEASE/TRAIT that are still not categor
 <pre class="r"><code>print(&quot;Number of papers with no disease study after adding missed cancer studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed cancer studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2671</code></pre>
+<pre><code>[1] 2681</code></pre>
 </div>
 <div id="diabetes" class="section level2" number="6.2">
 <h2><span class="header-section-number">6.2</span> Diabetes</h2>
@@ -3385,7 +3384,7 @@ not_disease_pubmeds &lt;- gwas_study_info  |&gt;
 print(&quot;Number of papers with no disease study after adding missed diabetes studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed diabetes studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2665</code></pre>
+<pre><code>[1] 2675</code></pre>
 </div>
 <div id="copd-and-other-chronic-lungairway-diseases"
 class="section level2" number="6.3">
@@ -3614,7 +3613,7 @@ print(&quot;Papers mentioning COPD in DISEASE/TRAIT that are still not categoriz
 <pre class="r"><code>print(&quot;Number of papers with no disease study after adding missed chronic lung/airway studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed chronic lung/airway studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2660</code></pre>
+<pre><code>[1] 2670</code></pre>
 </div>
 <div id="psychiatricneurological" class="section level2" number="6.4">
 <h2><span class="header-section-number">6.4</span>
@@ -3728,7 +3727,7 @@ gwas_study_info |&gt;
     filter(PUBMED_ID %in% not_disease_pubmeds) |&gt; 
     filter(grepl(&quot;Alzheimer&quot;, `DISEASE/TRAIT`, ignore.case = T)) |&gt;
     mutate(MAPPED_TRAIT_CATEGORY = &quot;Disease/Disorder&quot;,
-           disease_terms = &quot;Alzheimer&#39;s disease&quot;,
+           disease_terms = &quot;alzheimers disease&quot;,
            DISEASE_STUDY = T)
 
 
@@ -3902,7 +3901,7 @@ print(&quot;Papers mentioning psychiatric or neurological diseases in DISEASE/TR
 <pre class="r"><code>print(&quot;Number of papers with no disease study after adding missed psychiatric/neurological disease studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed psychiatric/neurological disease studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2651</code></pre>
+<pre><code>[1] 2661</code></pre>
 </div>
 <div id="pubmed-id-35760791" class="section level2" number="6.5">
 <h2><span class="header-section-number">6.5</span> Pubmed ID
@@ -3990,7 +3989,7 @@ not_disease_pubmeds &lt;- gwas_study_info  |&gt;
 print(&quot;Number of papers with no disease study after adding missed hereditary hemorrhagic telangiectasia study&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed hereditary hemorrhagic telangiectasia study&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2650</code></pre>
+<pre><code>[1] 2660</code></pre>
 </div>
 <div id="infectious-disease" class="section level2" number="6.6">
 <h2><span class="header-section-number">6.6</span> Infectious
@@ -4081,7 +4080,7 @@ print(&quot;Papers mentioning infectious diseases in DISEASE/TRAIT that are stil
 <pre class="r"><code>print(&quot;Number of papers with no disease study after adding missed infectious disease studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed infectious disease studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2648</code></pre>
+<pre><code>[1] 2658</code></pre>
 </div>
 <div id="autoimmuneinflammatory" class="section level2" number="6.7">
 <h2><span class="header-section-number">6.7</span>
@@ -4186,7 +4185,7 @@ print(&quot;Papers mentioning autoimmune/inflammatory diseases in DISEASE/TRAIT 
 <pre class="r"><code>print(&quot;Number of papers with no disease study after adding missed autoimmune/inflammatory disease studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed autoimmune/inflammatory disease studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2643</code></pre>
+<pre><code>[1] 2653</code></pre>
 </div>
 <div id="cardiovascular-disease" class="section level2" number="6.8">
 <h2><span class="header-section-number">6.8</span> Cardiovascular
@@ -4372,19 +4371,232 @@ print(&quot;Papers mentioning cardiovascular diseases in DISEASE/TRAIT that are 
 <pre class="r"><code>print(&quot;Number of papers with no disease study after adding missed cardiovascular disease studies&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with no disease study after adding missed cardiovascular disease studies&quot;</code></pre>
 <pre class="r"><code>length(not_disease_pubmeds)</code></pre>
-<pre><code>[1] 2642</code></pre>
+<pre><code>[1] 2652</code></pre>
+</div>
+</div>
+<div
+id="removing-disease-terms-that-dont-seem-to-come-from-disease-studies"
+class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Removing disease terms
+that don’t seem to come from disease studies</h1>
+<div id="sneezing-in-response-to-bright-light" class="section level3"
+number="7.0.1">
+<h3><span class="header-section-number">7.0.1</span> Sneezing in
+response to bright light</h3>
+<p>Got mapped to ‘autosomal dominant compelling helio-ophthalmic
+outburst syndrome’</p>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(&quot;autosomal dominant compelling helio-ophthalmic outburst syndrome&quot;, disease_terms)) |&gt;
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Photic sneeze reflex&quot;</code></pre>
+<pre class="r"><code># remove autosomal dominant compelling helio-ophthalmic outburst syndrome
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         stringr::str_remove_all(disease_terms,
+                          pattern = &quot;autosomal dominant compelling helio-ophthalmic outburst syndrome&quot;
+         ))</code></pre>
+</div>
+<div id="skin-sensitivity-to-sun" class="section level3" number="7.0.2">
+<h3><span class="header-section-number">7.0.2</span> Skin sensitivity to
+sun</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(&quot;skin sensitivity to sun&quot;, disease_terms)) |&gt;
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code> [1] &quot;Skin sensitivity to sun&quot;                                                                           
+ [2] &quot;Ease of sunburn&quot;                                                                                   
+ [3] &quot;Ease of skin tanning&quot;                                                                              
+ [4] &quot;Ease of skin tanning - Get mildly or occasionally tanned (UKB data field 1727)&quot;                    
+ [5] &quot;Ease of skin tanning - Get moderately tanned (UKB data field 1727)&quot;                                
+ [6] &quot;Ease of skin tanning - Get very tanned (UKB data field 1727)&quot;                                      
+ [7] &quot;Ease of skin tanning - Never tan only burn (UKB data field 1727)&quot;                                  
+ [8] &quot;Ease of skin tanning - Get mildly or occasionally tanned (UKB data field 1727) (Gene-based burden)&quot;
+ [9] &quot;Ease of skin tanning - Get moderately tanned (UKB data field 1727) (Gene-based burden)&quot;            
+[10] &quot;Ease of skin tanning - Never tan only burn (UKB data field 1727) (Gene-based burden)&quot;              
+[11] &quot;Ease of skin tanning - Get very tanned (UKB data field 1727) (Gene-based burden)&quot;                  </code></pre>
+<pre class="r"><code># remove skin sensitivity to sun
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         stringr::str_remove_all(disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;skin sensitivity to sun&quot;)
+         ))
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         stringr::str_remove_all(disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;suntan&quot;
+                          )
+         ))</code></pre>
+</div>
+<div id="hypersensitivity-reaction-disease" class="section level3"
+number="7.0.3">
+<h3><span class="header-section-number">7.0.3</span> Hypersensitivity
+reaction disease</h3>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(vec_to_grep_pattern(&quot;hypersensitivity reaction disease&quot;), 
+               disease_terms, 
+               perl = T)) |&gt;
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code>[1] &quot;Nevirapine-induced hypersensitivity in HIV&quot;</code></pre>
+<pre class="r"><code>gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(disease_terms =
+           str_remove_all(disease_terms,
+                          pattern = vec_to_grep_pattern(&quot;hypersensitivity reaction disease&quot;)))</code></pre>
+</div>
+<div id="handedness" class="section level3" number="7.0.4">
+<h3><span class="header-section-number">7.0.4</span> Handedness</h3>
+<pre class="r"><code># also remove functional laterality if Handedness chirality laterality is in DISEASE/TRAIT
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(grepl(&quot;Handedness&quot;, 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = &quot;functional laterality&quot;
+         ),
+         disease_terms
+         )
+  )
+
+# also remove functional laterality if Usual side of head for mobile phone use is in DISEASE/TRAIT
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(grepl(&quot;Usual side of head for mobile phone use&quot;, 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = &quot;functional laterality&quot;
+         ),
+         disease_terms
+         )
+  )
+
+# also remove functional laterality if PUBMED_ID=20585627
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(PUBMED_ID == &quot;20585627&quot;,
+                stringr::str_remove_all(disease_terms,
+                          pattern = &quot;functional laterality&quot;
+         ),
+         disease_terms
+         )
+  ) </code></pre>
+</div>
+<div id="abnormality-of-skin-pigmentation" class="section level2"
+number="7.1">
+<h2><span class="header-section-number">7.1</span> Abnormality of skin
+pigmentation</h2>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(&quot;abnormality of skin pigmentation&quot;, disease_terms)) |&gt;
+  pull(`DISEASE/TRAIT`) |&gt;
+  unique()</code></pre>
+<pre><code> [1] &quot;Skin colour saturation&quot;                                                          
+ [2] &quot;Perceived skin darkness&quot;                                                         
+ [3] &quot;Skin pigmentation&quot;                                                               
+ [4] &quot;Non-melanoma skin cancer&quot;                                                        
+ [5] &quot;Skin luminance&quot;                                                                  
+ [6] &quot;Skin red/green component&quot;                                                        
+ [7] &quot;Skin yellow/blue component&quot;                                                      
+ [8] &quot;25-hydroxyvitamin D levels x skin colour (very fair vs. fair) interaction&quot;       
+ [9] &quot;25-hydroxyvitamin D levels x skin colour (very fair vs. light olive) interaction&quot;
+[10] &quot;Skin colour - Brown (UKB data field 1717)&quot;                                       
+[11] &quot;Skin colour - Dark olive (UKB data field 1717)&quot;                                  
+[12] &quot;Skin colour - Fair (UKB data field 1717)&quot;                                        
+[13] &quot;Skin colour - Light olive (UKB data field 1717)&quot;                                 
+[14] &quot;Skin colour - Very fair (UKB data field 1717)&quot;                                   
+[15] &quot;Skin colour - Dark olive (UKB data field 1717) (Gene-based burden)&quot;              
+[16] &quot;Skin colour - Brown (UKB data field 1717) (Gene-based burden)&quot;                   
+[17] &quot;Skin colour - Fair (UKB data field 1717) (Gene-based burden)&quot;                    
+[18] &quot;Skin colour - Light olive (UKB data field 1717) (Gene-based burden)&quot;             
+[19] &quot;Skin colour - Very fair (UKB data field 1717) (Gene-based burden)&quot;               
+[20] &quot;Skin pigmentation traits&quot;                                                        
+[21] &quot;Tatto pigmentation&quot;                                                              </code></pre>
+<pre class="r"><code># as can see, most of these traits are not about true skin pigmentation abnormalities
+# just about skin pigmentation in general
+
+# if `DISEASE/TRAIT` contains &quot;UKB data field 1717&quot; (which is just a skin colour measurment field)
+# then remove &quot;abnormality of skin pigmentation&quot; from disease_terms
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(grepl(&quot;UKB data field 1717&quot;, 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = &quot;abnormality of skin pigmentation&quot;
+         ),
+         disease_terms
+         )
+  )
+
+# also remove if `DISEASE/TRAIT` contains &quot;Tattoo pigmentation&quot;
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(grepl(&quot;tattoo pigmentation|tatto pigmentation&quot;, 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = &quot;abnormality of skin pigmentation&quot;
+         ),
+         disease_terms
+         )
+  )
+
+# also remove if `DISEASE/TRAIT` is any of the following:
+# - Perceived skin darkness 
+# - Skin red/green component
+# - Skin yellow/blue component
+# - Skin pigmentation traits
+# - Skin pigmentation 
+# - Skin luminance
+
+remove_terms &lt;- c(&quot;Perceived skin darkness&quot;,
+                  &quot;Skin red/green component&quot;,
+                  &quot;Skin yellow/blue component&quot;,
+                  &quot;Skin pigmentation traits&quot;,
+                  &quot;Skin pigmentation&quot;,
+                  &quot;Skin luminance&quot;,
+                  &quot;Skin colour saturation&quot;
+                  )
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(`DISEASE/TRAIT` %in% remove_terms,
+                stringr::str_remove_all(disease_terms,
+                          pattern = &quot;abnormality of skin pigmentation&quot;
+         ),
+         disease_terms
+         )
+  )
+
+# this leaves PUBMED_ID 23548203, which according to suplementary table 1
+# is `Number of non-melanoma skin cancer (5+)` 
+# so change to &quot;non-melanoma skin cancer&quot;
+
+gwas_study_info = gwas_study_info |&gt;
+  mutate(disease_terms  = 
+         ifelse(PUBMED_ID == &quot;23548203&quot;,
+                stringr::str_replace_all(disease_terms,
+                          pattern = &quot;abnormality of skin pigmentation&quot;,
+                          replacement = &quot;non-melanoma skin cancer&quot;
+         ),
+         disease_terms
+         )
+  )</code></pre>
 </div>
 </div>
 <div
 id="creating-disease-labels-column-of-just-disease-or-phenotype-abnormality-terms-for-each-study---so-that-we-can-see-what-diseases-are-being-studied"
-class="section level1" number="7">
-<h1><span class="header-section-number">7</span> Creating disease labels
+class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Creating disease labels
 column of just disease or phenotype abnormality terms for each study -
 so that we can see what diseases are being studied</h1>
 <div
 id="make-disease-label-column---combining-disease-terms-from-both-mapped-trait-and-background-trait"
-class="section level2" number="7.1">
-<h2><span class="header-section-number">7.1</span> Make disease label
+class="section level2" number="8.1">
+<h2><span class="header-section-number">8.1</span> Make disease label
 column - combining disease terms from both mapped trait and background
 trait</h2>
 <pre class="r"><code>combined_disease_terms = function(MAPPED_TRAIT_1, MAPPED_TRAIT_2){
@@ -4723,8 +4935,8 @@ print(&quot;Number of studies with bad commas&quot;)</code></pre>
   ))</code></pre>
 </div>
 <div id="minor-fixes-of-trait-categorisation-and-returning-traits"
-class="section level2" number="7.2">
-<h2><span class="header-section-number">7.2</span> Minor fixes of trait
+class="section level2" number="8.2">
+<h2><span class="header-section-number">8.2</span> Minor fixes of trait
 categorisation and returning traits</h2>
 <pre class="r"><code># What studies are disease studies but have no collected disease terms?
 gwas_study_info |&gt; 
@@ -4733,19 +4945,27 @@ gwas_study_info |&gt;
   select(PUBMED_ID) |&gt; 
   distinct() |&gt;
   nrow()</code></pre>
-<pre><code>[1] 0</code></pre>
+<pre><code>[1] 16</code></pre>
 <pre class="r"><code>gwas_study_info |&gt; 
   filter(DISEASE_STUDY == T) |&gt; 
   filter(all_disease_terms == &quot;&quot;)  |&gt; 
   select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |&gt; 
   distinct() |&gt;
   head()</code></pre>
-<pre><code>[1] MAPPED_TRAIT          MAPPED_TRAIT_CATEGORY
-&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<pre><code>                                                      MAPPED_TRAIT
+1                                 abnormality of skin pigmentation
+2                                          skin sensitivity to sun
+3                                            functional laterality
+4 autosomal dominant compelling helio-ophthalmic outburst syndrome
+  MAPPED_TRAIT_CATEGORY
+1      Disease/Disorder
+2      Disease/Disorder
+3      Disease/Disorder
+4      Disease/Disorder</code></pre>
 <div
 id="fix-bug-where-mapped_traitbackground_mapped_trait-is-empty-string-but-trait_category-is-listed-as-diseasephenotypic-abnormality"
-class="section level3" number="7.2.1">
-<h3><span class="header-section-number">7.2.1</span> Fix bug where
+class="section level3" number="8.2.1">
+<h3><span class="header-section-number">8.2.1</span> Fix bug where
 MAPPED_TRAIT/BACKGROUND_MAPPED_TRAIT is empty string but TRAIT_CATEGORY
 is listed as disease/phenotypic abnormality</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
@@ -4758,8 +4978,8 @@ is listed as disease/phenotypic abnormality</h3>
                                         BACKGROUND_TRAIT_CATEGORY)) </code></pre>
 </div>
 <div id="recalculate-disease-study-flag-is-disease-study-or-not"
-class="section level3" number="7.2.2">
-<h3><span class="header-section-number">7.2.2</span> Recalculate disease
+class="section level3" number="8.2.2">
+<h3><span class="header-section-number">8.2.2</span> Recalculate disease
 study flag (is disease study or not?)</h3>
 <p>now that I have corrected any mistakes in categorization and added
 some missing disease terms</p>
@@ -4785,21 +5005,21 @@ gwas_study_info |&gt;
 # Groups:   MAPPED_TRAIT_CATEGORY [12]
    MAPPED_TRAIT_CATEGORY           BACKGROUND_TRAIT_CATEGORY     n
    &lt;chr&gt;                           &lt;chr&gt;                     &lt;int&gt;
- 1 Disease/Disorder                Other                     27664
- 2 Measurement                     Disease/Disorder          18685
- 3 Disease/Disorder                Disease/Disorder            854
- 4 Response                        Disease/Disorder            627
- 5 Other                           Disease/Disorder            440
+ 1 Disease/Disorder                Other                     27689
+ 2 Measurement                     Disease/Disorder          18660
+ 3 Disease/Disorder                Disease/Disorder            906
+ 4 Response                        Disease/Disorder            593
+ 5 Other                           Disease/Disorder            421
  6 Lipid/Cholesterol Measurement   Disease/Disorder            334
- 7 Disease/Disorder                Measurement                  95
+ 7 Disease/Disorder                Measurement                  64
  8 BMI/Weight/Body Fat Measurement Disease/Disorder             33
- 9 Disease/Disorder                Medical Procedure            24
-10 Blood Pressure Measurement      Disease/Disorder             20
-11 Behavior                        Disease/Disorder             13
-12 Brain Measurement               Disease/Disorder              8
-13 Medical Procedure               Disease/Disorder              8
-14 Phenotype                       Disease/Disorder              8
-15 Mental Process                  Disease/Disorder              7
+ 9 Behavior                        Disease/Disorder             32
+10 Disease/Disorder                Medical Procedure            24
+11 Blood Pressure Measurement      Disease/Disorder             20
+12 Mental Process                  Disease/Disorder             12
+13 Phenotype                       Disease/Disorder             10
+14 Brain Measurement               Disease/Disorder              8
+15 Medical Procedure               Disease/Disorder              8
 16 Disease/Disorder                Response                      4</code></pre>
 <pre class="r"><code># gwas_study_info |&gt; 
 #   filter(DISEASE_STUDY == T) |&gt; 
@@ -4816,21 +5036,21 @@ print(&quot;Number of studies of each kind of trait&quot;)</code></pre>
            BACKGROUND_TRAIT_CATEGORY) |&gt; 
   summarise(n = n()) |&gt;
   arrange(desc(n))</code></pre>
-<pre><code># A tibble: 42 × 4
+<pre><code># A tibble: 41 × 4
 # Groups:   DISEASE_STUDY, MAPPED_TRAIT_CATEGORY [24]
-   DISEASE_STUDY MAPPED_TRAIT_CATEGORY           BACKGROUND_TRAIT_CATEGORY     n
-   &lt;lgl&gt;         &lt;chr&gt;                           &lt;chr&gt;                     &lt;int&gt;
- 1 FALSE         Measurement                     Other                     91746
- 2 TRUE          Disease/Disorder                Other                     27664
- 3 TRUE          Measurement                     Disease/Disorder          18685
- 4 FALSE         Brain Measurement               Other                      7143
- 5 FALSE         Lipid/Cholesterol Measurement   Other                      4059
- 6 FALSE         Other                           Other                      2277
- 7 FALSE         Medical Procedure               Other                      1266
- 8 TRUE          Disease/Disorder                Disease/Disorder            854
- 9 FALSE         Response                        Other                       849
-10 FALSE         BMI/Weight/Body Fat Measurement Other                       732
-# ℹ 32 more rows</code></pre>
+   DISEASE_STUDY MAPPED_TRAIT_CATEGORY         BACKGROUND_TRAIT_CATEGORY     n
+   &lt;lgl&gt;         &lt;chr&gt;                         &lt;chr&gt;                     &lt;int&gt;
+ 1 FALSE         Measurement                   Other                     90184
+ 2 TRUE          Disease/Disorder              Other                     27689
+ 3 TRUE          Measurement                   Disease/Disorder          18660
+ 4 FALSE         Brain Measurement             Other                      7143
+ 5 FALSE         Lipid/Cholesterol Measurement Other                      4071
+ 6 FALSE         Other                         Other                      2337
+ 7 FALSE         Behavior                      Other                      1472
+ 8 FALSE         Medical Procedure             Other                      1266
+ 9 TRUE          Disease/Disorder              Disease/Disorder            906
+10 FALSE         Response                      Other                       771
+# ℹ 31 more rows</code></pre>
 <pre class="r"><code>print(&quot;Number of papers with at least one disease study&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers with at least one disease study&quot;</code></pre>
 <pre class="r"><code>gwas_study_info |&gt; 
@@ -4841,32 +5061,42 @@ print(&quot;Number of studies of each kind of trait&quot;)</code></pre>
 <pre><code># A tibble: 2 × 2
   DISEASE_STUDY     n
   &lt;lgl&gt;         &lt;int&gt;
-1 FALSE          2642
-2 TRUE           4684</code></pre>
+1 FALSE          2652
+2 TRUE           4674</code></pre>
 </div>
 </div>
 </div>
-<div id="saving" class="section level1" number="8">
-<h1><span class="header-section-number">8</span> Saving:</h1>
+<div id="saving" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Saving:</h1>
+<pre class="r"><code>tidy_terms &lt;- function(x){
+  x |&gt; str_replace_all(&quot;,\\s*,&quot;, &quot;,&quot;) |&gt;
+       str_replace_all(&quot;^\\s*,\\s*&quot;, &quot;&quot;) |&gt;
+       str_replace_all(&quot;\\s*,\\s*$&quot;, &quot;&quot;) |&gt;
+       str_squish() |&gt;
+       vapply(\(s) paste(unique(str_trim(str_split_1(s, &quot;,\\s*&quot;))), collapse = &quot;, &quot;), character(1))
+}
+
+gwas_study_info$all_disease_terms = tidy_terms(gwas_study_info$all_disease_terms)</code></pre>
 <div
 id="save-all-disease-disorder-condition-related-terms-ontology-terms"
-class="section level2" number="8.1">
-<h2><span class="header-section-number">8.1</span> Save all disease,
+class="section level2" number="9.1">
+<h2><span class="header-section-number">9.1</span> Save all disease,
 disorder, condition related-terms ontology terms</h2>
-<pre class="r"><code>all_disease_terms &lt;- c(
-  gwas_study_info |&gt; 
-    filter(DISEASE_STUDY == T) |&gt; 
-    select(all_disease_terms) |&gt; 
-    pull() |&gt;
-    str_split(pattern = &quot;; &quot;) |&gt;
-    unlist() |&gt;
-    unique()
-)
+<pre class="r"><code>all_disease_terms &lt;- gwas_study_info |&gt;
+  filter(DISEASE_STUDY) |&gt;
+  pull(all_disease_terms) |&gt;
+  str_split(&quot;, &quot;) |&gt; 
+  unlist() |&gt; 
+  str_trim() |&gt; 
+  unique() |&gt; 
+  sort()
+
+all_disease_terms &lt;- all_disease_terms[nzchar(all_disease_terms)]
 
 print(&quot;Number of all disease ontology terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of all disease ontology terms&quot;</code></pre>
 <pre class="r"><code>print(length(all_disease_terms))</code></pre>
-<pre><code>[1] 2875</code></pre>
+<pre><code>[1] 2510</code></pre>
 <pre class="r"><code>all_disease_terms &lt;- data.frame(disease_terms = all_disease_terms) 
 
 writexl::write_xlsx(path = here::here(&quot;output/trait_ontology/all_disease_terms.xlsx&quot;),
@@ -4902,30 +5132,29 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] stringr_1.6.0     ggplot2_3.5.2     dplyr_1.1.4       data.table_1.17.8
-[5] workflowr_1.7.2  
+[1] jsonlite_2.0.0    httr_1.4.7        stringr_1.6.0     ggplot2_3.5.2    
+[5] dplyr_1.1.4       data.table_1.17.8 workflowr_1.7.2  
 
 loaded via a namespace (and not attached):
  [1] utf8_1.2.6          sass_0.4.10         generics_0.1.4     
  [4] tidyr_1.3.1         renv_1.1.8          stringi_1.8.7      
  [7] digest_0.6.37       magrittr_2.0.4      evaluate_1.0.5     
 [10] grid_4.3.2          timechange_0.3.0    RColorBrewer_1.1-3 
-[13] fastmap_1.2.0       rprojroot_2.1.0     jsonlite_2.0.0     
-[16] writexl_1.5.4       processx_3.8.6      whisker_0.4.1      
-[19] ps_1.9.1            promises_1.3.3      BiocManager_1.30.26
-[22] httr_1.4.7          purrr_1.1.0         scales_1.4.0       
-[25] jquerylib_0.1.4     cli_3.6.5           rlang_1.1.6        
-[28] withr_3.0.2         cachem_1.1.0        yaml_2.3.10        
-[31] tools_4.3.2         httpuv_1.6.16       here_1.0.1         
-[34] vctrs_0.6.5         R6_2.6.1            lifecycle_1.0.4    
-[37] lubridate_1.9.4     git2r_0.36.2        fs_1.6.6           
-[40] pkgconfig_2.0.3     callr_3.7.6         pillar_1.11.1      
-[43] bslib_0.9.0         later_1.4.4         gtable_0.3.6       
-[46] glue_1.8.0          Rcpp_1.1.0          xfun_0.55          
-[49] tibble_3.3.0        tidyselect_1.2.1    rstudioapi_0.17.1  
-[52] knitr_1.50          farver_2.1.2        htmltools_0.5.8.1  
-[55] labeling_0.4.3      rmarkdown_2.30      compiler_4.3.2     
-[58] getPass_0.2-4      </code></pre>
+[13] fastmap_1.2.0       rprojroot_2.1.0     writexl_1.5.4      
+[16] processx_3.8.6      whisker_0.4.1       ps_1.9.1           
+[19] promises_1.3.3      BiocManager_1.30.26 purrr_1.1.0        
+[22] scales_1.4.0        jquerylib_0.1.4     cli_3.6.5          
+[25] rlang_1.1.6         withr_3.0.2         cachem_1.1.0       
+[28] yaml_2.3.10         tools_4.3.2         httpuv_1.6.16      
+[31] here_1.0.1          vctrs_0.6.5         R6_2.6.1           
+[34] lifecycle_1.0.4     lubridate_1.9.4     git2r_0.36.2       
+[37] fs_1.6.6            pkgconfig_2.0.3     callr_3.7.6        
+[40] pillar_1.11.1       bslib_0.9.0         later_1.4.4        
+[43] gtable_0.3.6        glue_1.8.0          Rcpp_1.1.0         
+[46] xfun_0.55           tibble_3.3.0        tidyselect_1.2.1   
+[49] rstudioapi_0.17.1   knitr_1.50          farver_2.1.2       
+[52] htmltools_0.5.8.1   labeling_0.4.3      rmarkdown_2.30     
+[55] compiler_4.3.2      getPass_0.2-4      </code></pre>
 </div>
 </div>
 </div>
