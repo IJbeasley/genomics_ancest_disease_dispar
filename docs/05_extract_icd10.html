@@ -375,7 +375,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2026-08-31
+<strong>Last updated:</strong> 2026-09-01
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -507,15 +507,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree24d6cf81653afe3d2835e15c8bdea1e098e667b5targetblank24d6cf8a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed20b69b809d6d82964cbb00ccb7d274f67e0d4b3targetblankd20b69ba">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/24d6cf81653afe3d2835e15c8bdea1e098e667b5" target="_blank">24d6cf8</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d20b69b809d6d82964cbb00ccb7d274f67e0d4b3" target="_blank">d20b69b</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree24d6cf81653afe3d2835e15c8bdea1e098e667b5targetblank24d6cf8a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed20b69b809d6d82964cbb00ccb7d274f67e0d4b3targetblankd20b69ba"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -525,7 +525,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/24d6cf81653afe3d2835e15c8bdea1e098e667b5" target="_blank">24d6cf8</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d20b69b809d6d82964cbb00ccb7d274f67e0d4b3" target="_blank">d20b69b</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -676,6 +676,40 @@ Message
 <tbody>
 <tr>
 <td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/d20b69b809d6d82964cbb00ccb7d274f67e0d4b3/analysis/05_extract_icd10.Rmd" target="_blank">d20b69b</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-01
+</td>
+<td>
+Update disease terms
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/76fa7b880dbd66d90ee367d567c02cf05359ea5c/docs/05_extract_icd10.html" target="_blank">76fa7b8</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-31
+</td>
+<td>
+Build site.
+</td>
+</tr>
+<tr>
+<td>
 html
 </td>
 <td>
@@ -821,8 +855,16 @@ class="section level1">
 <h2>Create a mapping table</h2>
 <pre class="r"><code>disease_mapping &lt;- gwas_study_info |&gt;
   filter(DISEASE_STUDY == T) |&gt;
+  dplyr::mutate(collected_all_disease_terms = stringr::str_replace_all(collected_all_disease_terms, 
+                                                              pattern = &quot;localized superficial swelling, mass, or lump&quot;, 
+                                                              replacement = &quot;localized superficial swelling: mass: or lump&quot;)) |&gt;
   tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
                                delim = &quot;, &quot;) |&gt;
+    tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
+                               delim = &quot;; &quot;) |&gt;
+  dplyr::mutate(collected_all_disease_terms = stringr::str_replace_all(collected_all_disease_terms, 
+                                                              pattern = &quot;localized superficial swelling: mass: or lump&quot;, 
+                                                              replacement = &quot;localized superficial swelling, mass, or lump&quot;)) |&gt;
   select(`DISEASE/TRAIT`, 
          collected_all_disease_terms, 
          PUBMED_ID,
@@ -837,7 +879,7 @@ disease_mapping =
 print(&quot;Number of unique disease trait &amp; study pairs&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique disease trait &amp; study pairs&quot;</code></pre>
 <pre class="r"><code>nrow(disease_mapping)</code></pre>
-<pre><code>[1] 48794</code></pre>
+<pre><code>[1] 48785</code></pre>
 <pre class="r"><code>diseases &lt;- stringr::str_split(pattern = &quot;, &quot;,
                                gwas_study_info$collected_all_disease_terms[gwas_study_info$collected_all_disease_terms != &quot;&quot;])  |&gt;
   unlist() |&gt;
@@ -848,11 +890,11 @@ diseases &lt;- unique(diseases)
 print(&quot;Number of unique disease terms&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique disease terms&quot;</code></pre>
 <pre class="r"><code>print(length(diseases))</code></pre>
-<pre><code>[1] 1974</code></pre>
+<pre><code>[1] 1966</code></pre>
 <pre class="r"><code>print(&quot;Number of disease papers&quot;)</code></pre>
 <pre><code>[1] &quot;Number of disease papers&quot;</code></pre>
 <pre class="r"><code>print(length(unique(disease_mapping$PUBMED_ID)))</code></pre>
-<pre><code>[1] 4669</code></pre>
+<pre><code>[1] 4665</code></pre>
 </div>
 <div id="get-icd10-codes-from-author-provided-diseasetrait-column"
 class="section level2">
@@ -1224,12 +1266,12 @@ print(&quot;Number of ICD10 code obtained&quot;)</code></pre>
 <pre><code># A tibble: 2 × 3
   icd10_code_origin               n percent
   &lt;chr&gt;                       &lt;int&gt;   &lt;dbl&gt;
-1 Study ICD10                  4343    11.1
-2 Study PheCode (PheCode Map)  6976    17.8</code></pre>
+1 Study ICD10                  4327    11.1
+2 Study PheCode (PheCode Map)  6966    17.8</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 11319</code></pre>
+<pre><code>[1] 11293</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   filter(!is.na(icd10_code_origin)) |&gt;
   head()</code></pre>
@@ -1355,10 +1397,10 @@ arrange(icd10_code_origin, desc(n))</code></pre>
 <pre><code># A tibble: 4 × 3
   icd10_code_origin               n percent
   &lt;chr&gt;                       &lt;int&gt;   &lt;dbl&gt;
-1 Study ICD10                  4343    8.9 
+1 Study ICD10                  4327    8.87
 2 Study PheCode (Manual Map)    933    1.91
-3 Study PheCode (PheCode Map)  6976   14.3 
-4 &lt;NA&gt;                        36542   74.9 </code></pre>
+3 Study PheCode (PheCode Map)  6966   14.3 
+4 &lt;NA&gt;                        36559   74.9 </code></pre>
 <pre class="r"><code># how many papers with at least one ICD-10 Code mapping
 disease_mapping |&gt;
  filter(!is.na(icd10_code_origin)) |&gt;
