@@ -1,7 +1,6 @@
 ---
 title: "Download trait ontology"
 author: "Isobel Beasley"
-date: "2025-09-05"
 output:
   workflowr::wflow_html:
     toc: true
@@ -24,9 +23,19 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(stringr)
+source(here::here("code/get_term_descendants.R"))
 
 ```
 
+```{r}
+
+print("Version of EFO ontology used for trait ontology retrieval:")
+cfg <- jsonlite::fromJSON("http://www.ebi.ac.uk/ols4/api/ontologies/efo")
+cfg$config$version      
+cfg$config$versionIri   
+cfg$loaded; cfg$updated
+
+```
 
 # Get trait ontology terms relating to 'Disease' (etc.)
 
@@ -44,205 +53,129 @@ library(jsonlite)
 url <-
 "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0700096/descendants"
 
-mondo_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  mondo_descendants <- c(mondo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+mondo_descendants <- get_descendants(url)
 
-length(mondo_descendants)
-mondo_descendants[1:5]
+writeLines(mondo_descendants$terms, here::here("output/trait_ontology/mondo_0700096_descendants.txt"))
 
-writeLines(mondo_descendants, here::here("output/trait_ontology/mondo_0700096_descendants.txt"))
+writeLines(mondo_descendants$iri_url, here::here("output/trait_ontology/mondo_0700096_descendants_iri.txt"))
 
 ```
 
 ## EFO 'Disease' Descendants (<http://www.ebi.ac.uk/efo/EFO_0000408>)
 
-```{r efo_descendants, eval = F}
+```{r efo_descendants, eval = T}
 
-url <-
-"http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000408/descendants"
+# url <-
+# "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000408/descendants"
+# this term is now obselete, so we use relevant archive version of EFO ontology to get descendants of EFO_0000408
+# taken from: https://github.com/EBISPOT/efo/releases/tag/v3.81.0
 
-efo_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  efo_descendants <- c(efo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
+
+library(ontologyIndex)   # NB: masks your own get_descendants() — qualify calls
+
+efo <- get_ontology(here::here("data/ontology/efo_3.81.0.obo"),
+                    propagate_relationships = "is_a",
+                    extract_tags = "everything")
+
+ids <- ontologyIndex::get_descendants(efo, 
+                                      roots = "efo:EFO_0000408",
+                                      exclude_roots = FALSE)
+
+obo_to_iri <- function(id) {
+  dplyr::case_when(
+    startsWith(id, "efo:")      ~ paste0("http://www.ebi.ac.uk/efo/", sub(":", 
+                                                                          "_", 
+                                                                          stringr::str_remove_all(
+                                                                            pattern = "^efo:",
+                                                                            id
+                                                                          )
+                                         )),
+    startsWith(id, "Orphanet:") ~ paste0("http://www.orpha.net/ORDO/", sub(":", "_", id)),
+    TRUE                        ~ paste0("http://purl.obolibrary.org/obo/", sub(":", "_", id))
+  )
 }
 
-length(efo_descendants)
-efo_descendants[1:5]
+efo_descendants <- tibble::tibble(
+  obo_id  = ids,
+  iri_url    = obo_to_iri(ids),
+  terms   = stringr::str_squish(tolower(efo$name[ids]))
+)
 
-writeLines(efo_descendants, here::here("output/trait_ontology/efo_0000408_descendants.txt"))
+
+writeLines(efo_descendants$terms, here::here("output/trait_ontology/efo_0000408_descendants.txt"))
+writeLines(efo_descendants$iri_url, here::here("output/trait_ontology/efo_0000408_descendants_iri.txt"))
 
 ```
 
 ## NCIT (Disease or Disorder): <http://purl.obolibrary.org/obo/NCIT_C2991>
 
-```{r ncit_descendants, eval = F}
+```{r ncit_descendants, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/ncit/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCIT_C2991/descendants"
 
+ncit_descendants <- get_descendants(url)
 
-ncit_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  ncit_descendants <- c(ncit_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(ncit_descendants)
-ncit_descendants[1:5]
-
-writeLines(ncit_descendants, here::here("output/trait_ontology/ncit_C2991_descendants.txt"))
+writeLines(ncit_descendants$terms, 
+           here::here("output/trait_ontology/ncit_C2991_descendants.txt"))
+writeLines(ncit_descendants$iri_url, 
+           here::here("output/trait_ontology/ncit_C2991_descendants_iri.txt"))
 
 ```
 
 ## Orphanet Disorder (<http://www.orpha.net/ORDO/Orphanet_557493>)
 
-```{r orphanet, eval = F}
+```{r orphanet, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/ordo/terms/http%253A%252F%252Fwww.orpha.net%252FORDO%252FOrphanet_557493/descendants"
 
-orphanet_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  orphanet_descendants <- c(orphanet_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+orphanet_descendants <- get_descendants(url)
 
-length(orphanet_descendants)
-orphanet_descendants[1:5]
+writeLines(orphanet_descendants$terms, 
+           here::here("output/trait_ontology/orphanet_557493_descendants.txt"))
 
-writeLines(orphanet_descendants, here::here("output/trait_ontology/orphanet_557493_descendants.txt"))
-
+writeLines(orphanet_descendants$iri_url, 
+           here::here("output/trait_ontology/orphanet_557493_descendants_iri.txt"))
 
 ```
 
 ## Pathologic process (<http://purl.obolibrary.org/obo/OBI_1110122>)
 
-```{r pathologic, eval = F}
+```{r pathologic, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOBI_1110122/descendants"
 
-path_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  path_descendants <- c(path_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+path_descendants <- get_descendants(url)
 
-length(path_descendants)
-path_descendants[1:5]
-
-writeLines(path_descendants, here::here("output/trait_ontology/obi_1110122_descendants.txt"))
-
+writeLines(path_descendants$terms, 
+           here::here("output/trait_ontology/obi_1110122_descendants.txt"))
+writeLines(path_descendants$iri_url, 
+           here::here("output/trait_ontology/obi_1110122_descendants_iri.txt"))
 
 ```
 
 ## Disease course <http://purl.obolibrary.org/obo/OGMS_0000063>
 
-```{r disease_course, eval = F}
+```{r disease_course, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOGMS_0000063/descendants"
 
-disease_course_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  disease_course_descendants <- c(disease_course_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+disease_course_descendants <- get_descendants(url)
 
-length(disease_course_descendants)
-disease_course_descendants[1:5]
-
-writeLines(disease_course_descendants, here::here("output/trait_ontology/ogms_0000063_descendants.txt"))
+writeLines(disease_course_descendants$terms, here::here("output/trait_ontology/ogms_0000063_descendants.txt"))
+writeLines(disease_course_descendants$iri_url, here::here("output/trait_ontology/ogms_0000063_descendants_iri.txt"))
 
 ```
 
 ## Age of onset of disease (http://purl.obolibrary.org/obo/OBA_2020000)
 
-```{r age_of_onset, eval = F}
+```{r age_of_onset, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/oba/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FOBA_2020000/descendants"
 
-age_of_onset_descendants <- c()
+age_of_onset_descendants <- get_descendants(url)
 
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  age_of_onset_descendants <- c(age_of_onset_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(age_of_onset_descendants)
-age_of_onset_descendants[1:5]
-
-writeLines(age_of_onset_descendants, here::here("output/trait_ontology/oba_2020000_descendants.txt"))
+writeLines(age_of_onset_descendants$terms, here::here("output/trait_ontology/oba_2020000_descendants.txt"))
+writeLines(age_of_onset_descendants$iri_url, here::here("output/trait_ontology/oba_2020000_descendants_iri.txt"))
 
 ```
 
@@ -253,26 +186,9 @@ writeLines(age_of_onset_descendants, here::here("output/trait_ontology/oba_20200
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FHP_0000118/descendants"
 
 
-hp_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  hp_descendants <- c(hp_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+hp_descendants <- get_descendants(url)
 
-length(hp_descendants)
-hp_descendants[1:5]
-
-hp_descendants = c(
+hp_descendants$terms = c(
                    "Abnormal aortic morphology",  
                    "Abnormal chest sounds",
                    "Abnormality of the eye", 
@@ -284,41 +200,41 @@ hp_descendants = c(
                    "Abnormality of the skeletal system",
                    "Abnormality of the vasculature",
                    "Abnormal venous morphology",
-                   hp_descendants)
+                   "Phenotypic abnormality",
+                   hp_descendants$terms)
 
-hp_descendants = c("Phenotypic abnormality", hp_descendants)
+hp_descendants$iri_url = c(
+  "http://purl.obolibrary.org/obo/HP_0001679",
+  "http://www.ebi.ac.uk/efo/EFO_0010670",
+  "http://purl.obolibrary.org/obo/HP_0000478",
+  "http://purl.obolibrary.org/obo/HP_0001760",
+  "http://purl.obolibrary.org/obo/HP_0011024",
+  "http://purl.obolibrary.org/obo/HP_0000078",
+  "http://purl.obolibrary.org/obo/HP_0001392",
+  "http://purl.obolibrary.org/obo/HP_0000707",
+  "http://purl.obolibrary.org/obo/HP_0000924",
+  "http://purl.obolibrary.org/obo/HP_0002597",
+  "http://purl.obolibrary.org/obo/HP_0000118",
+  "http://purl.obolibrary.org/obo/HP_0002624",
+  hp_descendants$iri_url
+)
 
-writeLines(hp_descendants, here::here("output/trait_ontology/hp_0000118_descendants.txt"))
+
+writeLines(hp_descendants$terms, here::here("output/trait_ontology/hp_0000118_descendants.txt"))
+writeLines(hp_descendants$iri_url, here::here("output/trait_ontology/hp_0000118_descendants_iri.txt"))
 
 ```
 
 ## Get trait ontology terms for sign or symptom (EFO:0003765)
 
-```{r sign_or_symptom, eval = F}
+```{r sign_or_symptom, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0003765/descendants"
 
-efo_descendants <- c()
+efo_descendants <- get_descendants(url)
 
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  efo_descendants <- c(efo_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(efo_descendants)
-efo_descendants[1:5]
-
-writeLines(efo_descendants, here::here("output/trait_ontology/efo_0003765_descendants.txt"))
+writeLines(efo_descendants$terms, here::here("output/trait_ontology/efo_0003765_descendants.txt"))
+writeLines(efo_descendants$iri_url, here::here("output/trait_ontology/efo_0003765_descendants_iri.txt"))
 
 ```
 
@@ -326,7 +242,7 @@ writeLines(efo_descendants, here::here("output/trait_ontology/efo_0003765_descen
 
 ## Measurement terms (<http://www.ebi.ac.uk/efo/EFO_0001444>)
 
-```{r measurement_descendants, eval = F}
+```{r measurement_descendants, eval = T}
 
 base <- paste0("http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/",
                "http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0001444/descendants")
@@ -351,7 +267,29 @@ for (p in seq_len(first$page$totalPages) - 1L) {
   )
 }
 measurement_descendants <- do.call(rbind, out)
-measurement_descendants <- measurement_descendants$label
+measurement_descendants_terms <- measurement_descendants$label
+measurement_descendants_iri_url <- measurement_descendants$iri
+
+# old measurement ids:
+ids <- ontologyIndex::get_descendants(efo, 
+                                      roots = "efo:EFO_0001444",
+                                      exclude_roots = FALSE)
+
+old_measurement_descendants <- tibble::tibble(
+    obo_id  = ids,
+    iri_url    = obo_to_iri(ids),
+    terms   = stringr::str_squish(tolower(efo$name[ids]))
+)
+
+old_measurement_descendants <-
+  old_measurement_descendants |> 
+  filter(!c(terms %in% measurement_descendants_terms)) 
+
+measurement_descendants_terms  <- c(measurement_descendants_terms,
+                                     old_measurement_descendants$terms)
+
+measurement_descendants_iri_url <- c(measurement_descendants_iri_url,
+                                     old_measurement_descendants$iri_url)
 
 disease_measurement_grep_terms <- c("age at",
                                     "addiction",
@@ -408,7 +346,7 @@ disease_measurement_grep_terms <- c("age at",
                                     )
 
 seropositivity_terms <- grep("seropositivity|antibody", 
-                             measurement_descendants, 
+                             measurement_descendants_terms, 
                              value = T,
                              ignore.case = T)
 
@@ -470,49 +408,53 @@ seropositivity_terms <- seropositivity_terms[!(seropositivity_terms %in% c(gut_v
 disease_measurement_terms = 
 grep(pattern = paste0(disease_measurement_grep_terms, 
                       collapse = "|"),
-     measurement_descendants,
+     measurement_descendants_terms,
       value = T,
      ignore.case = T)
 
 disease_measurement_terms <- c(disease_measurement_terms, 
                                seropositivity_terms)
 
-measurement_descendants = measurement_descendants[!measurement_descendants %in% disease_measurement_terms]
+is_disease_measurement <- 
+  measurement_descendants_terms %in% disease_measurement_terms
 
-writeLines(measurement_descendants, here::here("output/trait_ontology/efo_0001444_descendants.txt"))
+disease_measurement_iri_urls <- 
+  measurement_descendants_iri_url[is_disease_measurement]
 
-writeLines(disease_measurement_terms, here::here("output/trait_ontology/efo_0001444_disease_measurement_terms.txt"))
+measurement_descendants_terms <- 
+  measurement_descendants_terms[!is_disease_measurement]
+
+measurement_descendants_iri_urls <- 
+  measurement_descendants_iri_url[!is_disease_measurement]
+
+writeLines(measurement_descendants_terms, 
+           here::here("output/trait_ontology/efo_0001444_descendants.txt"))
+writeLines(measurement_descendants_iri_urls, 
+           here::here("output/trait_ontology/efo_0001444_descendants_iri.txt"))
+
+writeLines(disease_measurement_terms, 
+           here::here("output/trait_ontology/efo_0001444_disease_measurement_terms.txt"))
+writeLines(disease_measurement_iri_urls, 
+           here::here("output/trait_ontology/efo_0001444_disease_measurement_terms_iri.txt"))
 
 ```
 
 ## Total cholesterol measurements (<http://www.ebi.ac.uk/efo/EFO_0004574>)
 
-```{r, eval = F}
+```{r, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004574/descendants"
 
+total_choles_descendants <- get_descendants(url)
 
-total_choles_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  total_choles_descendants <- c(total_choles_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+total_choles_descendants$terms <- c("total cholesterol measurement", 
+                                   total_choles_descendants$terms)
 
-writeLines(total_choles_descendants, here::here("output/trait_ontology/efo_0004574_descendants.txt"))
+total_choles_descendants$iri_url <- c("http://www.ebi.ac.uk/efo/EFO_0004574",
+                                      total_choles_descendants$iri_url)
 
-
-length(total_choles_descendants)
-total_choles_descendants[1:5]
+writeLines(total_choles_descendants$terms, here::here("output/trait_ontology/efo_0004574_descendants.txt"))
+writeLines(total_choles_descendants$iri_url, here::here("output/trait_ontology/efo_0004574_descendants_iri.txt"))
 
 ```
 
@@ -526,245 +468,170 @@ Includes:
 
 ## From GO
 
-```{r, eval = F}
+```{r, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/go/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0050896/descendants"
 
-go_response_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  go_response_descendants <- c(go_response_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+go_response_descendants <- get_descendants(url)
 
-length(go_response_descendants)
-go_response_descendants[1:5]
-
-writeLines(go_response_descendants, here::here("output/trait_ontology/go_0050896_descendants.txt"))
+writeLines(go_response_descendants$terms, 
+           here::here("output/trait_ontology/go_0050896_descendants.txt"))
+writeLines(go_response_descendants$iri_url, 
+           here::here("output/trait_ontology/go_0050896_descendants_iri.txt"))
 
 
 ```
 
 ## From EFO
 
-```{r, eval = F}
+```{r, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0050896/descendants"
 
-efo_response_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  efo_response_descendants <- c(efo_response_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+efo_response_descendants <- get_descendants(url)
 
-length(efo_response_descendants)
-efo_response_descendants[1:5]
+writeLines(efo_response_descendants$terms, 
+           here::here("output/trait_ontology/efo_go_0050896_descendants.txt"))
 
-writeLines(efo_response_descendants, here::here("output/trait_ontology/efo_go_0050896_descendants.txt"))
+writeLines(efo_response_descendants$iri_url, 
+           here::here("output/trait_ontology/efo_go_0050896_descendants_iri.txt"))
 
 ```
 
 # Get ontology terms relating to 'Phenotype' (<http://www.ebi.ac.uk/efo/EFO_0000651>)
 
-```{r trait_ontology, eval = F}
+```{r trait_ontology, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000651/descendants"
 
-phenotype_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  phenotype_descendants <- c(phenotype_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+phenotype_descendants <- get_descendants(url)
 
-length(phenotype_descendants)
-phenotype_descendants[1:5]
-
-
-writeLines(phenotype_descendants, here::here("output/trait_ontology/efo_0000651_descendants.txt"))
+writeLines(phenotype_descendants$terms, here::here("output/trait_ontology/efo_0000651_descendants.txt"))
+writeLines(phenotype_descendants$iri_url, 
+           here::here("output/trait_ontology/efo_0000651_descendants_iri.txt"))
 
 
 ```
 
 # Mental process (<http://www.ebi.ac.uk/efo/EFO_0004323>)
 
-```{r, eval = F}
+```{r, eval = T}
+
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0004323/descendants"
 
-mental_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  mental_descendants <- c(mental_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+mental_descendants <- get_descendants(url)
 
-length(mental_descendants)
-mental_descendants[1:5]
-mental_descendants = c("mental process", 
-                       "cognitive function measurement",
-                       mental_descendants)
+mental_descendants$terms <- c("mental process", 
+                              "cognitive function measurement",
+                              mental_descendants$terms)
 
-writeLines(mental_descendants, here::here("output/trait_ontology/efo_0004323_descendants.txt"))
+mental_descendants$iri_url <- c("http://www.ebi.ac.uk/efo/EFO_0004323",
+                             "http://www.ebi.ac.uk/efo/EFO_0008354",
+                             mental_descendants$iri_url)
+
+
+writeLines(mental_descendants$terms, 
+           here::here("output/trait_ontology/efo_0004323_descendants.txt"))
+
+writeLines(mental_descendants$iri_url, 
+           here::here("output/trait_ontology/efo_0004323_descendants_iri.txt"))
 
 ```
 
 # Behavior (<http://purl.obolibrary.org/obo/GO_0007610>)
 
-```{r, eval = F}
+```{r, eval = T}
+
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0007610/descendants"
 
-behavior_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  behavior_descendants <- c(behavior_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+behavior_descendants <- get_descendants(url)
 
-length(behavior_descendants)
-behavior_descendants[1:5]
+behavior_descendants$terms = c("behavior", 
+                               behavior_descendants$terms)
 
-behavior_descendants = c("behavior", behavior_descendants)
-writeLines(behavior_descendants, here::here("output/trait_ontology/go_0007610_descendants.txt"))
+behavior_descendants$iri_url = c("http://purl.obolibrary.org/obo/GO_0007610",
+                                behavior_descendants$iri_url)
+
+writeLines(behavior_descendants$terms, here::here("output/trait_ontology/go_0007610_descendants.txt"))
+writeLines(behavior_descendants$iri_url, here::here("output/trait_ontology/go_0007610_descendants_iri.txt"))
+
 
 ```
 
 # Injury (<http://www.ebi.ac.uk/efo/EFO_0000546>)
 
-```{r, eval = F}
+```{r, eval = T}
 
-url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000546/descendants"
+# url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000546/descendants"
 
-injury_descendants <- c()
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  injury_descendants <- c(injury_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
+#url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0021178/descendants"
+# this term is now obselete, so we use relevant archive version of EFO ontology to get descendants
+
+library(ontologyIndex)   # NB: masks your own get_descendants() — qualify calls
+
+ids <- ontologyIndex::get_descendants(efo, 
+                                      roots = "efo:EFO_0000546",
+                                      exclude_roots = FALSE)
+
+obo_to_iri <- function(id) {
+  dplyr::case_when(
+    startsWith(id, "efo:")      ~ paste0("http://www.ebi.ac.uk/efo/", sub(":", 
+                                                                          "_", 
+                                                                          stringr::str_remove_all(
+                                                                            pattern = "^efo:",
+                                                                            id
+                                                                          )
+                                         )),
+    startsWith(id, "Orphanet:") ~ paste0("http://www.orpha.net/ORDO/", sub(":", "_", id)),
+    TRUE                        ~ paste0("http://purl.obolibrary.org/obo/", sub(":", "_", id))
+  )
 }
 
-length(injury_descendants)
-injury_descendants[1:5]
+injury_descendants  <- tibble::tibble(
+  obo_id  = ids,
+  iri_url     = obo_to_iri(ids),
+  terms   = stringr::str_squish(tolower(efo$name[ids]))
+)
 
-injury_descendants = c("injury", injury_descendants)
-writeLines(injury_descendants, here::here("output/trait_ontology/efo_0000546_descendants.txt"))
+writeLines(injury_descendants$terms, 
+           here::here("output/trait_ontology/efo_0000546_descendants.txt"))
+writeLines(injury_descendants$iri_url, 
+           here::here("output/trait_ontology/efo_0000546_descendants_iri.txt"))
 
 ```
 
-# Medical proceedure terms (http://www.ebi.ac.uk/efo/EFO_0002571)
+# Medical procedure terms (http://www.ebi.ac.uk/efo/EFO_0002571)
 
-```{r medical_proceedure_terms, eval = F}
+```{r medical_procedure_terms, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0002571/descendants"
 
-medical_proceedure_descendants <- c()
+medical_procedure_descendants <- get_descendants(url)
 
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  medical_proceedure_descendants <- c(medical_proceedure_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
-
-length(medical_proceedure_descendants)
-
-medical_proceedure_descendants[1:5]
-
-writeLines(medical_proceedure_descendants, here::here("output/trait_ontology/efo_0002571_descendants.txt"))
-
+writeLines(medical_procedure_descendants$terms, here::here("output/trait_ontology/efo_0002571_descendants.txt"))
+writeLines(medical_procedure_descendants$iri_url, here::here("output/trait_ontology/efo_0002571_descendants_iri.txt"))
 
 ```
 
 
 # Surgical procedure terms (http://purl.obolibrary.org/obo/MAXO_0000004)
 
-```{r surgical_proceedure_terms, eval = F}
+```{r surgical_procedure_terms, eval = T}
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/maxo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMAXO_0000004/descendants"
 
-surgical_proceedure_descendants <- c()
+surgical_procedure_descendants <- get_descendants(url)
 
-repeat {
-  res <- GET(url)
-  stop_for_status(res)
-  data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
-  
-  surgical_proceedure_descendants <- c(surgical_proceedure_descendants, data$`_embedded`$terms$label)
-  
-  # check if there is a next page
-  if (!is.null(data$`_links`$`next`$href)) {
-    url <- data$`_links`$`next`$href
-  } else {
-    break
-  }
-}
+surgical_procedure_descendants$terms <- c("surgical procedure", 
+                                           surgical_procedure_descendants$terms)
 
-length(surgical_proceedure_descendants)
+surgical_procedure_descendants$iri_url = c("http://purl.obolibrary.org/obo/MAXO_0000004",
+                                surgical_procedure_descendants$iri_url)
 
-surgical_proceedure_descendants[1:5]
+writeLines(surgical_procedure_descendants$terms, here::here("output/trait_ontology/maxo_0000004_descendants.txt"))
 
-writeLines(surgical_proceedure_descendants, here::here("output/trait_ontology/maxo_0000004_descendants.txt"))
+writeLines(surgical_procedure_descendants$iri_url, here::here("output/trait_ontology/maxo_0000004_descendants_iri.txt"))
+
 
 ```
 
