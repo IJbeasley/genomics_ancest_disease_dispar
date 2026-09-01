@@ -68,6 +68,49 @@ gwas_study_info =
 
 ```
 
+# Hepatitis Infection Correction 
+
+Distinguishing between chronic and acute infection. 
+
+```{r}
+
+hep_b_pmids <- gwas_study_info |>
+  filter(grepl("hepatitis b", collected_all_disease_terms, ignore.case = TRUE)) |>
+  pull(PUBMED_ID) |>
+  unique()             
+
+# studies to correct to chronic hepatitis b
+gwas_study_info |> 
+    filter(stringr::str_detect(pattern = "(?<!chronic )hepatitis b infection", 
+                               collected_all_disease_terms)) |>
+    filter(grepl("chronic hepatitis b", STUDY, ignore.case = TRUE) | 
+           grepl("chronic hepatitis b|persistent hepatitis b", `DISEASE/TRAIT`, ignore.case = TRUE) 
+    ) |>
+    distinct(STUDY, `DISEASE/TRAIT`, PUBMED_ID, collected_all_disease_terms)
+
+gwas_study_info <-
+gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(stringr::str_detect(pattern = "(?<!chronic )hepatitis b infection", 
+                               collected_all_disease_terms) & 
+                (stringr::str_detect(pattern = "chronic hepatitis b", 
+                                     tolower(STUDY)) |
+                 stringr::str_detect(pattern = "chronic hepatitis b|persistent hepatitis b", 
+                                     tolower(`DISEASE/TRAIT`)
+                                     )
+                 ),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = "(?<!chronic )hepatitis b infection",
+                          replacement = "chronic hepatitis b infection"
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# ? 28928442 acute
+
+```
+
 # Specific study corrections
 
 ### Pubmed id: 37271218 (Study of complications in Behcet's disease)
