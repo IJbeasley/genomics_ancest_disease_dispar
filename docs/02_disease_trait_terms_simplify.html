@@ -376,7 +376,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2026-08-31
+<strong>Last updated:</strong> 2026-09-01
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree6e5de5d5ed7a169ceaddbb4ada0100f16ba4bf08targetblank6e5de5da">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebc547fd8e16a5eee4cdb2e53c376b069ce388d02targetblankbc547fda">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/6e5de5d5ed7a169ceaddbb4ada0100f16ba4bf08" target="_blank">6e5de5d</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/bc547fd8e16a5eee4cdb2e53c376b069ce388d02" target="_blank">bc547fd</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree6e5de5d5ed7a169ceaddbb4ada0100f16ba4bf08targetblank6e5de5da"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebc547fd8e16a5eee4cdb2e53c376b069ce388d02targetblankbc547fda"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/6e5de5d5ed7a169ceaddbb4ada0100f16ba4bf08" target="_blank">6e5de5d</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/bc547fd8e16a5eee4cdb2e53c376b069ce388d02" target="_blank">bc547fd</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -617,10 +617,11 @@ Ignored files:
 Untracked files:
     Untracked:  analysis/compare_cohort_annot.Rmd
     Untracked:  code/correcting_for_overlapping_cohorts.R
+    Untracked:  disease_term_pipeline_review.md
 
 Unstaged changes:
     Modified:   analysis/03_group_cancer_diseases.Rmd
-    Modified:   analysis/05_extract_icd10.Rmd
+    Modified:   analysis/04_group_non_cancer_diseases.Rmd
     Modified:   analysis/06_map_trait_to_icd10.Rmd
     Modified:   analysis/07_gwas_to_gbd.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
@@ -678,6 +679,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/bc547fd8e16a5eee4cdb2e53c376b069ce388d02/analysis/02_disease_trait_terms_simplify.Rmd" target="_blank">bc547fd</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-01
+</td>
+<td>
+Cleaning up bugs
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/fe3528048d65f123efdc17f2c22b92981763a01e/docs/02_disease_trait_terms_simplify.html" target="_blank">fe35280</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-31
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -893,7 +928,8 @@ Organise Rmd file names
 <h1><span class="header-section-number">1</span> Set up</h1>
 <pre class="r"><code>library(dplyr)
 library(data.table)
-library(stringr)</code></pre>
+library(stringr)
+source(here::here(&quot;code/get_term_descendants.R&quot;))</code></pre>
 <pre class="r"><code>gwas_study_info &lt;- fread(here::here(&quot;output/gwas_cat/gwas_study_info_trait_cat.csv&quot;))</code></pre>
 </div>
 <div id="initial-summary" class="section level1" number="2">
@@ -934,9 +970,9 @@ head(n_studies_trait)</code></pre>
 3 schizophrenia                   140
 4 breast carcinoma                125
 5 alzheimer disease               119
-6 asthma                          113</code></pre>
+6 asthma                          112</code></pre>
 <pre class="r"><code>dim(n_studies_trait)</code></pre>
-<pre><code>[1] 2875    2</code></pre>
+<pre><code>[1] 2886    2</code></pre>
 </div>
 <div id="disease-trait-collapsing-and-cleaning" class="section level1"
 number="4">
@@ -992,16 +1028,15 @@ sero_map &lt;- tribble(
   &quot;epstein-barr virus early antigen seropositivity&quot;,     &quot;epstein-barr virus infection&quot;,       &quot;viral_infection&quot;,
   &quot;epstein-barr virus seropositivity&quot;,                   &quot;epstein-barr virus infection&quot;,       &quot;viral_infection&quot;,
   &quot;foot-and-mouth disease virus seropositivity&quot;,         &quot;foot-and-mouth disease&quot;,             &quot;viral_infection&quot;,
-  &quot;anti-hepatitis b virus antibod measurementy&quot;,         &quot;hepatitis b infection&quot;,              &quot;viral_infection&quot;,
-  &quot;hepatitis b virus core antigen seropositivity&quot;,       &quot;hepatitis b infection&quot;,               &quot;viral_infection&quot;,
-  &quot;hepatitis b virus surface antigen seropositivity&quot;,    &quot;hepatitis b infection&quot;,               &quot;viral_infection&quot;,
-  &quot;anti-hepatitis b virus antibody measurement&quot;,                     &quot;hepatitis b infection&quot;,               &quot;viral_infection&quot;,
+  &quot;anti-hepatitis b virus antibody measurement&quot;,         &quot;hepatitis b infection&quot;,              &quot;viral_infection&quot;,
+  &quot;hepatitis b virus core antigen seropositivity&quot;,       &quot;hepatitis b infection&quot;,              &quot;viral_infection&quot;,
+  &quot;hepatitis b virus surface antigen seropositivity&quot;,    &quot;hepatitis b infection&quot;,              &quot;viral_infection&quot;,
   &quot;hepatitis a virus seropositivity&quot;,                    &quot;hepatitis a infection&quot;,              &quot;viral_infection&quot;,
   &quot;hepatitis c virus seropositivity&quot;,                    &quot;hepatitis c infection&quot;,              &quot;viral_infection&quot;,
   &quot;hepatitis e virus seropositivity&quot;,                    &quot;hepatitis e infection&quot;,              &quot;viral_infection&quot;,
   &quot;anti-hepatitis e virus antibody measurement&quot;,         &quot;hepatitis e infection&quot;,              &quot;viral_infection&quot;,
   &quot;herpes simplex virus 2 seropositivity&quot;,               &quot;herpes simplex virus 2 infection&quot;,   &quot;viral_infection&quot;,
-  &quot;hsv2 virologic&quot;,                                      &quot;herpes simplex virus 2 infection&quot;,   &quot;viral_infection&quot;,
+  &quot;hsv2 virologic severity measurement&quot;,                 &quot;herpes simplex virus 2 infection&quot;,   &quot;viral_infection&quot;,
   &quot;anti-human herpes virus 7 antibody measurement&quot;,      &quot;human herpesvirus 7 infection&quot;,      &quot;viral_infection&quot;,
    &quot;anti-human herpes virus 6 antibody measurement&quot;,     &quot;human herpesvirus 6 infection&quot;,      &quot;viral_infection&quot;,
   &quot;anti-herpes simplex virus 6 antibody measurement&quot;,    &quot;herpes simplex virus 6 infection&quot;,   &quot;viral_infection&quot;,
@@ -1014,7 +1049,7 @@ sero_map &lt;- tribble(
   &quot;influenza a seropositivity&quot;,                          &quot;influenza a&quot;,                        &quot;viral_infection&quot;,
   &quot;influenza b seropositivity&quot;,                          &quot;influenza b&quot;,                        &quot;viral_infection&quot;,
   &quot;merkel cell virus seropositivity&quot;,                    &quot;merkel cell polyomavirus infection&quot;, &quot;viral_infection&quot;,
-  &quot;anti-merkel cell virus antibody measuremnt&quot;,          &quot;merkel cell polyomavirus infection&quot;, &quot;viral_infection&quot;,
+  &quot;anti-merkel cell virus antibody measurement&quot;,          &quot;merkel cell polyomavirus infection&quot;, &quot;viral_infection&quot;,
   &quot;measles virus seropositivity&quot;,                        &quot;measles&quot;,                           &quot;viral_infection&quot;,
   &quot;mumps virus seropositivity&quot;,                          &quot;mumps&quot;,                              &quot;viral_infection&quot;,
   &quot;pneumoviridae seropositivity&quot;,                        &quot;pneumovirus infection&quot;,              &quot;viral_infection&quot;,
@@ -1060,8 +1095,11 @@ sero_map &lt;- tribble(
   
   # other diseases:
   &quot;plasmodium falciparum seropositivity&quot;,                 &quot;malaria&quot;,                            &quot;parasitic_infection&quot;,
+  &quot;toxoplasma gondii seropositivity&quot;,                     &quot;toxoplasmosis&quot;,                      &quot;parasitic_infection&quot;,
+  &quot;trypanosoma cruzi seropositivity&quot;,                     &quot;chagas disease&quot;,                     &quot;parasitic_infection&quot;,
   &quot;helicobacter pylori infectious disease&quot;,                 &quot;helicobacter pylori infection&quot;,      &quot;bacterial_infection&quot;,
-  &quot;respiratory tract infectious disorder&quot;,                 &quot;respiratory tract infection&quot;,        &quot;other_infection&quot;
+  &quot;respiratory tract infectious disorder&quot;,                 &quot;respiratory tract infection&quot;,        &quot;other_infection&quot;,
+  &quot;aspergillus seropositivity&quot;,                             &quot;aspergillosis&quot;,                      &quot;fungal_infection&quot;
 
 )
 ## Sanity check: no duplicated source terms
@@ -1127,14 +1165,14 @@ gwas_study_info |&gt;
   select(collected_all_disease_terms, collected_all_disease_terms_raw) |&gt; 
   distinct() |&gt;
   head()</code></pre>
-<pre><code>                               collected_all_disease_terms
-                                                    &lt;char&gt;
-1:                        toxoplasma gondii seropositivity
-2:                            epstein-barr virus infection
-3:                            epstein-barr virus infection
-4:                          human papillomavirus infection
-5:                        trypanosoma cruzi seropositivity
-6: chagas cardiomyopathy, trypanosoma cruzi seropositivity
+<pre><code>             collected_all_disease_terms
+                                  &lt;char&gt;
+1:                         toxoplasmosis
+2:          epstein-barr virus infection
+3:          epstein-barr virus infection
+4:        human papillomavirus infection
+5:                        chagas disease
+6: chagas cardiomyopathy, chagas disease
                            collected_all_disease_terms_raw
                                                     &lt;char&gt;
 1:                        toxoplasma gondii seropositivity
@@ -1147,19 +1185,15 @@ gwas_study_info |&gt;
 gwas_study_info |&gt;
   filter(grepl(&quot;seropos&quot;, collected_all_disease_terms)) |&gt;
   distinct(collected_all_disease_terms)</code></pre>
-<pre><code>                                           collected_all_disease_terms
-                                                                &lt;char&gt;
- 1:                                   toxoplasma gondii seropositivity
- 2:                                   trypanosoma cruzi seropositivity
- 3:            chagas cardiomyopathy, trypanosoma cruzi seropositivity
- 4: rheumatoid factor seropositivity measurement, rheumatoid arthritis
- 5:                       rheumatoid factor seropositivity measurement
- 6:                                         seropositivity measurement
- 7:                                 gammaproteobacteria seropositivity
- 8:                                              fungus seropositivity
- 9:                                         aspergillus seropositivity
-10:                                           protozoan seropositivity
-11:                                      proteobacteria seropositivity</code></pre>
+<pre><code>                                          collected_all_disease_terms
+                                                               &lt;char&gt;
+1: rheumatoid factor seropositivity measurement, rheumatoid arthritis
+2:                       rheumatoid factor seropositivity measurement
+3:                                         seropositivity measurement
+4:                                 gammaproteobacteria seropositivity
+5:                                              fungus seropositivity
+6:                                           protozoan seropositivity
+7:                                      proteobacteria seropositivity</code></pre>
 </div>
 <div
 id="where-a-study-investigates-a-given-aspect-of-of-disease-reduce-this-to-a-study-of-this-disease"
@@ -1322,9 +1356,25 @@ gwas_study_info = gwas_study_info |&gt;
 <div id="general-measurement" class="section level3" number="4.2.4">
 <h3><span class="header-section-number">4.2.4</span> General
 measurement</h3>
+<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                        &quot; measurement(?=,|$)&quot;, &quot;&quot;)
+  )
+
+# gwas_study_info = gwas_study_info |&gt;
+#   mutate(collected_all_disease_terms = 
+#         str_replace_all(collected_all_disease_terms, 
+#                     &quot;(.*?) (.*?) measurement(?=,|$) &quot;, &quot;\\1 \\2&quot;)
+#   )</code></pre>
 </div>
-<div id="imaging" class="section level3" number="4.2.5">
-<h3><span class="header-section-number">4.2.5</span> Imaging</h3>
+</div>
+<div id="specific-cases-of-measurement" class="section level2"
+number="4.3">
+<h2><span class="header-section-number">4.3</span> Specific cases of
+measurement</h2>
+<div id="imaging" class="section level4" number="4.3.0.1">
+<h4><span class="header-section-number">4.3.0.1</span> Imaging</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
         str_replace_all(collected_all_disease_terms, 
@@ -1339,21 +1389,11 @@ gwas_study_info = gwas_study_info |&gt;
                            &quot;emphysema&quot;
           )
          )</code></pre>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-  mutate(collected_all_disease_terms = 
-        str_replace_all(collected_all_disease_terms, 
-                        &quot; measurement(?=,|$)&quot;, &quot;&quot;)
-  )
-
-# gwas_study_info = gwas_study_info |&gt;
-#   mutate(collected_all_disease_terms = 
-#         str_replace_all(collected_all_disease_terms, 
-#                     &quot;(.*?) (.*?) measurement(?=,|$) &quot;, &quot;\\1 \\2&quot;)
-#   )</code></pre>
+</div>
 <div
 id="borderline-personality-disorder-symptom---borderline-personality-disorder"
-class="section level4" number="4.2.5.1">
-<h4><span class="header-section-number">4.2.5.1</span> borderline
+class="section level4" number="4.3.0.2">
+<h4><span class="header-section-number">4.3.0.2</span> borderline
 personality disorder symptom -&gt; borderline personality disorder</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -1363,8 +1403,8 @@ personality disorder symptom -&gt; borderline personality disorder</h4>
                            string = collected_all_disease_terms))</code></pre>
 </div>
 <div id="suicide-behaviour-measurement---suicide" class="section level4"
-number="4.2.5.2">
-<h4><span class="header-section-number">4.2.5.2</span> suicide behaviour
+number="4.3.0.3">
+<h4><span class="header-section-number">4.3.0.3</span> suicide behaviour
 measurement -&gt; suicide</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -1375,8 +1415,8 @@ measurement -&gt; suicide</h4>
          )</code></pre>
 </div>
 <div id="sars-cov-2-antibody-measurement---covid-19"
-class="section level4" number="4.2.5.3">
-<h4><span class="header-section-number">4.2.5.3</span> sars-cov-2
+class="section level4" number="4.3.0.4">
+<h4><span class="header-section-number">4.3.0.4</span> sars-cov-2
 antibody measurement -&gt; covid-19</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -1386,8 +1426,8 @@ antibody measurement -&gt; covid-19</h4>
                            string = collected_all_disease_terms))</code></pre>
 </div>
 <div id="dependence-addiction-withdrawal-measurement"
-class="section level4" number="4.2.5.4">
-<h4><span class="header-section-number">4.2.5.4</span> Dependence /
+class="section level4" number="4.3.0.5">
+<h4><span class="header-section-number">4.3.0.5</span> Dependence /
 addiction / withdrawal measurement</h4>
 <pre class="r"><code># dependence measurement -&gt; dependence
 gwas_study_info = gwas_study_info |&gt;
@@ -1411,8 +1451,8 @@ gwas_study_info = gwas_study_info |&gt;
                            &quot;withdrawal&quot;))</code></pre>
 </div>
 <div id="syndrome-disorder-measurement" class="section level4"
-number="4.2.5.5">
-<h4><span class="header-section-number">4.2.5.5</span> Syndrome /
+number="4.3.0.6">
+<h4><span class="header-section-number">4.3.0.6</span> Syndrome /
 disorder measurement</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms =
@@ -1426,8 +1466,8 @@ gwas_study_info = gwas_study_info |&gt;
                            &quot;\\bdisorder\\s+measurement(?=,|$)&quot;,
                            &quot;disorder&quot;)) </code></pre>
 </div>
-<div id="allergy-measurement" class="section level4" number="4.2.5.6">
-<h4><span class="header-section-number">4.2.5.6</span> Allergy
+<div id="allergy-measurement" class="section level4" number="4.3.0.7">
+<h4><span class="header-section-number">4.3.0.7</span> Allergy
 measurement</h4>
 <pre class="r"><code># allergy measurement -&gt; allergy
 gwas_study_info = gwas_study_info |&gt; 
@@ -1437,8 +1477,8 @@ gwas_study_info = gwas_study_info |&gt;
                            &quot;allergy&quot;)) </code></pre>
 </div>
 <div id="emphysema-pattern-measurement---emphysema"
-class="section level4" number="4.2.5.7">
-<h4><span class="header-section-number">4.2.5.7</span> emphysema pattern
+class="section level4" number="4.3.0.8">
+<h4><span class="header-section-number">4.3.0.8</span> emphysema pattern
 measurement -&gt; emphysema</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -1448,8 +1488,8 @@ measurement -&gt; emphysema</h4>
                            string = collected_all_disease_terms))</code></pre>
 </div>
 <div id="time-to-remission-of-covid-19-symptoms---covid-19"
-class="section level4" number="4.2.5.8">
-<h4><span class="header-section-number">4.2.5.8</span> time to remission
+class="section level4" number="4.3.0.9">
+<h4><span class="header-section-number">4.3.0.9</span> time to remission
 of covid-19 symptoms -&gt; covid-19</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -1459,8 +1499,8 @@ of covid-19 symptoms -&gt; covid-19</h4>
                            string = collected_all_disease_terms))</code></pre>
 </div>
 <div id="vascular-brain-injury-measurement---vascular-brain-injury"
-class="section level4" number="4.2.5.9">
-<h4><span class="header-section-number">4.2.5.9</span> vascular brain
+class="section level4" number="4.3.0.10">
+<h4><span class="header-section-number">4.3.0.10</span> vascular brain
 injury measurement -&gt; vascular brain injury</h4>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
@@ -1469,9 +1509,8 @@ injury measurement -&gt; vascular brain injury</h4>
                            replacement = &quot;vascular brain injury&quot;,
                            string = collected_all_disease_terms))</code></pre>
 </div>
-</div>
-<div id="symptom-measurement" class="section level3" number="4.2.6">
-<h3><span class="header-section-number">4.2.6</span> Symptom
+<div id="symptom-measurement" class="section level3" number="4.3.1">
+<h3><span class="header-section-number">4.3.1</span> Symptom
 measurement</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1492,8 +1531,8 @@ gwas_study_info = gwas_study_info |&gt;
                          &quot; symptom count(?=,|$)&quot;)
          )</code></pre>
 <div id="specific-example-autism" class="section level4"
-number="4.2.6.1">
-<h4><span class="header-section-number">4.2.6.1</span> Specific example:
+number="4.3.1.1">
+<h4><span class="header-section-number">4.3.1.1</span> Specific example:
 autism</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt; 
     mutate(collected_all_disease_terms = 
@@ -1503,8 +1542,8 @@ autism</h4>
          ) </code></pre>
 </div>
 <div id="specific-example-respiratory-symptom-change"
-class="section level4" number="4.2.6.2">
-<h4><span class="header-section-number">4.2.6.2</span> Specific example:
+class="section level4" number="4.3.1.2">
+<h4><span class="header-section-number">4.3.1.2</span> Specific example:
 respiratory symptom change</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1521,11 +1560,11 @@ gwas_study_info = gwas_study_info |&gt;
 </div>
 </div>
 </div>
-<div id="age-of-onset-of" class="section level2" number="4.3">
-<h2><span class="header-section-number">4.3</span> Age of onset of</h2>
+<div id="age-of-onset-of" class="section level2" number="4.4">
+<h2><span class="header-section-number">4.4</span> Age of onset of</h2>
 <div id="non-specific-correction" class="section level4"
-number="4.3.0.1">
-<h4><span class="header-section-number">4.3.0.1</span> Non-specific
+number="4.4.0.1">
+<h4><span class="header-section-number">4.4.0.1</span> Non-specific
 correction</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
@@ -1534,8 +1573,8 @@ correction</h4>
          )</code></pre>
 </div>
 <div id="specific-correction-febrile-seizure" class="section level4"
-number="4.3.0.2">
-<h4><span class="header-section-number">4.3.0.2</span> Specific
+number="4.4.0.2">
+<h4><span class="header-section-number">4.4.0.2</span> Specific
 correction: febrile seizure</h4>
 <pre class="r"><code># febrile seizure (within the age range of 3 months to 6 years)
 gwas_study_info = gwas_study_info |&gt; 
@@ -1547,11 +1586,11 @@ gwas_study_info = gwas_study_info |&gt;
         )</code></pre>
 </div>
 </div>
-<div id="family-history-of" class="section level2" number="4.4">
-<h2><span class="header-section-number">4.4</span> Family history
+<div id="family-history-of" class="section level2" number="4.5">
+<h2><span class="header-section-number">4.5</span> Family history
 of</h2>
-<div id="non-specific-example" class="section level4" number="4.4.0.1">
-<h4><span class="header-section-number">4.4.0.1</span> Non-specific
+<div id="non-specific-example" class="section level4" number="4.5.0.1">
+<h4><span class="header-section-number">4.5.0.1</span> Non-specific
 example</h4>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
@@ -1559,31 +1598,15 @@ example</h4>
                          pattern = &quot;(?&lt;=^|, )family history of &quot;))</code></pre>
 </div>
 </div>
-<div id="disease-progression" class="section level2" number="4.5">
-<h2><span class="header-section-number">4.5</span> Disease
+<div id="disease-progression" class="section level2" number="4.6">
+<h2><span class="header-section-number">4.6</span> Disease
 progression</h2>
-<div id="disease-progression-measurement" class="section level3"
-number="4.5.1">
-<h3><span class="header-section-number">4.5.1</span> Disease progression
-measurement</h3>
-<pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
-    mutate(collected_all_disease_terms = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          &quot;(?&lt;=^|, )disease progression measurement(?=,|$)&quot;
-         ))
-
-gwas_study_info = gwas_study_info |&gt;
-    mutate(collected_all_disease_terms = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          &quot;disease progression measurement&quot;
-         ))</code></pre>
 </div>
-</div>
-<div id="time-to-remission" class="section level2" number="4.6">
-<h2><span class="header-section-number">4.6</span> Time to
+<div id="time-to-remission" class="section level2" number="4.7">
+<h2><span class="header-section-number">4.7</span> Time to
 remission</h2>
-<div id="covid" class="section level3" number="4.6.1">
-<h3><span class="header-section-number">4.6.1</span> COVID</h3>
+<div id="covid" class="section level3" number="4.7.1">
+<h3><span class="header-section-number">4.7.1</span> COVID</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
@@ -1593,12 +1616,12 @@ remission</h2>
 </div>
 </div>
 <div id="alzheimers-disease---additional-examples"
-class="section level2" number="4.7">
-<h2><span class="header-section-number">4.7</span> Alzheimer’s disease -
+class="section level2" number="4.8">
+<h2><span class="header-section-number">4.8</span> Alzheimer’s disease -
 additional examples</h2>
 <div id="neuropathological-change" class="section level3"
-number="4.7.1">
-<h3><span class="header-section-number">4.7.1</span> Neuropathological
+number="4.8.1">
+<h3><span class="header-section-number">4.8.1</span> Neuropathological
 change</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1607,8 +1630,8 @@ change</h3>
                           &quot;alzheimers disease&quot;
          ))</code></pre>
 </div>
-<div id="biomarker-measurement" class="section level3" number="4.7.2">
-<h3><span class="header-section-number">4.7.2</span> Biomarker
+<div id="biomarker-measurement" class="section level3" number="4.8.2">
+<h3><span class="header-section-number">4.8.2</span> Biomarker
 measurement</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
@@ -1627,21 +1650,9 @@ gwas_study_info = gwas_study_info |&gt;
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
                           &quot;(?&lt;=^|, )liver disease biomarker(?=,|$)&quot;,
-                          &quot;alzheimers disease&quot;
+                          &quot;liver disease&quot;
          ))</code></pre>
 </div>
-</div>
-<div id="cancer-aggressiveness-measurement" class="section level2"
-number="4.8">
-<h2><span class="header-section-number">4.8</span> Cancer aggressiveness
-measurement</h2>
-<pre class="r"><code>gwas_study_info = 
-gwas_study_info |&gt; 
- mutate(collected_all_disease_terms  = 
-          stringr::str_remove_all(collected_all_disease_terms,
-                                  pattern = &quot;(?&lt;=^|, )cancer aggressiveness measurement(?=,|$)&quot;
-                          )
- ) </code></pre>
 </div>
 <div id="other-specific-non-defined-measurement" class="section level2"
 number="4.9">
@@ -1842,7 +1853,7 @@ Cancer</h3>
 <pre class="r"><code>gwas_study_info = gwas_study_info |&gt;
       mutate(collected_all_disease_terms = 
            stringr::str_replace_all(collected_all_disease_terms,
-                            &quot;\\bcarcinoma&quot;,
+                            &quot;\\bcarcinoma\\b&quot;,
                             &quot;cancer&quot;)
          )</code></pre>
 </div>
@@ -2004,7 +2015,7 @@ number="4.14.1">
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
-           str_replace_all(pattern = &quot;^attempted suicide$&quot;,
+           str_replace_all(pattern = vec_to_grep_pattern(&quot;attempted suicide&quot;),
                            replacement = &quot;suicide&quot;,
                            string = collected_all_disease_terms))</code></pre>
 </div>
@@ -2015,7 +2026,7 @@ benign neoplasm</h3>
 <pre class="r"><code>gwas_study_info =
   gwas_study_info |&gt;
   mutate(collected_all_disease_terms = 
-           str_replace_all(pattern = &quot;^benign$&quot;,
+           str_replace_all(pattern = vec_to_grep_pattern(&quot;benign&quot;),
                            replacement = &quot;benign neoplasm&quot;,
                            string = collected_all_disease_terms))</code></pre>
 </div>
@@ -2111,11 +2122,51 @@ cancer antigen -&gt; squamous cell cancer</h3>
                            replacement = &quot;squamous cell cancer&quot;,
                            string = collected_all_disease_terms))</code></pre>
 </div>
+<div id="uterine-fibroids---uterine-fibroid" class="section level3"
+number="4.14.10">
+<h3><span class="header-section-number">4.14.10</span> uterine fibroids
+-&gt; uterine fibroid</h3>
+<pre class="r"><code>gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = str_replace_all(pattern = vec_to_grep_pattern(&quot;uterine fibroids&quot;),
+                                                     replacement = &quot;uterine fibroid&quot;,
+                                                     string = collected_all_disease_terms))</code></pre>
+</div>
+<div
+id="alpha-1-antitrypsin-deficiency---alpha-1-antitrypsin-deficiency"
+class="section level3" number="4.14.11">
+<h3><span class="header-section-number">4.14.11</span> alpha
+1-antitrypsin deficiency -&gt; alpha-1-antitrypsin deficiency</h3>
+<pre class="r"><code>gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = str_replace_all(pattern = vec_to_grep_pattern(&quot;alpha 1-antitrypsin deficiency&quot;),
+                                                     replacement = &quot;alpha-1-antitrypsin deficiency&quot;,
+                                                     string = collected_all_disease_terms))</code></pre>
+</div>
+<div id="sleep-disorders---sleep-disorder" class="section level3"
+number="4.14.12">
+<h3><span class="header-section-number">4.14.12</span> sleep disorders
+-&gt; sleep disorder</h3>
+<pre class="r"><code>gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(collected_all_disease_terms = str_replace_all(pattern = vec_to_grep_pattern(&quot;sleep disorders&quot;),
+                                                     replacement = &quot;sleep disorder&quot;,
+                                                     string = collected_all_disease_terms))</code></pre>
+</div>
 </div>
 </div>
 <div id="putting-it-all-together" class="section level1" number="5">
 <h1><span class="header-section-number">5</span> Putting it all
 together</h1>
+<pre class="r"><code>tidy_terms &lt;- function(x){
+  x |&gt; str_replace_all(&quot;,\\s*,&quot;, &quot;,&quot;) |&gt;
+       str_replace_all(&quot;^\\s*,\\s*&quot;, &quot;&quot;) |&gt;
+       str_replace_all(&quot;\\s*,\\s*$&quot;, &quot;&quot;) |&gt;
+       str_squish() |&gt;
+       vapply(\(s) paste(unique(str_trim(str_split_1(s, &quot;,\\s*&quot;))), collapse = &quot;, &quot;), character(1))
+}
+
+gwas_study_info$collected_all_disease_terms = tidy_terms(gwas_study_info$collected_all_disease_terms)</code></pre>
 <div id="final-summary---number-of-unique-diseases-studied"
 class="section level2" number="5.1">
 <h2><span class="header-section-number">5.1</span> Final summary -
@@ -2126,7 +2177,7 @@ number of unique diseases studied</h2>
             stringr::str_trim()
 
 length(unique(diseases))</code></pre>
-<pre><code>[1] 2344</code></pre>
+<pre><code>[1] 2333</code></pre>
 </div>
 <div id="frequency-of-unique-disease-terms-after-harmonization"
 class="section level2" number="5.2">
@@ -2150,11 +2201,11 @@ major depressive disorder   coronary artery disease
 <pre class="r"><code>print(&quot;Number of unique disease terms after harmonization:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique disease terms after harmonization:&quot;</code></pre>
 <pre class="r"><code>sum(freq[freq == 1])</code></pre>
-<pre><code>[1] 432</code></pre>
+<pre><code>[1] 428</code></pre>
 <pre class="r"><code>print(&quot;Average number of studies per disease term after harmonization:&quot;)</code></pre>
 <pre><code>[1] &quot;Average number of studies per disease term after harmonization:&quot;</code></pre>
 <pre class="r"><code>mean(freq)</code></pre>
-<pre><code>[1] 21.2035</code></pre>
+<pre><code>[1] 21.29104</code></pre>
 </div>
 <div
 id="save-the-updated-gwas_study_info-with-repaired-harmonized-disease-terms"
@@ -2192,25 +2243,26 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] stringr_1.6.0     data.table_1.17.8 dplyr_1.1.4       workflowr_1.7.2  
+[1] jsonlite_2.0.0    httr_1.4.7        stringr_1.6.0     data.table_1.17.8
+[5] dplyr_1.1.4       workflowr_1.7.2  
 
 loaded via a namespace (and not attached):
- [1] jsonlite_2.0.0      compiler_4.3.2      BiocManager_1.30.26
- [4] renv_1.1.8          promises_1.3.3      tidyselect_1.2.1   
- [7] Rcpp_1.1.0          git2r_0.36.2        callr_3.7.6        
-[10] later_1.4.4         jquerylib_0.1.4     yaml_2.3.10        
-[13] fastmap_1.2.0       here_1.0.1          R6_2.6.1           
-[16] generics_0.1.4      knitr_1.50          tibble_3.3.0       
-[19] rprojroot_2.1.0     bslib_0.9.0         pillar_1.11.1      
-[22] rlang_1.1.6         utf8_1.2.6          cachem_1.1.0       
-[25] stringi_1.8.7       httpuv_1.6.16       xfun_0.55          
-[28] getPass_0.2-4       fs_1.6.6            sass_0.4.10        
-[31] cli_3.6.5           withr_3.0.2         magrittr_2.0.4     
-[34] ps_1.9.1            digest_0.6.37       processx_3.8.6     
-[37] rstudioapi_0.17.1   lifecycle_1.0.4     vctrs_0.6.5        
-[40] evaluate_1.0.5      glue_1.8.0          whisker_0.4.1      
-[43] purrr_1.1.0         rmarkdown_2.30      httr_1.4.7         
-[46] tools_4.3.2         pkgconfig_2.0.3     htmltools_0.5.8.1  </code></pre>
+ [1] compiler_4.3.2      BiocManager_1.30.26 renv_1.1.8         
+ [4] promises_1.3.3      tidyselect_1.2.1    Rcpp_1.1.0         
+ [7] git2r_0.36.2        callr_3.7.6         later_1.4.4        
+[10] jquerylib_0.1.4     yaml_2.3.10         fastmap_1.2.0      
+[13] here_1.0.1          R6_2.6.1            generics_0.1.4     
+[16] knitr_1.50          tibble_3.3.0        rprojroot_2.1.0    
+[19] bslib_0.9.0         pillar_1.11.1       rlang_1.1.6        
+[22] utf8_1.2.6          cachem_1.1.0        stringi_1.8.7      
+[25] httpuv_1.6.16       xfun_0.55           getPass_0.2-4      
+[28] fs_1.6.6            sass_0.4.10         cli_3.6.5          
+[31] withr_3.0.2         magrittr_2.0.4      ps_1.9.1           
+[34] digest_0.6.37       processx_3.8.6      rstudioapi_0.17.1  
+[37] lifecycle_1.0.4     vctrs_0.6.5         evaluate_1.0.5     
+[40] glue_1.8.0          whisker_0.4.1       purrr_1.1.0        
+[43] rmarkdown_2.30      tools_4.3.2         pkgconfig_2.0.3    
+[46] htmltools_0.5.8.1  </code></pre>
 </div>
 </div>
 </div>
