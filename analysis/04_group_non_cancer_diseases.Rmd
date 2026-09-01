@@ -247,110 +247,6 @@ gwas_study_info =
 
 ```
 
-## Abnormality of the digestive system
-
-```{r abnormality_of_digestion}
-
-gwas_study_info |> 
-  filter(grepl(vec_to_grep_pattern("abnormality of the digestive system"), 
-               collected_all_disease_terms, 
-               perl = T)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms =
-           str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("abnormality of the digestive system")))
-
-
-```
-
-## Abnormality of skin pigmentation
-
-```{r abnormality_of_skin_pigmentation}
-
-gwas_study_info |> 
-  filter(grepl("abnormality of skin pigmentation", collected_all_disease_terms)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-# as can see, most of these traits are not about true skin pigmentation abnormalities
-# just about skin pigmentation in general
-
-# if `DISEASE/TRAIT` contains "UKB data field 1717" (which is just a skin colour measurment field)
-# then remove "abnormality of skin pigmentation" from collected_all_disease_terms
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl("UKB data field 1717", 
-                     `DISEASE/TRAIT`,
-                     ignore.case = TRUE),
-                stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "abnormality of skin pigmentation"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-# also remove if `DISEASE/TRAIT` contains "Tattoo pigmentation"
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl("tattoo pigmentation|tatto pigmentation", 
-                     `DISEASE/TRAIT`,
-                     ignore.case = TRUE),
-                stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "abnormality of skin pigmentation"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-# also remove if `DISEASE/TRAIT` is any of the following:
-# - Perceived skin darkness 
-# - Skin red/green component
-# - Skin yellow/blue component
-# - Skin pigmentation traits
-# - Skin pigmentation 
-# - Skin luminance
-
-remove_terms <- c("Perceived skin darkness",
-                  "Skin red/green component",
-                  "Skin yellow/blue component",
-                  "Skin pigmentation traits",
-                  "Skin pigmentation",
-                  "Skin luminance",
-                  "Skin colour saturation"
-                  )
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(`DISEASE/TRAIT` %in% remove_terms,
-                stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "abnormality of skin pigmentation"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-# this leaves PUBMED_ID 23548203, which according to suplementary table 1
-# is `Number of non-melanoma skin cancer (5+)` 
-# so change to "non-melanoma skin cancer"
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(PUBMED_ID == "23548203",
-                stringr::str_replace_all(collected_all_disease_terms,
-                          pattern = "abnormality of skin pigmentation",
-                          replacement = "non-melanoma skin cancer"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-
-```
-
 ## Abnormal thrombosis
 
 ```{r abnormal_thrombosis}
@@ -402,22 +298,6 @@ gwas_study_info =
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("abnormal thrombosis, allergic disease, respiratory system disease"),
                           "pulmonary embolism, deep vein thrombosis, chronic bronchitis, emphysema, asthma, rhinitis, eczema"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-
-# for pubmed id: 26908601
-# remove abnormal thrombosis
-# because this is included in the other provided terms 
-
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(PUBMED_ID == "26908601",
-                stringr::str_remove_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("abnormal thrombosis")
          ),
          collected_all_disease_terms
          )
@@ -496,44 +376,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-## Chronic disease
-
-```{r chronic_disease}
-
-gwas_study_info |> 
-  filter(grepl(vec_to_grep_pattern("chronic disease"), 
-               collected_all_disease_terms, 
-               perl = T)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms =
-           str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("chronic disease")))
-
-
-```
-
-## Facial wrinkling 
-
-```{r facial_wrinkling}
-
-gwas_study_info |> 
-  filter(grepl("facial wrinkling", collected_all_disease_terms)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-# remove facial wrinkling
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "facial wrinkling"
-         ))
-
-```
-
 ## Fibrosis
 
 ```{r fibrosis}
@@ -569,112 +411,6 @@ gwas_study_info =
 
 ```
 
-## Formal thought disorder
-
-```{r formal_though_disorder}
-
-gwas_study_info |> 
-  filter(grepl(vec_to_grep_pattern("formal thought disorder"), 
-               collected_all_disease_terms, 
-               perl = T)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-# as formal thought disorder is within other psychiatric traits
-# remove
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms =
-           str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("formal thought disorder")))
-
-
-```
-
-## Gender identity disorder
-
-```{r gender_identity_disorder}
-
-gwas_study_info = 
-  gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("childhood gender nonconformity"),
-                          "gender identity disorder"
-         ))
-
-gwas_study_info =
-    gwas_study_info |>
-    mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "gender identity disorder"
-         ))
-
-gwas_study_info =
-  gwas_study_info |>
-    mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "sexual and gender identity disorders"
-         ))
-
-```
-
-## Handedness 
-
-```{r handedness}
-
-gwas_study_info |> 
-  filter(grepl("handedness", collected_all_disease_terms)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-# remove handedness
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "handedness"
-         ))
-
-# also remove functional laterality if Handedness chirality laterality is in DISEASE/TRAIT
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl("Handedness", 
-                     `DISEASE/TRAIT`,
-                     ignore.case = TRUE),
-                stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "functional laterality"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-# also remove functional laterality if Usual side of head for mobile phone use is in DISEASE/TRAIT
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(grepl("Usual side of head for mobile phone use", 
-                     `DISEASE/TRAIT`,
-                     ignore.case = TRUE),
-                stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "functional laterality"
-         ),
-         collected_all_disease_terms
-         )
-  )
-
-# also remove functional laterality if PUBMED_ID=20585627
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         ifelse(PUBMED_ID == "20585627",
-                stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "functional laterality"
-         ),
-         collected_all_disease_terms
-         )
-  ) 
-
-
-```
-
 ## Hyperplasia 
 
 ```{r hyperplasia}
@@ -702,26 +438,6 @@ gwas_study_info =
 
 ```
 
-## Hypersensitivity reaction disease
-
-```{r hypersensitivity reaction disease}
-
-gwas_study_info |> 
-  filter(grepl(vec_to_grep_pattern("hypersensitivity reaction disease"), 
-               collected_all_disease_terms, 
-               perl = T)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-gwas_study_info =
-  gwas_study_info |>
-  mutate(collected_all_disease_terms =
-           str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("hypersensitivity reaction disease")))
-
-
-```
-
 ## Inflammatory skin disease
 
 ```{r inflammatory_skin_disease}
@@ -742,57 +458,6 @@ gwas_study_info =
                           replacement = "atopic dermatitis, psoriasis"
            )
   )
-```
-
-## Sneezing in response to bright light (autosomal dominant compelling helio-ophthalmic outburst syndrome)
-
-```{r sneezing_in_response_to_bright_light}
-
-gwas_study_info |> 
-  filter(grepl("autosomal dominant compelling helio-ophthalmic outburst syndrome", collected_all_disease_terms)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-# remove autosomal dominant compelling helio-ophthalmic outburst syndrome
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = "autosomal dominant compelling helio-ophthalmic outburst syndrome"
-         ))
-
-
-```
-
-## Skin sensitivity to sun
-
-```{r skin_sensitivity_to_sun}
-
-gwas_study_info |> 
-  filter(grepl("skin sensitivity to sun", collected_all_disease_terms)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-# remove skin sensitivity to sun
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("skin sensitivity to sun")
-         ))
-
-# also remove suntan
-gwas_study_info |> 
-  filter(grepl("suntan", collected_all_disease_terms)) |>
-  pull(`DISEASE/TRAIT`) |>
-  unique()
-
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          pattern = vec_to_grep_pattern("suntan"
-                          )
-         ))
-
 ```
 
 
@@ -1113,13 +778,6 @@ gwas_study_info = gwas_study_info |>
                           "alcohol-related disorders"
          ))
 
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern("nicotine dependence"),
-                          "tobacco use disorder"
-         ))
-
 ```
 
 ## Amyloidosis
@@ -1387,22 +1045,7 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("cafe-au-lait spot"),
-                          "café au lait spots"
-         ))
-
-```
-
-## Cancer of eye
-
-```{r cancer_of_eye}
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms  = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          vec_to_grep_pattern(c(
-                             "ocular melanoma")
-                             ),
-                          "cancer of eye"
+                          "cafe au lait spots"
          ))
 
 ```
@@ -3957,8 +3600,8 @@ gwas_study_info = gwas_study_info |>
 type_2_eye_terms <- c("diabetes mellitus type 2 associated cataract",
                       "diabetic maculopathy, type 2 diabetes mellitus",
                       "diabetic macular edema, type 2 diabetes mellitus",
-                      "proliferative diabetic retinopathy, type 2 diabetes mellitus",
-                      "macrovascular complications of diabetes, type 2 diabetes mellitus"
+                      "proliferative diabetic retinopathy, type 2 diabetes mellitus"
+                      #"macrovascular complications of diabetes, type 2 diabetes mellitus"
                      )
 
 gwas_study_info = gwas_study_info |>
@@ -4008,7 +3651,15 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("neuropathic pain, type 2 diabetes mellitus"),
-                          "type 2 diabetes with ophthalmic manifestations"
+                          "type 2 diabetes with diabetic neuropathy"
+         )
+  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("macrovascular complications of diabetes, type 2 diabetes mellitus"),
+                          "type 2 diabetes with circulatory complications"
          )
   )
          
@@ -4071,6 +3722,21 @@ gwas_study_info =
 
 
 # Save
+
+```{r clean_up}
+
+tidy_terms <- function(x){
+  x |> str_replace_all(",\\s*,", ",") |>
+       str_replace_all("^\\s*,\\s*", "") |>
+       str_replace_all("\\s*,\\s*$", "") |>
+       str_squish() |>
+       vapply(\(s) paste(unique(str_trim(str_split_1(s, ",\\s*"))), collapse = ", "), character(1))
+}
+
+gwas_study_info$collected_all_disease_terms = tidy_terms(gwas_study_info$collected_all_disease_terms)
+
+
+```
 
 ## How many unique traits are there now?
 
