@@ -24,9 +24,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(data.table)
 library(stringr)
+source(here::here("code/get_term_descendants.R"))
 
 ```
-
 
 ```{r setup_2, message = FALSE, warning= FALSE}
 
@@ -119,16 +119,15 @@ sero_map <- tribble(
   "epstein-barr virus early antigen seropositivity",     "epstein-barr virus infection",       "viral_infection",
   "epstein-barr virus seropositivity",                   "epstein-barr virus infection",       "viral_infection",
   "foot-and-mouth disease virus seropositivity",         "foot-and-mouth disease",             "viral_infection",
-  "anti-hepatitis b virus antibod measurementy",         "hepatitis b infection",              "viral_infection",
-  "hepatitis b virus core antigen seropositivity",       "hepatitis b infection",               "viral_infection",
-  "hepatitis b virus surface antigen seropositivity",    "hepatitis b infection",               "viral_infection",
-  "anti-hepatitis b virus antibody measurement",                     "hepatitis b infection",               "viral_infection",
+  "anti-hepatitis b virus antibody measurement",         "hepatitis b infection",              "viral_infection",
+  "hepatitis b virus core antigen seropositivity",       "hepatitis b infection",              "viral_infection",
+  "hepatitis b virus surface antigen seropositivity",    "hepatitis b infection",              "viral_infection",
   "hepatitis a virus seropositivity",                    "hepatitis a infection",              "viral_infection",
   "hepatitis c virus seropositivity",                    "hepatitis c infection",              "viral_infection",
   "hepatitis e virus seropositivity",                    "hepatitis e infection",              "viral_infection",
   "anti-hepatitis e virus antibody measurement",         "hepatitis e infection",              "viral_infection",
   "herpes simplex virus 2 seropositivity",               "herpes simplex virus 2 infection",   "viral_infection",
-  "hsv2 virologic",                                      "herpes simplex virus 2 infection",   "viral_infection",
+  "hsv2 virologic severity measurement",                 "herpes simplex virus 2 infection",   "viral_infection",
   "anti-human herpes virus 7 antibody measurement",      "human herpesvirus 7 infection",      "viral_infection",
    "anti-human herpes virus 6 antibody measurement",     "human herpesvirus 6 infection",      "viral_infection",
   "anti-herpes simplex virus 6 antibody measurement",    "herpes simplex virus 6 infection",   "viral_infection",
@@ -141,7 +140,7 @@ sero_map <- tribble(
   "influenza a seropositivity",                          "influenza a",                        "viral_infection",
   "influenza b seropositivity",                          "influenza b",                        "viral_infection",
   "merkel cell virus seropositivity",                    "merkel cell polyomavirus infection", "viral_infection",
-  "anti-merkel cell virus antibody measuremnt",          "merkel cell polyomavirus infection", "viral_infection",
+  "anti-merkel cell virus antibody measurement",          "merkel cell polyomavirus infection", "viral_infection",
   "measles virus seropositivity",                        "measles",                           "viral_infection",
   "mumps virus seropositivity",                          "mumps",                              "viral_infection",
   "pneumoviridae seropositivity",                        "pneumovirus infection",              "viral_infection",
@@ -187,8 +186,11 @@ sero_map <- tribble(
   
   # other diseases:
   "plasmodium falciparum seropositivity",                 "malaria",                            "parasitic_infection",
+  "toxoplasma gondii seropositivity",                     "toxoplasmosis",                      "parasitic_infection",
+  "trypanosoma cruzi seropositivity",                     "chagas disease",                     "parasitic_infection",
   "helicobacter pylori infectious disease",                 "helicobacter pylori infection",      "bacterial_infection",
-  "respiratory tract infectious disorder",                 "respiratory tract infection",        "other_infection"
+  "respiratory tract infectious disorder",                 "respiratory tract infection",        "other_infection",
+  "aspergillus seropositivity",                             "aspergillosis",                      "fungal_infection"
 
 )
 ## Sanity check: no duplicated source terms
@@ -440,7 +442,25 @@ gwas_study_info = gwas_study_info |>
 
 ### General measurement
 
-### Imaging
+```{r general_measurement}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                        " measurement(?=,|$)", "")
+  )
+
+# gwas_study_info = gwas_study_info |>
+#   mutate(collected_all_disease_terms = 
+#         str_replace_all(collected_all_disease_terms, 
+#                     "(.*?) (.*?) measurement(?=,|$) ", "\\1 \\2")
+#   )
+
+```
+
+## Specific cases of measurement
+
+#### Imaging
 
 ```{r imaging_measurement}
 
@@ -461,21 +481,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-```{r general_measurement}
-
-gwas_study_info = gwas_study_info |>
-  mutate(collected_all_disease_terms = 
-        str_replace_all(collected_all_disease_terms, 
-                        " measurement(?=,|$)", "")
-  )
-
-# gwas_study_info = gwas_study_info |>
-#   mutate(collected_all_disease_terms = 
-#         str_replace_all(collected_all_disease_terms, 
-#                     "(.*?) (.*?) measurement(?=,|$) ", "\\1 \\2")
-#   )
-
-```
 
 #### borderline personality disorder symptom -> borderline personality disorder
 
@@ -721,25 +726,6 @@ gwas_study_info = gwas_study_info |>
 
 ## Disease progression
 
-
-### Disease progression measurement
-
-```{r dis_progress_measure}
-
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          "(?<=^|, )disease progression measurement(?=,|$)"
-         ))
-
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms = 
-         stringr::str_remove_all(collected_all_disease_terms,
-                          "disease progression measurement"
-         ))
-
-```
-
 ## Time to remission
 
 ### COVID
@@ -790,27 +776,10 @@ gwas_study_info = gwas_study_info |>
     mutate(collected_all_disease_terms = 
          stringr::str_replace_all(collected_all_disease_terms,
                           "(?<=^|, )liver disease biomarker(?=,|$)",
-                          "alzheimers disease"
+                          "liver disease"
          ))
 
 ```
-
-
-
-## Cancer aggressiveness measurement
-
-```{r cancer_aggression}
-
-gwas_study_info = 
-gwas_study_info |> 
- mutate(collected_all_disease_terms  = 
-          stringr::str_remove_all(collected_all_disease_terms,
-                                  pattern = "(?<=^|, )cancer aggressiveness measurement(?=,|$)"
-                          )
- ) 
-
-```
-
 
 ## Other specific / non-defined measurement
 
@@ -1054,7 +1023,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
       mutate(collected_all_disease_terms = 
            stringr::str_replace_all(collected_all_disease_terms,
-                            "\\bcarcinoma",
+                            "\\bcarcinoma\\b",
                             "cancer")
          )
 
@@ -1245,7 +1214,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info =
   gwas_study_info |>
   mutate(collected_all_disease_terms = 
-           str_replace_all(pattern = "^attempted suicide$",
+           str_replace_all(pattern = vec_to_grep_pattern("attempted suicide"),
                            replacement = "suicide",
                            string = collected_all_disease_terms))
 
@@ -1259,7 +1228,7 @@ gwas_study_info =
 gwas_study_info =
   gwas_study_info |>
   mutate(collected_all_disease_terms = 
-           str_replace_all(pattern = "^benign$",
+           str_replace_all(pattern = vec_to_grep_pattern("benign"),
                            replacement = "benign neoplasm",
                            string = collected_all_disease_terms))
 
@@ -1378,15 +1347,61 @@ gwas_study_info =
 
 ```
 
+### uterine fibroids -> uterine fibroid
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = str_replace_all(pattern = vec_to_grep_pattern("uterine fibroids"),
+                                                     replacement = "uterine fibroid",
+                                                     string = collected_all_disease_terms))
+
+
+```
+
+
+### alpha 1-antitrypsin deficiency -> alpha-1-antitrypsin deficiency
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = str_replace_all(pattern = vec_to_grep_pattern("alpha 1-antitrypsin deficiency"),
+                                                     replacement = "alpha-1-antitrypsin deficiency",
+                                                     string = collected_all_disease_terms))
+
+
+```
+
+
+### sleep disorders -> sleep disorder
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = str_replace_all(pattern = vec_to_grep_pattern("sleep disorders"),
+                                                     replacement = "sleep disorder",
+                                                     string = collected_all_disease_terms))
+
+
+```
 
 
 # Putting it all together
 
-```{r, eval = F, include=F}
+```{r}
 
-gwas_study_info$collected_all_disease_terms = stringr::str_trim(gwas_study_info$collected_all_disease_terms)
-gwas_study_info$collected_all_disease_terms = sub(",$", "", gwas_study_info$collected_all_disease_terms)
-gwas_study_info$collected_all_disease_terms = stringr::str_replace_all(gwas_study_info$collected_all_disease_terms, "^, ", "")
+tidy_terms <- function(x){
+  x |> str_replace_all(",\\s*,", ",") |>
+       str_replace_all("^\\s*,\\s*", "") |>
+       str_replace_all("\\s*,\\s*$", "") |>
+       str_squish() |>
+       vapply(\(s) paste(unique(str_trim(str_split_1(s, ",\\s*"))), collapse = ", "), character(1))
+}
+
+gwas_study_info$collected_all_disease_terms = tidy_terms(gwas_study_info$collected_all_disease_terms)
 
 ```
 
