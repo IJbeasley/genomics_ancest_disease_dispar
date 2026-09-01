@@ -25,6 +25,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(stringr)
+source(here::here("code/get_term_descendants.R"))
 
 ```
 
@@ -1310,8 +1311,6 @@ disease_terms = c(mondo_descendants,
                   )
 
 
-
-
 disease_terms = stringr::str_trim(tolower(disease_terms))
 disease_terms = unique(disease_terms)
 
@@ -1332,9 +1331,28 @@ excl_terms <- c("skeletal age",
                 "mother's age at death",
                 "age at initiation of smoking",
                 "age at first birth measurement",
-                "age at last pregnancy measurement")
+                "age at last pregnancy measurement",
+                "attached earlobe",
+                "facial wrinkling",
+                "handedness",
+                "suntan",
+                "accessory eyelid",
+                "widow's peak")
 
 disease_terms <- disease_terms[!c(disease_terms %in% excl_terms)]
+
+vec_ontology_terms_check <- function(vec){
+  
+  vec <- vec[!is.na(vec) & vec != ""]
+  vec <- stringr::str_squish(vec)
+  vec <- vec[nzchar(vec)] 
+  vec <- unique(vec)
+  
+  return(vec)
+  
+}
+
+disease_terms <- vec_ontology_terms_check(disease_terms)
 
 print("Number of ontology terms found related to disease or disorder")
 length(disease_terms)
@@ -1378,6 +1396,10 @@ pheno_abnorm <- c("abnormal pap smear",
                   "abnormal result of diagnostic imaging",
                   pheno_abnorm)
 
+pheno_abnorm <- pheno_abnorm[!c(pheno_abnorm %in% excl_terms)]
+
+pheno_abnorm <- vec_ontology_terms_check(pheno_abnorm)
+
 pheno_abnorm_gwas <- not_accounted_for[not_accounted_for %in% pheno_abnorm]
 
 print("Percentage of GWAS traits under phenotype abnormality terms")
@@ -1395,6 +1417,24 @@ length(not_accounted_for)
 
 ```
 
+```{r}
+
+disease_or_disorder <- c(disease_gwas,
+                          pheno_abnorm_gwas
+  )
+
+gwas_study_info <- 
+  gwas_study_info |>
+  #rowwise() |>
+  dplyr::mutate(
+    disease_terms = 
+      ifelse(MAPPED_TRAIT %in% disease_or_disorder,
+             MAPPED_TRAIT,
+             NA)
+  ) |>
+  ungroup()
+
+```
 
 ## Measurement Overlap (how many GWAS traits fall within measurement terms?)
 
@@ -1418,6 +1458,9 @@ measurement <- c("cerebrospinal fluid composition attribute",
 
 measurement = stringr::str_trim(tolower(measurement))
 measurement = unique(measurement)
+
+measurement = vec_ontology_terms_check(measurement)
+
 ```
 
 ### BMI / weight terms / body fat terms
@@ -1541,7 +1584,7 @@ behavior_measurement <- c(
                     "exercise"
                     )
 
-behavior_measurement< grep(paste0(behavior_measurement, 
+behavior_measurement<- grep(paste0(behavior_measurement, 
                                   collapse = "|"), 
                             measurement,
                             value = T
@@ -1588,8 +1631,7 @@ response <- c(go_response,
 
 response <- unique(response)
 
-response = stringr::str_trim(tolower(response))
-response = unique(response)
+response <- vec_ontology_terms_check(response)
 
 ```
 
@@ -1630,6 +1672,8 @@ mental <- c(mental,
           "cognitive function measurement"
           )
 
+mental <- vec_ontology_terms_check(mental)
+
 mental_gwas = not_accounted_for[not_accounted_for %in% mental]
 
 print("Percentage of GWAS traits under mental process terms")
@@ -1657,6 +1701,8 @@ behavior <- unique(behavior)
 behavior <- c(behavior,
               behavior_measurement,
               "physical activity")
+
+behavior <- vec_ontology_terms_check(behavior)
 
 behavior_gwas = not_accounted_for[not_accounted_for %in% behavior]
 
@@ -1705,6 +1751,8 @@ phenotype <- unique(c(phenotype,
                       "sexual dimorphism",
                       "voice quality trait")
 )
+
+phenotype <- vec_ontology_terms_check(phenotype)
 
 phenotype_gwas = not_accounted_for[not_accounted_for %in% phenotype]
 
@@ -1755,6 +1803,7 @@ medical_procedure = unique(c(medical_procedure,
                            )
 
 
+medical_procedure <- vec_ontology_terms_check(medical_procedure)
 
 medical_procedure_gwas = not_accounted_for[not_accounted_for %in% medical_procedure]
 
@@ -1795,6 +1844,7 @@ enviro_factors <- c(
 "townsend deprivation index"
 )
 
+enviro_factors <- vec_ontology_terms_check(enviro_factors)
 
 enviro_factors_gwas = not_accounted_for[not_accounted_for %in% enviro_factors]
 
@@ -1904,83 +1954,6 @@ not_accounted_for = not_accounted_for[!not_accounted_for %in% cell_line_gwas]
 
 
 # Add Categories to GWAS Info
-
-## Add disease & phenotypic abnormality terms to GWAS study info dataset
-
-```{r disease_terms}
-
-disease_or_disorder <- c(disease_gwas,
-                          pheno_abnorm_gwas
-                          )
-
-
-disease_progress_measure <- 
-gwas_study_info |> 
-filter(MAPPED_TRAIT == "disease prognosis measurement") |>
-pull(STUDY_ACCESSION) |>
-unique()
-
-# for all GWAS Catalog studies with trait, "disease prognosis measurement"
-# the actual disease is captured / recorded in trait, so we can remove disease prognosis measurement and safely capture all disease studies
-gwas_study_info |>
-filter(STUDY_ACCESSION %in% disease_progress_measure) |>
-select(STUDY_ACCESSION, MAPPED_TRAIT, MAPPED_BACKGROUND_TRAIT)
-
-# similarly for: 
-# disease free survival
-# complicated disease course
-# mild disease course
-# remission
-# progression free survival
-# illness severity status
-unneeded_disease_progress_terms <-
-  c("disease prognosis measurement",
-"complicated disease course",
-"mild disease course",
-"remission",
-"disease free survival",
-"survival time",
-"overall survival",
-"progression free survival",
-"illness severity status"
-)
-
-# accessory eyelid
-# dna methylation
-# tube feeding
-# widow's peak
-# gata1 gene mutation
-other_not_disease_terms <- 
-  c(
-"anti-drug antibody measurement",
-"accessory eyelid",
-"dna methylation",
-"tube feeding",
-"widow's peak",
-"gata1 gene mutation"
-  )
-
-
-disease_or_disorder <-
-  disease_or_disorder[!(disease_or_disorder %in% 
-                        c(unneeded_disease_progress_terms,
-                          other_not_disease_terms
-                        )
-                        )]
-
-gwas_study_info <- 
-  gwas_study_info |> 
-  #dplyr::rowwise() |>
-  dplyr::mutate(
-    disease_terms = 
-      ifelse(MAPPED_TRAIT %in% disease_or_disorder,
-             MAPPED_TRAIT,
-             NA)
-  )
-
-
-
-```
 
 ## Map GWAS traits to high-level categories
 
@@ -2624,7 +2597,7 @@ gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
     filter(grepl("Alzheimer", `DISEASE/TRAIT`, ignore.case = T)) |>
     mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
-           disease_terms = "Alzheimer's disease",
+           disease_terms = "alzheimers disease",
            DISEASE_STUDY = T)
 
 
@@ -2971,6 +2944,209 @@ length(not_disease_pubmeds)
 
 ```
 
+# Removing disease terms that don't seem to come from disease studies
+
+
+### Sneezing in response to bright light
+
+Got mapped to 'autosomal dominant compelling helio-ophthalmic outburst syndrome'
+
+```{r sneezing_in_response_to_bright_light}
+
+gwas_study_info |> 
+  filter(grepl("autosomal dominant compelling helio-ophthalmic outburst syndrome", disease_terms)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# remove autosomal dominant compelling helio-ophthalmic outburst syndrome
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         stringr::str_remove_all(disease_terms,
+                          pattern = "autosomal dominant compelling helio-ophthalmic outburst syndrome"
+         ))
+
+
+```
+
+### Skin sensitivity to sun
+
+```{r skin_sensitivity_to_sun}
+
+gwas_study_info |> 
+  filter(grepl("skin sensitivity to sun", disease_terms)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# remove skin sensitivity to sun
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         stringr::str_remove_all(disease_terms,
+                          pattern = vec_to_grep_pattern("skin sensitivity to sun")
+         ))
+
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         stringr::str_remove_all(disease_terms,
+                          pattern = vec_to_grep_pattern("suntan"
+                          )
+         ))
+
+```
+
+
+### Hypersensitivity reaction disease
+
+```{r hypersensitivity reaction disease}
+
+gwas_study_info |> 
+  filter(grepl(vec_to_grep_pattern("hypersensitivity reaction disease"), 
+               disease_terms, 
+               perl = T)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(disease_terms =
+           str_remove_all(disease_terms,
+                          pattern = vec_to_grep_pattern("hypersensitivity reaction disease")))
+
+
+```
+
+
+### Handedness 
+
+```{r}
+
+# also remove functional laterality if Handedness chirality laterality is in DISEASE/TRAIT
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(grepl("Handedness", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = "functional laterality"
+         ),
+         disease_terms
+         )
+  )
+
+# also remove functional laterality if Usual side of head for mobile phone use is in DISEASE/TRAIT
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(grepl("Usual side of head for mobile phone use", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = "functional laterality"
+         ),
+         disease_terms
+         )
+  )
+
+# also remove functional laterality if PUBMED_ID=20585627
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(PUBMED_ID == "20585627",
+                stringr::str_remove_all(disease_terms,
+                          pattern = "functional laterality"
+         ),
+         disease_terms
+         )
+  ) 
+
+
+
+```
+
+
+
+## Abnormality of skin pigmentation
+
+```{r abnormality_of_skin_pigmentation}
+
+gwas_study_info |> 
+  filter(grepl("abnormality of skin pigmentation", disease_terms)) |>
+  pull(`DISEASE/TRAIT`) |>
+  unique()
+
+# as can see, most of these traits are not about true skin pigmentation abnormalities
+# just about skin pigmentation in general
+
+# if `DISEASE/TRAIT` contains "UKB data field 1717" (which is just a skin colour measurment field)
+# then remove "abnormality of skin pigmentation" from disease_terms
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(grepl("UKB data field 1717", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = "abnormality of skin pigmentation"
+         ),
+         disease_terms
+         )
+  )
+
+# also remove if `DISEASE/TRAIT` contains "Tattoo pigmentation"
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(grepl("tattoo pigmentation|tatto pigmentation", 
+                     `DISEASE/TRAIT`,
+                     ignore.case = TRUE),
+                stringr::str_remove_all(disease_terms,
+                          pattern = "abnormality of skin pigmentation"
+         ),
+         disease_terms
+         )
+  )
+
+# also remove if `DISEASE/TRAIT` is any of the following:
+# - Perceived skin darkness 
+# - Skin red/green component
+# - Skin yellow/blue component
+# - Skin pigmentation traits
+# - Skin pigmentation 
+# - Skin luminance
+
+remove_terms <- c("Perceived skin darkness",
+                  "Skin red/green component",
+                  "Skin yellow/blue component",
+                  "Skin pigmentation traits",
+                  "Skin pigmentation",
+                  "Skin luminance",
+                  "Skin colour saturation"
+                  )
+
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(`DISEASE/TRAIT` %in% remove_terms,
+                stringr::str_remove_all(disease_terms,
+                          pattern = "abnormality of skin pigmentation"
+         ),
+         disease_terms
+         )
+  )
+
+# this leaves PUBMED_ID 23548203, which according to suplementary table 1
+# is `Number of non-melanoma skin cancer (5+)` 
+# so change to "non-melanoma skin cancer"
+
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+         ifelse(PUBMED_ID == "23548203",
+                stringr::str_replace_all(disease_terms,
+                          pattern = "abnormality of skin pigmentation",
+                          replacement = "non-melanoma skin cancer"
+         ),
+         disease_terms
+         )
+  )
+
+
+```
+
+
 
 # Creating disease labels column of just disease or phenotype abnormality terms for each study - so that we can see what diseases are being studied
 
@@ -3268,19 +3444,35 @@ gwas_study_info |>
 
 # Saving:
 
+```{r clean_disease_terms}
+
+tidy_terms <- function(x){
+  x |> str_replace_all(",\\s*,", ",") |>
+       str_replace_all("^\\s*,\\s*", "") |>
+       str_replace_all("\\s*,\\s*$", "") |>
+       str_squish() |>
+       vapply(\(s) paste(unique(str_trim(str_split_1(s, ",\\s*"))), collapse = ", "), character(1))
+}
+
+gwas_study_info$all_disease_terms = tidy_terms(gwas_study_info$all_disease_terms)
+
+
+```
+
 ## Save all disease, disorder, condition related-terms ontology terms
 
 ```{r save_manual_disease_ontology_terms}
 
-all_disease_terms <- c(
-  gwas_study_info |> 
-    filter(DISEASE_STUDY == T) |> 
-    select(all_disease_terms) |> 
-    pull() |>
-    str_split(pattern = "; ") |>
-    unlist() |>
-    unique()
-)
+all_disease_terms <- gwas_study_info |>
+  filter(DISEASE_STUDY) |>
+  pull(all_disease_terms) |>
+  str_split(", ") |> 
+  unlist() |> 
+  str_trim() |> 
+  unique() |> 
+  sort()
+
+all_disease_terms <- all_disease_terms[nzchar(all_disease_terms)]
 
 print("Number of all disease ontology terms")
 
