@@ -38,8 +38,16 @@ gwas_study_info = gwas_study_info |>
 
 disease_mapping <- gwas_study_info |>
   filter(DISEASE_STUDY == T) |>
+  dplyr::mutate(collected_all_disease_terms = stringr::str_replace_all(collected_all_disease_terms, 
+                                                              pattern = "localized superficial swelling, mass, or lump", 
+                                                              replacement = "localized superficial swelling: mass: or lump")) |>
   tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
                                delim = ", ") |>
+    tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
+                               delim = "; ") |>
+  dplyr::mutate(collected_all_disease_terms = stringr::str_replace_all(collected_all_disease_terms, 
+                                                              pattern = "localized superficial swelling: mass: or lump", 
+                                                              replacement = "localized superficial swelling, mass, or lump")) |>
   select(`DISEASE/TRAIT`, 
          collected_all_disease_terms, 
          PUBMED_ID,
