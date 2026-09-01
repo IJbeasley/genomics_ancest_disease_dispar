@@ -55,6 +55,23 @@ get_descendants <- function(url){
 # that deals with comma separated values
 vec_to_grep_pattern <- function(vec){
 
+  # remove any NULL or NA values from the vector
+  vec <- vec[!is.na(vec) & vec != ""]
+
+  # remove any leading or trailing whitespace from the vector
+  vec <- stringr::str_squish(vec)
+  vec <- vec[nzchar(vec)]
+
+  # remove any duplicate values from the vector
+  vec <- unique(vec)
+
+  # sort the vector by string length in descending order
+  vec <- vec[order(stringr::str_length(vec), decreasing = T)]
+
+  stopifnot(length(vec) > 0)
+
+  vec <- stringr::str_escape(vec)
+
   vec <- paste0("(?<=^|, )", vec)
   vec <- paste0(vec, "(?=,|$)")
 
