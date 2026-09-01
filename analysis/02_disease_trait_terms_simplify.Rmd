@@ -108,6 +108,7 @@ sero_map <- tribble(
   "adenoviridae virus seropositivity",                   "adenovirus infection",               "viral_infection",
   "alphapapillomavirus 9 virus seropositivity",          "human papillomavirus infection",     "viral_infection",
   "bk polyomavirus seropositivity",                      "bk polyomavirus infection",          "viral_infection",
+  "anti-bk polyomavirus antibody",                       "bk polyomavirus infection",          "viral_infection",
   "calicivirus seropositivity",                          "calicivirus infection",              "viral_infection",
   "chikungunya virus seropositivity",                    "chikungunya",                        "viral_infection",
   "coxsackievirus seropositivity",                       "coxsackievirus infection",           "viral_infection",
@@ -118,14 +119,16 @@ sero_map <- tribble(
   "epstein-barr virus early antigen seropositivity",     "epstein-barr virus infection",       "viral_infection",
   "epstein-barr virus seropositivity",                   "epstein-barr virus infection",       "viral_infection",
   "foot-and-mouth disease virus seropositivity",         "foot-and-mouth disease",             "viral_infection",
-  "hepatitis b virus core antigen seropositivity",       "hepatitis b",                        "viral_infection",
-  "hepatitis b virus surface antigen seropositivity",    "hepatitis b",                        "viral_infection",
-  "anti-hepatitis b virus antibody",                     "hepatitis b",                        "viral_infection",
-  "hepatitis a virus seropositivity",                    "hepatitis a",                        "viral_infection",
-  "hepatitis c virus seropositivity",                    "hepatitis c",                        "viral_infection",
-  "hepatitis e virus seropositivity",                    "hepatitis e",                        "viral_infection",
-  "anti-hepatitis e virus antibody measurement",         "hepatitis e",                        "viral_infection",
+  "anti-hepatitis b virus antibod measurementy",         "hepatitis b infection",              "viral_infection",
+  "hepatitis b virus core antigen seropositivity",       "hepatitis b infection",               "viral_infection",
+  "hepatitis b virus surface antigen seropositivity",    "hepatitis b infection",               "viral_infection",
+  "anti-hepatitis b virus antibody",                     "hepatitis b infection",               "viral_infection",
+  "hepatitis a virus seropositivity",                    "hepatitis a infection",              "viral_infection",
+  "hepatitis c virus seropositivity",                    "hepatitis c infection",              "viral_infection",
+  "hepatitis e virus seropositivity",                    "hepatitis e infection",              "viral_infection",
+  "anti-hepatitis e virus antibody measurement",         "hepatitis e infection",              "viral_infection",
   "herpes simplex virus 2 seropositivity",               "herpes simplex virus 2 infection",   "viral_infection",
+  "hsv2 virologic",                                      "herpes simplex virus 2 infection",   "viral_infection",
   "anti-human herpes virus 7 antibody measurement",      "human herpesvirus 7 infection",      "viral_infection",
   "anti-herpes simplex virus 6 antibody measurement",    "herpes simplex virus 6 infection",   "viral_infection",
   "herpes virus seropositivity",                         "herpesvirus infection",              "viral_infection",
@@ -143,6 +146,7 @@ sero_map <- tribble(
   "pneumoviridae virus seropositivity",                  "pneumovirus infection",              "viral_infection",
   "poliovirus seropositivity",                           "poliovirus infection",               "viral_infection",
   "polyomavirus 2 seropositivity",                       "jc polyomavirus infection",          "viral_infection",
+  "anti-polyomavirus 2 antibody",                         "jc polyomavirus infection",          "viral_infection",
   "rubella virus seropositivity",                        "rubella",                            "viral_infection",
   "respiratory syncytial virus seropositivity",          "respiratory syncytial virus infection", "viral_infection",
   "sars-cov-2 antibody measurement",                     "covid-19",                           "viral_infection",
@@ -178,6 +182,11 @@ sero_map <- tribble(
   #"rheumatoid factor seropositivity measurement",                    "autoimmune disease",               "autoimmune",
   "plant allergen seropositivity",                       "plant allergy",                      "allergy",
   "animal allergen seropositivity" ,                       "animal allergy",                     "allergy",
+  
+  # other diseases:
+  "plasmodium falciparum seropositivity",                 "malaria",                            "parasitic_infection",
+  "helicobacter pylori infectious disease",                 "helicobacter pylori infection",      "bacterial_infection",
+  "respiratory tract infectious disorder",                 "respiratory tract infection",        "other_infection"
 
 )
 ## Sanity check: no duplicated source terms
@@ -343,17 +352,6 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-#### Specific example: psoriasis area and severity index
-
-```{r psoriasis_area_severity_index}
-
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms = 
-          stringr::str_remove(collected_all_disease_terms, ", psoriasis area and severity index(?=,|$)")
-         )
-
-```
-
 #### Specific example: uveal melanoma disease severity
 
 ```{r uveal_melanoma}
@@ -363,6 +361,50 @@ gwas_study_info = gwas_study_info |>
           stringr::str_replace_all(collected_all_disease_terms,
                            "(?<=^|, )uveal melanoma disease severity(?=,|$)",
                            "uveal melanoma"
+          )
+         )
+
+```
+
+
+#### Specific example: ankylosing spondylitis disease activity score
+
+```{r ankylosing_spondylitis_disease_activity_score}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_replace_all(collected_all_disease_terms,
+                           "(?<=^|, )ankylosing spondylitis disease activity score(?=,|$)",
+                           "ankylosing spondylitis"
+          )
+         )
+
+```
+
+#### Specific example: arthritis disease activity score
+
+```{r arthritis_disease_activity_score}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_replace_all(collected_all_disease_terms,
+                           "(?<=^|, )arthritis disease activity score(?=,|$)",
+                           "arthritis"
+          )
+         )
+
+```
+
+
+##### Specific example: psoriasis area and severity index
+
+```{r psoriasis_area_severity_index}
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_replace_all(collected_all_disease_terms,
+                           "(?<=^|, )psoriasis area and severity index(?=,|$)",
+                           "psoriasis"
           )
          )
 
@@ -395,6 +437,27 @@ gwas_study_info = gwas_study_info |>
 ```
 
 ### General measurement
+
+### Imaging
+
+```{r imaging_measurement}
+
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms, 
+                        "(?<=^|, )emphysema imaging(?=,|$)", 
+                        "emphysema")
+  )
+
+gwas_study_info = gwas_study_info |>
+    mutate(collected_all_disease_terms = 
+          stringr::str_replace_all(collected_all_disease_terms,
+                           "(?<=^|, )emphysema pattern(?=,|$)",
+                           "emphysema"
+          )
+         )
+
+```
 
 ```{r general_measurement}
 
@@ -1044,25 +1107,6 @@ gwas_study_info = gwas_study_info |>
                           "hepatitis c infection"
          ))
 
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          "(?<=^|, )chronic hepatitis c virus infection(?=,|$)",
-                          "chronic hepatitis, hepatitis c infection"
-         )) |>
-      mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          "(?<=^|, )chronic hepatitis b virus infection(?=,|$)",
-                          "chronic hepatitis, hepatitis b infection"
-         ))
-
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms = 
-         stringr::str_replace_all(collected_all_disease_terms,
-                          "(?<=^|, )hepatitis virus-related liver cancer(?=,|$)",
-                          "hepatitis, liver cancer"
-         ))
-
 
 ```
 
@@ -1317,6 +1361,21 @@ gwas_study_info =
                            string = collected_all_disease_terms))
 
 ```
+
+### squamous cell cancer antigen -> squamous cell cancer
+
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+           str_replace_all(pattern = "squamous cell cancer antigen",
+                           replacement = "squamous cell cancer",
+                           string = collected_all_disease_terms))
+
+```
+
 
 
 # Putting it all together
