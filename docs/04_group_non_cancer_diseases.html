@@ -508,15 +508,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree161608bd06324f514ad0b627e26af9575f40a1e9targetblank161608ba">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea7c9597b8c9db8c00e2cd5fb347786b5e40e4a8btargetblanka7c9597a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/161608bd06324f514ad0b627e26af9575f40a1e9" target="_blank">161608b</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a7c9597b8c9db8c00e2cd5fb347786b5e40e4a8b" target="_blank">a7c9597</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree161608bd06324f514ad0b627e26af9575f40a1e9targetblank161608ba"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreea7c9597b8c9db8c00e2cd5fb347786b5e40e4a8btargetblanka7c9597a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -526,7 +526,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/161608bd06324f514ad0b627e26af9575f40a1e9" target="_blank">161608b</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/a7c9597b8c9db8c00e2cd5fb347786b5e40e4a8b" target="_blank">a7c9597</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -589,6 +589,7 @@ Ignored files:
     Ignored:    data/icd/semiautomatic_ICD-pheno.txt
     Ignored:    data/icd/semiautomatic_ICD-pheno_UKB_subset.txt
     Ignored:    data/icd/umls-2025AA-mrconso.zip
+    Ignored:    data/icd/~$manual_disease_mappings_v2.xlsx
     Ignored:    data/nih/
     Ignored:    doccano_venv/
     Ignored:    figures/
@@ -675,6 +676,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/a7c9597b8c9db8c00e2cd5fb347786b5e40e4a8b/analysis/04_group_non_cancer_diseases.Rmd" target="_blank">a7c9597</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-31
+</td>
+<td>
+Reducing set of disease terms
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/3a8622d94277e2f5414ce926bb15ee4e0ed8e3d9/docs/04_group_non_cancer_diseases.html" target="_blank">3a8622d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-08-31
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -808,6 +843,70 @@ gwas_study_info &lt;- data.table::fread(here::here(&quot;output/gwas_cat/gwas_st
 </div>
 </div>
 </div>
+<div id="hepatitis-infection-correction" class="section level1">
+<h1>Hepatitis Infection Correction</h1>
+<p>Distinguishing between chronic and acute infection.</p>
+<pre class="r"><code>hep_b_pmids &lt;- gwas_study_info |&gt;
+  filter(grepl(&quot;hepatitis b&quot;, collected_all_disease_terms, ignore.case = TRUE)) |&gt;
+  pull(PUBMED_ID) |&gt;
+  unique()             
+
+# studies to correct to chronic hepatitis b
+gwas_study_info |&gt; 
+    filter(stringr::str_detect(pattern = &quot;(?&lt;!chronic )hepatitis b infection&quot;, 
+                               collected_all_disease_terms)) |&gt;
+    filter(grepl(&quot;chronic hepatitis b&quot;, STUDY, ignore.case = TRUE) | 
+           grepl(&quot;chronic hepatitis b|persistent hepatitis b&quot;, `DISEASE/TRAIT`, ignore.case = TRUE) 
+    ) |&gt;
+    distinct(STUDY, `DISEASE/TRAIT`, PUBMED_ID, collected_all_disease_terms)</code></pre>
+<pre><code>                                                                                                                                                    STUDY
+                                                                                                                                                   &lt;char&gt;
+1:                                  Genome-wide association study identifies 8p21.3 associated with persistent hepatitis B virus infection among Chinese.
+2:                                 A genome-wide association study identifies variants in the HLA-DP locus associated with chronic hepatitis B in Asians.
+3: Genome-wide association study confirming association of HLA-DP with protection against chronic hepatitis B and viral clearance in Japanese and Korean.
+4:                                           A genome-wide association study of chronic hepatitis B identified novel risk locus in a Japanese population.
+5:                                                                           New loci associated with chronic hepatitis B virus infection in Han Chinese.
+6:                          Identification of novel susceptibility loci associated with hepatitis B surface antigen seroclearance in chronic hepatitis B.
+7:                                       Genome-wide association study identifies new loci associated with risk of HBV infection and disease progression.
+                                                                DISEASE/TRAIT
+                                                                       &lt;char&gt;
+1:                                     Persistent hepatitis B virus infection
+2:                                                                Hepatitis B
+3:                                              Hepatitis B (viral clearance)
+4:                                                                Hepatitis B
+5:                                                                Hepatitis B
+6: Hepatitis B surface antigen seroclearance in chronic hepatitis B infection
+7:                                     Persistent hepatitis B virus infection
+   PUBMED_ID                                collected_all_disease_terms
+       &lt;int&gt;                                                     &lt;char&gt;
+1:  27244555                                      hepatitis b infection
+2:  19349983                                      hepatitis b infection
+3:  22737229                                      hepatitis b infection
+4:  21750111                                      hepatitis b infection
+5:  24162738                                      hepatitis b infection
+6:  29975729 chronic hepatitis b virus infection, hepatitis b infection
+7:  33736632                                      hepatitis b infection</code></pre>
+<pre class="r"><code>gwas_study_info &lt;-
+gwas_study_info |&gt;
+  mutate(collected_all_disease_terms  = 
+         ifelse(stringr::str_detect(pattern = &quot;(?&lt;!chronic )hepatitis b infection&quot;, 
+                               collected_all_disease_terms) &amp; 
+                (stringr::str_detect(pattern = &quot;chronic hepatitis b&quot;, 
+                                     tolower(STUDY)) |
+                 stringr::str_detect(pattern = &quot;chronic hepatitis b|persistent hepatitis b&quot;, 
+                                     tolower(`DISEASE/TRAIT`)
+                                     )
+                 ),
+                stringr::str_replace_all(collected_all_disease_terms,
+                          pattern = &quot;(?&lt;!chronic )hepatitis b infection&quot;,
+                          replacement = &quot;chronic hepatitis b infection&quot;
+         ),
+         collected_all_disease_terms
+         )
+  )
+
+# ? 28928442 acute</code></pre>
+</div>
 <div id="specific-study-corrections" class="section level1">
 <h1>Specific study corrections</h1>
 <div id="pubmed-id-37271218-study-of-complications-in-behcets-disease"
@@ -913,7 +1012,7 @@ gwas_study_info = gwas_study_info |&gt;
 diseases &lt;- unique(diseases)
 
 print(length(diseases))</code></pre>
-<pre><code>[1] 2194</code></pre>
+<pre><code>[1] 2175</code></pre>
 </div>
 </div>
 <div id="filtering-some-traits" class="section level1">
@@ -4095,7 +4194,7 @@ gwas_study_info = gwas_study_info |&gt;
 diseases &lt;- unique(diseases)
 
 print(length(diseases))</code></pre>
-<pre><code>[1] 1993</code></pre>
+<pre><code>[1] 1974</code></pre>
 <pre class="r"><code>fwrite(
   gwas_study_info,
   here::here(&quot;output/gwas_cat/gwas_study_all_group.csv&quot;)
