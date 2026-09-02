@@ -359,7 +359,7 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms = ifelse(PUBMED_ID == "26546620" &
                                                collected_all_disease_terms == "cancer",
-                                 "renal cell carcinoma, soft tissue sarcoma; ovarian cancer",
+                                 "renal cell carcinoma, soft tissue sarcoma, ovarian cancer",
                                  collected_all_disease_terms
                                  )
          )
@@ -770,16 +770,6 @@ gwas_study_info = gwas_study_info |>
          )
          )
 
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms =
-         ifelse(collected_all_disease_terms == 
-                 str_replace_all(collected_all_disease_terms,
-                                 pattern = vec_to_grep_pattern("ocular melanoma"), 
-                                 "ocular cancer"),
-                 collected_all_disease_terms
-         )
-         )
-
 ```
 
 ### Female reproductive organ 
@@ -1077,6 +1067,18 @@ gwas_study_info = gwas_study_info |>
                           "larynx cancer"),
                 collected_all_disease_terms
          ))
+
+
+# malignant laryngeal neoplasm
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(STUDY_ACCESSION == "GCST90041889",
+                stringr::str_replace_all(collected_all_disease_terms,
+                          vec_to_grep_pattern("malignant laryngeal neoplasm"),
+                          "larynx cancer"),
+                collected_all_disease_terms
+         ))
+
 
 
 ```
@@ -1480,6 +1482,13 @@ gwas_study_info |>
   pull(`DISEASE/TRAIT`) |>
   unique()
 
+# malignant urinary system neoplasm
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms = 
+        str_replace_all(collected_all_disease_terms,
+                       pattern = vec_to_grep_pattern("malignant urinary system neoplasm"),
+                       replacement = "urogenital cancer")
+  )
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms =
@@ -1489,6 +1498,8 @@ gwas_study_info = gwas_study_info |>
                  collected_all_disease_terms
          )
          )
+
+
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms =
@@ -1532,7 +1543,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002129/descendants"
 
-bone_cancer_terms <- get_descendants(url)
+bone_cancer_terms <- get_descendants(url)$terms
 
 bone_cancer_terms = stringr::str_replace_all(bone_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -1565,7 +1576,7 @@ url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252F
 
 # maybe do uninary bladder cancer instead
 
-bladder_cancer_terms <- get_descendants(url)
+bladder_cancer_terms <- get_descendants(url)$terms
 
 bladder_cancer_terms = stringr::str_replace_all(bladder_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -1624,7 +1635,7 @@ gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/snomed/terms/http%253A%252F%252Fsnomed.info%252Fid%252F92017000/descendants"
 
-benign_blood_vessel_terms <- get_descendants(url)
+benign_blood_vessel_terms <- get_descendants(url)$terms
 
 benign_blood_vessel_terms <- stringr::str_replace_all(benign_blood_vessel_terms,
                             "\\bcarcinoma\\b",
@@ -1644,7 +1655,7 @@ gwas_study_info = gwas_study_info |>
 
 ```{r group_benign_neoplasms}
 
-before <- unique(gwas_study_info$collected_all_disease_terms)
+before <- gwas_study_info$collected_all_disease_terms
 
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms = 
@@ -1667,7 +1678,7 @@ gwas_study_info <- gwas_study_info |>
       "(?<=^|, )benign(?: [^,]+)? neoplasm(?=,|$)|(?<=^|, )benign neoplasm of [^,]+(?=,|$)|(?<=^|, )[^,]+ benign neoplasm(?=,|$)",
       "benign neoplasm"))
 
-after <- unique(gwas_study_info$collected_all_disease_terms)
+after <- gwas_study_info$collected_all_disease_terms
 
 stopifnot(!any(grepl("malignant", before) & after == "benign neoplasm"))
 
@@ -1741,7 +1752,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002714/descendants"
 
-cns_cancer_terms <- get_descendants(url)
+cns_cancer_terms <- get_descendants(url)$terms
 
 cns_cancer_terms = stringr::str_replace_all(cns_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -1792,7 +1803,7 @@ gwas_study_info = gwas_study_info |>
 ```{r}
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_4362/descendants"
 
-cervical_cancer_terms <- get_descendants(url)
+cervical_cancer_terms <- get_descendants(url)$terms
 
 cervical_cancer_terms = stringr::str_replace_all(cervical_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -1829,14 +1840,15 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0005575/descendants"
 
-colorectal_cancer_terms <- get_descendants(url)
+colorectal_cancer_terms <- get_descendants(url)$terms
 
 colorectal_cancer_terms = stringr::str_replace_all(colorectal_cancer_terms,
                             "\\bcarcinoma\\b",
                             "cancer")
 
 colorectal_cancer_terms= c("metastatic colorectal cancer",
-                             "rectum cancer",
+                            "rectum cancer",
+                           "malignant colon neoplasm",
                           colorectal_cancer_terms)
 
 ```
@@ -1896,7 +1908,7 @@ gwas_study_info =
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0011962/descendants"
 
-endometrial_cancer_terms <- get_descendants(url)
+endometrial_cancer_terms <- get_descendants(url)$terms
 
 # also: http://www.ebi.ac.uk/efo/EFO_1001514: endometrial endometrioid carcinoma
 endometrial_cancer_terms = c("endometrial endometrioid carcinoma",
@@ -1945,7 +1957,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002236/descendants"
 
-ocular_cancer_terms <- get_descendants(url)
+ocular_cancer_terms <- get_descendants(url)$terms
 
 ocular_cancer_terms = stringr::str_replace_all(ocular_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2026,11 +2038,12 @@ intestinal_cancer_terms <- c("small intestine cancer",
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_263/descendants"
 
 
-kidney_cancer_terms <- get_descendants(url)
+kidney_cancer_terms <- get_descendants(url)$terms
 
 kidney_cancer_terms = c("renal cell carcinoma",
                        "clear cell renal carcinoma",
                        "clear cell renal cell carcinoma",
+                       "malignant renal pelvis neoplasm",
                        kidney_cancer_terms)
 
 kidney_cancer_terms = stringr::str_replace_all(kidney_cancer_terms,
@@ -2085,9 +2098,9 @@ gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0000565/descendants"
 
-leukemia_terms <- get_descendants(url)
+leukemia_terms <- get_descendants(url)$terms
 
-leukemia_terms <- c("b-cell acute lymphoblastic leukemia with t\\(1;19\\)\\(q23;p13.3\\); e2a-pbx1 \\(tcf3-pbx1\\)",
+leukemia_terms <- c("b-cell acute lymphoblastic leukemia with t(1;19)(q23;p13.3), e2a-pbx1 (tcf3-pbx1)",
                     leukemia_terms)
 
 leukemia_terms = stringr::str_replace_all(leukemia_terms,
@@ -2158,7 +2171,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0002691/descendants"
 
-liver_cancer_terms <- get_descendants(url)
+liver_cancer_terms <- get_descendants(url)$terms
 
 liver_cancer_terms = stringr::str_replace_all(liver_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2199,7 +2212,7 @@ gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008903/descendants"
 
-lung_cancer_terms <- get_descendants(url)
+lung_cancer_terms <- get_descendants(url)$terms
 
 lung_cancer_terms = stringr::str_replace_all(lung_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2226,7 +2239,8 @@ gwas_study_info |>
 ```{r small cell cancer}
 
 gwas_study_info |>
-    filter(grepl("\\bsmall cell cancer", collected_all_disease_terms, fixed = T)) |>
+    filter(grepl("\\bsmall cell cancer", 
+                 collected_all_disease_terms)) |>
     select(`DISEASE/TRAIT`, collected_all_disease_terms) |>
     distinct()
 
@@ -2249,7 +2263,7 @@ gwas_study_info = gwas_study_info |>
 
 url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0008170/descendants"
 
-ovarian_cancer_terms <- get_descendants(url)
+ovarian_cancer_terms <- get_descendants(url)$terms
 
 ovarian_cancer_terms = stringr::str_replace_all(ovarian_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2294,7 +2308,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0009831/descendants"
 
-pancreatic_cancer_terms <- get_descendants(url)
+pancreatic_cancer_terms <- get_descendants(url)$terms
 
 pancreatic_cancer_terms = stringr::str_replace_all(pancreatic_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2320,7 +2334,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/mondo/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FMONDO_0021089/descendants"
 
-peripheral_nervous_system_cancer_terms <- get_descendants(url)
+peripheral_nervous_system_cancer_terms <- get_descendants(url)$terms
 
 peripheral_nervous_system_cancer_terms = stringr::str_replace_all(peripheral_nervous_system_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2359,7 +2373,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10283/descendants"
 
-prostate_cancer_terms <- get_descendants(url)
+prostate_cancer_terms <- get_descendants(url)$terms
 
 prostate_cancer_terms = stringr::str_replace_all(prostate_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2427,7 +2441,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005952/descendants"
 
-nhl_terms <- get_descendants(url)
+nhl_terms <- get_descendants(url)$terms
 
 nhl_terms = stringr::str_replace_all(nhl_terms,
                             "\\bcarcinoma\\b",
@@ -2480,7 +2494,7 @@ gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0009260/descendants"
 
-non_melanoma_skin_cancer_terms <- get_descendants(url)
+non_melanoma_skin_cancer_terms <- get_descendants(url)$terms
 
 non_melanoma_skin_cancer_terms = stringr::str_replace_all(non_melanoma_skin_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2527,6 +2541,9 @@ gwas_study_info = gwas_study_info |>
                           "ocular melanoma"
          ))
 
+gwas_study_info <- gwas_study_info |>
+  mutate(collected_all_disease_terms = str_replace_all(
+      collected_all_disease_terms, vec_to_grep_pattern("ocular melanoma"), "ocular cancer"))
 
 ```
 
@@ -2536,7 +2553,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_0060119/descendants"
 
-other_pharynx_cancer_terms <- get_descendants(url)
+other_pharynx_cancer_terms <- get_descendants(url)$terms
 
 other_pharynx_cancer_terms = stringr::str_replace_all(other_pharynx_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2610,7 +2627,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_10534/descendants"
 
-stomach_cancer_terms <- get_descendants(url)
+stomach_cancer_terms <- get_descendants(url)$terms
 
 stomach_cancer_terms = stringr::str_replace_all(stomach_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2668,7 +2685,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_1781/descendants"
 
-thyroid_cancer_terms <- get_descendants(url)
+thyroid_cancer_terms <- get_descendants(url)$terms
 
 thyroid_cancer_terms = stringr::str_replace_all(thyroid_cancer_terms,
                             "\\bcarcinoma\\b",
@@ -2787,10 +2804,9 @@ gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(grepl("in situ", collected_all_disease_terms) & 
-                grepl("ICD10 D04|PheCode 172.3", 
+                grepl("ICD10 D04|PheCode 172\\.3", 
                       `DISEASE/TRAIT`, 
-                      ignore.case = T, 
-                      fixed = T),
+                      ignore.case = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("skin cancer in situ"),
                           "non-melanoma skin cancer"),
@@ -2885,8 +2901,7 @@ gwas_study_info = gwas_study_info |>
          ifelse(collected_all_disease_terms == "melanoma" &
                 grepl(paste0(malignant_skin_melanoma, collapse = "|\\b"),
                       `DISEASE/TRAIT`, 
-                      ignore.case = T,
-                      fixed = T),
+                      ignore.case = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("melanoma"),
                           "malignant melanoma of skin"),
@@ -2909,7 +2924,9 @@ gwas_study_info = gwas_study_info |>
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == "melanoma" & 
-                grepl("\\bcutaneous melanoma", STUDY, ignore.case = T, fixed = T),
+                grepl("\\bcutaneous melanoma", 
+                      STUDY, 
+                      ignore.case = T),
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("melanoma"), 
                           "malignant melanoma of skin"),
