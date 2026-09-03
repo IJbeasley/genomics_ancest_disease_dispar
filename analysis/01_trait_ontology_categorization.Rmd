@@ -1434,6 +1434,33 @@ gwas_study_info <-
   ) |>
   ungroup()
 
+# check against iri:
+efo_descendants_iri <- readLines(here::here("output/trait_ontology/efo_0000408_descendants_iri.txt"))
+ncit_descendants_iri <- readLines(here::here("output/trait_ontology/ncit_C2991_descendants_iri.txt"))
+mondo_descendants_iri <- readLines(here::here("output/trait_ontology/mondo_0700096_descendants_iri.txt"))
+orphanet_descendants_iri <- readLines(here::here("output/trait_ontology/orphanet_557493_descendants_iri.txt"))
+age_of_onset_descendants_iri <- readLines(here::here("output/trait_ontology/oba_2020000_descendants_iri.txt"))
+disease_measurement_terms_iri <- readLines(here::here("output/trait_ontology/efo_0001444_disease_measurement_terms_iri.txt"))
+sign_or_symptom_terms_iri <- readLines(here::here("output/trait_ontology/efo_0003765_descendants_iri.txt"))
+injury_iri <- readLines(here::here("output/trait_ontology/efo_0000546_descendants_iri.txt"))
+
+disease_iris <- c(efo_descendants_iri,
+                  ncit_descendants_iri,
+                  mondo_descendants_iri,
+                  orphanet_descendants_iri,
+                  age_of_onset_descendants_iri,
+                  disease_measurement_terms_iri,
+                  sign_or_symptom_terms_iri,
+                  injury_iri
+                  )
+
+# only missed terns are excluded terms
+  gwas_study_info  |>
+  filter(disease_terms == ""| is.na(disease_terms)) |>
+  filter(MAPPED_TRAIT_URI %in% disease_iris) |>
+  pull(MAPPED_TRAIT) |>
+  unique()
+
 ```
 
 ## Measurement Overlap (how many GWAS traits fall within measurement terms?)
@@ -2261,16 +2288,16 @@ gwas_study_info |>
     mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
            disease_terms = "small cell lung carcinoma",
            DISEASE_STUDY = T) 
-  
+
 # lung cancer
-add_lung_cancer <-
-  gwas_study_info |> 
+add_lung_carcinoma <-
+gwas_study_info |> 
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
-    filter(grepl("lung cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
+    filter(grepl("small cell and non-small cell lung cancers", `DISEASE/TRAIT`, ignore.case = T)) |>
     mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
            disease_terms = "lung carcinoma",
            DISEASE_STUDY = T) 
-
+  
 # head and neck cancer
 add_head_neck_cancer <-
   gwas_study_info |> 
@@ -2282,42 +2309,37 @@ add_head_neck_cancer <-
 
 
 # 21437268 - add pharynx cancer, oral cavity cancer
-add_pharynx_cancer <-
+gwas_study_info <-
+gwas_study_info <-
   gwas_study_info |> 
-    filter(PUBMED_ID == 21437268) |>
-    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
-           disease_terms = "pharyngeal cancer",
-           DISEASE_STUDY = T)
-
-add_oral_cavity_cancer <-
-  gwas_study_info |> 
-    filter(PUBMED_ID == 21437268) |>
-    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
-           disease_terms = "oral cavity carcinoma",
-           DISEASE_STUDY = T)
-
-add_oropharyngeal_cancer <-
-  gwas_study_info |> 
-    filter(PUBMED_ID %in% c(35459784, 37706329, 34642315)) |>
-    slice_sample(n = 1, by = PUBMED_ID) |>
-    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
-           disease_terms = "oropharyngeal cancer",
-           DISEASE_STUDY = T)
-
+  mutate(
+    disease_terms = ifelse(
+      PUBMED_ID == 21437268,
+      str_flatten(
+        c(disease_terms, "pharyngeal cancer: oral cavity carcinoma"),
+        collapse = ":"
+      ),
+      disease_terms
+    )
+  ) |>
+  tidyr::separate_longer_delim(
+    disease_terms,
+    delim = ":"
+  )
+                                 
 
 gwas_study_info <- 
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(add_missed_breast_cancer,
               add_missed_colorectal_cancer,
+              add_lung_carcinoma,
               add_small_cell_lung_carcinoma,
-              add_lung_cancer,
-              add_head_neck_cancer,
-              add_pharynx_cancer,
-              add_oropharyngeal_cancer,
-              add_oral_cavity_cancer
-            
+              add_head_neck_cancer),
+              by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
               )
-            )
   
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2330,7 +2352,7 @@ not_disease_pubmeds <- gwas_study_info  |>
 print("Papers mentioning cancer in DISEASE/TRAIT that are still not categorized as disease studies after adding missed cancer studies")
 gwas_study_info |> 
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
-    filter(grepl("cancer", 
+    filter(grepl("\\bcancer\\b|\\bcancers\\b|\\bcarcinoma\\b|\\bcarcinomas\\b|\\bneoplasm\\b|\\bneoplasms", 
                  `DISEASE/TRAIT`, 
                  ignore.case = T)) |>
     select(PUBMED_ID, `DISEASE/TRAIT`) |>
@@ -2374,10 +2396,14 @@ gwas_study_info |>
 
 
 gwas_study_info <-
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(add_missed_type_2_diabetes,
               add_missed_type_1_diabetes
-              )
+              ),
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2393,7 +2419,7 @@ gwas_study_info |>
     filter(grepl("diabetes", 
                  `DISEASE/TRAIT`, 
                  ignore.case = T)) |>
-    select(PUBMED_ID, `DISEASE/TRAIT`) |>
+    select(PUBMED_ID, `DISEASE/TRAIT`, STUDY) |>
     distinct()
 
 gwas_study_info |> 
@@ -2415,8 +2441,12 @@ gwas_study_info |>
            DISEASE_STUDY = T)
 
 gwas_study_info <-
-rows_append(gwas_study_info,
-            add_missed_diabetes
+rows_update(gwas_study_info,
+            add_missed_diabetes,
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2477,12 +2507,16 @@ gwas_study_info |>
            DISEASE_STUDY = T)
 
 gwas_study_info <-
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(add_missed_copd,
                   add_other_missed_copd,
               add_missed_asthma,
               add_missed_ild
-              )
+              ),
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 not_disease_pubmeds <- gwas_study_info  |> 
                        group_by(PUBMED_ID) |> 
@@ -2611,13 +2645,17 @@ gwas_study_info |>
     distinct()
 
 gwas_study_info <-
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(add_missed_bipolar_disorder,
               add_missed_major_depressive_disorder,
               add_missed_adhd,
               add_missed_schizophrenia,
               add_missed_alzheimers
-              )
+              ),
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2706,14 +2744,18 @@ gwas_study_info |>
 
 
 gwas_study_info <-
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(
               add_missed_hereditary_hemorrhagic_telangiectasia,
               add_missed_marfan_syndrome,
               add_missed_alport_syndrome,
               add_missed_adpkd,
               add_missed_a1at_deficiency
-              )
+              ),
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2733,6 +2775,7 @@ length(not_disease_pubmeds)
 ## Infectious disease
 
 ```{r infectious_disease_terms_in_non_disease_studies}
+
 gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
     filter(grepl("HIV|human immunodeficiency virus|AIDS|acquired immunodeficiency syndrome", 
@@ -2763,10 +2806,14 @@ gwas_study_info |>
            DISEASE_STUDY = T)
 
 gwas_study_info <-
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(add_hiv_1_infection,
               add_hep_c_virus_infection
-              )
+              ),
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2853,11 +2900,15 @@ gwas_study_info |>
            DISEASE_STUDY = T)
 
 gwas_study_info <-
-rows_append(gwas_study_info,
+rows_update(gwas_study_info,
             rbind(add_missed_ibd,
               add_missed_ra,
               add_missed_jia
-              )
+              ),
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2911,8 +2962,12 @@ gwas_study_info |>
            DISEASE_STUDY = T)
 
 gwas_study_info <-
-rows_append(gwas_study_info,
-            add_missed_coronary_artery_disease
+rows_update(gwas_study_info,
+            add_missed_coronary_artery_disease,
+            by = c("PUBMED_ID", 
+                     "STUDY_ACCESSION", 
+                     "MAPPED_TRAIT", 
+                     "MAPPED_BACKGROUND_TRAIT")
             )
 
 not_disease_pubmeds <- gwas_study_info  |> 
@@ -2964,7 +3019,6 @@ gwas_study_info = gwas_study_info |>
          stringr::str_remove_all(disease_terms,
                           pattern = "autosomal dominant compelling helio-ophthalmic outburst syndrome"
          ))
-
 
 ```
 
@@ -3145,8 +3199,6 @@ gwas_study_info = gwas_study_info |>
 
 
 ```
-
-
 
 # Creating disease labels column of just disease or phenotype abnormality terms for each study - so that we can see what diseases are being studied
 
@@ -3352,6 +3404,20 @@ gwas_study_info =
     replacement = ", ",
     string = all_disease_terms
   ))
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(DISEASE_STUDY == ifelse(all_disease_terms == ""| is.na(all_disease_terms), 
+                                 F, 
+                                 T)
+         ) |>
+  mutate(all_disease_terms == ifelse(all_disease_terms == ""| is.na(all_disease_terms), 
+                                 NA, 
+                                 all_disease_terms)
+         )
+
+
+
   
 ```
 
