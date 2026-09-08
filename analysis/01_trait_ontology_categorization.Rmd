@@ -2307,6 +2307,13 @@ add_head_neck_cancer <-
            disease_terms = "head and neck malignant neoplasia",
            DISEASE_STUDY = T) 
 
+# prostate cancer: 
+add_prostate_cancer <-
+  gwas_study_info |> 
+    filter(PUBMED_ID == 32914890) |> 
+    mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
+           disease_terms = "age at assessment, prostate cancer",
+           DISEASE_STUDY = T) 
 
 # 21437268 - add pharynx cancer, oral cavity cancer
 gwas_study_info <-
@@ -2334,6 +2341,7 @@ rows_update(gwas_study_info,
               add_missed_colorectal_cancer,
               add_lung_carcinoma,
               add_small_cell_lung_carcinoma,
+              add_prostate_cancer,
               add_head_neck_cancer),
               by = c("PUBMED_ID", 
                      "STUDY_ACCESSION", 
@@ -3001,6 +3009,21 @@ length(not_disease_pubmeds)
 
 # Removing disease terms that don't seem to come from disease studies
 
+## age at assessment 
+
+```{r}
+
+# for pubmed id: 38483351
+# age at assessment is just for height
+gwas_study_info = gwas_study_info |>
+  mutate(disease_terms  = 
+        ifelse(PUBMED_ID == "38483351",
+         stringr::str_remove_all(disease_terms,
+                          pattern = "age at assessment"),
+         disease_terms
+         ))
+
+```
 
 ### Sneezing in response to bright light
 
