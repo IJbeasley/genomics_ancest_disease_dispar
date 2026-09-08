@@ -22,6 +22,16 @@ library(ComplexHeatmap)
 
 ```
 
+## Load GWAS -> WHO ICD-10 2019 Mapping
+
+```{r load_gwas_study_info}
+
+disease_mapping <- data.table::fread(
+here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
+)
+
+```
+
 ## Load Lancet priority diseases
 
 ```{r load_lancet_priority_diseases}
@@ -30,221 +40,415 @@ gbd_2019 <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"
 
 gbd_2019 =
   gbd_2019 |>
-  select(cause = gbd_term,
-         icd10 = gbd_non_fatal_icd_10,
+  select(lancet_group,
+         lancet_condition,
+         cause = gbd_term,
+         icd10_non_fatal = gbd_non_fatal_icd_10,
+         icd10_cod = gbd_cod_icd_10,
          cause_hierarchy_level = gbd_level)
 
-
 gbd_2019 =
   gbd_2019 |>
-  filter(!is.na(icd10))
+  filter(!is.na(icd10_non_fatal) | !is.na(icd10_cod)) 
+
+```
+
+### Overlap and differences between ICD-10 code sets
+
+E.g. between non-fatal and cause of death ICD-10 codes for the same cause.
+
+```{r parsed_icd10_code_ranges}
+
+# Convert a base-36 character to its numeric value
+base36_value <- function(char) {
+  # Base-36 characters
+  base36_chars <- c(as.character(0:9), LETTERS)
+  
+  match(toupper(char), base36_chars) - 1L
+}
+
+parse_icd10_code <- function(code) {
+  
+  # Clean input
+  raw_code <- str_trim(code)
+  
+  # Split ICD-10 code into components:
+  #   letter + digit + alphanumeric + optional decimal + remaining characters
+  parts <- str_match(
+    raw_code,
+    "^([A-Za-z])([0-9])([0-9A-Za-z])\\.?([0-9A-Za-z]*)$"
+  )
+  
+  # Check: are the ICD-10 Codes formatted properly such that code an be parsed into its components?
+  if (is.na(parts[1, 1])) {
+    stop("Unparseable ICD10 code: '", raw_code, "'")
+  }
+  
+  # get the separate components of the code
+  # e.g. for A07.8
+  
+  # letter part of code, in e.g. is A
+  letter <- toupper(parts[1, 2])
+  
+  # first and second digit of code: 
+  # in e.g.is 0
+  first_digit <- parts[1, 3]
+  # in e.g. is 7
+  second_digit <- parts[1, 4]
+  
+  # decimal part of code
+  # in e.g. is 8
+  decimal_part <- parts[1, 5]
+  
+  
+  
+  # Convert characters after the decimal to a base-36 fraction
+  fraction <- 0
+  
+  if (nchar(decimal_part) > 0) {
+    decimal_chars <- str_split(decimal_part, "")[[1]]
+    
+    fraction <- sum(
+      base36_value(decimal_chars) /
+        36^seq_along(decimal_chars)
+    )
+  }
+  
+  parsed_icd10_code <-
+  list(
+    letter = letter,
+    value = base36_value(first_digit) * 36 +
+            base36_value(second_digit) +
+            fraction,
+    label = raw_code,
+    bare = nchar(decimal_part) == 0
+  )
+  
+  return(parsed_icd10_code)
+  
+}
+
+parse_range <- function(range_string) {
+  
+  # Split range into start and end codes
+  range_parts <- str_trim(str_split(range_string, "-")[[1]])
+  
+  # get parsed start and end codes
+  start_code <- parse_icd10_code(range_parts[1])
+  end_code <- parse_icd10_code(range_parts[length(range_parts)])
+  
+  # Start and end codes must belong to the same ICD-10 category
+  if (start_code$letter != end_code$letter) {
+    stop("Range spans letters: '", range_string, "'")
+  }
+  
+  # A bare 3-character END code covers the entire category
+  end_value <- if (end_code$bare) {
+    end_code$value + 1 - 1e-9
+  } else {
+    end_code$value
+  }
+  
+  parsed_range <-
+  tibble(
+    letter = start_code$letter,
+    start_value = start_code$value,
+    end_value = end_value,
+    start_label = start_code$label,
+    end_label = end_code$label
+  )
+  
+  return(parsed_range)
+  
+}
+
+# to be applied rowwise to data frame
+parse_rangelist <- function(range_list) {
+  
+  range_list <- unlist(str_split(range_list, ", "))
+  
+  parsed_rangelist <- purrr::map(range_list, parse_range) |>
+                      purrr::list_rbind()
+  
+  return(parsed_rangelist)
+}
+
+# after parsing ranges, convert back to a simplified string representation
+# e.g. A07.8-A07.9, A08.0-A08.1, A08.3-A08.5, A09.0-A09.9
+simplify_ranges <- function(range_data) {
+  
+  if (nrow(range_data) == 0) {
+    return(NA_character_)
+  }
+  
+  range_labels <- if_else(
+    range_data$start_label == range_data$end_label,
+    range_data$start_label,
+    paste0(
+      range_data$start_label,
+      "-",
+      range_data$end_label
+    )
+  )
+  
+  paste(range_labels, collapse = ", ")
+}
 
 ```
 
 
-# Prepare GBD 2019 data for merging with GWAS traits
+```{r overlap_icd10_codes_ranges}
 
-## Tidy ICD codes
+# get the overlap between two parsed ICD-10 range lists
+# i.e. a & b need to be output of parse_rangelist
+intersect_ranges <- function(parsed_rangelist_a, 
+                             parsed_rangelist_b) {
+  
+  output <- list()
+  
+  for (i in seq_len(nrow(parsed_rangelist_a))) {
+    for (j in seq_len(nrow(parsed_rangelist_b))) {
+      
+      # Ranges must belong to the same ICD-10 category
+      if (parsed_rangelist_a$letter[i] != parsed_rangelist_b$letter[j]) {
+        next
+      }
+      
+      # The intersection starts at the later start point
+      if (parsed_rangelist_a$start_value[i] >= parsed_rangelist_b$start_value[j]) {
+        
+        start_value <- parsed_rangelist_a$start_value[i]
+        start_label <- parsed_rangelist_a$start_label[i]
+        
+      } else {
+        
+        start_value <- parsed_rangelist_b$start_value[j]
+        start_label <- parsed_rangelist_b$start_label[j]
+      }
+      
+      # The intersection ends at the earlier end point
+      if (parsed_rangelist_a$end_value[i] <= parsed_rangelist_b$end_value[j]) {
+        
+        end_value <- parsed_rangelist_a$end_value[i]
+        end_label <- parsed_rangelist_a$end_label[i]
+        
+      } else {
+        end_value <- parsed_rangelist_b$end_value[j]
+        end_label <- parsed_rangelist_b$end_label[j]
+      }
+      
+      # Keep only valid intersections
+      if (start_value <= end_value) {
+        output[[length(output) + 1]] <- tibble(
+          letter = parsed_rangelist_a$letter[i],
+          start_value = start_value,
+          end_value = end_value,
+          start_label = start_label,
+          end_label = end_label
+        )
+      }
+    }
+  }
+  
+  overlap <- bind_rows(output)
+  overlap <- simplify_ranges(overlap)
+  
+  return(overlap)
+}
 
-### Make long format, separate multiple ICD code ranges into rows
+compare_icd10_ranges <- function(icd10_range_a, 
+                                 icd10_range_b) {
+  
+ parsed_range_a <- parse_rangelist(icd10_range_a)
+ parsed_range_b <- parse_rangelist(icd10_range_b)
+                                            
+ overlap <- intersect_ranges(parsed_range_a, 
+                             parsed_range_b
+                             ) 
 
-```{r make_long_icd10_2019}
+ return(overlap)
 
-# expand multiple ICD codes into rows
-gbd_2019 = 
-  gbd_2019 |>
-  mutate(icd10 = str_split(icd10, ",\\s*")) |>
-  tidyr::unnest(icd10) 
+}
 
-# separate ICD code ranges into start and end codes
-gbd_2019 =
-  gbd_2019 |>
-  tidyr::separate_wider_delim(col = "icd10",
-                        delim = "-", 
-                       names = c("start_icd10_code", "end_icd10_code"),
-                       too_few = "align_end"
-                       ) 
-
-# if only one ICD code (i.e. no range), set start and end to be the same
-gbd_2019 =
-  gbd_2019 |>
-  mutate(start_icd10_code = 
-         ifelse(is.na(start_icd10_code),
-                end_icd10_code,
-                start_icd10_code)
-         )
-
-gbd_2019 =
-  gbd_2019 |>
-  distinct()
-
-head(gbd_2019)
+gbd_2019 <- 
+gbd_2019 |>
+  rowwise() |>
+  mutate(overlap = compare_icd10_ranges(icd10_non_fatal, icd10_cod)) |>
+  ungroup()
 
 ```
 
-### Where icd10 code ranges are the same, but missing decimal places, add .9 to end code (to help with filtering ranges)
+
 
 ```{r}
 
-gbd_2019 |>
-  filter(start_icd10_code == end_icd10_code &
-         !grepl(".", start_icd10_code, fixed = TRUE)
-         ) |>
-  arrange(start_icd10_code) |>
-  head()
+merge_ranges <- function(df) {
+  
+  if (nrow(df) == 0) {
+    return(df)
+  }
+  
+  output <- list()
+  
+  for (letter in unique(df$letter)) {
+    
+    # Get and sort ranges for this ICD-10 category
+    ranges <- df |>
+      filter(letter == !!letter) |>
+      arrange(start_value)
+    
+    current_range <- ranges[1, ]
+    
+    for (k in seq_len(nrow(ranges))[-1]) {
+      
+      next_range <- ranges[k, ]
+      
+      # Extend the current range if the ranges overlap
+      if (next_range$start_value <= current_range$end_value) {
+        
+        if (next_range$end_value > current_range$end_value) {
+          current_range$end_value <- next_range$end_value
+          current_range$end_label <- next_range$end_label
+        }
+        
+      } else {
+        
+        # No overlap: save current range and start a new one
+        output[[length(output) + 1]] <- current_range
+        current_range <- next_range
+      }
+    }
+    
+    # Save the final range for this letter
+    output[[length(output) + 1]] <- current_range
+  }
+  
+  bind_rows(output)
+}
 
-gbd_2019 = 
-gbd_2019 |>
-  mutate(end_icd10_code =
-         ifelse(
-         start_icd10_code == end_icd10_code &
-         !grepl(".", start_icd10_code, fixed = TRUE),
-         paste0(end_icd10_code, ".9"),
-         end_icd10_code
-         ) 
-  )
 
-```
-
-### Seperate numeric and letter parts of ICD codes (to help with filtering ranges)
-
-```{r separate_numeric_letter_icd10_2019}
-
-# replace O9A513 with O99.9
-gbd_2019 =
-  gbd_2019 |>
-  mutate(end_icd10_code =
-        ifelse(end_icd10_code == "O9A513",
-               "O99.9",
-               end_icd10_code)
-         )
-
-# replace Z3A49 with Z39.2
-gbd_2019 =
-  gbd_2019 |>
-  mutate(end_icd10_code =
-        ifelse(end_icd10_code == "Z3A49",
-               "Z39.2",
-               end_icd10_code)
-         )
-
-# check start_icd10_code and end_icd10_code start with the same letter
-# if not, need to fix these rows
-  gbd_2019 |>
-  filter(str_extract(start_icd10_code, "^[A-Z]") != 
-         str_extract(end_icd10_code, "^[A-Z]")
-         )
-
-gbd_2019 =
-  gbd_2019 |>
-  mutate(icd10_code_letter = str_extract(start_icd10_code, "^[A-Z]")) 
-
-gbd_2019 =
-  gbd_2019 |>
-  mutate(start_icd10_code_num = as.numeric(str_remove(start_icd10_code, 
-                                                      "^[A-Z]")
-                                           ),
-         end_icd10_code_num = as.numeric(str_remove(end_icd10_code, 
-                                                    "^[A-Z]")
-                                         )
-         )
 
 ```
-
-
 
 # Merge GWAS traits with GBD causes
 
-## Load Disease Mapping 
+```{r}
 
-```{r load_gwas_study_info}
+SRC <- c("overlap", 
+         "icd10_non_fatal", 
+         "icd10_cod")
 
-disease_mapping <- data.table::fread(
-here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
-)
+cause_intervals <- gbd_2019 |>
+  select(cause, 
+         lancet_condition,
+         lancet_group,
+         all_of(SRC)) |>
+  pivot_longer(all_of(SRC), 
+               names_to = "cause_source", 
+               values_to = "rangelist") |>
+  filter(!is.na(rangelist)) |>
+  mutate(parsed_rangelist = map(rangelist,
+                                 ~ parse_rangelist(.x))) |>
+  unnest(parsed_rangelist) |>
+  filter(start_value <= end_value) |>                       # drop reversed ranges like K75.4-K75
+  mutate(matched_range = if_else(start_label == end_label, 
+                                 start_label, 
+                                 paste0(start_label, "-", end_label))
+         ) 
 
-disease_mapping =
-  disease_mapping |>
-  mutate(icd10_code = sub("^([^-]+)-\\1$", "\\1", icd10_code))
+gwas_mapped_codes <- disease_mapping |>
+  distinct(icd10_code) |>
+  filter(!is.na(icd10_code), 
+         str_trim(icd10_code) != "") |>
+  mutate(parsed_icd10code = map(icd10_code,
+                                ~as.data.frame(parse_icd10_code(.x))
+                                )
+         ) |>
+  unnest(parsed_icd10code)
 
-disease_mapping =
-  disease_mapping |>
-    mutate(icd10_code_letter = str_extract(icd10_code, "^[A-Z]")) |>
-    mutate(icd10_code_num = as.numeric(str_remove(icd10_code, "^[A-Z]")))
+code_to_cause <- gwas_mapped_codes  |>
+  left_join(cause_intervals, 
+            by = "letter", 
+            relationship = "many-to-many") |>
+  mutate(hit = !is.na(start_value) & 
+         value <= end_value &  # check that gwas ICD-10 code value is less than the end value of the range
+         start_value <= value) |> # check that the the gwas ICD-10 code value is greater than the start value of the range
+  filter(hit == TRUE & !is.na(cause)) |>
+  distinct(icd10_code, 
+           cause, 
+           lancet_condition,
+           lancet_group,
+           cause_source, 
+           matched_range)
 
-disease_mapping |>
-  filter(is.na(icd10_code_num)) |>
-  nrow()
+disease_mapping_annotated <- disease_mapping |>
+  left_join(code_to_cause, 
+            by = "icd10_code", 
+            relationship = "many-to-many")
 
-disease_mapping =
-  disease_mapping |>
-  filter(!is.na(icd10_code_num)) 
+disease_mapping_annotated |>
+  filter(!is.na(cause)) |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
 
-disease_mapping = 
-  disease_mapping |>
-  mutate(icd10_code_num = as.numeric(icd10_code_num))
-
-```
-
-## Join disease mapping with GBD 2019 data
-
-```{r join_gwas_gbd_2019}
-
-disease_mapping_with_cause <- disease_mapping |>
-  rowwise() |>
-  mutate(
-    cause = 
-      list(
-      gbd_2019$cause[
-      which(icd10_code_num >= gbd_2019$start_icd10_code_num &
-            icd10_code_num <= gbd_2019$end_icd10_code_num & 
-            icd10_code_letter == gbd_2019$icd10_code_letter)
-      ]),
-    cause_hierarchy_level  = 
-       list(
-            gbd_2019$cause_hierarchy_level[
-      which(icd10_code_num >= gbd_2019$start_icd10_code_num &
-            icd10_code_num <= gbd_2019$end_icd10_code_num & 
-            icd10_code_letter == gbd_2019$icd10_code_letter)
-      ])
+disease_mapping_with_cause <-
+disease_mapping_annotated |>
+  distinct(`DISEASE/TRAIT`, 
+           collected_all_disease_terms,
+           PUBMED_ID,
+           YEAR,
+           STUDY_ACCESSION,
+           icd10_code,
+           cause,
+           lancet_condition,
+           lancet_group,
+           cause_source) |>
+  group_by(`DISEASE/TRAIT`, 
+           collected_all_disease_terms,
+           PUBMED_ID,
+           YEAR,
+           STUDY_ACCESSION,
+           cause,
+           lancet_condition,
+           lancet_group,) |>
+  summarise(icd10_code = stringr::str_flatten_comma(unique(sort(icd10_code)),
+                                                    na.rm = TRUE
+                                                    ),
+            cause_source = stringr::str_flatten_comma(unique(sort(cause_source)),
+                                                      na.rm = TRUE
+                                                      )
   ) |>
+  mutate(cause_source = case_when(grepl("overlap", cause_source) ~ "overlap",
+                                  grepl("icd10_non_fatal", cause_source) ~ "icd10_non_fatal",
+                                  grepl("icd10_cod", cause_source) ~ "icd10_cod", 
+                                  TRUE ~ NA_character_
+                                    ) ) |>
   ungroup()
 
 
-disease_mapping_with_cause = 
-  disease_mapping_with_cause |>
-  tidyr::unnest(c(cause, cause_hierarchy_level),
-                keep_empty = TRUE
-                )
-
-
-```
-
-```{r check_mapping}
-
-# K76.1 ULMS mapping to chronic liver disease, but is actually about downstream consequences of
-# heart failure/disease 
-disease_mapping_with_cause |> 
-  filter(icd10_code == "K76.1" & grepl("UMLS", icd10_code_origin)) |> 
-  select(`DISEASE/TRAIT`, cause) |> 
-  distinct()  |> 
-  head()
-
-# remove this mapping 
-disease_mapping_with_cause = 
-  disease_mapping_with_cause |>
-  filter(!(icd10_code == "K76.1" & grepl("UMLS", icd10_code_origin)))
-
-```
-
-```{r check_mapping_results}
-
-print("Number of unique studies mapped to a cause:")
-disease_mapping_with_cause |> 
-  filter(!is.na(cause)) |> 
-  pull(PUBMED_ID) |> 
-  unique() |> 
+# number if just unique studies mapped to a cause
+disease_mapping_with_cause |>
+  filter(!is.na(cause)) |>
+  filter(cause_source == "overlap") |>
+  pull(PUBMED_ID) |>
+  unique() |>
   length()
+
+disease_mapping_with_cause |>
+  filter(!is.na(cause)) |>
+  filter(cause_source == "icd10_non_fatal") |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
+
+disease_mapping_with_cause |>
+  filter(!is.na(cause)) |>
+  filter(cause_source == "icd10_cod") |>
+  pull(PUBMED_ID) |>
+  unique() |>
+  length()
+                           
 
 print("Number of unique studies mapped to non-communicable diseases:")
 # filter out infectious diseases
@@ -265,7 +469,14 @@ disease_mapping_with_cause |>
   unique() |> 
   length()
 
+disease_mapping_with_cause |>
+  pull(cause) |>
+  unique()
+                                
+
+
 ```
+
 
 # Check overlap (upset plot) of studies mapped to different causes
 
@@ -273,17 +484,17 @@ disease_mapping_with_cause |>
 
 ```{r check_overlap_diabetes}
 
-diabetes_studies = disease_mapping_with_cause |>
+diabetes_studies = disease_mapping_with_cause  |>
   filter(cause %in% c("Type 1 diabetes mellitus", 
                       "Type 2 diabetes mellitus", 
                       "Diabetes mellitus",
                       "Chronic kidney disease due to diabetes mellitus type 2",
-                      "Chronic kidney disease due to diabetes mellitus type 1")) |>
+                      "Chronic kidney disease due to diabetes mellitus type 1",
+                      "Chronic kidney disease")) |>
   select(PUBMED_ID, cause) |>
   distinct()
 
 # create a binary matrix indicating which studies are mapped to which causes
-
 diabetes_studies_wide = diabetes_studies |>
   tidyr::pivot_wider(names_from = cause, values_from = cause, values_fill = NA) |>
   select(-PUBMED_ID) |>
@@ -352,7 +563,8 @@ cardiovascular_studies_wide = cardiovascular_studies |>
 upset_matrix_cardiovascular = make_comb_mat(cardiovascular_studies_wide)
 
 UpSet(upset_matrix_cardiovascular,
-      comb_order = order(comb_size(upset_matrix_cardiovascular), decreasing = TRUE)
+      comb_order = order(comb_size(upset_matrix_cardiovascular), 
+                         decreasing = TRUE)
       #nsets = 3, 
       #order.by = "freq", 
       # sets.bar.color = "#56B4E9", 
@@ -474,20 +686,6 @@ UpSet(upset_matrix_respiratory,
 ## Overlap across Lancet conditions
 
 ```{r check_overlap_lancet_conditions}
-
-lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
-                                     sheet = 1) |>
-  dplyr::rename_with(~ gsub(" ", "_", .x)) |>
-  filter(!is.na(gbd_term)) |>
-  filter(lancet_group == "NCD-7") |>
-  select(cause = gbd_term, lancet_condition) |>
-  distinct()
-
-disease_mapping_with_cause = 
-  disease_mapping_with_cause |>
-  left_join(lancet_cause_mapping,
-            by = "cause"
-            )
 
 overlap_lancet_conditions =
 disease_mapping_with_cause |>
@@ -851,21 +1049,11 @@ disease_mapping_with_cause |>
 
 ```{r save_final_gwas_gbd_mapping}
 
-gbd_2019 <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"))
-
-gbd_2019 =
-  gbd_2019 |>
-  select(cause = gbd_term,
-         lancet_group)
-
-disease_mapping_with_cause = 
-  disease_mapping_with_cause |>
-  left_join(gbd_2019, by = "cause")
-
 data.table::fwrite(
 disease_mapping_with_cause,
 here::here("output/icd_map/gwas_study_gbd_causes.csv")
 )
+
 
 ```
 
