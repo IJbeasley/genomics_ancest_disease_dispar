@@ -154,7 +154,7 @@ unmapped_traits =
 
 
 # Add the unmapped traits to the gwas study info df, by matching on DISEASE/TRAIT
-# and making unmmaped traits are NA
+# and making unmapped traits are NA
 gwas_study_info =
   gwas_study_info |>
   mutate(MAPPED_TRAIT = ifelse(MAPPED_TRAIT == "",
@@ -2051,7 +2051,7 @@ round(100 * length(not_accounted_for) / length(gwas_background),
 
 ```{r background_phenotype_abnormality_terms}
 
-pheno_abnorm_gwas  = pheno_abnorm_gwas
+pheno_abnorm_gwas  =  gwas_background[gwas_background %in% pheno_abnorm]
 
 print("Percentage of background GWAS traits under phenotype abnormality terms")
 round(100 * length(pheno_abnorm_gwas) / length(gwas_background),
@@ -3151,7 +3151,7 @@ gwas_study_info |>
 # as can see, most of these traits are not about true skin pigmentation abnormalities
 # just about skin pigmentation in general
 
-# if `DISEASE/TRAIT` contains "UKB data field 1717" (which is just a skin colour measurment field)
+# if `DISEASE/TRAIT` contains "UKB data field 1717" (which is just a skin colour measurement field)
 # then remove "abnormality of skin pigmentation" from disease_terms
 gwas_study_info = gwas_study_info |>
   mutate(disease_terms  = 
@@ -3205,7 +3205,7 @@ gwas_study_info = gwas_study_info |>
          )
   )
 
-# this leaves PUBMED_ID 23548203, which according to suplementary table 1
+# this leaves PUBMED_ID 23548203, which according to supplementary table 1
 # is `Number of non-melanoma skin cancer (5+)` 
 # so change to "non-melanoma skin cancer"
 
@@ -3417,8 +3417,28 @@ gwas_study_info |>
              string = all_disease_terms
            )) 
 
-print("Number of studies with bad commas")
-gwas_study_info |> filter(grepl(",", all_disease_terms))
+gwas_study_info  = 
+gwas_study_info |> 
+    mutate(all_disease_terms = 
+           str_replace_all(
+             pattern = "localized superficial swelling, mass, or lump",
+             replacement = "localized superficial swelling or lump",
+             string = all_disease_terms
+           )) 
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(all_disease_terms = ifelse(all_disease_terms == "age at assessment, prostate cancer",
+                                    "age at assessment; prostate cancer",
+                                    all_disease_terms)
+  )
+
+print("Number of individual terms with bad commas")
+# bad commas being those that will mean that if this column is split
+# by bad comma, I mean this term will be split into two terms, which will cause problems
+gwas_study_info |> 
+  filter(grepl(",", all_disease_terms)) |>
+  distinct(all_disease_terms) 
 
 gwas_study_info =
   gwas_study_info |>
@@ -3430,17 +3450,14 @@ gwas_study_info =
 
 gwas_study_info =
   gwas_study_info |>
-  mutate(DISEASE_STUDY == ifelse(all_disease_terms == ""| is.na(all_disease_terms), 
-                                 F, 
-                                 T)
-         ) |>
-  mutate(all_disease_terms == ifelse(all_disease_terms == ""| is.na(all_disease_terms), 
+  mutate(all_disease_terms = ifelse(all_disease_terms == ""| is.na(all_disease_terms), 
                                  NA, 
                                  all_disease_terms)
-         )
-
-
-
+         ) |>
+  mutate(DISEASE_STUDY = ifelse(all_disease_terms == ""| is.na(all_disease_terms), 
+                                 F, 
+                                 T)
+         ) 
   
 ```
 
@@ -3451,14 +3468,14 @@ gwas_study_info =
 # What studies are disease studies but have no collected disease terms?
 gwas_study_info |> 
   filter(DISEASE_STUDY == T) |> 
-  filter(all_disease_terms == "")  |> 
+  filter(all_disease_terms == "" | is.na(all_disease_terms))  |> 
   select(PUBMED_ID) |> 
   distinct() |>
   nrow()
 
 gwas_study_info |> 
   filter(DISEASE_STUDY == T) |> 
-  filter(all_disease_terms == "")  |> 
+  filter(all_disease_terms == "" | is.na(all_disease_terms))  |> 
   select(MAPPED_TRAIT, MAPPED_TRAIT_CATEGORY) |> 
   distinct() |>
   head()
@@ -3535,12 +3552,25 @@ gwas_study_info |>
 
 ```{r clean_disease_terms}
 
-tidy_terms <- function(x){
-  x |> str_replace_all(",\\s*,", ",") |>
-       str_replace_all("^\\s*,\\s*", "") |>
-       str_replace_all("\\s*,\\s*$", "") |>
-       str_squish() |>
-       vapply(\(s) paste(unique(str_trim(str_split_1(s, ",\\s*"))), collapse = ", "), character(1))
+tidy_terms <- function(x) {
+  x |>
+    str_replace_all(",\\s*,", ",") |>
+    str_replace_all("^\\s*,\\s*", "") |>
+    str_replace_all("\\s*,\\s*$", "") |>
+    str_squish() |>
+    vapply(
+      \(s) {
+        if (is.na(s)) {
+          NA_character_
+        } else {
+          paste(
+            unique(str_trim(str_split_1(s, ",\\s*"))),
+            collapse = ", "
+          )
+        }
+      },
+      character(1)
+    )
 }
 
 gwas_study_info$all_disease_terms = tidy_terms(gwas_study_info$all_disease_terms)
