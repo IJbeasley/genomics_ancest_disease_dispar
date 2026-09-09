@@ -11,6 +11,12 @@ cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx"),
 cohort_names |>
   dplyr::select(cohort, full_name, synonyms)
 
+# split synonyms into separate rows
+cohort_names <-
+  cohort_names |>
+  tidyr::separate_rows(synonyms, sep = ",") |>
+  mutate(synonyms = str_trim(synonyms)) # trim whitespace
+
 # Work with cohort, full_name, synonyms; keep row index for grouping
 df <- cohort_names |>
   select(cohort, full_name, synonyms) |>
@@ -159,17 +165,17 @@ cat(sprintf("Groups with >1 row: %d\n", sum(group_sizes$group_size > 1)))
 cat(sprintf("Rows involved in a match: %d\n\n", nrow(matched)))
 
 # Print a readable summary of each multi-row group
-matched |>
-  arrange(desc(group_size), group_id) |>
-  group_by(group_id) |>
-  group_walk(function(grp, key) {
-    cat(sprintf("─── Group %d  (size %d | %s) ───\n",
-                key$group_id, grp$group_size[1], grp$match_type[1]))
-    grp |>
-      select(cohort, full_name, synonyms) |>
-      print(n = Inf)
-    cat("\n")
-  })
+# matched |>
+#   arrange(desc(group_size), group_id) |>
+#   group_by(group_id) |>
+#   group_walk(function(grp, key) {
+#     cat(sprintf("─── Group %d  (size %d | %s) ───\n",
+#                 key$group_id, grp$group_size[1], grp$match_type[1]))
+#     grp |>
+#       select(cohort, full_name, synonyms) |>
+#       print(n = Inf)
+#     cat("\n")
+#   })
 
 # Return the full annotated data frame invisibly
 invisible(matched)

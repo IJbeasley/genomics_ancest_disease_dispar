@@ -99,16 +99,7 @@ gwas_ancest_info |>
   filter(grepl(",", n_sample))
 
 
-# for 39621102, max: 6458
-# for 34662886, 454,787
-# for 34737426, 456,348
-# for 31832568,  244 individuals
-# for 29915124, sum (634)
-# for 39024449, 635,969
-# for 30104761, 408,961
-# for 38185688 331,522
-# for 36180795 110,182 + 1,503,898
-# for 32514122, 212,453
+
 
 
 gwas_ancest_info = gwas_ancest_info |>

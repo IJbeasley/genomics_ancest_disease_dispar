@@ -159,7 +159,12 @@ clean_trait_documentation <- function(trait_vector) {
     ) |>
     stringr::str_remove_all(
       pattern = "(?i)\\(proximal\\)|\\(distal\\)|\\(left-sided\\)|\\(right-sided\\)"
+    ) |>
+    stringr::str_remove_all(
+      pattern = "(?i)\\(1 week after surgery\\)|\\(3 months after surgery\\)"
     )
+
+
 
   trait_clean <- trait_clean |>
     str_remove_all(

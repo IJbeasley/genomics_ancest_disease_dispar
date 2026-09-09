@@ -19,6 +19,7 @@ str_length_sort <- function(vec) {
 get_descendants <- function(url){
 
   terms <- c()
+  iri_url <- c()
 
   repeat {
     res <- GET(url)
@@ -26,6 +27,7 @@ get_descendants <- function(url){
     data <- fromJSON(content(res, as = "text", encoding = "UTF-8"))
 
     terms <- c(terms, data$`_embedded`$terms$label)
+    iri_url <- c(iri_url, data$`_embedded`$terms$iri)
 
     # check if there is a next page
     if (!is.null(data$`_links`$`next`$href)) {
@@ -35,19 +37,29 @@ get_descendants <- function(url){
     }
   }
 
+  iri_url = unlist(iri_url)
+  iri_url = stringr::str_trim(tolower(iri_url))
+  iri_url = unique(iri_url)
+
   terms = unlist(terms)
   terms = stringr::str_trim(tolower(terms))
   terms = unique(terms)
+
+  iri_url = iri_url[order(nchar(terms), decreasing = TRUE)]
   terms = str_length_sort(terms)
+
 
   print("Number of terms collected:")
   print(length(terms))
+  print("Number of IRI URLs collected:")
+  print(length(iri_url))
+
 
   print("\n Some example terms")
   print(terms[1:5])
 
-  return(terms)
-
+  return(list(terms = terms,
+              iri_url = iri_url))
 
 }
 
