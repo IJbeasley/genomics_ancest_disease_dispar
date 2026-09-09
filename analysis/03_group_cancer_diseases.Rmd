@@ -231,7 +231,6 @@ gwas_study_info = gwas_study_info |>
          )
   )
 # Malignant neoplasm of other and ill-defined sites within the digestive organs and peritoneum (PheCode 159)
-
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(collected_all_disease_terms == "cancer" & 
@@ -239,6 +238,94 @@ gwas_study_info = gwas_study_info |>
                 stringr::str_replace_all(collected_all_disease_terms,
                           vec_to_grep_pattern("cancer"),
                           "digestive system cancer, peritoneum cancer"),
+                collected_all_disease_terms
+         )
+  )
+
+# from paper: https://pubmed.ncbi.nlm.nih.gov/23300138/
+# they study: oesophageal squamous cell (OSCC), pancreatic and hepatocellular cancers
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(collected_all_disease_terms == "cancer" & 
+                PUBMED_ID == "23300138",
+                "esophageal cancer, pancreatic cancer, liver cancer",
+                collected_all_disease_terms
+         )
+  )
+
+
+# from paper: https://pubmed.ncbi.nlm.nih.gov/31597885/
+# they are most interested in breast cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "31597885",
+                str_replace_all( 
+                  pattern = vec_to_grep_pattern("cancer"),
+                  replacement = "breast cancer",
+                  string = collected_all_disease_terms),
+                  collected_all_disease_terms
+         )
+  )
+
+# in breast or colorectal cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "32757270",
+                str_replace_all( 
+                  pattern = vec_to_grep_pattern("cancer"),
+                  replacement = "breast cancer, colorectal cancer",
+                  string = collected_all_disease_terms),
+                  collected_all_disease_terms
+                )
+  )
+
+# for 36268685
+# from paper: https://pubmed.ncbi.nlm.nih.gov/36268685/ studied cancers were:
+#lung cancer, malignant melanoma, head and neck cancer, gastric cancer, kidney cancer, Hodgkin’s lymphoma, carcinoma of unknown primary, esophageal cancer, rectal cancer, malignant mesothelioma, bone cancer and gastroesophageal junction cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "36268685",
+                str_replace_all( 
+                  pattern = vec_to_grep_pattern("cancer"),
+                  replacement = "lung cancer, malignant melanoma of skin, head and neck cancer, gastric cancer, kidney cancer, hodgkins lymphoma, carcinoma of unknown primary, esophageal cancer, colorectal cancer, malignant mesothelioma, bone cancer, gastroesophageal junction cancer",
+                  string = collected_all_disease_terms),
+                  collected_all_disease_terms
+                )
+  )
+
+
+# 34390503
+# indicate focus of study is:
+# multiple myeloma, breast cancer, lung cancer, prostate cancer
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "34390503",
+                str_replace_all( 
+                  pattern = vec_to_grep_pattern("cancer"),
+                  replacement = "multiple myeloma, breast cancer, lung cancer, prostate cancer",
+                  string = collected_all_disease_terms),
+                  collected_all_disease_terms
+                )
+  )
+
+# from paper: 
+# 37344884
+# metastatic renal cell carcinoma
+# triple-negative breast cancer.
+# NSCLC
+#  non-squamous non-small-cell lung cancer 
+# small-cell lung cancer.
+# urothelial cancer
+# ovarian cancer
+# melanoma
+# solid tumors
+gwas_study_info = gwas_study_info |>
+  mutate(collected_all_disease_terms  = 
+         ifelse(PUBMED_ID == "37344884",
+                str_replace_all( 
+                  pattern = vec_to_grep_pattern("cancer"),
+                  replacement = "kidney cancer, breast cancer, lung cancer, urothelial cancer, ovarian cancer, malignant melanoma of skin, cervical cancer, endometrial cancer, gastric cancer, head and neck cancer, non-melanoma skin cancer",
+                  string = collected_all_disease_terms),
                 collected_all_disease_terms
          )
   )
@@ -878,30 +965,30 @@ gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(grepl("survival", MAPPED_TRAIT, ignore.case = T),
          stringr::str_replace_all(collected_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
          collected_all_disease_terms
          )
   )
 
-# assme where measure is grade, it is cancer
+# assume where measure is grade, it is cancer
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(grepl("grade", `DISEASE/TRAIT`, ignore.case = T),
          stringr::str_replace_all(collected_all_disease_terms,
-                          "glioma",
+                         vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
          collected_all_disease_terms
          )
   )
 
-# Adult diffuse glioma - assume maglignant
+# Adult diffuse glioma - assume malignant
 # https://pmc.ncbi.nlm.nih.gov/articles/PMC9245936/
 gwas_study_info = gwas_study_info |>
   mutate(collected_all_disease_terms  = 
          ifelse(grepl("adult diffuse", `DISEASE/TRAIT`, ignore.case = T),
          stringr::str_replace_all(collected_all_disease_terms,
-                          "glioma",
+                          vec_to_grep_pattern("glioma"),
                           "central nervous system cancer"),
          collected_all_disease_terms
          )
@@ -938,7 +1025,7 @@ gwas_study_info |>
 
 
 # for pubmed id: 22886559 
-# majority (~90%) graded glioma, gliobastoma and Oligodendroglioma
+# majority (~90%) graded glioma, glioblastoma and Oligodendroglioma
 # so assume malignant
 gwas_study_info =
 gwas_study_info |>
@@ -991,7 +1078,7 @@ gwas_study_info |>
   )
 
 # pubmed id: 34319593
-# considers glioma a maglignant tumor
+# considers glioma a malignant tumor
 gwas_study_info =
 gwas_study_info |>
   mutate(collected_all_disease_terms  =
@@ -1514,7 +1601,7 @@ gwas_study_info = gwas_study_info |>
 ```
 
 
-#### Vulvar neoplasm
+### Vulvar neoplasm
 
 ```{r vulvar neoplasm}
 
@@ -1574,7 +1661,7 @@ gwas_study_info = gwas_study_info |>
 
 url <-  "http://www.ebi.ac.uk/ols4/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FDOID_4007/descendants"
 
-# maybe do uninary bladder cancer instead
+# maybe do urinary bladder cancer instead
 
 bladder_cancer_terms <- get_descendants(url)$terms
 
@@ -2130,7 +2217,7 @@ gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_0005570/descendants"
 
-# this term is now obselete, so we use relevant archive version of EFO ontology to get descendants of EFO_0000408
+# this term is now obsolete, so we use relevant archive version of EFO ontology to get descendants of EFO_0000408
 # taken from: https://github.com/EBISPOT/efo/releases/tag/v3.81.0
 
 
@@ -2547,7 +2634,7 @@ gwas_study_info <- gwas_study_info |>
 
 ```
 
-### Other pharygnx cancer
+### Other pharynx cancer
 
 ```{r}
 
@@ -2585,7 +2672,7 @@ gwas_study_info = gwas_study_info |>
 
 url <- "http://www.ebi.ac.uk/ols4/api/ontologies/efo/terms/http%253A%252F%252Fwww.ebi.ac.uk%252Fefo%252FEFO_1001968/descendants"
 
-# EFO_1001968 is now obselete, so we use relevant archive version of EFO ontology to get descendants of EFO_1001968
+# EFO_1001968 is now obsolete, so we use relevant archive version of EFO ontology to get descendants of EFO_1001968
 ids <- ontologyIndex::get_descendants(efo, 
                                       roots = "efo:EFO_1001968",
                                       exclude_roots = FALSE)
@@ -3059,7 +3146,7 @@ gwas_study_info = gwas_study_info |>
 
 ```
 
-#### Fix non-melanoma skin cancer, woopsy
+#### Fix non-melanoma skin cancer
 
 ```{r fix_non_melanoma_skin_cancer}
 
