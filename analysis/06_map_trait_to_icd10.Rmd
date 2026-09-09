@@ -31,9 +31,9 @@ disease_mapping <-
   mutate(icd10_code = ifelse(icd10_code == "",
                              NA,
                              icd10_code)) |>
-  mutate(icd10_code_origin = ifelse(icd10_code_origin == "",
+  mutate(icd10_source_col = ifelse(icd10_source_col == "",
                                     NA,
-                                    icd10_code_origin))
+                                    icd10_source_col))
 
 gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_all_group.csv"))
 
@@ -86,7 +86,7 @@ disease_mapping <- disease_mapping |>
 
 # Tidy `DISEASE/TRAIT` Column 
 
-Do this to enable term matching with PheCode, ICD-10 and ULS descriptions. 
+Do this to enable term matching with PheCode, ICD-10 and UMLS descriptions. 
 
 ### Removing model related terms 
 
@@ -113,12 +113,12 @@ disease_mapping <-
   mutate(icd10_code = ifelse(icd10_code == "",
                              NA,
                              icd10_code)) |>
-  mutate(icd10_code_match = ifelse(icd10_code_match == "",
+  mutate(icd10_source = ifelse(icd10_source == "",
                              NA,
-                             icd10_code_match)) |>
-  mutate(icd10_code_origin = ifelse(icd10_code_origin == "",
+                             icd10_source)) |>
+  mutate(icd10_source_col = ifelse(icd10_source_col == "",
                              NA,
-                             icd10_code_origin)
+                             icd10_source_col)
          )
 
 ```
@@ -133,7 +133,7 @@ disease_mapping <-
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
 phecodes <- fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
-n_studies <- nrow(disease_mapping)
+n_rows<- nrow(disease_mapping)
 
 icd10_desc_map  = 
 phecodes |>
@@ -158,12 +158,22 @@ matched_icd10_desc =
                                      collapse = ", ", 
                                      na.rm = T), 
             .groups = "drop") 
+
+# diabetic retinopathy is only mapped to H36.0 
+# but should also be mapped to E10.3, E11.3, E13.3, E14.3
+
+matched_icd10_desc =
+  matched_icd10_desc |>
+  mutate(icd10_code = ifelse(trait_clean == "diabetic retinopathy",
+                             "H36.0, E10.3, E11.3, E13.3, E14.3",
+                             icd10_code))
   
+
 # match by cleaned DISEASE/TRAIT
 matched_icd10_desc = 
   matched_icd10_desc |>
-    mutate(icd10_code_match = "ICD Description") |>
-    mutate(icd10_code_origin = "DISEASE/TRAIT")
+    mutate(icd10_source = "ICD Description") |>
+    mutate(icd10_source_col = "DISEASE/TRAIT")
 
 disease_mapping = 
 disease_mapping |>
@@ -181,7 +191,7 @@ rows_patch(matched_icd10_desc,
 matched_icd10_desc = 
  matched_icd10_desc |>
  rename(trait_context_clean = trait_clean) |>
- mutate(icd10_code_origin = "Extracted disease from DISEASE/TRAIT")
+ mutate(icd10_source_col = "Extracted disease from DISEASE/TRAIT")
   
 disease_mapping = 
 disease_mapping |>
@@ -192,9 +202,9 @@ rows_patch(matched_icd10_desc,
 print("Number of ICD10 codes obtained")
 disease_mapping |>
     filter(!is.na(icd10_code)) |> 
-  group_by(icd10_code_origin) |> 
+  group_by(icd10_source_col) |> 
   summarise(n = n(), 
-            percent = n()/n_studies *100)
+            percent = n()/n_rows*100)
 
 print("Number of papers where at least one ICD-10 has been obtained so far:")
 disease_mapping |>
@@ -205,8 +215,8 @@ disease_mapping |>
 
 disease_mapping |>
     filter(!is.na(icd10_code)) |> 
-  group_by(icd10_code_origin,
-           icd10_code_match) |> 
+  group_by(icd10_source_col,
+           icd10_source) |> 
   summarise(n = length(unique(PUBMED_ID)))
 
 ```
@@ -231,8 +241,8 @@ matched_phenotypes =
 phenotype_icd_map  |>
   mutate(trait_clean = tolower(Phenotype)) |>
   select(trait_clean, icd10_code) |>
-  mutate(icd10_code_origin = "DISEASE/TRAIT") |>
-  mutate(icd10_code_match = "Phecode Phenotype")
+  mutate(icd10_source_col = "DISEASE/TRAIT") |>
+  mutate(icd10_source = "Phecode Phenotype")
 
 disease_mapping =
 disease_mapping |>
@@ -251,7 +261,7 @@ rows_patch(matched_phenotypes,
 matched_phenotypes =
 matched_phenotypes |>
   rename(trait_context_clean = trait_clean) |>
-  mutate(icd10_code_origin = "Extracted disease from DISEASE/TRAIT")
+  mutate(icd10_source_col = "Extracted disease from DISEASE/TRAIT")
 
 
 disease_mapping =
@@ -262,9 +272,9 @@ rows_patch(matched_phenotypes,
 
 disease_mapping |>
     filter(!is.na(icd10_code)) |> 
-  group_by(icd10_code_origin) |> 
+  group_by(icd10_source_col) |> 
   summarise(n = n(), 
-            percent = n()/n_studies *100)
+            percent = n()/n_rows*100)
 
 print("Number of papers where at least one ICD-10 has been obtained so far:")
 disease_mapping |>
@@ -275,8 +285,8 @@ disease_mapping |>
 
 disease_mapping |>
     filter(!is.na(icd10_code)) |> 
-  group_by(icd10_code_origin,
-           icd10_code_match) |> 
+  group_by(icd10_source_col,
+           icd10_source) |> 
   summarise(n = length(unique(PUBMED_ID)))
          
 ```
@@ -285,7 +295,7 @@ disease_mapping |>
 
 ```{bash eval =FALSE}
 
-# extract CUIs for only ICD-10 and ICD-10CM ULMS terms
+# extract CUIs for only ICD-10 and ICD-10CM UMLS terms
 awk -F'|' '$2=="ENG" && ($12=="ICD10" || $12=="ICD10CM") {print $1}' \
   data/icd/2025AA/META/MRCONSO.RRF |
   sort -u \
@@ -345,13 +355,14 @@ umls_icd10  <-
 
 umls_icd10 <-
   umls_icd10 |>
-  filter(tolower(STR) != "hypertension") 
+  filter(tolower(STR) != "hypertension") |>
+  filter(tolower(STR) != "cancer")
 
 umls_icd10  <-
   umls_icd10  |>
   group_by(STR) |>
   summarise(icd10_code = str_flatten(unique(
-                              unlist(str_split(icd10_code, ","))
+                              unlist(str_split(icd10_code, ", "))
                               ),
                                collapse = ", ",
                                na.rm = T),
@@ -365,7 +376,7 @@ umls_icd10  <-
 
 umls_icd10 <-
   umls_icd10 |>
-  mutate(icd10_code_match = "UMLS")
+  mutate(icd10_source = "UMLS")
 
 head(umls_icd10)
 
@@ -385,18 +396,18 @@ unmapped_disease_terms <-
 # overlap with umls terms
 disease_trait_umls  <-
   umls_icd10 |>
-  filter(tolower(STR) %in% unmapped_disease_terms) |>
   select(trait_clean = STR,
          icd10_code,
-         icd10_code_match) |>
+         icd10_source) |>
   distinct() |>
-  mutate(icd10_code_origin = "DISEASE/TRAIT")
+  mutate(icd10_source_col = "DISEASE/TRAIT")
 
 
  disease_mapping <-
   disease_mapping |>
   rows_patch(disease_trait_umls,
-             by = 'trait_clean')
+             by = 'trait_clean',
+             unmatched = "ignore")
  
 ```
 
@@ -414,24 +425,24 @@ unmapped_disease_terms <-
 # overlap with umls terms
 disease_trait_umls  <-
   umls_icd10 |>
-  filter(tolower(STR) %in% unmapped_disease_terms) |>
   select(trait_context_clean = STR,
          icd10_code,
-         icd10_code_match) |>
+         icd10_source) |>
   distinct() |>
-  mutate(icd10_code_origin = "Extracted disease from DISEASE/TRAIT")
+  mutate(icd10_source_col = "Extracted disease from DISEASE/TRAIT")
 
  disease_mapping <-
   disease_mapping |>
   mutate(trait_context_clean = tolower(trait_context_clean)) |>
   rows_patch(disease_trait_umls,
-             by = 'trait_context_clean')
+             by = 'trait_context_clean',
+             unmatched = "ignore")
  
  disease_mapping |>
     filter(!is.na(icd10_code)) |> 
-  group_by(icd10_code_origin) |> 
+  group_by(icd10_source_col) |> 
   summarise(n = n(), 
-            percent = n()/n_studies *100)
+            percent = n()/n_rows*100)
  
  print("Number of papers where at least one ICD-10 has been obtained so far:")
 disease_mapping |>
@@ -457,8 +468,8 @@ manual_icd10_map_trait_clean =
   manual_icd10_map |>
   select(trait_clean = mapped_trait, 
          icd10_code) |>
-  mutate(icd10_code_origin = "DISEASE/TRAIT") |>
-  mutate(icd10_code_match = "Manual Map") |> 
+  mutate(icd10_source_col = "DISEASE/TRAIT") |>
+  mutate(icd10_source = "Manual Map") |> 
   distinct()
 
 disease_mapping =
@@ -481,7 +492,7 @@ matched_icd10_desc =
 
 matched_icd10_desc = 
   matched_icd10_desc |>
-  mutate(icd10_code_origin = "MAPPED DISEASE TRAIT")
+  mutate(icd10_source_col = "MAPPED DISEASE TERM")
 
 disease_mapping =
   rows_patch(disease_mapping,
@@ -507,7 +518,7 @@ matched_phenotypes =
 
 matched_phenotypes = 
   matched_phenotypes |>
-  mutate(icd10_code_origin = "MAPPED DISEASE TRAIT")
+  mutate(icd10_source_col = "MAPPED DISEASE TERM")
 
 # match by collected_all_disease_terms
 disease_mapping = 
@@ -536,8 +547,8 @@ manual_icd10_map_collected_trait =
   select(trait_clean = mapped_trait, 
          icd10_code) |>
   rename(collected_all_disease_terms = trait_clean) |>
-  mutate(icd10_code_origin = "MAPPED DISEASE TERM") |>
-  mutate(icd10_code_match = "Manual Map") |>
+  mutate(icd10_source_col = "MAPPED DISEASE TERM") |>
+  mutate(icd10_source = "Manual Map") |>
   distinct()
 
 disease_mapping =
@@ -566,16 +577,16 @@ unmapped_terms <-
 # overlap with umls terms
 collected_trait_umls  <-
   umls_icd10 |>
-  filter(tolower(STR) %in% unmapped_terms) |>
   select(collected_all_disease_terms = STR,
          icd10_code) |>
   distinct() |>
-  mutate(icd10_code_origin = "MAPPED DISEASE TRAIT")
+  mutate(icd10_source_col = "MAPPED DISEASE TERM")
 
 disease_mapping <-
   disease_mapping |>
   rows_patch(collected_trait_umls,
-             by = "collected_all_disease_terms")
+             by = "collected_all_disease_terms",
+             unmatched = "ignore")
 
 
 print("Number of papers where at least one ICD-10 has been obtained so far:")
@@ -588,135 +599,43 @@ disease_mapping |>
 
 ```
 
-# Inferring ICD10 codes from similar study ICD10 codes
-
-```{r, eval = F}
-
-# similar studies:
-study_icd_map =
-disease_mapping |>
-filter(!is.na(icd10_code)) |>
-filter(grepl("Study", icd10_code_origin)) 
-
-study_icd_map =
-  study_icd_map |>
-  select(collected_all_disease_terms, icd10_code) |>
-  distinct()
-
-study_icd_map =
-  study_icd_map |>
-  filter(collected_all_disease_terms != "NS")
-
-# remove Z95.1 and Z95.5 from coronary artery disease
-study_icd_map =
-  study_icd_map |>
-  mutate(icd10_code = ifelse(collected_all_disease_terms == "coronary artery disease",
-                             str_replace_all(icd10_code, "Z95.1|Z95.5", ""),
-                             icd10_code))
-
-# assume ovarian cancer terms more specific than 
-# Malignant neoplasm of ovary and other uterine adnexa (PheCode 184.1)
-# study_icd_map =
-#   study_icd_map |>
-#   filter(!( collected_all_disease_terms == "ovarian cancer" &&phecode == "184.10")
-#   )
-
-study_icd_map = 
-  study_icd_map |>
-  mutate(collected_all_disease_terms = str_trim(collected_all_disease_terms)) |>
-  mutate(collected_all_disease_terms = str_remove_all(collected_all_disease_terms, "^, ")) 
-  
-
-study_icd_map =
-  study_icd_map |>
-  filter(icd10_code != "" & !is.na(icd10_code))
-
-
-study_icd_map =
-  study_icd_map |>
-  tidyr::separate_longer_delim(icd10_code, delim = ", ") |>
-  tidyr::separate_longer_delim(icd10_code, delim = ",")
-
-study_icd_map =
-  study_icd_map |>
-  group_by(collected_all_disease_terms) |>
-  summarise(icd10_code = str_flatten(unique(sort(icd10_code)),
-                                     collapse = ", ", 
-                                     na.rm = T), 
-            .groups = "drop") |>
-  mutate(icd10_code_origin = "Inferred from similar studies") |>
-  mutate(icd10_code_match = "MAPPED DISEASE TRAIT") 
-
-# study_icd_map = 
-#   study_icd_map |>
-#   mutate(icd10_code_origin = "Inferred from similar studies")
-
-disease_mapping_updated = 
-  rows_patch(disease_mapping,
-             study_icd_map,
-             by = "collected_all_disease_terms",
-             unmatched = "ignore")
-
-disease_mapping |>
-  filter(is.na(icd10_code)) |>
-  nrow()
-
-```
-
 # How was ICD-10 code inferred?
 
 ```{r how_was_icd10_inferred}
 
-# as a percentage
-n_disease_mapping = nrow(disease_mapping)
-
-group_levels <- c(
-  "UMLS Match",
-  "Study Provided Info",
-  "Phecode Match",
-  "ICD Description Match",
-  "Manual Mapping",
-  "Other"
-)
-
+# number of ICD-10 codes obtained by source
 disease_mapping |>
-  group_by(icd10_code_origin) |>
+  group_by(icd10_source) |>
+  summarise(n = n())
+
+# number of papers with ICD-10 retrieved, by sources
+disease_mapping |>
+  group_by(icd10_source) |>
+  summarise(n_papers = length(unique(PUBMED_ID)))
+
+# number of ICD-10 codes obtained by column (i.e. whether from MAPPED TERM or DISEASE/TRAIT)
+disease_mapping |>
+  group_by(icd10_source_col) |>
   summarise(n = n())
 
 disease_mapping |>
-  select(icd10_code_match, icd10_code_origin) |>
-  distinct()
+  group_by(icd10_source_col) |>
+  summarise(n_papers = length(unique(PUBMED_ID)))
 
 disease_mapping  |> 
-    group_by(icd10_code_match, icd10_code_origin) |> 
+    group_by(icd10_source, icd10_source_col) |> 
     summarise(n = n(), 
               n_papers = length(unique(PUBMED_ID))
     ) 
 
+# number of papers with at least one ICD-10 Code retrieved
 disease_mapping |>
   group_by(PUBMED_ID) |>
   summarise(at_least_one_icd10 = any(!is.na(icd10_code))) |>
-  summarise(n_papers_with_icd10 = sum(at_least_one_icd10),
-            n_papers = n())
+  summarise(n_papers_with_icd10 = sum(at_least_one_icd10))
 
-disease_mapping  |> 
-# mutate(icd10_code_origin_group = case_when(
-#   grepl("Study", icd10_code_origin) ~ "Study Provided Info",
-#   grepl("Phecode Phenotype Match", icd10_code_origin) ~ "Phecode Match",
-#   grepl("ICD Description Match", icd10_code_origin) ~ "ICD Description Match",
-#   grepl("UMLS", icd10_code_origin) ~ "UMLS Match",
-#   grepl("Manual Mapping", icd10_code_origin) ~ "Manual Mapping",
-#   TRUE ~ "Other"
-# )) |>
-#   mutate(icd10_code_origin_group = factor(icd10_code_origin_group,
-#                                         levels = group_levels
-#                                         )
-#        ) |>
-group_by(icd10_code_origin, icd10_code_match) |> 
-summarise(n = n(),
-          percent = round(100 * n/n_disease_mapping, 
-                          digits = 2)
-          ) 
+# total number of papers
+disease_mapping |> pull(PUBMED_ID) |> unique() |> length()
 
 ```
 
@@ -727,7 +646,7 @@ summarise(n = n(),
 ```{r cleaning_icd10_codes}
 
 
-# for cleaning ICD-10 Codes, i.e. exapnding code ranges to include all subcomponents, and converting 3 dp codes to 1 dp codes
+# for cleaning ICD-10 Codes, i.e. expanding code ranges to include all subcomponents, and converting 3 dp codes to 1 dp codes
 source(here::here("code/paper_to_icd10_mapping/clean_icd10_codes_fns.R"))
 
 disease_mapping <-
@@ -983,6 +902,7 @@ check_icd10_codes <-
 validate_icd10(unique(disease_mapping$icd10_who), 
                read_icd10_meta()) 
 
+# 31 invalid codes (including NA)
 check_icd10_codes |>
   filter(!grepl("\\bok\\b", status, ignore.case = TRUE)) |>
   nrow()
@@ -990,9 +910,19 @@ check_icd10_codes |>
 head(check_icd10_codes |>
   filter(!grepl("\\bok\\b", status, ignore.case = TRUE)))
 
+validated_codes <-
+  check_icd10_codes |>
+  filter(grepl("\\bok\\b", status, ignore.case = TRUE)) |>
+  filter(!is.na(input)) |>
+  pull(input)
+
+# exclude ICD-10 Codes we could not validate with the 2019 ICD10 WHO: 
 disease_mapping <-
   disease_mapping |>
   select(-icd10_code, -icd10_code_clean) |>
+  mutate(icd10_who = ifelse(icd10_who %in% validated_codes, 
+                            icd10_who, 
+                            NA_character_)) |>
   rename(icd10_code = icd10_who)
 
 ```
