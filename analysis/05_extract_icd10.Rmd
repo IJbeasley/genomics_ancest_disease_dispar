@@ -38,16 +38,8 @@ gwas_study_info = gwas_study_info |>
 
 disease_mapping <- gwas_study_info |>
   filter(DISEASE_STUDY == T) |>
-  dplyr::mutate(collected_all_disease_terms = stringr::str_replace_all(collected_all_disease_terms, 
-                                                              pattern = "localized superficial swelling, mass, or lump", 
-                                                              replacement = "localized superficial swelling: mass: or lump")) |>
   tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
                                delim = ", ") |>
-    # tidyr::separate_longer_delim(cols = collected_all_disease_terms, 
-    #                            delim = "; ") |>
-  dplyr::mutate(collected_all_disease_terms = stringr::str_replace_all(collected_all_disease_terms, 
-                                                              pattern = "localized superficial swelling: mass: or lump", 
-                                                              replacement = "localized superficial swelling, mass, or lump")) |>
   select(`DISEASE/TRAIT`, 
          collected_all_disease_terms, 
          PUBMED_ID,
@@ -129,10 +121,10 @@ disease_mapping =
 # note the source of the ICD-10 codes
 disease_mapping <-
   disease_mapping |>
-  mutate(icd10_code_match = ifelse(!is.na(icd10_code),
+  mutate(icd10_source_col = ifelse(!is.na(icd10_code),
                              "DISEASE/TRAIT",
                              NA),
-         icd10_code_origin = ifelse(!is.na(icd10_code),
+         icd10_source = ifelse(!is.na(icd10_code),
                                     "Study ICD10",
                                     NA)
          )
@@ -176,7 +168,7 @@ disease_mapping  <-
 # 127.0
 # Should be I27.0
 disease_mapping |>
-  filter(icd10_code == "D63.165.8") |>
+  filter(icd10_code == "127.0") |>
   distinct(`DISEASE/TRAIT`, icd10_code)
 
 
@@ -278,7 +270,7 @@ disease_mapping |>
 
 n_study_provided = 
 disease_mapping |>
-  filter(icd10_code_origin == "Study ICD10") |>
+  filter(icd10_source == "Study ICD10") |>
   distinct(STUDY_ACCESSION) |>
   nrow()
 
@@ -293,7 +285,7 @@ print(round(n_study_provided / n_studies * 100, 2))
 
 n_paper_provided = 
 disease_mapping |>
-  filter(icd10_code_origin == "Study ICD10") |>
+  filter(icd10_source == "Study ICD10") |>
   distinct(PUBMED_ID) |>
   nrow()
 
@@ -354,8 +346,8 @@ group_by(phecode) |>
 # label the origin of these ICD10 codes as "Study PheCode Mapping"
 phecode_icd_map =
   phecode_icd_map |>
-  mutate(icd10_code_origin = "Study PheCode (PheCode Map)",
-         icd10_code_match = "DISEASE/TRAIT")
+  mutate(icd10_source = "Study PheCode (PheCode Map)",
+         icd10_source_col = "DISEASE/TRAIT")
 
 disease_mapping =
   rows_patch(disease_mapping,
@@ -368,39 +360,39 @@ disease_mapping =
 print("Number of ICD10 code obtained")
 disease_mapping |>
     filter(!is.na(icd10_code)) |> 
-  group_by(icd10_code_origin) |> 
+  group_by(icd10_source) |> 
   summarise(n = n(), 
             percent = n()/n_studies *100)
 
 disease_mapping |>
-  filter(!is.na(icd10_code_origin)) |>
+  filter(!is.na(icd10_source)) |>
   nrow()
 
 disease_mapping |>
-  filter(!is.na(icd10_code_origin)) |>
+  filter(!is.na(icd10_source)) |>
   head()
 
 # per pubmed id, are there multiple icd10 code origins?
 disease_mapping |>
-  filter(!is.na(icd10_code_origin)) |>
-  distinct(PUBMED_ID, icd10_code_origin) |>
+  filter(!is.na(icd10_source)) |>
+  distinct(PUBMED_ID, icd10_source) |>
   group_by(PUBMED_ID) |>
-  summarise(n_icd10_code_origins = n()) |>
-  filter(n_icd10_code_origins > 1)
+  summarise(n_icd10_sources = n()) |>
+  filter(n_icd10_sources > 1)
 
 # which pubmed ids have multiple icd10 code origins?
 disease_mapping |>
-  filter(!is.na(icd10_code_origin)) |>
+  filter(!is.na(icd10_source)) |>
   group_by(PUBMED_ID) |>
-  summarise(n_icd10_code_origins = n_distinct(icd10_code_origin)) |>
-  filter(n_icd10_code_origins > 1)
+  summarise(n_icd10_sources = n_distinct(icd10_source)) |>
+  filter(n_icd10_sources > 1)
 
 # per study accession, are there multiple icd10 code origins?
 disease_mapping |>
-  filter(!is.na(icd10_code_origin)) |>
+  filter(!is.na(icd10_source)) |>
   group_by(STUDY_ACCESSION) |>
-  summarise(n_icd10_code_origins = n_distinct(icd10_code_origin)) |>
-  pull(n_icd10_code_origins) |>
+  summarise(n_icd10_sources = n_distinct(icd10_source)) |>
+  pull(n_icd10_sources) |>
   summary()
 
 ```
@@ -430,8 +422,8 @@ phecode_icd_manual =
 
 to_add = phecode_icd_manual |>
   mutate(phecode = as.numeric(phecode),
-         icd10_code_origin = "Study PheCode (Manual Map)",
-         icd10_code_match = "DISEASE/TRAIT") |>
+         icd10_source = "Study PheCode (Manual Map)",
+         icd10_source_col = "DISEASE/TRAIT") |>
   select(-phenotype) |>
   distinct()
 
@@ -456,11 +448,11 @@ Possibly to add:
 ```{r}
 
 disease_mapping |>
-    filter(is.na(icd10_code_origin)) |> filter(grepl("UKB", `DISEASE/TRAIT`)) |> pull(PUBMED_ID) |> unique() |> length()
+    filter(is.na(icd10_source_col)) |> filter(grepl("UKB", `DISEASE/TRAIT`)) |> pull(PUBMED_ID) |> unique() |> length()
 
 
 disease_mapping |>
-    filter(is.na(icd10_code_origin)) |> filter(grepl("[0-9+]_[0-9+]", `DISEASE/TRAIT`)) |> pull(PUBMED_ID) |> unique() |> length()
+    filter(is.na(icd10_source_col)) |> filter(grepl("[0-9+]_[0-9+]", `DISEASE/TRAIT`)) |> pull(PUBMED_ID) |> unique() |> length()
 
 ```
 
@@ -471,17 +463,17 @@ disease_mapping |>
 n_disease_mapping = nrow(disease_mapping)
 
 disease_mapping  |> 
-group_by(icd10_code_origin) |>
+group_by(icd10_source) |>
   summarise(n = n(),
           percent = round(100 * n/n_disease_mapping, 
                           digits = 2)
           ) |> 
-arrange(icd10_code_origin, desc(n))
+arrange(icd10_source, desc(n))
 
 
 # how many papers with at least one ICD-10 Code mapping
 disease_mapping |>
- filter(!is.na(icd10_code_origin)) |>
+ filter(!is.na(icd10_source)) |>
   pull(PUBMED_ID) |>
   unique() |>
   length()
