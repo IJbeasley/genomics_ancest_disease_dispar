@@ -25,16 +25,17 @@ read_icd10_meta <- function(path = here::here("data/icd/icd102019enMeta/icd10201
   d
 }
 
-# ensure read in codes are in the correct format for matching
-normalize_icd10 <- function(x) {
-
-  gsub("[^A-Z0-9]", "", toupper(trimws(x)))
-}
-
 # check codes are valid ICD-10 codes, and return a data frame with the input code, matched code, title, and validation status
 validate_icd10 <- function(codes, # vector of ICD-10 Codes
                            tab, # data frame of valid ICD-10 Codes and metadata (from read_icd10_meta)
                            allow_nonterminal = TRUE) {
+
+  # ensure read in codes are in the correct format for matching
+  normalize_icd10 <- function(x) {
+
+    gsub("[^A-Z0-9]", "", toupper(trimws(x)))
+  }
+
 
   i <- match(normalize_icd10(codes), tab$code)
 

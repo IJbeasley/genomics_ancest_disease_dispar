@@ -192,7 +192,7 @@ expand_range <- function(icd10_range){
   # excluding any codes that are not valid ICD10 codes
   not_valid_codes <- c(# A9-14
     sprintf("A%02d",
-            seq(9, 14)),
+            seq(10, 14)),
     "A29",
     "A45",
     "A47",
@@ -258,9 +258,8 @@ expand_range <- function(icd10_range){
     "I75",
     "I76",
     sprintf("I%02d",
-            seq(90, 96)),
-    sprintf("I%02d",
-            seq(7, 8)),
+            seq(90, 94)),
+    "I96",
     "J07",
     "J08",
     "J19",

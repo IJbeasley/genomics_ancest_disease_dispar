@@ -98,7 +98,9 @@ clean_trait_documentation <- function(trait_vector) {
     str_remove_all("(?i)3-month functional outcome in\\s*") |>
     str_remove_all("(?i)\\s*\\((XELOX|FOLFOX)(?:,\\s*\\w+)?\\)") |>
     str_remove_all("(?i)\\s*\\(\\d+[- ]weeks?\\)") |>
-    str_remove_all("(?i)(within|but not) the last 12 months")
+    str_remove_all("(?i)(within|but not) the last 12 months") |>
+    str_remove_all("(?i)\\(advanced\\)") |>
+    str_remove_all("(?i)\\(prostate cancer excluded\\)")
 
 
   trait_clean <- trait_clean |>
@@ -111,6 +113,9 @@ clean_trait_documentation <- function(trait_vector) {
     ) |>
     stringr::str_remove_all(
       pattern = "(?i)\\(age at diagnosis\\)|\\(age-stratified\\)"
+    ) |>
+    stringr::str_remove_all(
+      pattern = "(?i)age of onset of"
     ) |>
     stringr::str_remove_all(
       pattern = "(?i)^age at\\b"
