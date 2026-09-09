@@ -43,13 +43,18 @@ gbd_2019 =
   select(lancet_group,
          lancet_condition,
          cause = gbd_term,
+         include,
          icd10_non_fatal = gbd_non_fatal_icd_10,
          icd10_cod = gbd_cod_icd_10,
          cause_hierarchy_level = gbd_level)
 
 gbd_2019 =
   gbd_2019 |>
-  filter(!is.na(icd10_non_fatal) | !is.na(icd10_cod)) 
+  mutate(include = as.logical(include))
+
+gbd_2019 =
+  gbd_2019 |>
+  filter(!is.na(icd10_non_fatal) | !is.na(icd10_cod))
 
 ```
 
@@ -278,58 +283,6 @@ gbd_2019 |>
 
 ```
 
-
-
-```{r}
-
-merge_ranges <- function(df) {
-  
-  if (nrow(df) == 0) {
-    return(df)
-  }
-  
-  output <- list()
-  
-  for (letter in unique(df$letter)) {
-    
-    # Get and sort ranges for this ICD-10 category
-    ranges <- df |>
-      filter(letter == !!letter) |>
-      arrange(start_value)
-    
-    current_range <- ranges[1, ]
-    
-    for (k in seq_len(nrow(ranges))[-1]) {
-      
-      next_range <- ranges[k, ]
-      
-      # Extend the current range if the ranges overlap
-      if (next_range$start_value <= current_range$end_value) {
-        
-        if (next_range$end_value > current_range$end_value) {
-          current_range$end_value <- next_range$end_value
-          current_range$end_label <- next_range$end_label
-        }
-        
-      } else {
-        
-        # No overlap: save current range and start a new one
-        output[[length(output) + 1]] <- current_range
-        current_range <- next_range
-      }
-    }
-    
-    # Save the final range for this letter
-    output[[length(output) + 1]] <- current_range
-  }
-  
-  bind_rows(output)
-}
-
-
-
-```
-
 # Merge GWAS traits with GBD causes
 
 ```{r}
@@ -342,6 +295,7 @@ cause_intervals <- gbd_2019 |>
   select(cause, 
          lancet_condition,
          lancet_group,
+         include,
          all_of(SRC)) |>
   pivot_longer(all_of(SRC), 
                names_to = "cause_source", 
@@ -378,6 +332,7 @@ code_to_cause <- gwas_mapped_codes  |>
            cause, 
            lancet_condition,
            lancet_group,
+           include,
            cause_source, 
            matched_range)
 
@@ -403,6 +358,7 @@ disease_mapping_annotated |>
            cause,
            lancet_condition,
            lancet_group,
+           include,
            cause_source) |>
   group_by(`DISEASE/TRAIT`, 
            collected_all_disease_terms,
@@ -411,7 +367,8 @@ disease_mapping_annotated |>
            STUDY_ACCESSION,
            cause,
            lancet_condition,
-           lancet_group,) |>
+           lancet_group,
+           include) |>
   summarise(icd10_code = stringr::str_flatten_comma(unique(sort(icd10_code)),
                                                     na.rm = TRUE
                                                     ),
@@ -453,28 +410,18 @@ disease_mapping_with_cause |>
 print("Number of unique studies mapped to non-communicable diseases:")
 # filter out infectious diseases
 disease_mapping_with_cause |>
-    dplyr::filter(!cause %in% c("HIV/AIDS",
-                             "Tuberculosis",
-                             "Malaria",
-                             "Lower respiratory infections",
-                             "Diarrhoeal diseases",
-                             "Neonatal disorders",
-                             "Tetanus",
-                             "Diphtheria",
-                             "Pertussis" ,
-                             "Measles",
-                             "Maternal disorders")) |>
+    dplyr::filter(include == TRUE) |>
     filter(!is.na(cause)) |> 
   pull(PUBMED_ID) |> 
   unique() |> 
   length()
 
+print("List of non-communicable diseases mapped to GWAS studies:")
 disease_mapping_with_cause |>
+  dplyr::filter(include == TRUE) |>
   pull(cause) |>
   unique()
                                 
-
-
 ```
 
 
@@ -609,23 +556,13 @@ UpSet(upset_matrix_liver,
 ```
 
 
-## Across all non-communicable diseases
+## Across all relevant non-communicable diseases
 
 ```{r check_overlap_all_ncd}
 
 non_communicable_studies =
 disease_mapping_with_cause |>
-    dplyr::filter(!cause %in% c("HIV/AIDS",
-                             "Tuberculosis",
-                             "Malaria",
-                             "Lower respiratory infections",
-                             "Diarrhoeal diseases",
-                             "Neonatal disorders",
-                             "Tetanus",
-                             "Diphtheria",
-                             "Pertussis" ,
-                             "Measles",
-                             "Maternal disorders")) |>
+  filter(include == T) |>
   filter(!is.na(cause)) |>
   select(PUBMED_ID, cause) |>
   distinct() 
@@ -689,8 +626,8 @@ UpSet(upset_matrix_respiratory,
 
 overlap_lancet_conditions =
 disease_mapping_with_cause |>
-  group_by(lancet_condition) |>
   filter(!is.na(lancet_condition)) |>
+  group_by(lancet_condition) |>
   summarise(PUBMED_ID = list(unique(PUBMED_ID))) |>
   tibble::deframe()
 
@@ -715,6 +652,52 @@ overlap_lancet_conditions |> purrr::list_c() |> unique() |> length()
 
 ```
 
+### Just for the relevant diseases 
+
+```{r}
+
+overlap_lancet_conditions =
+disease_mapping_with_cause |>
+  filter(include == TRUE) |>
+  filter(!is.na(lancet_condition)) |>
+  mutate(general_group = case_when(
+    lancet_condition %in% c("Atherosclerotic cardiovascular diseases",
+                          "Haemorrhagic stroke") ~ "Cardiovascular diseases",  
+    TRUE ~ lancet_condition
+  )) |>
+  group_by(general_group) |>
+  summarise(PUBMED_ID = list(unique(PUBMED_ID))) |>
+  tibble::deframe()
+
+
+upset_matrix_lancet_conditions = make_comb_mat(overlap_lancet_conditions)
+
+UpSet(upset_matrix_lancet_conditions,
+      comb_order = order(comb_size(upset_matrix_lancet_conditions), decreasing = TRUE)
+      #nsets = 3, 
+      #order.by = "freq", 
+      # sets.bar.color = "#56B4E9", 
+      # main.bar.color = "#0072B2", 
+      # matrix.color = "#D55E00", 
+      #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+      )
+
+# disease_mapping_with_cause |>
+#   filter(include == TRUE) |>
+#   filter(!is.na(lancet_condition)) |>
+#   mutate(general_group = case_when(
+#     lancet_condition %in% c("Atherosclerotic cardiovascular diseases",
+#                           "Haemorrhagic stroke") ~ "Cardiovascular diseases",  
+#     TRUE ~ lancet_condition
+#   )) |>
+#   group_by(PUBMED_ID) |>
+#   filter(any(general_group == "Cardiovascular diseases") &
+#            any(general_group == "Diabetes"))
+
+
+
+```
+
 # Check recall i.e. that I have identified most/all studies of the priority diseases
 
 ## Diabetes 
@@ -723,10 +706,12 @@ overlap_lancet_conditions |> purrr::list_c() |> unique() |> length()
 
 no_capture <- paste0("(?<!no )",
                 "(?<!non )",
-                "(?<!no type 2 )"
+                "(?<!non-)",
+                "(?<!no type 2 )",
+                "(?<!no type 1 )"
                 )
 
-diabetes_grep = paste0(no_capture, "diabetes")
+diabetes_grep = paste0(no_capture, "(?:diabetes|diabetic)")
 
 disease_mapping_with_cause |>
   filter(grepl(diabetes_grep, 
@@ -757,7 +742,7 @@ Check recall for these together as they are often comorbid and may be captured b
 
 ```{r recall_liver_cancer}
 
-liver_cancer_grep = paste0(no_capture, "liver|cirhosis|hepatocellular carcinoma|hepatoma|hepatic carcinoma")
+liver_cancer_grep = paste0(no_capture, "(?:liver|cirrhosis|hepatocellular carcinoma|hepatoma|hepatic carcinoma)")
 
 disease_mapping_with_cause |>
   filter(grepl(liver_cancer_grep, 
@@ -794,7 +779,7 @@ disease_mapping_with_cause |>
 ```{r recall_stroke}
 
 stroke_grep = paste0(no_capture, 
-                     "stroke|cerebrovascular|cerebral|hemorrhage")
+                     "(?:stroke|cerebrovascular|cerebral|hemorrhage)")
 
 disease_mapping_with_cause |>
   filter(grepl(stroke_grep, 
@@ -832,7 +817,7 @@ disease_mapping_with_cause |>
 ```{r recall_stomach_cancer}
 
 stomach_cancer_grep = paste0(no_capture, 
-                     "stomach|gastric")
+                     "(?:stomach|gastric)")
 
 disease_mapping_with_cause |>
   filter(grepl(stomach_cancer_grep, 
@@ -870,7 +855,7 @@ disease_mapping_with_cause |>
 ```{r recall_cervical_cancer}
 
 cervical_cancer_grep = paste0(no_capture, 
-                     "cervical|cervix")
+                     "(?:cervical|cervix)")
 
 disease_mapping_with_cause |>
   filter(grepl(cervical_cancer_grep, 
@@ -910,7 +895,7 @@ disease_mapping_with_cause |>
 # human papilloma virus (HPV) is a major cause of cervical cancer ...
 # so do we include studies of HPV in our mapping of cervical cancer?
 hpv_grep <- paste0(no_capture, 
-                     "hpv|human papilloma virus|pap smear")
+                     "(?:hpv|human papilloma virus|pap smear)")
 
 disease_mapping_with_cause |>
   filter(grepl(hpv_grep, 
@@ -940,10 +925,6 @@ disease_mapping_with_cause |>
          collected_all_disease_terms) |>
   distinct()
 
-disease_mapping_with_cause <- 
-  disease_mapping_with_cause |>
-  mutate(icd10_code = str_replace(icd10_code, "R879", "R87.9")) 
-
 ```
 
 ## Lip and oral cavity cancer
@@ -951,7 +932,7 @@ disease_mapping_with_cause <-
 ```{r recall_lip_oral_cavity_cancer}
 
 lip_oral_cavity_cancer_grep = paste0(no_capture, 
-                     "lip\\b|oral cavity|mouth|tongue|pharynx|larynx|pharyngeal|laryngeal")
+                     "(?:lip\\b|oral cavity|mouth|tongue|pharynx|larynx|pharyngeal|laryngeal)")
 
 disease_mapping_with_cause |>
   filter(grepl(lip_oral_cavity_cancer_grep, 
@@ -986,7 +967,7 @@ disease_mapping_with_cause |>
 ```{r}
 
 heart_disease_grep = paste0(no_capture, 
-                     "heart disease|cardiovascular|coronary|myocardial|angina|heart failure")
+                     "(?:heart disease|cardiovascular|coronary|myocardial|angina|heart failure)")
 
 disease_mapping_with_cause |>
   filter(grepl(heart_disease_grep, 
@@ -1015,6 +996,45 @@ disease_mapping_with_cause |>
 ```
 
 # Check precision i.e. that the studies I have mapped to the priority diseases are actually about those diseases
+
+# Cervical cancer
+
+```{r precision_cervical_cancer}
+
+disease_mapping_with_cause |>
+  filter(cause == "Cervical cancer") |>
+  filter(!grepl("cervical|cervix", `DISEASE/TRAIT`, ignore.case = TRUE) 
+         ) |>
+  distinct(`DISEASE/TRAIT`,
+           collected_all_disease_terms)
+
+disease_mapping_with_cause |>
+  filter(cause == "Cervical cancer") |>
+  filter(!grepl("cervical|cervix", `DISEASE/TRAIT`, ignore.case = TRUE) 
+         ) |>
+ group_by(PUBMED_ID,
+          STUDY_ACCESSION,
+          `DISEASE/TRAIT`,
+          collected_all_disease_terms) |>
+  summarise(icd10_code = str_flatten(unique(icd10_code), 
+                                     collapse = ", ",
+                                     na.rm = T),
+            cause = str_flatten(unique(cause), 
+                                collapse = ", ",
+                                na.rm = T)) |>
+  select(PUBMED_ID, 
+         `DISEASE/TRAIT`,
+         collected_all_disease_terms, 
+         icd10_code,
+         cause) |>
+  distinct()
+
+
+# most common ICD-10 Codes 
+disease_mapping_with_cause |>
+  filter(cause == "Cervical cancer")
+
+```
 
 ## Type 2 diabetes 
 
@@ -1045,10 +1065,15 @@ disease_mapping_with_cause |>
 ```
 
 
-# Save + combine with GWAS data
+# Save Mapped GWAS Catalog Paper Mapping to GBD Causes
 
 ```{r save_final_gwas_gbd_mapping}
 
+# remove studies not mapping to a cause
+disease_mapping_with_cause <-
+ disease_mapping_with_cause |>
+  filter(cause != "" & !is.na(cause))
+  
 data.table::fwrite(
 disease_mapping_with_cause,
 here::here("output/icd_map/gwas_study_gbd_causes.csv")
