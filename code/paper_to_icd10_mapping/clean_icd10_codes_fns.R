@@ -43,6 +43,14 @@ simplify_range <- function(icd10_range) {
 
   stopifnot(length(icd10_range_split) == 2)
 
+  icd10_range_split <-
+    # make sure the range is to only one dp
+    stringr::str_replace(
+      icd10_range_split,
+      pattern = "^([A-Z][0-9]{2}\\.[0-9]).*$",
+      replacement = "\\1"
+    )
+
   # if end of range is 0.9, remove
   icd10_range_split [2] <- str_replace(icd10_range_split [2], "\\.9$", "")
 
@@ -106,6 +114,7 @@ expand_range <- function(icd10_range){
     }
 
     else {
+
       expanded_codes <- icd10_range
 
     }
