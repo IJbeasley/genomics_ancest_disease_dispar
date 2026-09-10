@@ -355,8 +355,20 @@ umls_icd10  <-
 
 umls_icd10 <-
   umls_icd10 |>
-  filter(tolower(STR) != "hypertension") |>
-  filter(tolower(STR) != "cancer")
+  filter(STR != "hypertension") |>
+  filter(STR != "cancer")
+
+# where K76.1 is mapped to coronary artery disease
+# remove 
+umls_icd10 |>
+    filter(STR == "coronary artery disease")
+
+umls_icd10 <-
+  umls_icd10 |>
+  mutate(icd10_code = ifelse(STR == "coronary artery disease",
+                             str_remove_all(string = icd10_code,
+                                            pattern = ", K76.1"),
+                             icd10_code))
 
 umls_icd10  <-
   umls_icd10  |>
@@ -727,6 +739,30 @@ disease_mapping |>
   group_by(token_kind) |>
   summarise(n = n())
 
+disease_mapping <-
+  disease_mapping |> 
+  mutate(icd10_code_clean = ifelse(icd10_code_clean == "G45-G46.8",
+                                   "G45, G46",
+                                   icd10_code_clean)) |>
+  tidyr::separate_longer_delim(icd10_code_clean, delim = ", ") 
+
+disease_mapping <-
+  disease_mapping |> 
+    mutate(token_kind = case_when(
+      str_detect(icd10_code_clean, ICD10_CODE_RE)  ~ "code",
+      str_detect(icd10_code_clean, ICD10_RANGE_RE) ~ "range",
+      is.na(icd10_code_clean)                        ~ "missing",
+      TRUE                              ~ "malformed"
+    ))
+
+disease_mapping |> 
+  group_by(token_kind) |>
+  summarise(n = n())
+
+# one code range not properly expanded
+disease_mapping |>
+  filter(token_kind == "range") |>
+  distinct(icd10_code_clean)
 
 WHO_ICD10_CODE_RE <- "^[A-Z][0-9]{2}(\\.[0-9])?$"
 
@@ -938,6 +974,24 @@ disease_mapping =
           STUDY_ACCESSION,
           collected_all_disease_terms, 
           icd10_code)
+
+disease_mapping = 
+  disease_mapping |> 
+  mutate(icd10_code = ifelse(icd10_code == "",
+                             NA_character_,
+                             icd10_code))
+
+# make a column that displays the disease term that was used to infer the ICD-10 code
+disease_mapping <-
+disease_mapping |>
+  mutate(icd10_term = case_when(
+   icd10_source_col == "DISEASE/TRAIT" &  grepl("Study", icd10_source) ~ `DISEASE/TRAIT`,
+   icd10_source_col == "DISEASE/TRAIT" ~ trait_clean,
+   icd10_source_col == "MAPPED DISEASE TERM" ~ collected_all_disease_terms, 
+   icd10_source_col == "Extracted disease from DISEASE/TRAIT" ~ trait_context_clean,
+   TRUE ~ NA_character_
+  )
+  )
 
 fwrite(disease_mapping,
        here::here("output/icd_map/gwas_disease_to_icd10_mapping.csv")
