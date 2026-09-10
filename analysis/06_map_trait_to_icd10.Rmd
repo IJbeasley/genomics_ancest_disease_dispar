@@ -35,6 +35,8 @@ disease_mapping <-
                                     NA,
                                     icd10_source_col))
 
+n_rows <- nrow(disease_mapping)
+
 gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_all_group.csv"))
 
 gwas_study_info = gwas_study_info |>
@@ -132,8 +134,26 @@ disease_mapping <-
 ```{r match_disease_terms_to_icd_descriptions, message=FALSE}
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
-phecodes <- fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
-n_rows<- nrow(disease_mapping)
+
+phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+
+bad_phecode_icd_map = 
+  data.frame(
+    ICD10 = c("I08.1", "I08.2"),
+    ICD_DESCRIPTION = c(
+      "Disorders of both mitral and tricuspid valves",
+      "Disorders of both aortic and tricuspid valves"),
+    PheCode = c(395.1, 395.2),
+    Phenotypes = c(
+      "Nonrheumatic mitral valve disorders",
+      "Nonrheumatic aortic valve disorders"
+    )
+  )
+
+phecodes <-
+dplyr::rows_delete(phecodes,
+                   bad_phecode_icd_map,
+                   by = c("ICD10", "PheCode"))
 
 icd10_desc_map  = 
 phecodes |>
@@ -356,7 +376,8 @@ umls_icd10  <-
 umls_icd10 <-
   umls_icd10 |>
   filter(STR != "hypertension") |>
-  filter(STR != "cancer")
+  filter(STR != "cancer") |>
+  filter(STR != "high blood pressure")
 
 # where K76.1 is mapped to coronary artery disease
 # remove 
@@ -985,8 +1006,13 @@ disease_mapping =
 disease_mapping <-
 disease_mapping |>
   mutate(icd10_term = case_when(
-   icd10_source_col == "DISEASE/TRAIT" &  grepl("Study", icd10_source) ~ `DISEASE/TRAIT`,
-   icd10_source_col == "DISEASE/TRAIT" ~ trait_clean,
+   icd10_source_col == "DISEASE/TRAIT" &
+    grepl("Study", icd10_source) ~ "DISEASE/TRAIT",
+   # icd10_source_col == "DISEASE/TRAIT" &  
+   #  grepl("Study PheCode", icd10_source) & ~ phecode,
+   #  icd10_source_col == "DISEASE/TRAIT" &  
+   #  grepl("Study ICD10", icd10_source) & ~ icd10_code,
+   # icd10_source_col == "DISEASE/TRAIT" ~ trait_clean,
    icd10_source_col == "MAPPED DISEASE TERM" ~ collected_all_disease_terms, 
    icd10_source_col == "Extracted disease from DISEASE/TRAIT" ~ trait_context_clean,
    TRUE ~ NA_character_
