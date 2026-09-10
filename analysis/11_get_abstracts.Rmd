@@ -1,0 +1,189 @@
+---
+title: "Downloading abstracts for GWAS Catalog papers"
+author: "Isobel Beasley"
+date: "2025-12-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Relevant abstract text 
+
+```{r load_packages, message=FALSE}
+
+library(dplyr)
+library(rentrez)
+library(xml2)
+
+```
+
+## Get only disease studies, and select relevant columns
+
+```{r gwas_cat_load_preprocess}
+
+## Step 1: 
+# get only disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::filter(cause != "") |>
+  dplyr::filter(include == T)
+
+# gwas_study_info =
+#   gwas_study_info |>
+#   dplyr::filter(DISEASE_STUDY == T) |>
+#   dplyr::select(-COHORT)
+
+```
+
+## Extract information required to get paper text & abstracts
+
+```{r gwas_cat_extract_info}
+
+pmids = gwas_study_info |> 
+        pull(PUBMED_ID) |>
+        unique()
+
+print("Number of unique pubmed ids for disease studies:")
+pmids |> length()
+
+```
+
+### Get only papers abstracts that haven't previously been downloaded
+
+```{r get_abstracts_existing}
+
+existing_abstracts <- list.files(here::here("output/abstracts/"), 
+                                 pattern = "*.txt", 
+                                 full.names = FALSE
+                                 ) |>
+  tools::file_path_sans_ext()
+
+pmids_with_abstracts <- existing_abstracts[existing_abstracts %in% pmids]
+
+print("Number of abstracts already downloaded:")
+length(pmids_with_abstracts)
+
+pmids <- pmids[!(pmids %in% pmids_with_abstracts)]
+
+print("Number of abstracts to download:")
+length(pmids)
+
+```
+
+## Get abstracts from Entrez
+
+```{r get_abstracts_entrez, eval = FALSE}
+
+set_entrez_key(Sys.getenv('NCBI_API_KEY'))
+
+get_pubmed_abstracts <- function(pmids, 
+                                 batch_size = 200, 
+                                 verbose = TRUE) {
+  
+  n <- length(pmids)
+  
+  abstracts <- setNames(rep("MISSING", 
+                            n), 
+                        pmids
+                        )  # initialize result
+  
+  # Split PMIDs into batches
+  batches <- split(pmids, 
+                   ceiling(seq_along(pmids)/batch_size)
+                   )
+  
+  for(i in seq_along(batches)) {
+    
+    batch_pmids <- batches[[i]]
+    
+    if(verbose) message(sprintf("Fetching batch %d of %d (%d PMIDs)...", 
+                                i, 
+                                length(batches), 
+                                length(batch_pmids)
+                                )
+                        )
+    
+    # Fetch XML
+    xml_data <- entrez_fetch(db = "pubmed", 
+                             id = paste(batch_pmids, 
+                                        collapse = ","), 
+                             rettype = "xml", 
+                             parsed = FALSE
+                             )
+    
+    doc <- read_xml(xml_data)
+    articles <- xml_find_all(doc, ".//PubmedArticle")
+    
+    for(article in articles) {
+      
+      pmid_node <- xml_find_first(article, 
+                                  ".//PMID")
+      
+      pmid <- xml_text(pmid_node)
+      
+      abstract_nodes <- xml_find_all(article, 
+                                     ".//AbstractText")
+      
+      if(length(abstract_nodes) > 0) {
+        abstracts[pmid] <- paste(xml_text(abstract_nodes), 
+                                 collapse = " ")
+      }
+    }
+  }
+  
+  return(abstracts)
+}
+
+pmids = unique(pmids)
+abstracts <- get_pubmed_abstracts(pmids)
+
+missing_abstracts <- pmids[abstracts == "MISSING"]
+print("Number of missing abstracts:")
+length(missing_abstracts)
+
+# Remove missing abstracts
+pmids <- pmids[abstracts != "MISSING"]
+abstracts <- abstracts[abstracts != "MISSING"]
+
+print("Number of abstracts retrieved:")
+length(abstracts)
+
+# Loop through abstracts and write each to a file
+for (i in seq_along(abstracts)) {
+  file_name <- paste0(here::here("output/abstracts/"), pmids[i], ".txt")
+  writeLines(abstracts[i], file_name)
+}
+
+```
+
+```{r check_abstracts}
+
+all_pmids = gwas_study_info$PUBMED_ID
+
+
+retrieved_abstracts <- list.files(here::here("output/abstracts/"), 
+                                 pattern = "*.txt", 
+                                 full.names = FALSE
+                                 ) |>
+  tools::file_path_sans_ext()
+
+missing_abstracts = setdiff(all_pmids,
+                             retrieved_abstracts)
+
+
+print("Number of abstracts still missing after retrieval:")
+length(missing_abstracts)
+
+print(missing_abstracts)
+
+
+```
+
+
+
