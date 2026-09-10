@@ -320,7 +320,27 @@ disease_mapping <- disease_mapping |>
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
 
-phecodes <- fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+
+# drop badly mapped conversions
+# Nonrheumatic heart disorders being mapped to rheumatic heart disorders (I08.1, I08.2) in the PheCode to ICD10 mapping file
+bad_phecode_icd_map = 
+  data.frame(
+    ICD10 = c("I08.1", "I08.2"),
+    ICD_DESCRIPTION = c(
+      "Disorders of both mitral and tricuspid valves",
+      "Disorders of both aortic and tricuspid valves"),
+    PheCode = c(395.1, 395.2),
+    Phenotypes = c(
+      "Nonrheumatic mitral valve disorders",
+      "Nonrheumatic aortic valve disorders"
+    )
+  )
+
+phecodes <-
+dplyr::rows_delete(phecodes,
+                   bad_phecode_icd_map,
+                   by = c("ICD10", "PheCode"))
 
 phecode_icd_map =
   phecodes |>
@@ -343,11 +363,14 @@ group_by(phecode) |>
                         na.rm = T), 
             .groups = "drop")
 
+
+
 # label the origin of these ICD10 codes as "Study PheCode Mapping"
 phecode_icd_map =
   phecode_icd_map |>
   mutate(icd10_source = "Study PheCode (PheCode Map)",
          icd10_source_col = "DISEASE/TRAIT")
+
 
 disease_mapping =
   rows_patch(disease_mapping,
