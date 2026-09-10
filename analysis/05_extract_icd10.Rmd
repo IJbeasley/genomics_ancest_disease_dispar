@@ -361,8 +361,8 @@ print("Number of ICD10 code obtained")
 disease_mapping |>
     filter(!is.na(icd10_code)) |> 
   group_by(icd10_source) |> 
-  summarise(n = n(), 
-            percent = n()/n_studies *100)
+  summarise(n = length(unique(STUDY_ACCESSION)), 
+            percent = length(unique(STUDY_ACCESSION))/n_studies *100)
 
 disease_mapping |>
   filter(!is.na(icd10_source)) |>
@@ -460,12 +460,10 @@ disease_mapping |>
 
 ```{r}
 
-n_disease_mapping = nrow(disease_mapping)
-
 disease_mapping  |> 
 group_by(icd10_source) |>
-  summarise(n = n(),
-          percent = round(100 * n/n_disease_mapping, 
+  summarise(n = length(unique(STUDY_ACCESSION)),
+          percent = round(100 * length(unique(STUDY_ACCESSION)), 
                           digits = 2)
           ) |> 
 arrange(icd10_source, desc(n))
