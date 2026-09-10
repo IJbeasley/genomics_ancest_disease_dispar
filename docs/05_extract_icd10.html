@@ -507,15 +507,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreee0cc043ae796f545a7e026a6e291c31ec03a4f3dtargetblanke0cc043a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree92595630d125d5f8145e8265384d164ba0b03d69targetblank9259563a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/e0cc043ae796f545a7e026a6e291c31ec03a4f3d" target="_blank">e0cc043</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/92595630d125d5f8145e8265384d164ba0b03d69" target="_blank">9259563</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreee0cc043ae796f545a7e026a6e291c31ec03a4f3dtargetblanke0cc043a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree92595630d125d5f8145e8265384d164ba0b03d69targetblank9259563a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -525,7 +525,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/e0cc043ae796f545a7e026a6e291c31ec03a4f3d" target="_blank">e0cc043</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/92595630d125d5f8145e8265384d164ba0b03d69" target="_blank">9259563</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -584,6 +584,7 @@ Ignored files:
     Ignored:    data/icd/mondo_umls_mapping.csv
     Ignored:    data/icd/oxo/
     Ignored:    data/icd/oxo2-mappings_mondo_icd10.tsv
+    Ignored:    data/icd/phecode_icd10_map_corrections.csv
     Ignored:    data/icd/phecode_international_version_unrolled.csv
     Ignored:    data/icd/phecode_to_icd10_manual_mapping.xlsx
     Ignored:    data/icd/phecode_to_icd10_manual_mapping_v5.xlsx
@@ -632,6 +633,7 @@ Untracked files:
 
 Unstaged changes:
     Modified:   analysis/06_map_trait_to_icd10.Rmd
+    Modified:   analysis/07_gwas_to_gbd.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
     Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
     Deleted:    analysis/get_abstracts.Rmd
@@ -641,6 +643,7 @@ Unstaged changes:
     Modified:   analysis/replication_ancestry_bias.Rmd
     Modified:   analysis/specific_aims_stats.Rmd
     Modified:   code/cohort_norm/normalize_cohort_names.R
+    Modified:   data/icd/README.md
 
 </code></pre>
 <p>
@@ -685,6 +688,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/92595630d125d5f8145e8265384d164ba0b03d69/analysis/05_extract_icd10.Rmd" target="_blank">9259563</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-10
+</td>
+<td>
+Remove bad phecode mapping
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/56f3a7c1edc0829a313cbac598e82bc1973d2c64/docs/05_extract_icd10.html" target="_blank">56f3a7c</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-10
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1358,7 +1395,27 @@ class="section level2">
 <h3>Convert Phecodes to ICD10</h3>
 <pre class="r"><code># phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
 
-phecodes &lt;- fread(here::here(&quot;data/icd/phecode_international_version_unrolled.csv&quot;))
+phecodes &lt;- data.table::fread(here::here(&quot;data/icd/phecode_international_version_unrolled.csv&quot;))
+
+# drop badly mapped conversions
+# Nonrheumatic heart disorders being mapped to rheumatic heart disorders (I08.1, I08.2) in the PheCode to ICD10 mapping file
+bad_phecode_icd_map = 
+  data.frame(
+    ICD10 = c(&quot;I08.1&quot;, &quot;I08.2&quot;),
+    ICD_DESCRIPTION = c(
+      &quot;Disorders of both mitral and tricuspid valves&quot;,
+      &quot;Disorders of both aortic and tricuspid valves&quot;),
+    PheCode = c(395.1, 395.2),
+    Phenotypes = c(
+      &quot;Nonrheumatic mitral valve disorders&quot;,
+      &quot;Nonrheumatic aortic valve disorders&quot;
+    )
+  )
+
+phecodes &lt;-
+dplyr::rows_delete(phecodes,
+                   bad_phecode_icd_map,
+                   by = c(&quot;ICD10&quot;, &quot;PheCode&quot;))
 
 phecode_icd_map =
   phecodes |&gt;
@@ -1381,11 +1438,14 @@ group_by(phecode) |&gt;
                         na.rm = T), 
             .groups = &quot;drop&quot;)
 
+
+
 # label the origin of these ICD10 codes as &quot;Study PheCode Mapping&quot;
 phecode_icd_map =
   phecode_icd_map |&gt;
   mutate(icd10_source = &quot;Study PheCode (PheCode Map)&quot;,
          icd10_source_col = &quot;DISEASE/TRAIT&quot;)
+
 
 disease_mapping =
   rows_patch(disease_mapping,
