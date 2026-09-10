@@ -58,11 +58,11 @@ gbd_2019 =
 
 ```
 
-### Overlap and differences between ICD-10 code sets
+### Calculate overlap between ICD-10 code sets
 
-E.g. between non-fatal and cause of death ICD-10 codes for the same cause.
+I.e. between non-fatal and cause of death ICD-10 codes for the same cause.
 
-```{r parsed_icd10_code_ranges}
+```{r parse_icd10_code_ranges_fns}
 
 # Convert a base-36 character to its numeric value
 base36_value <- function(char) {
@@ -202,7 +202,7 @@ simplify_ranges <- function(range_data) {
 ```
 
 
-```{r overlap_icd10_codes_ranges}
+```{r overlap_gbd_icd10_ranges}
 
 # get the overlap between two parsed ICD-10 range lists
 # i.e. a & b need to be output of parse_rangelist
@@ -291,6 +291,7 @@ SRC <- c("overlap",
          "icd10_non_fatal", 
          "icd10_cod")
 
+# parse the ICD-10 ranges for each GBD cause into a data frame of intervals
 cause_intervals <- gbd_2019 |>
   select(cause, 
          lancet_condition,
@@ -310,6 +311,7 @@ cause_intervals <- gbd_2019 |>
                                  paste0(start_label, "-", end_label))
          ) 
 
+# parse all mapped ICD-10 codes for each GWAS study
 gwas_mapped_codes <- disease_mapping |>
   distinct(icd10_code) |>
   filter(!is.na(icd10_code), 
@@ -341,6 +343,14 @@ disease_mapping_annotated <- disease_mapping |>
             by = "icd10_code", 
             relationship = "many-to-many")
 
+
+```
+
+
+```{r number_of_papers_mapped_to_cause}
+
+# number of distinct papers mapped to a cause (includes papers mapped to multiple causes,
+# and papers mapped to communicable traits and other excluded diseases)
 disease_mapping_annotated |>
   filter(!is.na(cause)) |>
   pull(PUBMED_ID) |>
@@ -349,22 +359,11 @@ disease_mapping_annotated |>
 
 disease_mapping_with_cause <-
 disease_mapping_annotated |>
-  distinct(`DISEASE/TRAIT`, 
-           collected_all_disease_terms,
-           PUBMED_ID,
+  group_by(PUBMED_ID,
            YEAR,
-           STUDY_ACCESSION,
-           icd10_code,
-           cause,
-           lancet_condition,
-           lancet_group,
-           include,
-           cause_source) |>
-  group_by(`DISEASE/TRAIT`, 
+           `DISEASE/TRAIT`, 
            collected_all_disease_terms,
-           PUBMED_ID,
-           YEAR,
-           STUDY_ACCESSION,
+           icd10_term,
            cause,
            lancet_condition,
            lancet_group,
@@ -381,10 +380,11 @@ disease_mapping_annotated |>
                                   grepl("icd10_cod", cause_source) ~ "icd10_cod", 
                                   TRUE ~ NA_character_
                                     ) ) |>
-  ungroup()
+  ungroup() |>
+  distinct()
 
 
-# number if just unique studies mapped to a cause
+# number of papers only mapped to a cause by overlap of non-fatal and cause of death ICD-10 codes
 disease_mapping_with_cause |>
   filter(!is.na(cause)) |>
   filter(cause_source == "overlap") |>
@@ -392,6 +392,7 @@ disease_mapping_with_cause |>
   unique() |>
   length()
 
+# number of papers only mapped to a cause by overlap of non-fatal ICD-10 codes
 disease_mapping_with_cause |>
   filter(!is.na(cause)) |>
   filter(cause_source == "icd10_non_fatal") |>
@@ -399,6 +400,7 @@ disease_mapping_with_cause |>
   unique() |>
   length()
 
+# number of papers only mapped to a cause by overlap of cause of death ICD-10 codes
 disease_mapping_with_cause |>
   filter(!is.na(cause)) |>
   filter(cause_source == "icd10_cod") |>
@@ -407,7 +409,7 @@ disease_mapping_with_cause |>
   length()
                            
 
-print("Number of unique studies mapped to non-communicable diseases:")
+print("Number of unique papers mapped to non-communicable diseases:")
 # filter out infectious diseases
 disease_mapping_with_cause |>
     dplyr::filter(include == TRUE) |>
@@ -416,11 +418,20 @@ disease_mapping_with_cause |>
   unique() |> 
   length()
 
-print("List of non-communicable diseases mapped to GWAS studies:")
+disease_mapping_with_cause |>
+    dplyr::filter(include == TRUE) |>
+    filter(!is.na(cause)) |> 
+  filter(cause_source == "overlap") |>
+  pull(PUBMED_ID) |> 
+  unique() |> 
+  length()
+
+print("List of non-communicable diseases mapped to GWAS Catalog studies:")
 disease_mapping_with_cause |>
   dplyr::filter(include == TRUE) |>
   pull(cause) |>
-  unique()
+  unique() |> 
+  sort()
                                 
 ```
 
@@ -997,70 +1008,86 @@ disease_mapping_with_cause |>
 
 # Check precision i.e. that the studies I have mapped to the priority diseases are actually about those diseases
 
-# Cervical cancer
+## Cervical cancer 
+
+What terms caused the mapping to cervical cancer? Are they actually about cervical cancer?
 
 ```{r precision_cervical_cancer}
 
 disease_mapping_with_cause |>
   filter(cause == "Cervical cancer") |>
-  filter(!grepl("cervical|cervix", `DISEASE/TRAIT`, ignore.case = TRUE) 
-         ) |>
-  distinct(`DISEASE/TRAIT`,
-           collected_all_disease_terms)
-
-disease_mapping_with_cause |>
-  filter(cause == "Cervical cancer") |>
-  filter(!grepl("cervical|cervix", `DISEASE/TRAIT`, ignore.case = TRUE) 
-         ) |>
- group_by(PUBMED_ID,
-          STUDY_ACCESSION,
-          `DISEASE/TRAIT`,
-          collected_all_disease_terms) |>
-  summarise(icd10_code = str_flatten(unique(icd10_code), 
-                                     collapse = ", ",
-                                     na.rm = T),
-            cause = str_flatten(unique(cause), 
-                                collapse = ", ",
-                                na.rm = T)) |>
-  select(PUBMED_ID, 
-         `DISEASE/TRAIT`,
-         collected_all_disease_terms, 
-         icd10_code,
-         cause) |>
-  distinct()
-
-
-# most common ICD-10 Codes 
-disease_mapping_with_cause |>
-  filter(cause == "Cervical cancer")
+  distinct(PUBMED_ID, icd10_term) |>
+  group_by(icd10_term) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
 
 ```
 
-## Type 2 diabetes 
+## Chronic kidney disease 
+
+```{r precision_chronic_kidney_disease}
+
+disease_mapping_with_cause |>
+  filter(cause == "Chronic kidney disease") |>
+  distinct(PUBMED_ID, icd10_term) |>
+  group_by(icd10_term) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
+
+```
+
+## Cirrhosis and other chronic liver diseases
+
+```{r precision_cirrhosis}
+
+disease_mapping_with_cause |> 
+filter(cause == "Cirrhosis and other chronic liver diseases") |>
+  distinct(PUBMED_ID, icd10_term) |>
+  group_by(icd10_term) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
+
+```
+
+## Diabetes mellitus
 
 ```{r precision_type_2_diabetes}
 
-disease_mapping_with_cause |>
-  filter(cause == "Type 2 diabetes mellitus") |>
-  filter(!grepl("type 2 diabetes|diabetes type 2|e11|type ii diabetes", `DISEASE/TRAIT`, ignore.case = TRUE) 
-         ) |>
- group_by(PUBMED_ID,
-          STUDY_ACCESSION,
-          `DISEASE/TRAIT`,
-          collected_all_disease_terms) |>
-  summarise(icd10_code = str_flatten(unique(icd10_code), 
-                                     collapse = ", ",
-                                     na.rm = T),
-            cause = str_flatten(unique(cause), 
-                                collapse = ", ",
-                                na.rm = T)) |>
-  select(PUBMED_ID, 
-         `DISEASE/TRAIT`,
-         collected_all_disease_terms, 
-         icd10_code,
-         cause) |>
-  distinct()
+disease_mapping_with_cause |> 
+filter(cause == "Diabetes mellitus") |>
+  distinct(PUBMED_ID, icd10_term) |>
+  group_by(icd10_term) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
 
+# severe protein-calorie malnutrition 
+
+```
+
+
+## Haemorrhagic stroke
+
+```{r precision_haemorrhagic_stroke}
+
+disease_mapping_with_cause |> 
+filter(cause == "Intracerebral hemorrhage" | cause == "Subarachnoid hemorrhag") |>
+  distinct(PUBMED_ID, icd10_term) |>
+  group_by(icd10_term) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
+
+```
+
+## Rheumatic heart disease
+
+```{r precision_rheumatic_heart_disease}
+
+disease_mapping_with_cause |> 
+filter(cause == "Rheumatic heart disease") |>
+  distinct(PUBMED_ID, icd10_term) |>
+  group_by(icd10_term) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
 
 ```
 
