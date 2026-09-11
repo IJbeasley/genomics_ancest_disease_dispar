@@ -1,0 +1,2384 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+<meta name="date" content="2025-10-17" />
+
+<title>Get abstract text for GWAS Catalog studies</title>
+
+<script src="site_libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Get abstract text for GWAS Catalog
+studies</h1>
+<h4 class="author">Isobel Beasley</h4>
+<h4 class="date">2025-10-17</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2026-09-11
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.2). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7b015e585c37ba4744b7e4a44da2f8183569ed97targetblank7b015e5a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7b015e585c37ba4744b7e4a44da2f8183569ed97" target="_blank">7b015e5</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7b015e585c37ba4744b7e4a44da2f8183569ed97targetblank7b015e5a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7b015e585c37ba4744b7e4a44da2f8183569ed97" target="_blank">7b015e5</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    .venv/
+    Ignored:    BioC.dtd
+    Ignored:    FormatConverter.jar
+    Ignored:    FormatConverter.zip
+    Ignored:    analysis/.DS_Store
+    Ignored:    ancestry_dispar_env/
+    Ignored:    code/.DS_Store
+    Ignored:    code/extract_text/__pycache__/
+    Ignored:    code/full_text_conversion/.DS_Store
+    Ignored:    code/full_text_conversion/__pycache__/
+    Ignored:    code/pop_desc_processing/.DS_Store
+    Ignored:    code/text_mining_models/__pycache__/
+    Ignored:    data/.DS_Store
+    Ignored:    data/cdc/
+    Ignored:    data/cohort/
+    Ignored:    data/europe_pmc/
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/IHME-GBD_2023_DATA-73cc01fd-1.csv
+    Ignored:    data/gbd/gbd_2019_california_percent_deaths.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/2025AA/
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/UK_Biobank_master_file.tsv
+    Ignored:    data/icd/allXREFinDO.tsv
+    Ignored:    data/icd/hp_umls_mapping.csv
+    Ignored:    data/icd/icd102019en.xml
+    Ignored:    data/icd/icd102019enMeta/
+    Ignored:    data/icd/lancet_conditions_icd10.xlsx
+    Ignored:    data/icd/manual_disease_icd10_mappings.xlsx
+    Ignored:    data/icd/manual_disease_mappings_v2.xlsx
+    Ignored:    data/icd/manual_test.xlsx
+    Ignored:    data/icd/mondo_umls_mapping.csv
+    Ignored:    data/icd/oxo/
+    Ignored:    data/icd/oxo2-mappings_mondo_icd10.tsv
+    Ignored:    data/icd/phecode_icd10_map_corrections.csv
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/phecode_to_icd10_manual_mapping.xlsx
+    Ignored:    data/icd/phecode_to_icd10_manual_mapping_v5.xlsx
+    Ignored:    data/icd/positive.sssom.tsv
+    Ignored:    data/icd/semiautomatic_ICD-pheno.txt
+    Ignored:    data/icd/semiautomatic_ICD-pheno_UKB_subset.txt
+    Ignored:    data/icd/umls-2025AA-mrconso.zip
+    Ignored:    data/icd/~$IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/~$lancet_conditions_icd10.xlsx
+    Ignored:    data/icd/~$manual_disease_mappings_v2.xlsx
+    Ignored:    data/icd/~$phecode_to_icd10_manual_mapping_v5.xlsx
+    Ignored:    data/nih/
+    Ignored:    data/ontology/
+    Ignored:    doccano_venv/
+    Ignored:    figures/
+    Ignored:    output/.DS_Store
+    Ignored:    output/abbreviations/
+    Ignored:    output/abstracts/
+    Ignored:    output/clustering/
+    Ignored:    output/doccano/
+    Ignored:    output/fulltexts/
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_cohorts/
+    Ignored:    output/icd_map/
+    Ignored:    output/methods/
+    Ignored:    output/results/
+    Ignored:    output/supplement/
+    Ignored:    output/text_mining_predictions/
+    Ignored:    output/trait_ontology/
+    Ignored:    pubmedbert-cohort-ner-model/
+    Ignored:    pubmedbert-cohort-ner/
+    Ignored:    pubmedbert-grid/
+    Ignored:    renv/
+    Ignored:    spacy_venv_requirements.txt
+    Ignored:    spacyr_venv/
+
+Untracked files:
+    Untracked:  analysis/12_get_full_text.Rmd
+    Untracked:  analysis/compare_cohort_annot.Rmd
+    Untracked:  analysis/normalise_cohort_annot.Rmd
+
+Unstaged changes:
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
+    Deleted:    analysis/get_abstracts.Rmd
+    Deleted:    analysis/get_full_text.Rmd
+    Deleted:    analysis/get_supplement.Rmd
+    Deleted:    analysis/grep_annotations_prep.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/prep_finetune_after_doccano.Rmd
+    Modified:   analysis/replication_ancestry_bias.Rmd
+    Modified:   analysis/specific_aims_stats.Rmd
+    Deleted:    analysis/text_for_cohort_labels.Rmd
+    Deleted:    analysis/training_set_selection.Rmd
+    Modified:   code/cohort_norm/normalize_cohort_names.R
+    Modified:   data/icd/README.md
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/23_first_parse_text_annotations.Rmd</code>) and HTML
+(<code>docs/23_first_parse_text_annotations.html</code>) files. If
+you’ve configured a remote Git repository (see
+<code>?wflow_git_remote</code>), click on the hyperlinks in the table
+below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/7b015e585c37ba4744b7e4a44da2f8183569ed97/analysis/23_first_parse_text_annotations.Rmd" target="_blank">7b015e5</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-11
+</td>
+<td>
+Update first parse annotation page
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="set-up" class="section level1">
+<h1>Set up</h1>
+<div id="required-packages" class="section level2">
+<h2>Required packages</h2>
+<pre class="r"><code>library(stringr)
+library(readxl)
+library(dplyr)
+library(stringi)
+library(xml2)
+library(jsonlite)
+library(tokenizers)</code></pre>
+</div>
+</div>
+<div id="get-pmids-for-relevant-papeprs" class="section level1">
+<h1>Get PMIDs for relevant papeprs</h1>
+<pre class="r"><code># get only relevant disease studies
+gwas_study_info &lt;- data.table::fread(here::here(&quot;output/icd_map/gwas_study_gbd_causes.csv&quot;))
+
+gwas_study_info = gwas_study_info |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+# filter out infectious diseases
+gwas_study_info &lt;- gwas_study_info |&gt;
+    dplyr::filter(!cause %in% c(&quot;HIV/AIDS&quot;,
+                             &quot;Tuberculosis&quot;,
+                             &quot;Malaria&quot;,
+                             &quot;Lower respiratory infections&quot;,
+                             &quot;Diarrhoeal diseases&quot;,
+                             &quot;Neonatal disorders&quot;,
+                             &quot;Tetanus&quot;,
+                             &quot;Diphtheria&quot;,
+                             &quot;Pertussis&quot; ,
+                             &quot;Measles&quot;,
+                             &quot;Maternal disorders&quot;))
+
+gwas_study_info &lt;-
+  gwas_study_info |&gt;
+  filter(cause != &quot;&quot;)
+
+# all pmids
+pmids &lt;- gwas_study_info$PUBMED_ID |&gt; unique()
+
+# training sample pmids
+training_sample &lt;- readLines(here::here(&quot;output/gwas_cat/training_sample_pmids.txt&quot;))</code></pre>
+</div>
+<div id="get-pmcids" class="section level1">
+<h1>Get PMCIDs</h1>
+<pre class="r"><code>converted_ids &lt;- data.table::fread(here::here(&quot;output/fulltexts/pmid_to_pmcid_mapping.csv&quot;))</code></pre>
+</div>
+<div id="get-grep-terms" class="section level1">
+<h1>Get grep terms</h1>
+<div id="cohort-context-terms" class="section level2">
+<h2>Cohort context terms</h2>
+<pre class="r"><code>cohort_context_terms &lt;- readLines(here::here(&quot;output/gwas_cat/ancestry_population_terms.txt&quot;))
+
+print(&quot;Number of cohort context terms:&quot;)
+length(cohort_context_terms)</code></pre>
+</div>
+<div id="cohort-names" class="section level2">
+<h2>Cohort names</h2>
+<pre class="r"><code>cohort_abbr_names &lt;- readLines(
+           here::here(&quot;output/gwas_cat/cohort_abbrev_names.txt&quot;))
+
+cohort_full_names &lt;- 
+readLines(
+           here::here(&quot;output/gwas_cat/cohort_full_names.txt&quot;))</code></pre>
+</div>
+</div>
+<div id="get-cohort-relevant-abstract-sentences" class="section level1">
+<h1>Get cohort-relevant abstract sentences</h1>
+<div id="load-relevant-abstracts" class="section level2">
+<h2>Load relevant abstracts</h2>
+<pre class="r"><code>abstract_files &lt;- list.files(here::here(&quot;output/abstracts/&quot;), 
+                             pattern = &quot;*.json&quot;, 
+                             full.names = FALSE
+                             ) |&gt;
+                   sort()
+
+abstract_pmids = str_remove_all(abstract_files, &quot;_sentences.json$&quot;)
+abstract_pmids = abstract_pmids[abstract_pmids %in% pmids]
+
+
+abstracts &lt;- sapply(abstract_pmids,
+                    function(file) {
+                      json_data &lt;- fromJSON(here::here(paste0(&quot;output/abstracts/&quot;, file, &quot;_sentences.json&quot;)))
+                      
+                      abstract_lines &lt;- json_data[json_data != &quot;&quot;]
+                      
+                      # readLines(here::here(paste0(&quot;output/abstracts/&quot;,file, &quot;.txt&quot;)), 
+                      #           warn = FALSE) |&gt; 
+                      #   paste(collapse = &quot; &quot;)
+                    }
+                    )
+
+
+# check lengths of these vectors are the same
+print(&quot;Check lengths of vectors are the same:&quot;)
+print(paste(&quot;Length of pmids:&quot;, length(pmids)))
+print(paste(&quot;Length of abstract pmids:&quot;, length(abstract_pmids)))
+print(paste(&quot;Length of abstracts:&quot;, length(abstracts)))</code></pre>
+<div id="check-what-abstracts-are-missing" class="section level3">
+<h3>Check: What abstracts are missing?</h3>
+<pre class="r"><code>missing_abstracts = pmids[!(pmids %in% abstract_pmids)] 
+
+print(&quot;Number of missing abstracts:&quot;)
+length(missing_abstracts)</code></pre>
+</div>
+</div>
+<div id="cohort-name-matching-in-abstract-sentences"
+class="section level2">
+<h2>Cohort name matching in abstract sentences</h2>
+<div
+id="remove-title-sentences-and-small-sentences-that-are-likely-to-contain-cohort-names-but-are-not-sentences-describing-the-cohort"
+class="section level3">
+<h3>Remove title sentences and small sentences that are likely to
+contain cohort names but are not sentences describing the cohort</h3>
+<pre class="r"><code># remove title from sentences (as this is likely to contain cohort names but is not a sentence describing the cohort)
+
+has_balanced_parens &lt;- function(s) {
+  stringr::str_count(s, fixed(&quot;(&quot;)) == stringr::str_count(s, fixed(&quot;)&quot;))
+}
+
+get_title_sentences &lt;- function(x, n_words_threshold = 5) {
+                 
+                 # get short sentences &lt; 6 words
+                 sentences &lt;- x[stringr::str_count(x, &quot; &quot;) &lt; n_words_threshold]
+                 
+                 # catch / inspect title sentences 
+                 # upper_case &lt;- &quot;(?m)^\\s*[A-Z][A-Z\\s]+$&quot;
+                 
+                 # get sentences that start with capital letter
+                 sentences &lt;- sentences[grepl(&quot;^(\\d+(\\.\\d+)*\\s+)?[A-Za-z]&quot;, sentences)]
+                  #sentences[grepl(&quot;^[A-Z]&quot;, sentences)]
+                 
+                 # exclude sentences containing unmatched bracket as these are more likely to be complex sentences that are less likely to be titles or headings
+                 #sentences &lt;- sentences[!grepl(&quot;\\(|\\)&quot;, sentences)]
+                 sentences &lt;- sentences[has_balanced_parens(sentences)]
+                 
+                 # exclude sentences that end with a comma, as these are more likely to be incomplete sentences that are part of a larger sentence, and less likely to be titles or headings
+                 sentences &lt;- sentences[!grepl(&quot;,$|\\($&quot;, sentences)] 
+                 
+                 # exclude sentences that contain urls
+                 sentences &lt;- sentences[!grepl(&quot;www.|http&quot;, sentences)]
+                 
+                 return(sentences)
+                 
+}
+
+get_non_title_sentences &lt;- function(x) {
+  
+                title_sentences &lt;- get_title_sentences(x)
+                 
+                keep_non_title_sentences &lt;- x[!c(x %in% title_sentences)]
+                 
+                return(keep_non_title_sentences)
+}
+
+title_sentences &lt;- purrr::map(abstracts,
+                              get_title_sentences
+                              ) |&gt;
+                              # ~get_title_sentences(.x, 
+                              #                     n_words_threshold = 3)) |&gt;
+                   purrr::list_c() |&gt;
+                   sort() |&gt;
+                   unique()
+
+
+print(&quot;Title sentences identified:&quot;)
+print(title_sentences)
+
+
+abstracts &lt;-
+purrr::map(abstracts,
+           get_non_title_sentences        
+                 )</code></pre>
+</div>
+<div id="function-to-extract-sentences-with-cohort-names"
+class="section level3">
+<h3>Function to extract sentences with cohort names</h3>
+<pre class="r"><code>extract_cohort_sentences &lt;- function(text_list, # list of texts to search through (e.g. abstracts, or full texts)
+                                     terms, # terms to grep search for
+                                     column_name = &quot;COHORT&quot;,
+                                     tokenize = FALSE,
+                                     ignore_case) {
+  
+  #word boundary or preceded by ( [ ,
+  terms_grep &lt;- paste0(&quot;(?&lt;=\\b|\\(|\\[)&quot;,
+                            terms,
+                            &quot;(?=\\b|,|\\(|\\])&quot;)
+  
+  results &lt;- lapply(seq_along(text_list), function(i) {
+    
+    # Split text into sentences, if not done already
+    if(tokenize) {
+      sentences &lt;- tokenizers::tokenize_sentences(test_list[[i]])[[1]]
+    } else {
+      sentences &lt;-  text_list[[i]]
+    }
+    
+    # For each sentence, find all matching cohort names
+    lapply(seq_along(sentences), function(s) {
+      
+      sentence &lt;- sentences[s]
+      
+      # Identify cohort names present in this sentence
+      matched_cohorts &lt;- terms[str_detect(sentence, 
+                                          regex(terms_grep, 
+                                                ignore_case = ignore_case)
+                                          )
+                               ]
+      term_df &lt;-
+      data.frame(
+        article_id = i,
+        sentence_id = s,
+        sentence = sentence,
+        stringsAsFactors = FALSE
+      )
+      
+      # Add column with matched term names (if any)
+      term_df[[column_name]] &lt;- ifelse(length(matched_cohorts) &gt; 0,
+                                       str_flatten(unique(matched_cohorts), 
+                                                   collapse = &quot;|&quot;, 
+                                                   na.rm = T),
+                                       &quot;&quot;
+      )
+      
+      # Add column with binary label for whether any terms were matched
+      term_df[[paste0(&quot;has_&quot;, tolower(column_name))]] &lt;- ifelse(length(matched_cohorts) &gt; 0, 
+                                                                TRUE, 
+                                                                FALSE)
+      
+      return(term_df)
+      
+    }) |&gt; bind_rows()
+  })
+
+ results &lt;- bind_rows(results)
+ 
+ results$pubmed_id &lt;- names(text_list)[results$article_id]
+ 
+ return(results) #returns a df of sentences, with labelled columns for whether they contain cohort names, and which cohort names they contain (if any)
+ # id of sentence, and abstract / article
+}</code></pre>
+</div>
+<div id="get-cohort-relevant-sentences" class="section level3">
+<h3>Get cohort relevant sentences</h3>
+<div id="get-cohort-name-sentences" class="section level4">
+<h4>Get cohort name sentences</h4>
+<pre class="r"><code># extract sentences with cohort full names (case-insensitive matching, as full names are less likely to be ambiguous)
+cohort_sentences_df_p1 &lt;- extract_cohort_sentences(abstracts,
+                                                cohort_full_names,
+                                                ignore_case = TRUE
+                                                )
+
+# extract sentences with cohort abbreviation names (case-sensitive matching, as abbreviations are more likely to be ambiguous)
+cohort_sentences_df_p2 = extract_cohort_sentences(abstracts,
+                                                  cohort_abbr_names,
+                                                  ignore_case = FALSE
+                                                  )
+
+cohort_sentences_df =
+  bind_rows(cohort_sentences_df_p1,
+            cohort_sentences_df_p2
+            )
+
+
+cohort_sentences_df = 
+  cohort_sentences_df |&gt;
+  distinct()
+
+separate_cohorts &lt;- function(COHORT) {
+  
+  if (any(grepl(&quot;\\|&quot;, COHORT))) {
+    return(unlist(strsplit(COHORT, &quot;\\|&quot;)))
+  } else {
+    return(COHORT)
+  }
+  
+}
+
+cohort_sentences_df =
+  cohort_sentences_df |&gt;
+  group_by(pubmed_id,
+           article_id, 
+           sentence_id, 
+           sentence) |&gt;
+  summarise(
+    COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
+                         collapse = &quot;|&quot;, 
+                         na.rm = T),
+    has_cohort = ifelse(any(COHORT != &quot;&quot;), TRUE, FALSE)
+  ) |&gt;
+  ungroup() 
+
+cohort_sentences_df =
+  cohort_sentences_df |&gt;
+  mutate(COHORT = str_remove_all(COHORT, 
+                               pattern = &quot;\\|$|^\\|&quot;
+                               )
+         ) </code></pre>
+<pre class="r"><code>print(&quot;Number of abstracts containing probable cohort reference&quot;)
+abstracts_cohorts &lt;- cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  pull(article_id) |&gt;
+  unique() 
+
+n_abstracts_cohorts =  abstracts_cohorts |&gt;
+  length()
+
+print(n_abstracts_cohorts)
+
+print(&quot;Percentage of sampled abstracts containing probable cohort reference:&quot;)
+100 * n_abstracts_cohorts / length(unique(pmids))
+
+print(&quot;Number of sentences containing probable cohort reference&quot;)
+  cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  select(article_id, sentence_id) |&gt;
+  distinct() |&gt;
+  nrow()
+  
+print(&quot;Number of entities&quot;)
+cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  pull(COHORT) |&gt;
+  str_split(&quot;\\|&quot;) |&gt;
+  unlist() |&gt;
+  length()
+  
+print(&quot;Number of unique cohorts referenced (not unique cohort names, but unique strings in the COHORT column):&quot;)
+detected_cohorts &lt;- cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  pull(COHORT) |&gt;
+  str_split(&quot;\\|&quot;) |&gt;
+  unlist() 
+
+n_cohorts &lt;- detected_cohorts |&gt;
+  unique()  |&gt;
+  length()
+
+print(n_cohorts)
+
+print(&quot;Most common cohort names detected (by number of sentences they are mentioned in):&quot;)
+data.frame(cohort = detected_cohorts) |&gt;
+  group_by(cohort) |&gt;
+  summarise(n = n()) |&gt;
+  arrange(desc(n)) |&gt;
+  head(10)
+
+print(&quot;Most common cohort names detected (by number of abstracts they are mentioned in):&quot;)
+cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  select(COHORT, article_id) |&gt;
+  tidyr::separate_rows(COHORT, sep = &quot;\\|&quot;) |&gt;
+  distinct() |&gt;
+  group_by(COHORT) |&gt;
+  summarise(n_abstracts = n()) |&gt;
+  arrange(desc(n_abstracts)) |&gt;
+  head(5)</code></pre>
+</div>
+<div id="get-cohort-related-context-sentences" class="section level4">
+<h4>Get cohort-related context sentences</h4>
+<pre class="r"><code>all_cohort_terms &lt;- c(cohort_full_names, cohort_abbr_names)
+
+# mask cohort names in methods text
+# so that extract population descriptors etc. are not masked by cohort name matching
+cohort_patterns &lt;- 
+  all_cohort_terms |&gt;
+  unique()
+
+cohort_patterns &lt;- cohort_patterns[order(-nchar(cohort_patterns))] # order by length, to avoid shorter patterns matching within longer patterns (e.g. &quot;UK Biobank&quot; and &quot;Biobank&quot;)
+
+cohort_patterns  &lt;- cohort_patterns |&gt; 
+  stringr::str_escape()   # or: gsub(&quot;([][{}()+*^$|\\\\?.])&quot;, &quot;\\\\\\1&quot;, x)
+
+cohort_patterns &lt;- paste0(&quot;(?&lt;=\\b|\\(|\\[)&quot;,
+                            cohort_patterns,
+                            &quot;(?=\\b|,|\\(|\\])&quot;)
+
+mask_re &lt;- paste0(&quot;\\b(?:&quot;,
+                  paste(cohort_patterns,
+                        collapse = &quot;|&quot;),
+                  &quot;)\\b&quot;)
+
+
+masked_abstracts &lt;- purrr::map(abstracts,
+           function(x) {
+             stringr::str_replace_all(x, 
+                                      stringr::regex(mask_re, ignore_case = TRUE), 
+                                      &quot;\u241F&quot;
+                                      )
+           }
+           )
+
+# extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
+cohort_context_df = extract_cohort_sentences(masked_abstracts,
+                                            cohort_context_terms,
+                                            column_name = &quot;CONTEXT&quot;,
+                                            ignore_case = FALSE
+                                            )
+
+cohort_sentences_df &lt;-
+left_join(cohort_sentences_df,
+          cohort_context_df |&gt; select(pubmed_id,
+                                      article_id, 
+                                      sentence_id, 
+                                      CONTEXT,
+                                      has_context),
+          by = c(&quot;pubmed_id&quot;,
+                 &quot;article_id&quot;, 
+                 &quot;sentence_id&quot;)
+          ) 
+
+print(&quot;Number of sentences with cohort names and/or cohort-related context:&quot;)
+cohort_sentences_df |&gt; 
+  group_by(has_cohort, has_context) |&gt; 
+  summarise(n = n())
+
+filtered_cohort_sentences_df =
+  cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot; | CONTEXT != &quot;&quot;)
+
+print(&quot;Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):&quot;)
+nrow(filtered_cohort_sentences_df)</code></pre>
+</div>
+<div id="get-hard-negatives" class="section level4">
+<h4>Get hard negatives</h4>
+<p>These are ‘semanitically similar’ sentences to cohort names.</p>
+<pre class="r"><code>json_list &lt;- 
+cohort_sentences_df |&gt;
+  filter(has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/abstract_cohort_sentences.json&quot;))
+
+
+json_list &lt;- 
+cohort_sentences_df |&gt;
+  filter(!has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/abstract_non_cohort_sentences.json&quot;))</code></pre>
+<pre class="bash"><code>
+source  spacyr_venv/bin/activate
+
+python3 code/extract_text/sentence_embeddings.py \
+        --label &quot;abstracts&quot; \
+        --cohort_path &quot;output/doccano/abstract_cohort_sentences.json&quot; \
+        --non_cohort_path &quot;output/doccano/abstract_non_cohort_sentences.json&quot; \
+        --figure_save_path &quot;output/doccano/abstract_sentence_similarity.png&quot; \
+        --p 75
+        </code></pre>
+</div>
+<div id="make-training-set" class="section level4">
+<h4>Make training set</h4>
+<pre class="r"><code>abstract_hard_negatives &lt;- jsonlite::read_json(here::here(&quot;output/doccano/hard_negatives_abstracts.json&quot;),
+                                               simplifyVector = TRUE)
+
+cohort_sentences_df  &lt;- 
+cohort_sentences_df |&gt;
+  dplyr::mutate(hard_negative = ifelse(sentence %in% abstract_hard_negatives,
+                                TRUE,
+                                FALSE)
+  )
+
+print(&quot;Overlap between hard negatives and sentences with cohort names or cohort-related context:&quot;)
+cohort_sentences_df |&gt;
+  filter(hard_negative == TRUE) |&gt;
+  group_by(has_cohort, has_context) |&gt;
+  summarise(n = n())
+
+# most hard negatives overlap with context sentences! (As expected, as 
+# as context sentences should also be semantically similar to cohort sentences
+
+filtered_cohort_sentences_df &lt;-
+cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot; | CONTEXT != &quot;&quot; | hard_negative == TRUE)
+
+print(&quot;Size of training set:&quot;)
+print(&quot;Number of sentences with cohort names or cohort-related context (population, ancestry, country terms) or hard negatives:&quot;)
+nrow(filtered_cohort_sentences_df)</code></pre>
+</div>
+</div>
+</div>
+<div id="prepare-data-in-doccano-json-format" class="section level2">
+<h2>Prepare data in Doccano JSON format</h2>
+<pre class="r"><code>convert_to_doccano_json_sentence_level &lt;- function(cohort_sentences_df) {
+  doccano_list &lt;- vector(&quot;list&quot;, nrow(cohort_sentences_df))
+
+  for (i in seq_len(nrow(cohort_sentences_df))) {
+    current_sentence &lt;- cohort_sentences_df$sentence[i]
+    matched_cohort   &lt;- cohort_sentences_df$COHORT[i]
+    pubmed_id_val    &lt;- cohort_sentences_df$pubmed_id[i]
+    date_val         &lt;- cohort_sentences_df$date[i]
+    cohort_val       &lt;- cohort_sentences_df$cohort[i]
+    country_val      &lt;- cohort_sentences_df$country[i]
+
+    if (is.na(matched_cohort) || matched_cohort == &quot;&quot;) {
+      entities &lt;- list()
+    } else {
+      cohorts &lt;- if (grepl(&quot;\\|&quot;, matched_cohort)) {
+        unlist(strsplit(matched_cohort, split = &quot;\\|&quot;))
+      } else {
+        matched_cohort
+      }
+
+      matches &lt;- do.call(rbind, lapply(cohorts, function(c) {
+        stringr::str_locate_all(current_sentence,
+                                stringr::fixed(c, ignore_case = TRUE))[[1]]
+      }))
+
+      matches[, &quot;start&quot;] &lt;- matches[, &quot;start&quot;] - 1  # 0-based for Doccano
+
+      entities &lt;- lapply(seq_len(nrow(matches)), function(k) {
+        list(start_offset = matches[k, &quot;start&quot;],
+             end_offset   = matches[k, &quot;end&quot;],
+             label        = &quot;COHORT&quot;)
+      })
+    }
+
+    doccano_list[[i]] &lt;- list(
+      text                  = current_sentence,
+      pubmed_id             = pubmed_id_val,
+      date                  = date_val,
+      country               = country_val,
+      gwas_cat_cohort_label = cohort_val,
+      label                 = entities
+    )
+  }
+
+  # Convert label entries to [start, end, label] vector form
+  doccano_list &lt;- lapply(doccano_list, function(x) {
+    x$label &lt;- lapply(x$label, function(l) c(l$start_offset, l$end_offset, l$label))
+    x
+  })
+
+  doccano_list
+}
+
+# old version
+# convert_to_doccano_json_sentence_level &lt;- function(cohort_sentences_df) {
+#   
+#   # set up json list
+#   doccano_list &lt;- list()
+#   example_id &lt;- 1
+# 
+#   for(current_sentence in cohort_sentences_df$sentence) {
+# 
+#       # Filter cohort sentences that match this sentence (safe matching)
+#       df &lt;- cohort_sentences_df |&gt;
+#              dplyr::filter(sentence == current_sentence) 
+#       
+#       for (i in seq_len(nrow(df))) {
+#         
+#         matched_cohort &lt;- df$COHORT[i]
+#         pubmed_id_val  &lt;- df$pubmed_id[i]
+#         date_val       &lt;- df$date[i]
+#         cohort_val     &lt;- df$cohort[i]
+#         country_val    &lt;- df$country[i]
+#       
+#         if(matched_cohort == &quot;&quot;){
+#         
+#           doccano_list[[example_id]] &lt;- list(
+#             text = current_sentence,
+#             pubmed_id = pubmed_id_val,
+#             date = date_val,
+#             country = country_val,
+#             gwas_cat_cohort_label = cohort_val,
+#             label = list()
+#           )
+#         
+#         } else {
+#         
+#           # Find the location of all matches of the cohort name in the sentence
+#           if(grepl(&quot;\\|&quot;, matched_cohort)) {
+#              
+#              # If multiple cohort names, separate
+#              matched_cohort &lt;- unlist(strsplit(matched_cohort, split = &quot;\\|&quot;))
+#           
+#              match_locations &lt;- list()
+#           
+#              for(current_matched_cohort in matched_cohort){
+#             
+#                  matches &lt;- str_locate_all(current_sentence,
+#                                            fixed(current_matched_cohort, 
+#                                                  ignore_case = TRUE)
+#                                            )[[1]]
+#             
+#                  match_locations &lt;- append(match_locations, list(matches))
+#              }
+#           
+#              # Combine all match locations into a single matrix
+#              matches &lt;- do.call(rbind, match_locations)
+#           
+#           } else {
+#           
+#              matches &lt;- str_locate_all(current_sentence,
+#                                        fixed(matched_cohort, 
+#                                              ignore_case = TRUE)
+#                                        )[[1]]
+#           }
+#           
+#           # Convert matches to 0-based indexing (for doccano)
+#           matches[, &quot;start&quot;] &lt;- matches[, &quot;start&quot;] - 1  
+#           
+#           # Turn match locations into entity list
+#           entities &lt;- list()
+#           
+#           for(k in seq_len(nrow(matches))) {
+#             entities &lt;- append(entities, list(list(
+#               start_offset = matches[k, &quot;start&quot;],
+#               end_offset = matches[k, &quot;end&quot;],
+#               label = &quot;COHORT&quot;
+#             )))
+#           }
+#           
+#           # Create Doccano JSON entry
+#           doccano_list[[example_id]] &lt;- list(
+#             text = current_sentence,
+#             pubmed_id = pubmed_id_val,
+#             date = date_val,
+#             country = country_val,
+#             gwas_cat_cohort_label = cohort_val,
+#             label = entities
+#           )
+#         }
+#       }
+# 
+#       example_id &lt;- example_id + 1
+#   }
+#   
+#   # Convert named list label format to vector format [start, end, label]
+#   doccano_list &lt;- lapply(doccano_list, function(x) {
+#     x$label &lt;- lapply(x$label, function(l) {
+#       c(l$start_offset, l$end_offset, l$label)
+#     })
+#     x
+#   })
+# 
+#   return(doccano_list)
+# }</code></pre>
+<div id="function-to-do-this-preparation" class="section level3">
+<h3>Function to do this preparation</h3>
+<pre class="r"><code>{
+# file path for intermediate json file output
+json_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.json&quot;)
+
+# file path for final jsonl file output
+jsonl_file = here::here(&quot;output/doccano/abstracts_with_cohort_info.jsonl&quot;)
+
+# Join metadata onto sentences before passing to function
+meta_data_df &lt;- data.frame(
+  pubmed_id = as.character(pmids)
+)
+
+filtered_cohort_sentences_df &lt;- left_join(
+  filtered_cohort_sentences_df,
+  meta_data_df,
+  by = &quot;pubmed_id&quot;
+)
+
+# Create JSON as a list
+json_list &lt;- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_cohort_sentences_df
+)
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+
+json_data &lt;- fromJSON(json_file,
+                      simplifyVector = FALSE)
+
+# Open connection to JSONL file
+con &lt;- file(jsonl_file, &quot;w&quot;)
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+  
+# Close connection
+close(con)
+
+cat(&quot;JSONL saved to:&quot;, jsonl_file, &quot;\n&quot;)
+}
+
+
+# training dataset saving 
+{
+# file path for intermediate json file output
+json_file = here::here(&quot;output/doccano/training_abstracts_with_cohort_info.json&quot;)
+
+# file path for final jsonl file output
+jsonl_file = here::here(&quot;output/doccano/training_abstracts_with_cohort_info.jsonl&quot;)
+
+
+filtered_training_cohort_sentences_df &lt;-
+  filtered_cohort_sentences_df |&gt;
+  filter(pubmed_id %in% training_sample)
+
+json_list &lt;- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_training_cohort_sentences_df
+)
+
+json_data &lt;- fromJSON(json_file,
+                      simplifyVector = FALSE)
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+# Open connection to JSONL file
+con &lt;- file(jsonl_file, &quot;w&quot;)
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+
+# Close connection
+close(con)
+
+cat(&quot;JSONL saved to:&quot;, jsonl_file, &quot;\n&quot;)
+}</code></pre>
+</div>
+</div>
+</div>
+<div id="get-cohort-revelevant-methods-section-sentence-extraction"
+class="section level1">
+<h1>Get cohort-revelevant methods section sentence extraction</h1>
+<div id="load-relevant-methods-text" class="section level2">
+<h2>Load relevant methods text</h2>
+<pre class="r"><code>methods_sections &lt;- list.files(here::here(&quot;output/methods_sentences/&quot;), 
+                             pattern = &quot;*.json&quot;, 
+                             full.names = TRUE
+                             )
+
+methods_sections &lt;- methods_sections[!c(methods_sections %in% 
+                                          grep(&quot;failed_files|no_methods&quot;, 
+                                                methods_sections, 
+                                                value = TRUE)
+                                      )
+                                     ]
+
+pmcids_with_methods &lt;- methods_sections |&gt;
+  gsub(pattern = &quot;.*/&quot;, replacement = &quot;&quot;) |&gt;
+  gsub(pattern = &quot;_methods_sentences\\.json$&quot;, 
+       replacement = &quot;&quot;) |&gt;
+  gsub(pattern = &quot;_methods_main_sentences\\.json$&quot;, 
+       replacement = &quot;&quot;) |&gt;
+  gsub(pattern = &quot;_bioc|_pdf_tei&quot;, replacement = &quot;&quot;) 
+
+converted_pmcids &lt;-  converted_ids |&gt;
+  filter(pmcids %in% pmcids_with_methods) |&gt;
+  pull(PMID)
+
+pubmeds_with_methods &lt;- c(converted_pmcids, 
+                          grep(&quot;PMC&quot;, 
+                               pmcids_with_methods, 
+                               value = TRUE, 
+                               invert = TRUE)
+                          )
+
+print(&quot;Number of papers with methods sections extracted out of sample&quot;)
+sum(pubmeds_with_methods %in% pmids) 
+
+100 * sum(pubmeds_with_methods %in% pmids) / length(pmids)
+
+# get corresponding files to pubmed ids 
+pubmeds_to_get &lt;- pubmeds_with_methods[pubmeds_with_methods %in% pmids]
+
+get_file_names_df &lt;- 
+   converted_ids |&gt;
+   filter(PMID %in% pubmeds_to_get) |&gt;
+   select(-DOI) |&gt;
+   rename(pmid = PMID,
+          pmcid = pmcids
+          ) |&gt;
+  rowwise() |&gt;
+  
+  # data.frame(pmid = pubmeds_to_get) |&gt;
+  #                    #rowwise() |&gt;
+  #                    mutate(pmcid = converted_ids |&gt; 
+  #                                    filter(PMID %in% pubmeds_to_get) |&gt; 
+  #                                       pull(pmcids)
+  #                               ) |&gt;
+  mutate(file_name = ifelse(!is.na(pmcid) | pmcid != &quot;&quot;,
+                            grep(methods_sections, 
+                                 pattern = pmcid, 
+                                 value = TRUE),
+                            grep(methods_sections,
+                                 pattern = pmid, 
+                                 value = TRUE)
+                            )
+  ) |&gt;
+  mutate(file_name = ifelse(is.na(file_name),
+                            grep(methods_sections,
+                                 pattern = pmid, 
+                                 value = TRUE),
+                            file_name
+                            )) |&gt;
+  filter(!is.na(file_name)) |&gt; 
+  ungroup()
+
+methods_texts &lt;- sapply(get_file_names_df$file_name,
+                    function(file) {
+                      
+                      json_data &lt;- fromJSON(file)
+                      
+                      text_lines &lt;- json_data[json_data != &quot;&quot;]
+
+                                          }
+                    )
+
+
+names(methods_texts) &lt;- get_file_names_df$pmid
+
+# order methods texts by pmids
+methods_texts &lt;- methods_texts[order(names(methods_texts))]</code></pre>
+<div id="remove-title-sentences" class="section level3">
+<h3>Remove title sentences</h3>
+<pre class="r"><code>title_sentences &lt;- purrr::map(methods_texts,
+                              get_title_sentences) |&gt;
+                   purrr::list_c() |&gt;
+                   sort() |&gt;
+                   unique()
+
+
+print(&quot;Number of title sentences extracted from methods sections:&quot;)
+length(title_sentences)
+           
+
+methods_texts &lt;-
+purrr::map(methods_texts,
+           get_non_title_sentences        
+                 )
+
+# what small sentences are left
+purrr::map(
+methods_texts,
+~.x[stringr::str_count(.x, &quot; &quot;) &lt; 5]
+) |&gt;
+  purrr::list_c()</code></pre>
+</div>
+<div id="manual-checks-of-methods-text-sentences"
+class="section level3">
+<h3>Manual checks of methods text sentences</h3>
+<pre class="r"><code># to do when more settled with methods text extraction, to check the quality of the sentences extracted from methods sections, and whether they are likely to be useful for cohort name extraction
+
+# Check 1. 
+# Do all sentences start:
+# with a capital,
+# Or a number 
+# Or a word that is lower case, and then upper case (e.g. eQTl)
+check_1_regex &lt;- &quot;^([A-Z]|[0-9]+|[a-z]+[A-Z])&quot;
+
+check_1 &lt;- purrr::keep(methods_texts,
+            ~any(!grepl(check_1_regex,
+                       .x)
+                 )
+                 ) 
+
+check_1 &lt;- purrr::imap(check_1, 
+           function(x, idx) {
+             
+             sentences_idx = grep(check_1_regex,
+                                  x,
+                                  invert = TRUE,
+                                  value = F
+                                  )
+             
+             just_broken_sentences_idx &lt;- sentences_idx
+             
+             sentences_idx &lt;- sort(unique(c(sentences_idx - 1,
+                               sentences_idx, 
+                               sentences_idx + 1)))
+             
+             sentences_idx &lt;- sentences_idx[sentences_idx &gt; 0 &amp; sentences_idx &lt;= length(x)]
+             
+             
+             # idx of nearby sentences
+             # sentences_idx &lt;- sort(unique(c(sentences_idx - 2,
+             #                                sentences_idx, 
+             #                                sentences_idx + 2))
+             #                       )
+             # 
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |&gt;
+               dplyr::mutate(broken_sentence = ifelse(sentence_id %in% just_broken_sentences_idx, TRUE, FALSE))
+             
+             return(df)
+           }
+           ) |&gt;
+  bind_rows()
+
+print(&quot;\n \n Check the starts of sentences seem reasonable&quot;)
+print(&quot;Number of papers with sentences that don&#39;t start with capital, number, or lower-upper case word:&quot;)
+check_1  |&gt; pull(pubmed_id) |&gt; unique() |&gt; length()
+
+print(&quot;Number of sentences that don&#39;t start with capital, number, or lower-upper case word:&quot;)
+check_1 |&gt; filter(broken_sentence) |&gt; nrow()
+
+# Check 2: 
+# Sentence ends with a full stop: 
+# &quot;\\.$&quot;
+check_2_regex &lt;- &quot;\\.$|\\?$&quot;
+
+check_2 &lt;- purrr::keep(methods_texts,
+            ~any(!grepl(check_2_regex,
+                       .x)
+                 )
+                 )
+
+check_2 &lt;- purrr::imap(check_2,
+           function(x, idx) {
+             
+             sentences_idx = grep(check_2_regex,
+                                  x,
+                                  invert = TRUE,
+                                  value = F
+                                  )
+             
+             just_broken_sentences_idx &lt;- sentences_idx
+             
+             sentences_idx &lt;- sort(unique(c(sentences_idx - 1,
+                               sentences_idx, 
+                               sentences_idx + 1)))
+             
+             sentences_idx &lt;- sentences_idx[sentences_idx &gt; 0 &amp; sentences_idx &lt;= length(x)]
+             
+             
+             # idx of nearby sentences
+             # sentences_idx &lt;- sort(unique(c(sentences_idx - 2,
+             #                                sentences_idx, 
+             #                                sentences_idx + 2))
+             #                       )
+             # 
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |&gt;
+               dplyr::mutate(broken_sentence = ifelse(sentence_id %in% just_broken_sentences_idx, TRUE, FALSE))
+             
+             return(df)
+           }
+           ) |&gt;
+  bind_rows()
+
+
+print(&quot;\n \n Check the ends of sentences seem reasonable&quot;)
+print(&quot;Number of papers with sentences that don&#39;t end with a full stop or question mark:&quot;)
+check_2  |&gt; pull(pubmed_id) |&gt; unique() |&gt; length()
+
+print(&quot;Number of sentences that don&#39;t end with a full stop or question mark:&quot;)
+check_2 |&gt; filter(broken_sentence) |&gt; nrow()
+
+# Check 3: 
+# Sentences don&#39;t have un-matched brackets
+# &quot;\\((?![^()]*\\))|(?&lt;!\\([^()]*\\))\\)&quot;
+has_unmatched_parens &lt;- function(x) {
+  open  &lt;- stringr::str_count(x, &quot;\\(&quot;)
+  close &lt;- stringr::str_count(x, &quot;\\)&quot;)
+  open != close
+}
+
+check_3 &lt;- purrr::keep(methods_texts, 
+                       ~ any(has_unmatched_parens(.x)))
+
+check_3 &lt;- purrr::imap(check_3,
+           function(x, idx) {
+             
+             sentences_idx = which(sapply(x, has_unmatched_parens))
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |&gt;
+               dplyr::mutate(broken_sentence = TRUE) |&gt;
+               tibble::remove_rownames()
+             
+             return(df)
+           }
+           ) |&gt;
+  bind_rows()
+
+print(&quot;\n \n Check that brackets seem reasonable&quot;)
+print(&quot;Number of papers with sentences that have un-matched brackets:&quot;)
+check_3  |&gt; pull(pubmed_id) |&gt; unique() |&gt; length()
+
+print(&quot;Number of sentences that have un-matched brackets:&quot;)
+check_3 |&gt; filter(broken_sentence) |&gt; nrow()
+
+# Check 4: 
+# Sentences don&#39;t have un-matched quotation marks
+# &quot;\&quot;([^\&quot;]*\&quot;[^\&quot;]*)*\&quot;&quot;
+check_4_regex &lt;- &quot;\&quot;([^\&quot;]*\&quot;[^\&quot;]*)*\&quot;&quot;
+
+check_4 &lt;- purrr::keep(methods_texts,
+            ~any(grepl(check_4_regex,
+                       .x)
+                 )
+                 )
+
+check_4 &lt;- purrr::imap(check_4,
+           function(x, idx) {
+             
+             sentences_idx = grep(check_4_regex,
+                                  x,
+                                  value = F
+                                  )
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |&gt;
+               dplyr::mutate(broken_sentence = TRUE)
+             
+             return(df)
+           }
+           ) |&gt;
+  bind_rows()
+
+
+print(&quot;\n \n Check that quotation marks seem reasonable&quot;)
+print(&quot;Number of papers with sentences that have un-matched quotation marks:&quot;)
+print(head(check_4))
+
+  
+# Check sentences that end with [a-z][0-9].
+check_5_regex &lt;- &quot;[a-z][0-9].$|[A-Z][0-9].$&quot;
+
+check_5 &lt;- purrr::keep(methods_texts,
+            ~any(grepl(check_5_regex,
+                       .x)
+                 )
+                 )
+
+
+check_5 &lt;- purrr::imap(check_5,
+           function(x, idx) {
+             
+             sentences_idx = grep(check_5_regex,
+                                  x,
+                                  value = F
+                                  )
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |&gt;
+               dplyr::mutate(broken_sentence = TRUE)
+             
+             return(df)
+           }
+           ) |&gt;
+  bind_rows()
+
+
+n_character_limit &lt;- 100
+
+check_5 &lt;- purrr::keep(methods_texts,
+            ~any((nchar(.x) &gt; n_character_limit) &amp; 
+                   length(grep(.x, pattern = &quot;.&quot;) &gt; 1)
+            )
+                 )
+
+check_5 &lt;- purrr::imap(check_5,
+           function(x, idx) {
+             
+             sentences_idx = which(nchar(x) &gt; n_character_limit)
+             
+             sentences = x[sentences_idx]
+             
+             df = data.frame(sentence = sentences,
+                        pubmed_id = idx,
+                        sentence_id = sentences_idx
+                        ) |&gt;
+               dplyr::mutate(broken_sentence = TRUE)
+             
+             return(df)
+           }
+           ) |&gt;
+  bind_rows()
+
+split_regex &lt;- &quot;(?&lt;!St\\.)(?&lt;!Fig\\.)(?&lt;!no\\.)(?&lt;!vs\\.)(?&lt;!i\\.e\\.)(?&lt;!e\\.g\\.)(?&lt;!Inc\\.)(?&lt;!Co\\.)(?&lt;=[a-z]\\.)\\s+(?=[A-Z])&quot;
+
+
+check_5 |&gt;
+  mutate(match_split = str_detect(sentence, 
+                                  pattern = split_regex
+                                  )
+  ) |&gt;
+  filter(match_split) |&gt;
+  pull(sentence) |&gt;
+  stringr::str_split(pattern = split_regex)  </code></pre>
+</div>
+</div>
+<div id="get-cohort-relevant-sentences-1" class="section level2">
+<h2>Get cohort relevant sentences</h2>
+<div id="get-cohort-names-sentences" class="section level3">
+<h3>Get cohort names sentences</h3>
+<pre class="r"><code># extract sentences with cohort full names (case-insensitive matching, as full names are less likely to be ambiguous)
+cohort_sentences_df_p1 &lt;- extract_cohort_sentences(methods_texts,
+                                                cohort_full_names,
+                                                ignore_case = TRUE
+                                                )
+
+# extract sentences with cohort abbreviation names (case-sensitive matching, as abbreviations are more likely to be ambiguous)
+cohort_sentences_df_p2 = extract_cohort_sentences(methods_texts,
+                                                  cohort_abbr_names,
+                                                  ignore_case = FALSE
+                                                  )
+
+methods_cohort_sentences_df = 
+  bind_rows(cohort_sentences_df_p1,
+            cohort_sentences_df_p2
+            ) |&gt;
+  distinct()
+
+
+methods_cohort_sentences_df =
+  methods_cohort_sentences_df |&gt;
+  group_by(pubmed_id, 
+           article_id, 
+           sentence_id, 
+           sentence) |&gt;
+  summarise(
+    COHORT = str_flatten(unique(separate_cohorts(COHORT)), 
+                         collapse = &quot;|&quot;, 
+                         na.rm = T),
+    has_cohort = ifelse(any(COHORT != &quot;&quot;), TRUE, FALSE)
+  ) |&gt;
+  ungroup() 
+
+methods_cohort_sentences_df =
+  methods_cohort_sentences_df |&gt;
+  mutate(COHORT = str_remove_all(COHORT, 
+                               pattern = &quot;\\|$|^\\|&quot;
+                               )
+         ) 
+
+print(&quot;Number of methods sections containing probable cohort reference:&quot;)
+methods_cohorts &lt;- methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  pull(article_id) |&gt;
+  unique()
+
+methods_cohorts  |&gt; length()
+
+print(&quot;Percentage of methods sections containing probable cohort reference:&quot;)
+100 * length(methods_cohorts) / length(methods_texts)
+
+
+print(&quot;Number of sentences containing probable cohort reference in methods sections&quot;)
+  methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  select(article_id, sentence_id) |&gt;
+  distinct() |&gt;
+  nrow()
+
+print(&quot;Number of entities in methods sections&quot;)
+methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  pull(COHORT) |&gt;
+  str_split(&quot;\\|&quot;) |&gt;
+  unlist() |&gt;
+  length()
+
+print(&quot;Most common cohort names detected in methods sections:&quot;)
+methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  select(COHORT, article_id) |&gt;
+  tidyr::separate_rows(COHORT, sep = &quot;\\|&quot;) |&gt;
+  distinct() |&gt;
+  group_by(COHORT) |&gt;
+  summarise(n_abstracts = n()) |&gt;
+  arrange(desc(n_abstracts)) |&gt;
+  head(5)
+
+print(&quot;Number of cohort names only mentioned in one paper&quot;)
+methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  select(COHORT, article_id) |&gt;
+  tidyr::separate_rows(COHORT, sep = &quot;\\|&quot;) |&gt;
+  distinct() |&gt;
+  group_by(COHORT) |&gt;
+  summarise(n_abstracts = n()) |&gt;
+  filter(n_abstracts == 1) |&gt;
+  nrow()
+
+print(&quot;Number of unique cohorts referenced in methods sections (not unique cohort names, but unique strings in the COHORT column):&quot;)
+detected_cohorts_methods &lt;- methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot;) |&gt;
+  pull(COHORT) |&gt;
+  str_split(&quot;\\|&quot;) |&gt;
+  unlist()
+
+n_cohorts_methods &lt;- detected_cohorts_methods |&gt;
+  unique()  |&gt;
+  length()
+
+print(n_cohorts_methods)
+
+print(&quot;Most common cohort names detected in methods sections by number of sentences they are mentioned in:&quot;)
+data.frame(cohort = detected_cohorts_methods) |&gt;
+  group_by(cohort) |&gt;
+  summarise(n = n()) |&gt;
+  arrange(desc(n)) |&gt;
+  head(10)</code></pre>
+</div>
+<div id="get-cohort-related-context-sentences-1" class="section level3">
+<h3>Get cohort-related context sentences</h3>
+<pre class="r"><code>masked_methods_text &lt;- purrr::map(methods_texts,
+           function(x) {
+             stringr::str_replace_all(x, 
+                                      stringr::regex(mask_re, ignore_case = TRUE), 
+                                      &quot;\u241F&quot;
+                                      )
+           }
+           )
+
+# extract sentences with cohort context terms (case-sensitive matching, as some context terms are common words that could be ambiguous)
+methods_cohort_context_df = extract_cohort_sentences(
+                                            masked_methods_text,
+                                            cohort_context_terms,
+                                            column_name = &quot;CONTEXT&quot;,
+                                            ignore_case = FALSE
+                                            )
+
+methods_cohort_sentences_df &lt;-
+left_join(methods_cohort_sentences_df,
+          methods_cohort_context_df |&gt; select(pubmed_id, 
+                                      article_id,
+                                      sentence_id,
+                                      CONTEXT,
+                                      has_context), 
+          by = c(&quot;pubmed_id&quot;,
+                 &quot;article_id&quot;, 
+                 &quot;sentence_id&quot;)
+          ) 
+
+print(&quot;Number of sentences with cohort names and/or cohort-related context:&quot;)
+methods_cohort_sentences_df |&gt; 
+  mutate(has_context = ifelse(CONTEXT == &quot;&quot;, F, T)) |&gt;
+  group_by(has_cohort, has_context) |&gt; 
+  summarise(n = n())
+
+print(&quot;Most common cohort-related context terms detected in methods sections:&quot;)
+methods_cohort_sentences_df |&gt;
+  filter(CONTEXT != &quot;&quot;) |&gt;
+  select(CONTEXT, article_id) |&gt;
+  tidyr::separate_rows(CONTEXT, sep = &quot;\\|&quot;) |&gt;
+  distinct() |&gt;
+  group_by(CONTEXT) |&gt;
+  summarise(n_abstracts = n()) |&gt;
+  arrange(desc(n_abstracts)) |&gt;
+  head(10)
+
+print(&quot;Most common cohort-related context terms detected in methods sections by number of sentences they are mentioned in:&quot;)
+methods_cohort_sentences_df |&gt;
+  filter(CONTEXT != &quot;&quot;) |&gt;
+  select(CONTEXT, article_id) |&gt;
+  tidyr::separate_rows(CONTEXT, sep = &quot;\\|&quot;) |&gt;
+  distinct() |&gt;
+  group_by(CONTEXT) |&gt;
+  summarise(n = n()) |&gt;
+  arrange(desc(n)) |&gt;
+  head(10)</code></pre>
+</div>
+<div id="get-hard-negatives-1" class="section level3">
+<h3>Get hard negatives</h3>
+<pre class="r"><code>json_list &lt;- 
+methods_cohort_sentences_df  |&gt;
+  filter(has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/methods_cohort_sentences.json&quot;))
+
+
+json_list &lt;- 
+methods_cohort_sentences_df  |&gt;
+  filter(!has_cohort) |&gt;
+  pull(sentence) |&gt;
+  as.list()
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           here::here(&quot;output/doccano/methods_non_cohort_sentences.json&quot;))</code></pre>
+<pre class="bash"><code>
+source  spacyr_venv/bin/activate
+
+python3 code/extract_text/sentence_embeddings.py \
+        --label &quot;methods&quot; \
+        --cohort_path &quot;output/doccano/methods_cohort_sentences.json&quot; \
+        --non_cohort_path &quot;output/doccano/methods_non_cohort_sentences.json&quot; \
+        --figure_save_path &quot;output/doccano/methods_sentence_similarity.png&quot;
+        </code></pre>
+</div>
+<div id="make-final-traing-set" class="section level3">
+<h3>Make final traing set</h3>
+<p>sentences with words that indicate sample or cohort is being
+discussed</p>
+<pre class="r"><code>methods_hard_negatives &lt;- jsonlite::read_json(here::here(&quot;output/doccano/hard_negatives_methods.json&quot;),
+                                               simplifyVector = TRUE)
+
+methods_cohort_sentences_df   &lt;- 
+methods_cohort_sentences_df  |&gt;
+  dplyr::mutate(hard_negative = ifelse(sentence %in% methods_hard_negatives,
+                                TRUE,
+                                FALSE)
+  )
+
+print(&quot;Overlap between hard negatives and sentences with cohort names or cohort-related context in methods sections:&quot;)
+methods_cohort_sentences_df |&gt;
+  filter(hard_negative == TRUE) |&gt;
+  group_by(has_cohort, has_context) |&gt;
+  summarise(n = n())
+
+
+filtered_methods_cohort_sentences_df =
+  methods_cohort_sentences_df |&gt;
+  filter(COHORT != &quot;&quot; | CONTEXT != &quot;&quot; | hard_negative == TRUE)
+
+print(&quot;Number of sentences with cohort names or cohort-related context (population, ancestry, country terms):&quot;)
+nrow(filtered_methods_cohort_sentences_df)</code></pre>
+</div>
+</div>
+<div id="prepare-data-in-doccano-json-format-1" class="section level2">
+<h2>Prepare data in Doccano JSON format</h2>
+<pre class="r"><code># file path for intermediate json file output
+{
+json_file = here::here(&quot;output/doccano/methods_with_cohort_info.json&quot;)
+
+# file path for final jsonl file output
+jsonl_file = here::here(&quot;output/doccano/methods_with_cohort_info.jsonl&quot;)
+
+filtered_methods_cohort_sentences_df  &lt;- left_join(
+  filtered_methods_cohort_sentences_df,
+  meta_data_df,
+  by = &quot;pubmed_id&quot;
+)
+
+# Create JSON as a list
+json_list &lt;- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_methods_cohort_sentences_df 
+)
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+
+json_data &lt;- fromJSON(json_file,
+                      simplifyVector = FALSE)
+
+# Open connection to JSONL file
+con &lt;- file(jsonl_file, &quot;w&quot;)
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+
+# Close connection
+close(con)
+
+cat(&quot;JSONL saved to:&quot;, jsonl_file, &quot;\n&quot;)
+}
+
+{
+# file path for intermediate json file output
+json_file = here::here(&quot;output/doccano/training_methods_with_cohort_info.json&quot;)
+
+# file path for final jsonl file output
+jsonl_file = here::here(&quot;output/doccano/training_methods_with_cohort_info.jsonl&quot;)
+
+filtered_training_methods_cohort_sentences_df &lt;-
+  filtered_methods_cohort_sentences_df |&gt;
+  filter(pubmed_id %in% training_sample)
+
+json_list &lt;- convert_to_doccano_json_sentence_level(
+  cohort_sentences_df = filtered_training_methods_cohort_sentences_df
+)
+
+# Write to JSON file
+writeLines(toJSON(json_list,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+
+json_data &lt;- fromJSON(json_file,
+                      simplifyVector = FALSE)
+
+# Open connection to JSONL file
+con &lt;- file(jsonl_file, &quot;w&quot;)
+
+# Loop over each element (object) and write as one line
+for (i in seq_along(json_data)) {
+  writeLines(toJSON(json_data[[i]], auto_unbox = TRUE), con)
+}
+
+# Close connection
+close(con)
+
+cat(&quot;JSONL saved to:&quot;, jsonl_file, &quot;\n&quot;)
+}</code></pre>
+</div>
+</div>
+<div id="next-steps-to-update" class="section level1">
+<h1>Next steps to update:</h1>
+<div id="population-descriptors-extract-label" class="section level2">
+<h2>Population descriptors extract / label</h2>
+</div>
+<div id="sample-sizes-extract-label" class="section level2">
+<h2>Sample sizes extract / label</h2>
+<pre class="r"><code>participant_words &lt;- c(&quot;adults&quot;, &quot;adolescents&quot;, &quot;children&quot;, &quot;infants&quot;, 
+                       &quot;neonates&quot;,
+                       &quot;women&quot;, &quot;men&quot;, &quot;female&quot;, &quot;male&quot;,&quot;trios&quot;, &quot;families&quot;, &quot;twins&quot;, &quot;siblings&quot;, 
+                        &quot;cases&quot;, &quot;probands&quot;, #&quot;case subjects&quot;, #&quot;([A-Za-z-]+)\\scases&quot;, ,
+                        &quot;controls&quot;, #&quot;control subjects&quot;,   #&quot;([A-Za-z-]+)\\scontrols&quot;                            
+                        &quot;individuals&quot;, &quot;patients&quot;,  &quot;participants&quot;, 
+                       &quot;subjects&quot;, &quot;samples&quot;, &quot;donors&quot;)
+                        #“([A-Za-z-]+)\\sparticipants”
+                        #&quot;\\b[0-9,]+\\s+([A-Za-z-]+)\\scases&quot;
+
+                        # “population controls”,
+                        # &quot;affected individuals&quot;
+                       # &quot;study participants&quot;
+participant_phrases_regex &lt;- paste0(&quot;\\b[0-9,]+\\s+([A-Za-z-]+)\\s&quot;, &quot;(&quot;,
+                              paste0(participant_words, collapse = &quot;|&quot;), 
+                              &quot;)&quot;)
+
+participant_phrases_regex_v2 &lt;- paste0(&quot;\\b[0-9,]+\\s+([A-Za-z-]+)\\s+([A-Za-z-]+)\\s&quot;, &quot;(&quot;,
+                                    paste0(participant_words, collapse = &quot;|&quot;), 
+                                    &quot;)&quot;)
+
+participant_phrases_regex_v3 &lt;- paste0(&quot;\\b[0-9,]+\\s+([A-Za-z-]+)\\s+([A-Za-z-]+)\\s([A-Za-z-]+)\\s&quot;, &quot;(&quot;,
+                                       paste0(participant_words, collapse = &quot;|&quot;), 
+                                       &quot;)&quot;)
+
+participant_regex &lt;- paste0(&quot;\\b[0-9,]+\\s+&quot;, &quot;(&quot;,
+                        paste0(participant_words, collapse = &quot;|&quot;), 
+                        &quot;)&quot;)
+
+
+n_participants_regex &lt;- &quot;(n|N|Neffective|Neff|Ncontrol|Ncase|ncase|ncontrol|ntotal)\\s*=\\s*[0-9,]&quot;
+
+filtered_cohort_sentences_df |&gt;
+  filter(str_detect(sentence, participant_phrases_regex) | 
+           str_detect(sentence, participant_regex) |
+           str_detect(sentence, participant_phrases_regex_v2) |
+           str_detect(sentence, participant_phrases_regex_v3) |
+           str_detect(sentence, n_participants_regex)) |&gt; 
+  select(sentence) |&gt; 
+  distinct() |&gt; 
+  pull()
+
+filtered_cohort_sentences_df |&gt;
+  mutate(
+    participant_phrase = str_extract(sentence, participant_phrases_regex),
+    participant_phrase_v2 = str_extract(sentence, participant_phrases_regex_v2),
+    participant_phrase_v3 = str_extract(sentence, participant_regex),
+    n_participants_phrase = str_extract(sentence, n_participants_regex)
+  ) |&gt;
+  mutate(any_participant_phrase = if_else(!is.na(participant_phrase) | 
+                                   !is.na(participant_phrase_v2) | 
+                                   !is.na(participant_phrase_v3) | !is.na(n_participants_phrase), 
+                                 TRUE, FALSE)) |&gt;
+  filter(grepl(pattern = &quot;\\b[0-9]+&quot;, sentence)) |&gt;
+  filter(any_participant_phrase == FALSE) |&gt;
+  pull(sentence) 
+
+filtered_methods_cohort_sentences_df |&gt;
+mutate(
+  participant_phrase = str_extract(sentence, participant_phrases_regex),
+  participant_phrase_v2 = str_extract(sentence, participant_phrases_regex_v2),
+  participant_phrase_v3 = str_extract(sentence, participant_regex),
+  n_participants_phrase = str_extract(sentence, n_participants_regex)
+) |&gt;
+  mutate(any_participant_phrase = if_else(!is.na(participant_phrase) | 
+                                            !is.na(participant_phrase_v2) | 
+                                            !is.na(participant_phrase_v3) | !is.na(n_participants_phrase), 
+                                          TRUE, FALSE)) |&gt;
+  filter(grepl(pattern = &quot;\\b[0-9]+&quot;, sentence)) |&gt;
+  filter(any_participant_phrase == FALSE) |&gt;
+  pull(sentence) </code></pre>
+</div>
+<div id="identify-meta-analysis-studies" class="section level2">
+<h2>Identify meta-analysis studies</h2>
+<pre class="r"><code>pattern &lt;- paste(
+  &quot;meta-analy[sz]is&quot;,           # meta-analysis / meta-analyses / meta-analyze
+  &quot;meta-analy[sz]ed&quot;,
+  &quot;meta-analy[sz]ing&quot;,
+  &quot;metaanaly[sz]is&quot;,            # no hyphen
+  &quot;meta analy[sz]is&quot;,           # space
+  # &quot;pooled analysis&quot;,
+  # &quot;pooled analyses&quot;,
+  # &quot;combined analysis&quot;,
+  # &quot;combined analyses&quot;,
+  # &quot;joint analysis&quot;,
+  # &quot;mega-analysis&quot;,              # individual-participant variant
+  &quot;METAL&quot;,
+  sep = &quot;|&quot;
+)
+
+
+possible_meta_abstracts &lt;-
+  purrr::keep(abstracts,
+              ~ any(grepl(pattern, .x, ignore.case = TRUE))) |&gt;
+  names()
+
+# purrr::map(abstracts,
+#             ~grep(pattern, .x, ignore.case = TRUE, value = TRUE)) |&gt;
+#   purrr::list_c()
+
+possible_meta_methods &lt;-
+  purrr::keep(methods_texts,
+              ~ any(grepl(pattern, .x, ignore.case = TRUE))) |&gt;
+  names()
+
+possible_meta &lt;- union(possible_meta_abstracts, possible_meta_methods)
+
+writeLines(possible_meta, here::here(&quot;output/meta_analysis_studies.txt&quot;))</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
