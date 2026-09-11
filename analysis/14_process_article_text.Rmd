@@ -1,0 +1,228 @@
+---
+title: "Process text & xml files"
+author: "Isobel Beasley"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE}
+
+# for evaluating bash chunks
+knitr::opts_chunk$set(engine.opts = list(bash = "-l"))
+Sys.setenv(PATH = paste(Sys.getenv("PATH"),
+                        dirname(Sys.getenv("PLINK")),
+                        dirname(Sys.getenv("PLINK2")),
+                        sep = ":"))
+
+```
+
+# Processing full-text .xml in to section .txt files
+
+```{r}
+
+
+```
+
+## Extracting methods sections
+
+```{bash extract_methods_sections, eval = F}
+
+mdkir -p output/methods
+source spacyr_venv/bin/activate
+
+# use bash script to extract methods sections from all full text xmls, and save to output/fulltexts/methods
+for dir in output/fulltexts/*/; do
+  echo "Processing directory: $dir"
+  code/extract_text/batch_process_methods.sh \
+    "$dir" \
+    output/methods
+done
+
+```
+
+```{bash rename_methods_files}
+
+europe_pmc_conv=output/fulltexts/pmid_to_pmcid_mapping.csv
+
+awk -F',' 'NR > 1 && $2 ~ /^PMC/ {
+    gsub(/"/, "", $1)
+    gsub(/"/, "", $2)
+    if ($1 != "") print $2, $1
+}' "$europe_pmc_conv" > /tmp/pmc_to_pmid.txt
+
+head /tmp/pmc_to_pmid.txt
+
+for f in output/methods/PMC*_methods*.txt; do
+    filename=$(basename "$f")
+
+    pmcid="${filename%_methods.txt}"
+    pmcid="${pmcid%_methods_main.txt}"
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2}' /tmp/pmc_to_pmid.txt)
+
+    if [[ -n "$pmid" ]]; then
+        # Preserve which suffix the original file had
+        if [[ "$filename" == *_methods_main.txt ]]; then
+            new_file="output/methods/${pmid}_methods_main.txt"
+        else
+            new_file="output/methods/${pmid}_methods.txt"
+        fi
+
+        mv "$f" "$new_file"
+    else
+        echo "No PMID mapping: $f"
+    fi
+done
+
+```
+
+## Extracting results sections
+
+```{bash extract_results_sections, eval = F}
+
+mdkir -p output/results
+source spacyr_venv/bin/activate
+
+# use bash script to extract results sections from all full text xmls, and save to output/fulltexts/results
+for dir in output/fulltexts/*/; do
+  echo "Processing directory: $dir"
+  code/extract_text/batch_process_results.sh \
+    "$dir" \
+    output/results
+done
+
+```
+
+```{bash rename_results_files, eval = F}
+
+for f in output/results/PMC*_results*.txt; do
+    filename=$(basename "$f")
+
+    pmcid="${filename%_results.txt}"
+    pmcid="${pmcid%_results_main.txt}"
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2}' /tmp/pmc_to_pmid.txt)
+
+    if [[ -n "$pmid" ]]; then
+        # Preserve which suffix the original file had
+        if [[ "$filename" == *_results_main.txt ]]; then
+            new_file="output/results/${pmid}_results_main.txt"
+        else
+            new_file="output/results/${pmid}_results.txt"
+        fi
+
+        mv "$f" "$new_file"
+    else
+        echo "No PMID mapping: $f"
+    fi
+done
+
+```
+
+### Total number of extracted methods sections 
+
+```{r, eval = F}
+
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::filter(cause != "") |>
+  dplyr::filter(include == T)
+
+all_pmids = gwas_study_info |> 
+        pull(PUBMED_ID) |>
+        unique()
+
+methods_files <-
+  list.files(here::here("output/methods/"),
+             pattern = "\\.txt$")
+
+methods_files <- basename(methods_files) |> 
+  stringr::str_remove_all("_methods.txt|_methods_main.txt") |>
+  stringr::str_remove_all("_bioc|_pdf_tei") |> 
+  unique()
+
+methods_files <- methods_files[!methods_files %in% c("failed_files.txt",
+                                                     "no_methods_files.txt",
+                                                     "main_fallback_files.txt")]
+
+methods_pmids <- unique(methods_pmids)
+methods_pmids <- methods_pmids[methods_pmids %in% all_pmids]
+
+print("Number of PMIDs with methods sections extracted:")
+sum(all_pmids %in% methods_pmids)
+
+print("% of total PMIDs with full texts downloaded:")
+100 * sum(all_pmids %in% methods_pmids) / length(all_pmids)
+
+
+failed_files <- readLines(here::here("output/methods/failed_files.txt")) |>
+  basename() |>
+  stringr::str_remove_all(".pdf.tei.xml|_bioc.xml|.xml") 
+
+print("Number of files that failed to extract methods sections from")
+length(failed_files)
+
+failed_converted_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% failed_files) |>
+  pull(PMID)
+
+
+failed_files <- c(failed_files,
+                  failed_converted_pmcids
+                  )
+
+
+full_text_pmids[!c(full_text_pmids %in% c(methods_pmids, failed_files))]
+
+```
+
+
+# Convert convert article sections to sentences
+
+## Abstracts
+
+```{bash, eval = F}
+
+mkdir -p output/abstracts/abstracts_sentences
+source spacyr_venv/bin/activate
+
+python3 code/extract_text/spacy_obtain_sentences.py \
+--input_dir output/abstracts \
+--output_dir output/abstracts/abstracts_sentences \
+--hf_model pritamdeka/S-PubMedBert-MS-MARCO
+
+```
+
+## Methods
+
+```{bash, eval = F}
+
+mkdir -p output/methods/methods_sentences
+source spacyr_venv/bin/activate
+
+python3 code/extract_text/spacy_obtain_sentences.py \
+--input_dir output/methods \
+--output_dir  output/methods/methods_sentences \
+--hf_model pritamdeka/S-PubMedBert-MS-MARCO
+
+```
+
+## Results
+
+```{bash, eval = F}
+
+mkdir -p output/results\results_sentence
+source spacyr_venv/bin/activate
+
+python3 code/extract_text/spacy_obtain_sentences.py \
+--input_dir output/results \
+--output_dir  output/results\results_sentences \
+--hf_model pritamdeka/S-PubMedBert-MS-MARCO
+
+```
