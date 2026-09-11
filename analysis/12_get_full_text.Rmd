@@ -1,0 +1,1736 @@
+---
+title: "Get full article text for GWAS Catalog studies"
+author: "Isobel Beasley"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = F)
+knitr::opts_chunk$set(engine.opts = list(bash = "-l"))
+```
+
+## Required packages 
+
+```{r, message=FALSE}
+
+library(httr)
+library(xml2)
+library(stringr)
+library(here)
+library(dplyr)
+library(data.table)
+
+```
+
+# Get PMCIDs 
+
+## Get Pubmed ids from GWAS catalog
+
+```{r get_pmids}
+
+# gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_group_l2.csv"))
+
+## Step 1: 
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+# filter out infectious diseases
+gwas_study_info <- gwas_study_info |>
+  dplyr::filter(include == T) |> 
+  dplyr::filter(cause != "")
+
+# gwas_study_info <- gwas_study_info |>
+#   dplyr::filter(DISEASE_STUDY == TRUE)
+
+print("Number of disease studies to get full texts for:")
+all_pmids <- unique(gwas_study_info$PUBMED_ID)
+length(all_pmids)
+
+```
+
+## Convert Pubmed IDs to PMCIDs
+
+conversion file from: https://europepmc.org/downloads
+
+```{r pmid_to_pmcid, warning=FALSE, eval=F}
+# get PMID to PMCID mapping using Europe PMC file:
+convert_pmid_df <- fread(here::here("data/europe_pmc/PMID_PMCID_DOI.csv"))
+
+convert_pmid_df <- convert_pmid_df |>
+  dplyr::mutate(PMCID= ifelse(is.na(PMCID),
+                                "",
+                                PMCID
+                                )
+                )
+
+convert_pmid_df <-
+  convert_pmid_df |>
+  dplyr::filter(!is.na(PMID) & PMID != "")
+
+converted_ids = 
+  convert_pmid_df |>
+  filter(PMID %in% all_pmids) 
+
+data.table::fwrite(converted_ids,
+                   here::here("output/fulltexts/pmid_to_pmcid_mapping.csv")
+                   )
+
+rm(convert_pmid_df)
+gc()
+
+```
+
+
+```{r pmids_to_pmcids_stats, warning=FALSE}
+
+converted_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv"))
+
+print("Head of pmid to pmcid mapping data.frame:")
+head(converted_ids)
+
+print("Dimensions of pmid to pmcid mapping data.frame:")
+dim(converted_ids)
+length(all_pmids)
+
+print("All pmids are in this data.frame, but some don't have pmcid mapping")
+not_converted_pmids <-
+converted_ids |>
+  filter(PMCID == "")  |>
+  pull(PMID)
+
+print("Number of pmids without pmcid mapping:")
+length(not_converted_pmids)
+
+pmcids <-
+converted_ids$PMCID |>
+  unique()
+
+pmcids <- pmcids[pmcids != ""]
+
+print("Number of pmids with pmcid mapping:")
+length(pmcids)
+
+print("Percentage of pmids with pmcid:")
+round(100 * length(pmcids) / length(all_pmids), digits = 2)
+
+```
+
+# Download full texts from European PMC
+
+Requires PMCIDS to download full text xmls from Europe PMC Restful API. Thus, can only be applied to papers with PMCIDs.
+
+```{r download_europe_xml, eval = F}
+
+# Function to download full text xml from Europe PMC Restful API
+download_pmc_text <- function(pmcid, 
+                              out_dir = here::here("output/fulltexts/europe_pmc/")
+                              ) {
+  
+  # check if file already exists
+  if(file.exists(paste0(out_dir, pmcid, ".xml"))){
+    return(TRUE)
+  }
+
+
+  url_xml <- paste0("https://www.ebi.ac.uk/",
+                    "europepmc/webservices/rest/",
+                    pmcid,
+                    "/fullTextXML"
+                    )
+  
+  resp <- GET(url_xml)
+  
+  # ---- Fallback URL ----
+  if(status_code(resp) != 200){
+    
+    url_xml <- paste0("https://europepmc.org/",
+                       "oai.cgi?verb=GetRecord",
+                       "&metadataPrefix=pmc",
+                       "&identifier=oai:europepmc.org:",
+                       pmcid)
+    
+    resp <- GET(url_xml)
+  
+  }
+  
+  # ---- Fail if still bad ----
+  if(status_code(resp) != 200){
+    
+  return(NULL)
+    
+  }
+  
+  # ---- Parse XML ----
+  xml_content <- read_xml(
+    content(resp, 
+            as = "text", 
+            encoding = "UTF-8")
+  )
+  
+  article_node = xml_find_first(xml_content, 
+                               "//*[local-name() = 'article']"
+                               )
+  
+   if (is.na(article_node)) {
+    message("No <article> node found for ", pmcid)
+     
+    return(NULL)
+   }
+  
+  # --- Save ---
+  write_xml(article_node, 
+            paste0(out_dir, pmcid, ".xml")
+            )
+  
+} 
+
+
+for(article in pmcids[pmcids != ""]){
+
+download_pmc_text(article)
+
+}
+
+```
+
+
+```{r downloaded_european_full_texts}
+
+euro_pmcids <-list.files(here::here("output/fulltexts/europe_pmc/"),
+                  pattern = "\\.xml$")
+
+euro_pmcids <- gsub("\\.xml$", 
+       "", 
+       euro_pmcids
+       )
+
+euro_pmcids <- pmcids[pmcids %in% euro_pmcids]
+
+n_euro_pmc <- length(euro_pmcids)
+
+print("Number of downloaded full text files from European PMC:")
+
+print(n_euro_pmc)
+
+print("Percentage of pmids with full text from European PMC:")
+round(100 * n_euro_pmc / length(all_pmids), digits = 2)
+
+```
+
+# Download full texts from NCBI Cloud Service
+
+For remaining PMCIDs / PMIDs without full text, try downloading using NCBI Cloud Service. 
+
+```{bash download_full_texts_ncbi_cloud, eval = FALSE}
+
+# get list of pmcids with full text - author_manuscript available
+# available in XML and plain text for text mining purposes.
+aws s3 cp s3://pmc-oa-opendata/author_manuscript/txt/metadata/txt/author_manuscript.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+
+aws s3 ls s3://pmc-oa-opendata/oa_noncomm/  --no-sign-request  | head
+
+
+aws s3 cp ls s3://pmc-oa-opendata/author_manuscript/txt/metadata/txt/author_manuscript.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+# get list of pmcids with full text - non-commercial use
+# oa_noncomm 
+aws s3 cp s3://pmc-oa-opendata/oa_noncomm/txt/metadata/txt/oa_noncomm.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+
+# get list of pmcids with full text, commercial list
+# oa_comm
+aws s3 cp s3://pmc-oa-opendata/oa_comm/txt/metadata/txt/oa_comm.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+
+# get list of pmcids with full text, commercial list
+# oa_other
+aws s3 cp s3://pmc-oa-opendata/oa_other/txt/metadata/txt/oa_other.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+
+```
+
+## Identify full texts already downloaded through European PMC
+
+```{r identify_full_texts}
+
+europeanpmc_full_texts <- 
+list.files(here::here("output/fulltexts/europe_pmc"),
+                  pattern = "\\.xml"
+           )
+
+# get pmcids of these files
+europeanpmc_full_texts <-
+  gsub("\\.xml$", 
+       "", 
+       europeanpmc_full_texts
+       ) 
+
+```
+
+## Get NCBI download paths for remaining full texts (where available)
+
+```{r get_full_text_paths}
+
+left_over_pmcids = pmcids[!pmcids %in% europeanpmc_full_texts]
+
+print("Number of remaining pmcids without full text:")
+length(left_over_pmcids)
+
+print("+ Number of pmids without pmcid mapping:")
+length(not_converted_pmids)
+
+author_manu = data.table::fread(here::here("output/fulltexts/aws_locations/author_manuscript.filelist.txt"))
+
+oa_noncomm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_noncomm.filelist.txt"))
+
+oa_comm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_comm.filelist.txt"))
+
+author_manu_to_get <-
+author_manu |>
+  dplyr::filter(AccessionID %in% left_over_pmcids | 
+                PMID %in% not_converted_pmids)
+
+print("Number of papers to download in Author Manuscripts section:")
+nrow(author_manu_to_get)
+
+oa_noncomm_to_get = 
+oa_noncomm |>
+  dplyr::filter(AccessionID %in% left_over_pmcids | 
+                PMID %in% not_converted_pmids)
+
+# remove any overlaps between sections
+oa_noncomm_to_get <-
+  oa_noncomm_to_get |>
+  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID))
+
+print("Number of additional papers to download in the Non-commericial Open Access PMC section:")
+nrow(oa_noncomm_to_get)
+
+oa_comm_to_get = 
+oa_comm |>
+  dplyr::filter(AccessionID %in% left_over_pmcids |
+                PMID %in% not_converted_pmids)
+
+oa_comm_to_get <-
+  oa_comm_to_get |>
+  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID)) |>
+  dplyr::filter(!c(PMID %in% oa_noncomm_to_get$PMID))
+
+# remove any overlaps between sections
+print("Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:")
+nrow(oa_comm_to_get)
+
+file_paths = 
+c(oa_noncomm_to_get$Key,
+  oa_comm_to_get$Key,
+  author_manu_to_get$Key)
+
+file_paths <- str_replace_all(file_paths,
+                              pattern = "txt",
+                              replacement = "xml")
+
+file_paths <- unique(file_paths)
+
+# don't re-download files that have already been retrieved
+file_paths_to_get <- 
+file_paths[
+basename(file_paths) %in% list.files(here::here("output/fulltexts/ncbi_cloud/"))
+]
+
+writeLines(
+  file_paths_to_get,
+  here::here("output/fulltexts/aws_locations/selected_paths.txt")
+)
+
+```
+
+## Download remaining full texts from NCBI Cloud Service
+
+```{r download_remaining_full_texts, eval = F}
+
+system(
+  paste(
+    "xargs -I {} aws s3 cp",
+    "s3://pmc-oa-opendata/{}",
+    shQuote(here::here("output/fulltexts/ncbi_cloud/")),
+    "--no-sign-request",
+    "<",
+    shQuote(here::here("output/fulltexts/aws_locations/selected_paths.txt"))
+  )
+)
+
+```
+
+
+```{r ncbi_full_text_stats}
+
+# get list of pmcids already retrieved
+ncbi_pmcids_retrieved <- 
+list.files(c(#here::here("output/fulltexts/europe_pmc"),
+             here::here("output/fulltexts/ncbi_cloud/")
+             ),
+             pattern = "\\.xml$"
+)
+
+ncbi_pmcids_retrieved <-
+  gsub("\\.xml$", 
+       "", 
+       ncbi_pmcids_retrieved
+       )
+
+pmids_retrieved <-
+converted_ids  |>
+  filter(pmcids %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |>
+  pull(PMID)
+
+not_available <- all_pmids[!c(all_pmids %in% pmids_retrieved)] 
+
+print("Percentage of pmids with full text from NCBI Cloud Service:")
+100 * (length(all_pmids) - n_euro_pmc - length(not_available)) / length(all_pmids)
+
+print("Percentage of pmids without full text from either European PMC or NCBI Cloud Service:")
+100 * length(not_available) / length(all_pmids)
+
+```
+
+# Download from publisher (uses dois)
+
+## Get dois for remaining articles to get full full text
+
+```{r get_from_publisher}
+
+doi_information <-
+converted_ids |>
+  filter(PMID %in% not_available)
+
+```
+
+## Function to get CrossRef meta-data / link information: 
+
+```{r crossref_fn, message=FALSE, warning=FALSE}
+
+library(rcrossref)
+library(httr)
+
+# Get download links from Crossref
+get_crossref_links <- function(doi) {
+  
+  # Query Crossref for the article
+  works <- cr_works(dois = doi)
+  
+  # keep links for xml or text-mining 
+  links <- works$data$link[[1]]
+  
+  if(is.null(links)){
+    link_data <- data.frame(doi = doi,
+                            URL = NA,
+                            content.type = NA,
+                            content.version = NA,
+                            intended.application = NA)
+    return(link_data)
+  }
+  
+  links <- 
+  links |>
+    filter(intended.application == "text-mining" | content.type == "application/xml"
+             ) 
+  
+  
+  
+  if(nrow(links) == 0){
+    link_data <- data.frame(doi = doi,
+                            URL = NA,
+                            content.type = NA,
+                            content.version = NA,
+                            intended.application = NA)
+  } else{
+  
+  link_data <- 
+  data.frame(doi = doi,
+             links)
+  
+  }
+
+  return(link_data)
+} 
+
+# get all crossref links 
+get_crossref_links <- function(doi) {
+  
+  # Query Crossref for the article
+  works <- cr_works(dois = doi)
+  
+  # keep links for xml or text-mining 
+  links <- works$data$link
+  
+  if(is.null(links)){
+    link_data <- data.frame(doi = doi,
+                            URL = NA,
+                            content.type = NA,
+                            content.version = NA,
+                            intended.application = NA)
+    return(link_data)
+  }
+  
+  return(links)
+  
+}
+
+```
+
+## Download xml full texts from publisher links
+
+### Download full text from Elsevier API links
+
+- Can download full text (xmls etc.) for open access articles using Elsevier API by getting token from: https://dev.elsevier.com/
+- Can download full text using this token for subscribed content (for non-commercial, academic purposes) after contacting Elsevier using the following information: https://dev.elsevier.com/api_key_settings.html
+- XMLS are in Elsevier's proprietary XML format (not JATS)
+
+```{r get_elsevier_dois}
+
+# elsevier dois:
+elsevier_doi_patterns <-	"10.1016|10.1053|10.1086|10.1194|10.1593|10.1097/jto.|10.1182|10.1038/sj.ki"
+
+elsevier_dois <- grep(elsevier_doi_patterns,
+                          doi_information$DOI,
+                           value = TRUE
+                           )
+
+print("Number of papers potentially can get from Elsevier:")
+length(elsevier_dois)
+
+```
+
+```{r download_elsevier_dois, eval = F}
+
+elsevier_api_key <- Sys.getenv("ELSEVIER_API_KEY")
+
+elsevier_doi_info <- str_remove_all(pattern = "https://doi.org/", 
+                                     string = elsevier_dois)
+
+# get pmids for elsevier dois
+pmids_elsevier <- doi_information |>
+  filter(DOI %in% elsevier_dois) |>
+  mutate(DOI = str_remove_all(DOI,
+                                 pattern = "https://doi.org/"
+                                 )
+         ) |>
+rename_with(~tolower(.x)) 
+
+# get elsevier full text links from crossref
+elsevier_link_df <- purrr::map(elsevier_doi_info,
+                              ~get_crossref_links(.x)
+                              ) |> 
+  bind_rows()
+
+print("Number of Elsevier links retrieved from Crossref:")
+nrow(elsevier_link_df)
+
+print("Number of xml links retrieved from Elsevier links:")
+elsevier_link_df |>
+  filter(content.type == "text/xml") |>
+  nrow()
+
+elsevier_links <- elsevier_link_df |>
+                  filter(!is.na(URL)) 
+
+elsevier_links <- elsevier_links |>
+  left_join(pmids_elsevier,
+            by = c("doi")
+            )
+
+# get only xml links
+elsevier_links <-
+elsevier_links |>
+  filter(content.type == "text/xml") 
+
+
+download_elsevier_text <- function(url, 
+                                   api_key,
+                                   pmid,
+                                   out_dir = here::here("output/fulltexts/elsevier/elsevier_xml/")) {
+  
+  # if(file.exists(paste0(out_dir, pmid, ".xml"))|file.exists(paste0(out_dir, pmid, ".txt"))
+  #    ){
+  #   return(TRUE)
+  # }
+  
+  response <- GET(url,
+                  add_headers("X-ELS-APIKey" = api_key)
+                  )
+  
+  # if (status_code(response) != 200) {
+  #   message("Failed to fetch text for ", pmid)
+  #   return(FALSE)
+  #   
+  # }
+  
+  ct <- headers(response)[["content-type"]]
+  
+  #print(ct)
+  
+  if(grepl("text/plain", ct)){
+    message("Received plain text for ", pmid, 
+            " - skipping for now."
+            )
+    
+    return(TRUE)
+    
+    # text_content <- content(response, type = "text/plain")
+    # 
+    # writeLines(text_content,
+    #            paste0(out_dir, pmid, ".txt"),
+    #            useBytes = TRUE)
+    
+    
+  } else {
+  
+  xml_content <- content(response, 
+                         encoding = "UTF-8",
+                         type = "text/xml")
+  
+  
+  article_node <- xml2::xml_find_first(
+    xml_content,
+    ".//*[local-name()='originalText']"
+)
+  
+      xml2::write_xml(article_node, 
+                        file = paste0(out_dir, pmid, ".xml")
+    )
+      
+  }
+    
+  # writeLines(text_content,
+  #            paste0(out_dir, pmid, ".txt"),
+  #            useBytes = TRUE)
+  
+}
+
+purrr::walk2(elsevier_links$URL,
+              elsevier_links$pmid,
+                ~download_elsevier_text(url = .x,
+                                        api_key = elsevier_api_key,
+                                        pmid = .y)
+                )
+
+```
+
+Convert Elsevier xmls to JATS xml files 
+
+```{bash convert_elsevier_to_jats}
+
+for file in output/fulltexts/elsevier/elsevier_xml/*.xml; do 
+    filename=$(basename "$file")
+    Rscript code/full_text_conversion/elsevier_to_jats_v5.R "$file" "output/fulltexts/elsevier/${filename%.xml}.xml"
+done
+
+```
+
+```{r how_many_elsevier_texts}
+
+print("Number of downloaded full text files (xml) from Elsevier:")
+list.files(here::here("output/fulltexts/elsevier/elsevier_xml/"),
+             pattern = "\\.xml$"
+             ) |>
+  length()
+
+```
+
+### Download full text from Sage 
+
+Policies:
+
+- Permitted for non-commercial text mining with institutional access
+- https://journals.sagepub.com/page/policies/text-and-data-mining
+
+```{r sage_full_texts, eval = F}
+
+sage_doi_patterns <- "10.1177|10.1089"
+
+sage_links <-
+  grep(sage_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+sage_links <- str_remove_all(pattern = "https://doi.org/", 
+                              string = sage_links)
+
+sage_link_df <- purrr::map(sage_links, 
+                      ~get_crossref_links(.x)) |> 
+  bind_rows()
+
+
+# then had to download manually using provided xml links
+# to use institutional login details 
+# http://www.liebertpub.com/doi/full-xml/10.1089/omi.2017.0019
+# https://journals.sagepub.com/doi/full-xml/10.1177/00220345211051967
+# https://journals.sagepub.com/doi/full-xml/10.1177/0271678X211066299
+# these are in JATS .xml format
+
+# saved to output/fulltexts/sage
+length(sage_links)
+
+```
+
+```{r sage_full_texts_check}
+
+print("Number of downloaded full text files (xml) from Sage:")
+length(list.files(here::here("output/fulltexts/sage"),
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from Springer Nature Open Access API 
+
+- JATS xml format
+
+```{r get_springer_full_texts_links, eval = F}
+
+springer_nature_links <-
+  grep("nature|10.1038/ng|10.1007/s0|10.1007|10.1038/ejhg|10.1038/tpj|10.1038/jhg|10\\.1038/|10\\.1007/|10.1245",
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from Springer Nature:")
+length(springer_nature_links)
+
+```
+
+
+```{r download_springer_full_texts, eval = F}
+
+springer_to_get <- doi_information %>%
+  filter(DOI %in% paste0("https://doi.org/", 
+                         springer_nature_links))
+
+springer_nature_links <- springer_to_get$DOI |> 
+  str_remove_all(pattern = "https://doi.org/")
+
+springer_nature_pmids <- springer_to_get$PMID
+
+check_springer_oa <- function(doi, 
+                              api_key,
+                              pmids,
+                              out_dir = here::here("output/fulltexts/springer_nature/")) {
+  
+  # if(file.exists(paste0(out_dir, pmids, ".xml"))){
+  #   return(data.frame(doi = doi, 
+  #                     openaccess = TRUE)
+  #   )
+  # }
+  
+query <- glue::glue('(doi:"{doi}")')
+
+url <- modify_url(
+    "https://api.springernature.com/openaccess/jats",
+    query = list(
+        api_key = Sys.getenv("NATURE_SPRINGER_OA_API_KEY"),
+        callback = "",
+        s = 1,
+        p = 1,
+        q = query
+    )
+)
+  
+  # url<- paste0('https://api.springernature.com/openaccess/',
+  #               'jats?',
+  #              'api_key=', api_key,
+  #              '&callback=&s=1&p=1',
+  #              '&q=(doi:', '"', doi, '"', ")"
+  # )
+  
+  # url <-  'https://api.springernature.com/openaccess/jats?api_key=237213d679b2c31096e6e777bd122f5c&q=(doi="10.1038/nature05616")'
+  
+  print(url)
+  
+  response <- GET(url)
+  
+  # if the request fails, return data.frame with doi and oa = F
+  if (status_code(response) != 200) {
+    return(data.frame(doi = doi, 
+                      openaccess = FALSE)
+           )
+  } else {
+    
+    xml_content <- content(response)
+    
+    article_node <- xml2::xml_find_all(xml_content, ".//records")
+    
+  if (xml2::xml_text(article_node) == "") {
+    
+    return(data.frame(doi = doi, 
+                      openaccess = FALSE)
+    )
+    
+  }
+    
+  }
+    
+    xml2::write_xml(article_node, 
+              paste0(out_dir, pmids, ".xml")
+    )
+    
+    return(data.frame(doi = doi, 
+                      openaccess = TRUE)
+    )
+    
+}
+
+check_springer_oa(doi = springer_nature_links[1],
+                      api_key = Sys.getenv("NATURE_SPRINGER_OA_API_KEY"),
+                      pmids = springer_nature_pmids[1]
+                  )
+  
+  oa_status <-
+purrr::map2(springer_nature_links,
+            springer_nature_pmids,
+           ~check_springer_oa(doi = .x,
+                              api_key = Sys.getenv("NATURE_SPRINGER_OA_API_KEY"),
+                              pmids = .y)
+)
+  
+  
+  oa_status_df <- oa_status |> bind_rows()
+  
+  oa_status_df |> group_by(openaccess) |>
+    summarise(n = n())
+  
+  oa_status_df |>
+    filter(openaccess == FALSE)
+  
+  oa_status_df |> 
+    filter(openaccess == TRUE) |>
+    nrow()
+
+```
+
+```{bash convert_springer_html_to_xml}
+
+auto-corpus -b NATURE_GENETICS -t "output/fulltexts/springer_nature" -f "output/fulltexts/springer_nature/html" -o XML
+
+```
+
+
+```{r springer_full_texts_check}
+
+print("Number of downloaded full text files (xml) from Springer Nature:")
+length(list.files(here::here("output/fulltexts/springer_nature"),
+             pattern = "\\.xml$"
+)
+)
+
+print("Number of downloaded html files from Springer Nature:")
+length(list.files(here::here("output/fulltexts/springer_nature"),
+                  recursive = TRUE,
+             pattern = "\\.html$"
+)
+)
+
+```
+
+### Download full text from Wiley 
+
+Wiley Text & Data-mining Policy: https://onlinelibrary.wiley.com/library-info/resources/text-and-datamining
+
+- Can download PDFs using their API with token
+- Download xmls using https://onlinelibrary.wiley.com/doi/full-xml/[DOI]
+
+These xmls are in Wiley's proprietary XML format, not JATS. 
+
+```{r which_wiley_dois_to_download}
+
+wiley_dois <- grep("10\\.1002/|10\\.1111/", 
+                   doi_information$DOI, 
+                   value = TRUE)
+
+wiley_dois <- str_remove_all(wiley_dois, "https://doi.org/")
+
+print("Number of papers potentially can get from Wiley:")
+length(wiley_dois)
+
+```
+
+
+```{r download_wiley_full_texts, eval = F, message=FALSE}
+
+pmids_wiley_dois <- doi_information %>%
+  filter(DOI %in% paste0("https://doi.org/",
+                         wiley_dois)
+                         ) %>%
+  pull(PMID)
+
+download_wiley_pdf<- function(doi,
+                   api_key,
+                   pmids,
+                   output_dir = here::here("output/fulltexts/wiley/pdf/")){
+  
+  # check files doesn't already exist
+  if(file.exists(paste0(output_dir, pmids, ".pdf"))){
+    return(NULL)
+  }
+  
+  print(pmids)
+  
+  curl_command <- paste0('curl -L -H "Wiley-TDM-Client-Token:',
+                         api_key,
+                         '" https://api.wiley.com/onlinelibrary/tdm/v1/articles/',
+                         doi, 
+                         ' -o ', output_dir, pmids, '.pdf'
+  )
+  
+  print(curl_command)
+
+system(curl_command)
+
+}
+
+purrr::walk2(wiley_dois,
+             pmids_wiley_dois,
+             ~ download_wiley_pdf(.x, Sys.getenv("WILEY_API_KEY"), .y)
+)
+
+# remove zero byte files - ? I think these are failed downloads as not open access
+system("find output/fulltexts/wiley/pdf -type f -size 0 -delete")
+
+# xmls downloaded manually using https://onlinelibrary.wiley.com/doi/full-xml/[DOI]
+# downloaded to fulltexts/wiley/wiley_xml
+
+```
+
+As xml files are in Wiley format, convert JATS XML (1.1) format to be consistent with PubMed etc. 
+
+```{bash convert_wiley_xml}
+
+for file in output/fulltexts/wiley/wiley_xml/*.xml; do 
+    filename=$(basename "$file")
+    Rscript code/full_text_conversion/wiley_to_jats.R "$file" "output/fulltexts/wiley/${filename%.xml}.xml"
+done
+
+```
+
+```{r how_many_wiley_texts}
+
+# how many wiley full text xml downloaded
+print("Number of downloaded full text files (xml) from Wiley:")
+length(list.files(here::here("output/fulltexts/wiley/xml/"), 
+                  recursive = TRUE,
+                  pattern = "\\.xml$"))
+
+# how many wiley pdfs downloaded
+print("Number of downloaded full text files (pdf) from Wiley:")
+length(list.files(here::here("output/fulltexts/wiley/"), 
+                  recursive = TRUE,
+                  pattern = "\\.pdf$"))
+
+```
+
+## Download html full texts from publisher links
+
+### Download full text American Journal of Cancer Research
+
+Published by e-Century, under policy: https://e-century.us/web/journal_author_info.php?journal=ajcr
+
+"All PDF, XML and html files for all articles published in this journal are the property of the publisher, e-Century Publishing Corporation (www.e-Century.org). Authors and readers are granted the right to freely use these files for all academic purposes."
+
+```{r ajcr_full_texts}
+
+# pubmed ids: 34522458
+# download pdf
+
+``` 
+
+```{r ajcr_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from American Journal of Cancer Research:")
+length(list.files(here::here("output/fulltexts/ajcr"),
+                  pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/ajcr
+# grobid retrieved via: https://grobidorg-grobid.hf.space/
+print("Number of converted full text files (xml) from American Journal of Cancer Research:")
+
+length(list.files(here::here("output/fulltexts/ajcr"),
+                  pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from ASM journals
+
+```{r asm_full_texts, eval = F}
+
+asm_doi_patterns <- "10.1128|10.1093/infdis|10.1093/cid"
+
+asm_links <-
+  grep(asm_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from ASM:")
+length(asm_links)
+
+# download pdf content from webpage
+# use crossref links:
+
+asm_link_df <-
+  get_crossref_links(asm_links) |> 
+  bind_rows()
+
+print("ASM links to retrieve")
+asm_link_df 
+
+```
+
+```{r asm_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from ASM:")
+length(list.files(here::here("output/fulltexts/asm"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/asm
+print("Number of converted full text files (xml) from ASM:")
+length(list.files(here::here("output/fulltexts/asm"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from BMJ Journals
+
+TDM policy: https://bmjgroup.com/text-and-data-mining-tdm-policy/
+
+```{r download_bmj_full_texts}
+
+bmj_doi_patterns <- "10.1136/gutjnl|10.1136/jmedgenet"
+
+bmj_links <-
+  grep(bmj_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from BMJ:")
+length(bmj_links)
+
+# download html content from webpage
+# save to output/fulltexts/bmj
+
+```
+
+
+```{bash convert_bmj_html_to_xml}
+
+auto-corpus \
+-b BMJ \
+-t "output/fulltexts/bmj" \
+-f "output/fulltexts/bmj/html" \
+-o XML
+
+```
+
+```{r bmj_full_texts_check}
+
+print("Number of downloaded full text files (html) from BMJ:")
+length(list.files(here::here("output/fulltexts/bmj"),
+                  recursive = TRUE,
+             pattern = "\\.html$"
+)
+)
+
+print("Number of convert full text files (xml) from BMJ:")
+length(list.files(here::here("output/fulltexts/bmj"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from Cambridge
+
+Policies: https://www.cambridge.org/core/services/open-research/text-and-data-mining
+
+- Can carry out TDM on any Cambridge Core content you have lawful access to
+- Contact openresearch@cambridge.org about getting xml content
+
+```{r cambridge_full_texts}
+
+cambridge_doi_patterns <- "10.1017"
+
+cambridge_links <-
+  grep(cambridge_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from Cambridge:")
+length(cambridge_links)
+
+# obtain html content from webpage
+
+```
+
+```{bash convert_cambridge_full_texts}
+
+auto-corpus -b CAMBRIDGE_CORE -t "output/fulltexts/cambridge" -f "output/fulltexts/cambridge/html" -o XML
+
+```
+
+```{r cambridge_full_texts_check}
+
+print("Number of downloaded full text files (html) from Cambridge:")
+length(list.files(here::here("output/fulltexts/cambridge"),
+                  recursive = TRUE,
+             pattern = "\\.html$"
+)
+)
+
+print("Number of converted full text files (xml) from Cambridge:")
+length(list.files(here::here("output/fulltexts/cambridge"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download from ERS
+
+```{r ers_full_texts}
+
+ers_doi_patterns <- "10.1183"
+
+ers_links <-
+  grep(ers_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from ERS:")
+length(ers_links)
+
+ers_links
+# this article is dstributed under the terms of the Creative Commons Attribution Non-Commercial Licence 4.0, which permits text-mining and is available at https://erj.ersjournals.com/content/erj/53/2/1801258.full.pdf
+
+
+```
+
+```{r ers_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from ERS:")
+length(list.files(here::here("output/fulltexts/ers"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/ers
+print("Number of converted full text files (xml) from ERS:")
+length(list.files(here::here("output/fulltexts/ers"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from eScholarship repository
+
+```{r escholarship_full_texts}
+
+# 39024449
+# https://doi.org/10.1126/science.adj1182  https://escholarship.org/content/qt53c9n629/qt53c9n629.pdf
+
+
+print("Number of papers potentially can get from eScholarship:")
+list.files(here::here("output/fulltexts/escholarship"),
+             pattern = "\\.pdf$"
+) |>
+  length()
+
+```
+
+```{r escholarship_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from eScholarship:")
+length(list.files(here::here("output/fulltexts/escholarship"),
+                  pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/escholarship
+print("Number of converted full text files (xml) from eScholarship:")
+length(list.files(here::here("output/fulltexts/escholarship"),
+                  pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download JAMA full text
+
+```{r jama_full_texts}
+
+jama_doi_patterns <- "10.1001/jama"
+
+jama_links <-
+  grep(jama_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from JAMA:")
+length(jama_links)
+
+```
+
+```{bash convert_jama_html_to_xml}
+
+auto-corpus -b JAMA -t "output/fulltexts/jama" -f "output/fulltexts/jama/html" -o XML
+
+```
+
+
+```{r jama_full_texts_check}
+
+print("Number of downloaded full text files (html) from JAMA:")
+length(list.files(here::here("output/fulltexts/jama"),
+                  recursive = TRUE,
+             pattern = "\\.html$"
+)
+)
+
+print("Number of converted full text files (xml) from JAMA:")
+length(list.files(here::here("output/fulltexts/jama"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from 'In vivo'
+
+Uses a CC-BY-NC-ND 4.0 license, so can download and use for non-commercial purposes.
+
+```{r invivo_full_texts}
+invivo_doi_patterns <- "10.21873/invivo"
+
+invivo_links <-
+  grep(invivo_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from In vivo:")
+length(invivo_links)
+```
+
+```{r invivo_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from In vivo:")
+length(list.files(here::here("output/fulltexts/in_vivo"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/in_vivo
+print("Number of converted full text files (xml) from In vivo:")
+length(list.files(here::here("output/fulltexts/in_vivo"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from Karger
+
+```{r karger_full_texts}
+
+karger_doi_patterns <- "10.1159"
+
+karger_links <-
+  grep(karger_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from Karger:")
+length(karger_links)
+
+# download pdf content from webpage
+# save to output/fulltexts/karger
+
+# get links from crossref
+karger_link_df <-
+  get_crossref_links(karger_links) |> 
+  bind_rows()
+
+print("Karger links to retrieve")
+karger_link_df
+
+```
+
+```{r karger_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from Karger:")
+length(list.files(here::here("output/fulltexts/karger"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/karger
+print("Number of converted full text files (xml) from Karger:")
+length(list.files(here::here("output/fulltexts/karger"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from Medica
+
+```{r medica_full_texts}
+
+medica_doi_patterns <- "10.1159|10.5603"
+
+medica_links <-
+  grep(medica_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from Medica:")
+length(medica_links)
+
+# download pdf content from webpage
+# save to output/fulltexts/medica
+# uses a CC BY license, so can download and use for non-commercial purposes
+
+```
+
+```{r medica_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from Medica:")
+length(list.files(here::here("output/fulltexts/medica"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+print("Number of converted full text files (xml) from Medica:")
+length(list.files(here::here("output/fulltexts/medica"),
+                  recursive = TRUE,
+             pattern = "\\.xml$")
+)
+
+```
+
+### Download full text from Ovid Lippincott Williams & Wilkins Total Access Collection
+
+From UCSF Library, license allows text-mining (for Ovid Lippincott Williams & Wilkins Total Access Collection):
+
+"Data Mining: Yes, text mining / data mining activities for legitimate academic research and education purposes."
+
+```{r ovid_full_texts}
+
+ovid_doi_patterns <- "10.1097/fpc|10.1212|10.1681|10.1161/circgen|10.1161/strokeaha"
+
+# 24001895
+# https://doi.org/10.1161/circgen.119.002670
+
+# 29748315 
+# https://doi.org/10.1161/circgen.117.001992
+
+# https://doi.org/10.1227/neu.0000000000002082 ... should work but error atm
+
+
+ovid_links <-
+  grep(ovid_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from Ovid Lippincott Williams & Wilkins Total Access Collection:")
+length(ovid_links)
+
+```
+
+```{r ovid_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from Ovid Lippincott Williams & Wilkins Total Access Collection:")
+length(list.files(here::here("output/fulltexts/ovid"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/ovid
+print("Number of converted full text files (xml) from Ovid Lippincott Williams & Wilkins Total Access Collection:")
+length(list.files(here::here("output/fulltexts/ovid"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+))
+
+```
+
+### Download full text from Oxford Academic 
+
+Oxford Academic TDM policy: https://academic.oup.com/pages/purchasing/rights-and-permissions/text-and-data-mining
+
+*should reach out to confirm UCSF rights / possibly get xml formats 
+
+```{r oxford_full_texts_potential}
+
+ats_doi_patterns <- "10.1164|10.1165"
+# ? ATS: doi: 10.1164, 10.1165 (moving to Oxford Academic in March 2026)
+
+# go doi pages, and download html manually 
+oxford_dois <- grep("10.1093|10.1136/amiajnl|10.1210|10.1513|10.1164|10.1165", 
+                   doi_information$DOI, 
+                   value = TRUE)
+
+print("Number of papers potentially can get from Oxford Academic:")
+length(oxford_dois)
+
+```
+
+```{r oxford_how_many_full_texts}
+
+# then had to download manually using institutional login
+# then saved to output/fulltexts/oxford_academic/html
+oxford_htmls <- list.files(here::here("output/fulltexts/oxford_academic/html/"),
+                             pattern = "\\.html$"
+                             )
+
+print("Number of downloaded full text files (html) from Oxford Academic:")
+length(oxford_htmls)
+
+```
+
+```{bash convert_oxford_full_texts}
+
+python3 code/full_text_conversion/preprocess_oxford_html.py \
+       --input  output/fulltexts/oxford_academic/html \
+       --output output/fulltexts/oxford_academic/html_ac_ready
+
+auto-corpus -b OXFORD_ACADEMIC \
+            -t output/fulltexts/oxford_academic \
+            -f output/fulltexts/oxford_academic/html_ac_ready \
+            -o XML
+            
+```
+
+```{r oxford_full_texts_check}
+
+print("Number of downloaded full text files (html) from Oxford Academic:")
+length(list.files(here::here("output/fulltexts/oxford_academic/html"),
+                  pattern = "\\.html$"
+)
+)
+
+print("Number of converted (xml) from Oxford Academic:")
+length(list.files(here::here("output/fulltexts/oxford_academic"),
+                  pattern = "\\.xml$"
+)
+)
+
+```
+
+### Download full text from Taylor & Francis
+
+TDM policy / information: https://taylorandfrancis.com/our-policies/textanddatamining/
+
+- " If you or your institution subscribes to content from Taylor & Francis you can carry out TDM activities on this content, as well as open access content, without any additional charge, provided this is on a non-commercial basis. "
+
+```{r download_taylor_francis_full_texts, eval = F}
+
+taylor_francis_dois <- grep("10.1080|10.2217|10.3109", 
+                   doi_information$DOI,
+                   value = TRUE)
+
+print("Number of papers potentially can get from Taylor & Francis:")
+length(taylor_francis_dois)
+
+# then had to download manually using institutional login
+# as html
+# saved to output/fulltexts/taylor_and_francis/html
+
+```
+
+```{bash convert_taylor_francis_full_texts, eval = F}
+
+auto-corpus -b TAYLOR_AND_FRANCIS -t "output/fulltexts/taylor_and_francis" -f "output/fulltexts/taylor_and_francis/html" -o XML
+
+```
+
+```{r taylor_francis_full_texts_check}
+
+print("Number of downloaded full text files (html) from Taylor & Francis:")
+length(list.files(here::here("output/fulltexts/taylor_and_francis/html"),
+                  pattern = "\\.html$"
+)
+)
+
+print("Number of downloaded full text files (xml) from Taylor & Francis:")
+length(list.files(here::here("output/fulltexts/taylor_and_francis"),
+                  recursive = TRUE,
+                  pattern = "\\.xml$")
+)
+
+```
+
+
+# To get/check text-mining license info for:
+
+### American Association for Cancer Research, doi: 10.1158
+
+? UCSF Library - "Other Use Restrictions (Public Note): TDM: Permitted (interpreted)"
+
+```{r aacr_full_texts}
+
+aacr_doi_patterns <- "10.1158"
+
+aacr_links <-
+  grep(aacr_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from AACR:")
+length(aacr_links)
+
+```
+
+10.1158/0008-5472.can-10-1493
+10.1158/1078-0432.ccr-10-2394
+10.1158/1078-0432.ccr-13-2835
+10.1158/1078-0432.ccr-17-2537
+
+
+
+### American Physiological Society, doi: 10.1152
+
+```{r aps_full_texts}
+
+# check, how many papers:
+aps_doi_patterns <- "10.1152"
+
+aps_links <-
+  grep(aps_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from APS:")
+length(aps_links)
+
+```
+
+
+### AHA, doi: 10.1161
+
+```{r aha_full_texts}
+
+aha_doi_patterns <- "10.1161"
+
+aha_links <-
+  grep(aha_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from AHA:")
+length(aha_links)
+
+```
+
+### ASH, doi: 10.1182
+
+```{r ash_full_texts}
+
+ash_doi_patterns <- "10.1182"
+
+ash_links <-
+  grep(ash_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from ASH:")
+length(ash_links)
+
+```
+
+### ASCO, doi: 10.1200
+
+```{r asco_full_texts}
+
+asco_doi_patterns <- "10.1200"
+
+asco_links <-
+  grep(asco_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from ASCO:")
+length(asco_links)
+
+```
+
+### J-STAGE: doi: 10.1248
+
+```{r jstage_full_texts}
+
+jstage_doi_patterns <- "10.1248"
+
+jstage_links <-
+  grep(jstage_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from J-STAGE:")
+length(jstage_links)
+
+```
+
+### (ADA) Diabetes, doi: 10.2337
+
+- https://diabetesjournals.org/journals/pages/ada-journal-policies
+- ? Seems likely text-mining may be allowed, 
+https://diabetesjournals.org/journals/pages/license
+
+License for Non-Commercial Reuse, Version 1.0
+Unless otherwise indicated, the American Diabetes Association (ADA) holds copyright on all content published in ADA journals, unless otherwise noted. Individual readers may use the content as long as the work is properly cited and linked to the version of record, the use is educational and not for profit, and the work is not altered. ADA permission is required to post articles on third-party websites (unless otherwise specified below under “Article sharing and access”) or to include articles in educational materials that are sold to students or used in courses for which tuition or other fees are charged.
+
+Agreeing to the Publisher’s license enables the Licensee to use the article anywhere in the world for non-commercial purposes, provided that the Licensee:
+
+Cites the article using an appropriate bibliographic citation, e.g., authors, article title, journal, volume, page numbers, DOI, and the link to the definitive published version
+Uses the article for educational and not-for-profit purposes only
+Maintains the integrity of the work by making no alterations
+Retains copyright notices and links to these terms and conditions
+Ensures that, for any content in the article that is identified as belonging to a third party, any re-use complies with the copyright policies of that third party.
+
+```{r diabetes_full_texts}
+
+diabetes_doi_patterns <- "10.2337"
+
+diabetes_links <-
+  grep(diabetes_doi_patterns, 
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from Diabetes:")
+length(diabetes_links)
+
+```
+
+## Internal non-commerical research purposes
+
+### PNAS:
+- https://www.pnas.org/author-center/publication-charges
+Text and data mining are permitted for noncommercial institutions with an active institutional site license to PNAS for internal noncommercial research purposes.
+
+### AAAS / Science: 
+- https://www.science.org/content/page/institutional-license-agreement
+"Non-commercial Licensees' Authorized Users may use the Licensed Materials (excluding any Complimentary Resources) for text and data mining, for purely internal non-commercial research purposes, for as long as the Licensee maintains a subscription to the Licensed Materials, subject to the terms and conditions in ANNEX A"
+
+
+# Total number of downloaded full texts
+
+```{r final_full_text_stats}
+
+# full_text_files <-
+#   list.files(here::here("output/fulltexts"), 
+#              recursive = T, 
+#              pattern = "\\.xml$|\\.html$|\\.pdf$") 
+
+full_text_files <-
+  list.files(here::here("output/fulltexts"),
+             recursive = T,
+             pattern = "\\.xml$")
+
+full_text_files <- basename(full_text_files) |> 
+  stringr::str_remove_all("\\.pdf.tei.xml$|\\.html$|\\.xml$|\\.pdf$") |>
+  stringr::str_remove_all("_bioc") |>
+  unique()
+
+# convert pmcids to pmids 
+converted_fulltext_pmcids <-
+  converted_ids |>
+  filter(pmcids %in% full_text_files) |>
+  pull(PMID) |>
+  unique() 
+
+full_text_files  <- c(full_text_files, 
+                      converted_fulltext_pmcids)
+
+full_text_pmids <- grep("PMC", 
+                        full_text_files, 
+                        invert = T, 
+                        value = T)
+
+full_text_pmids = unique(full_text_pmids)
+full_text_pmids <- full_text_pmids[full_text_pmids %in% all_pmids]
+
+print("Number of PMIDs with full texts downloaded:")
+sum(all_pmids %in% full_text_pmids)
+
+print("% of total PMIDs with full texts downloaded:")
+100 * sum(all_pmids %in% full_text_pmids) / length(all_pmids)
+
+```
+
+### Number of papers to manually review
+
+The papers I can't get full texts for automatically (either through Europe PMC, NCBI Cloud Service, or publisher TDM policies) will need to be manually reviewed to identify study cohorts. 
+
+```{r papers_to_review}
+
+print("Number of PMIDs without full texts downloaded (to manually review):")
+n_manual_review = length(all_pmids) - sum(all_pmids %in% full_text_files)
+n_manual_review
+
+print("Assuming 10 minutes per paper to review, total time (hours):")
+n_manual_review * 10 / 60
+
+```
+
+
+# Testing: 
+
+## Download PDFs using Open Access information from Open Alex
+
+```{r pdfs_open_alex, eval = F}
+
+doi_information <-
+converted_ids |>
+  filter(!c(PMID %in% full_text_pmids)) |>
+  pull(DOI)
+
+doi_information <- doi_information[doi_information != ""]
+
+library(openalexR)
+
+# get open alex works for pmids
+open_alex_works <- oa_fetch(
+  doi = unique(doi_information),
+  entity = "works",
+  options = list(select = c("doi", 
+                            "open_access"))
+)
+
+	
+oa_fetch(
+  doi = unique(doi_information)[10],
+  entity = "works",
+  options = list(select = c("doi",
+                            "licenses"))
+)
+
+```
+
+
