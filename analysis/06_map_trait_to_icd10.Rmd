@@ -135,30 +135,53 @@ disease_mapping <-
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
 
-phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"),
+                              encoding = "Latin-1")
+
+phecodes <- phecodes |>
+  mutate(ICD_DESCRIPTION = iconv(
+  ICD_DESCRIPTION,
+  from = "ISO-8859-1",
+  to = "UTF-8"
+))
 
 bad_phecode_icd_map = 
   data.frame(
-    ICD10 = c("I08.1", "I08.2"),
+    ICD10 = c("I08.1", 
+              "I08.2",
+              "E10.4",
+              "E10.3"),
     ICD_DESCRIPTION = c(
       "Disorders of both mitral and tricuspid valves",
-      "Disorders of both aortic and tricuspid valves"),
-    PheCode = c(395.1, 395.2),
-    Phenotypes = c(
+      "Disorders of both aortic and tricuspid valves",
+      "Type 1 diabetes mellitus, With neurological complications",
+      "Type 1 diabetes mellitus, With ophthalmic complications"),
+    PheCode = c(395.1, 
+                395.2,
+                250.24,
+                250.23),
+    Phenotype = c(
       "Nonrheumatic mitral valve disorders",
-      "Nonrheumatic aortic valve disorders"
+      "Nonrheumatic aortic valve disorders",
+      "Type 2 diabetes with neurological manifestations",
+      "Type 2 diabetes with ophthalmic manifestations"
     )
   )
 
 phecodes <-
 dplyr::rows_delete(phecodes,
                    bad_phecode_icd_map,
-                   by = c("ICD10", "PheCode"))
+                   by = names(bad_phecode_icd_map))
+
+# also remove Phecode 260.2 mappings 
+# severe protein-calorie malnutrition mappings are weird/wrong
+phecodes  <-
+  phecodes  |>
+  filter(PheCode != "260.2")
 
 icd10_desc_map  = 
 phecodes |>
-    mutate(trait_clean = tolower(iconv(ICD_DESCRIPTION, 
-                                                       to = "UTF-8"))
+    mutate(trait_clean = tolower(ICD_DESCRIPTION)
            ) |>
     select(trait_clean,    
            icd10_code = ICD10) 
@@ -250,11 +273,11 @@ disease_mapping |>
 phenotype_icd_map =
   phecodes |>
 group_by(Phenotype) |>
-summarise(icd10_code = 
-            str_flatten(ICD10, 
-                        collapse = ", ", 
-                        na.rm = T), 
-            .groups = "drop")
+summarise(icd10_code = str_flatten(ICD10, 
+                                   collapse = ", ", 
+                                   na.rm = T),
+            .groups = "drop"
+)
 
 # match by cleaned DISEASE/TRAIT
 matched_phenotypes =
@@ -419,13 +442,6 @@ head(umls_icd10)
 
 ```{r match_disease_terms_to_umls, message=FALSE}
 
-unmapped_disease_terms <-
-  disease_mapping |>
-  filter(is.na(icd10_code)) |>
-  pull(trait_clean) |>
-  unique() |>
-  tolower()
-
 # overlap with umls terms
 disease_trait_umls  <-
   umls_icd10 |>
@@ -447,13 +463,6 @@ disease_trait_umls  <-
 #### Match trait context to UMLS
 
 ```{r match_trait_context_to_umls, message=FALSE}
-
-unmapped_disease_terms <- 
-    disease_mapping |>
-    filter(is.na(icd10_code)) |> 
-    pull(trait_context_clean) |>
-    unique() |> 
-    tolower()
 
 # overlap with umls terms
 disease_trait_umls  <-
@@ -530,7 +539,8 @@ matched_icd10_desc =
 disease_mapping =
   rows_patch(disease_mapping,
              matched_icd10_desc,
-             unmatched = "ignore")
+             unmatched = "ignore",
+             by = "collected_all_disease_terms")
 
  print("Number of papers where at least one ICD-10 has been obtained so far:")
 disease_mapping |>
@@ -569,9 +579,7 @@ disease_mapping |>
 
 ```
 
-# Manual mapping of GWAS traits to ICD 10
-
-### From Excel sheet
+### Manual mapping of GWAS traits to ICD 10
 
 ```{r manual_mapping_mapped_disease_term}
 
@@ -597,15 +605,9 @@ disease_mapping =
 
 ```
 
-### UMLS match collected_all_disease_terms
+## UMLS match collected_all_disease_terms
 
 ```{r match_collected_umls, message=FALSE}
-
-unmapped_terms <-
-  disease_mapping |>
-  filter(is.na(icd10_code)) |>
-  pull(collected_all_disease_terms) |>
-  unique()
 
 # overlap with umls terms
 collected_trait_umls  <-
@@ -613,7 +615,8 @@ collected_trait_umls  <-
   select(collected_all_disease_terms = STR,
          icd10_code) |>
   distinct() |>
-  mutate(icd10_source_col = "MAPPED DISEASE TERM")
+  mutate(icd10_source_col = "MAPPED DISEASE TERM") |>
+  mutate(icd10_source = "UMLS")
 
 disease_mapping <-
   disease_mapping |>
