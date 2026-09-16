@@ -37,12 +37,6 @@ disease_mapping <-
 
 n_rows <- nrow(disease_mapping)
 
-gwas_study_info <- data.table::fread(here::here("output/gwas_cat/gwas_study_all_group.csv"))
-
-gwas_study_info = gwas_study_info |>
-    mutate(collected_all_disease_terms = stringi::stri_trans_general(collected_all_disease_terms, "Latin-ASCII")
-           )
-
 ```
 
 
@@ -134,16 +128,28 @@ disease_mapping <-
 ```{r match_disease_terms_to_icd_descriptions, message=FALSE}
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
+phecodes <- data.table::fread(
+  here::here("data/icd/phecode_international_version_unrolled.csv"),
+  encoding = "UTF-8"          # correct — the file really is UTF-8
+)
 
-phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"),
-                              encoding = "Latin-1")
+# Repair malformed bytes, fold diacritics, and convert to ASCII.  This is important because the PheCode mapping file contains some non-ASCII characters (e.g., "é" in "Meniere disease") that are not present in the GWAS Catalog disease terms.  If we don't do this, we won't be able to match these terms.
+ascii_key <- function(x) {
+  x |>
+    stringi::stri_enc_toutf8(validate = TRUE) |>   # malformed bytes -> U+FFFD
+    stringi::stri_trans_nfc() |>                   # é as e+U+0301 folds like é as U+00E9
+    stringi::stri_trans_general("Latin-ASCII") |>  # é->e  ö->o  ç->c  ß->ss
+    stringi::stri_replace_all_regex("[\u2010-\u2015]", "-") |>  # en/em dashes
+    stringi::stri_replace_all_regex("[^\\p{ASCII}]", "") |>     # U+FFFD, β, × ...
+    stringi::stri_trim_both() 
+}
 
+# H81.0 cannot be recovered from its bytes — repair it explicitly.
 phecodes <- phecodes |>
-  mutate(ICD_DESCRIPTION = iconv(
-  ICD_DESCRIPTION,
-  from = "ISO-8859-1",
-  to = "UTF-8"
-))
+  mutate(ICD_DESCRIPTION = if_else(ICD10 == "H81.0", "Meniere disease", ICD_DESCRIPTION)) |>
+  mutate(
+         ICD_DESCRIPTION        = ascii_key(ICD_DESCRIPTION),
+         Phenotype   = ascii_key(Phenotype))
 
 bad_phecode_icd_map = 
   data.frame(
@@ -411,7 +417,7 @@ umls_icd10 <-
   umls_icd10 |>
   mutate(icd10_code = ifelse(STR == "coronary artery disease",
                              str_remove_all(string = icd10_code,
-                                            pattern = ", K76.1"),
+                                            pattern = ", K76\\.1"),
                              icd10_code))
 
 umls_icd10  <-
@@ -500,7 +506,8 @@ disease_mapping |>
 ```{r manual_map_icd10_disease_trait}
 
 manual_icd10_map <-
-  readxl::read_xlsx(here::here("data/icd/manual_disease_mappings_v2.xlsx"))
+  readxl::read_xlsx(here::here("data/icd/manual_disease_map.xlsx")) |>
+  select(-icd10_desc)
 
 manual_icd10_map  <-
   manual_icd10_map  |> 
