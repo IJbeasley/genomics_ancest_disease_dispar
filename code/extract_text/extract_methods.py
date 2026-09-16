@@ -121,7 +121,10 @@ def extract_bioc_main(root):
                 if para_text:
                     text_parts.append(clean_extracted_text(para_text) + ' ')
 
-    result = ' '.join(text_parts).strip()
+    # Clean the JOIN, not only each part: every part already ends in ' ', so a
+    # plain join left a double space at each paragraph boundary -- the reason
+    # BioC files differed from every other path on whitespace.
+    result = clean_extracted_text(' '.join(text_parts))
     return result if result else None
 
 
@@ -178,6 +181,34 @@ def flatten_without_citations(elem):
 # ---------------------------------------------------------------------------
 # Text cleaning (shared across formats)
 # ---------------------------------------------------------------------------
+
+# Byte-order marks and zero-width spaces -> replaced by a space (see the
+# comment at the call site).  U+200B is literally ZERO WIDTH SPACE.
+_ZERO_WIDTH_RE = re.compile('[\u200b\u2060\ufeff]')
+
+# True joiners, which carry no width and no space: simply dropped.
+_JOINER_RE = re.compile('[\u200c\u200d]')
+
+# Typographic quote marks -> ASCII.  Includes the low-9 forms (\u201a and
+# \u201e, used as opening quotes in German and Polish sources) and guillemets.
+# PRIMES ARE DELIBERATELY ABSENT: \u2032/\u2033 carry meaning in nucleotide
+# notation (5' and 3' ends) and stay exactly as the publisher set them.
+_QUOTE_TRANSLATION = {
+    0x2018: "'", 0x2019: "'", 0x201a: "'", 0x201b: "'",   # single
+    0x201c: '"', 0x201d: '"', 0x201e: '"', 0x201f: '"',   # double
+    0x00ab: '"', 0x00bb: '"',                             # guillemets
+}
+
+# Trademark, registered and copyright signs, with any preceding space.
+# Applied BEFORE NFKC, which would otherwise turn U+2122 into "TM".
+_TRADEMARK_RE = re.compile(r'\s*[\u00ae\u2122\u00a9]')
+
+# An exponent detached from its base by superscript flattening:
+# "10 -8", "10 \u22128", "10 \u2013 8".  Anchored on a literal 10, which is how
+# every occurrence in this corpus appears, so ordinary arithmetic spacing
+# elsewhere is untouched.
+_SPLIT_EXPONENT_RE = re.compile(r'10\s+([-\u2212\u2013])\s*(\d)')
+
 
 # A reference marker flattened onto the end of a word: "populations10,11,12".
 # Host word must be 4+ LOWERCASE letters, which excludes gene symbols
@@ -254,10 +285,35 @@ def clean_extracted_text(text):
     Apply standard text cleaning to extracted methods text.
     Shared across all XML formats.
     """
+    # Trademark signs come FIRST, before NFKC: normalisation rewrites
+    # U+2122 to the literal letters "TM" ("ThermoFisher\u2122" ->
+    # "ThermoFisherTM"), after which no symbol remains to strip.
+    text = _TRADEMARK_RE.sub('', text)
+
     text = unicodedata.normalize("NFKC", text)
     text = htmlmod.unescape(text)
+
+    # Zero-width characters and byte-order marks survive NFKC and are
+    # invisible in an editor.  A true joiner (ZWNJ/ZWJ) is dropped; the rest
+    # become a space, because mid-word they stand in for a lost one
+    # ("individuals\ufeffwith diabetes") and deleting them would weld the two
+    # words into one token.  The whitespace collapse below tidies the result.
+    text = _JOINER_RE.sub('', text)
+    text = _ZERO_WIDTH_RE.sub(' ', text)
+
+    # Normalise curly/typographic quotes to ASCII.  Present in 67% of files,
+    # and a curly apostrophe silently breaks exact-match lookups of cohort
+    # and assay names against the plain-ASCII reference lists.
+    text = text.translate(_QUOTE_TRANSLATION)
+
     text = text.replace('\xa0', ' ')
     text = re.sub(r'\s+', ' ', text).strip()
+
+    # Rejoin exponents that superscript flattening split with a space:
+    # "p < 2.5 x 10 -8" -> "p < 2.5 x 10-8".  Affects ~65% of methods files;
+    # left alone the detached exponent reads as its own numeric token and no
+    # p-value parser can recover the magnitude.
+    text = _SPLIT_EXPONENT_RE.sub(r'10\1\2', text)
 
     # Remove section numbering at start of paragraphs
     text = re.sub(r'^(\d+\.)+\d*\s*', '', text)
@@ -347,6 +403,13 @@ NON_METHODS_SECTIONS = {
     'references', 'bibliography', 'funding', 'competing interests',
     'conflict of interest', 'disclosure', 'data availability',
     'supplementary', 'supplemental', 'appendix',
+    'resource availability', 
+    'lead contact',
+    'materials availability', 'data and materials availability',
+    'data and code availability',
+    'data and code availability statement',
+    'code availability',
+    'key resources table'
 }
 
 # Fallback keywords: substrings that, when they appear in a section head,
@@ -527,7 +590,7 @@ def extract_bioc_methods(root):
                     text_parts.append(clean_extracted_text(para_text) + ' ')
 
     if text_parts:
-        result = ' '.join(text_parts).strip()
+        result = clean_extracted_text(' '.join(text_parts))
         return result if result else None
 
     # --- Fallback: scan passage text for inline section headers -----------
@@ -603,7 +666,10 @@ def _bioc_fallback_inline_headers(root):
         if t:
             text_parts.append(clean_extracted_text(t) + ' ')
 
-    result = ' '.join(text_parts).strip()
+    # Clean the JOIN, not only each part: every part already ends in ' ', so a
+    # plain join left a double space at each paragraph boundary -- the reason
+    # BioC files differed from every other path on whitespace.
+    result = clean_extracted_text(' '.join(text_parts))
     return result if result else None
 
 
