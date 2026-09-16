@@ -33,7 +33,8 @@ source(here::here("code/get_term_descendants.R"))
 
 ```{r load_gwas_study_info}
 
-gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"))
+gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+                         quote = "")
 
 gwas_study_info = 
   gwas_study_info |>
@@ -1454,7 +1455,7 @@ disease_iris <- c(efo_descendants_iri,
                   injury_iri
                   )
 
-# only missed terns are excluded terms
+# only missed terms are excluded terms
   gwas_study_info  |>
   filter(disease_terms == ""| is.na(disease_terms)) |>
   filter(MAPPED_TRAIT_URI %in% disease_iris) |>
@@ -2254,7 +2255,7 @@ gwas_study_info |>
 
 # for these studies, add breast cancer to the disease terms column, and disease/disorder to the trait category column, and then we can re-run the summary of number of studies of each kind
 
-add_missed_breast_cancer <-
+add_breast_cancer <-
 gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
     filter(grepl("breast cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
@@ -2263,7 +2264,7 @@ gwas_study_info |>
            DISEASE_STUDY = T)
 
 # colorectal cancer
-add_missed_colorectal_cancer <-
+add_colorectal_cancer <-
 gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
     filter(grepl("colorectal cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
@@ -2272,7 +2273,7 @@ gwas_study_info |>
            DISEASE_STUDY = T) 
 
 # colon cancer
-add_missed_colon_cancer <-
+add_colon_cancer <-
 gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
     filter(grepl("colon cancer", `DISEASE/TRAIT`, ignore.case = T)) |>
@@ -2317,28 +2318,36 @@ add_prostate_cancer <-
 
 # 21437268 - add pharynx cancer, oral cavity cancer
 gwas_study_info <-
-gwas_study_info <-
   gwas_study_info |> 
+  rowwise() |>
   mutate(
     disease_terms = ifelse(
       PUBMED_ID == 21437268,
       str_flatten(
         c(disease_terms, "pharyngeal cancer: oral cavity carcinoma"),
-        collapse = ":"
+        collapse = ":",
+        na.rm = T
       ),
       disease_terms
     )
   ) |>
+  ungroup() |>
   tidyr::separate_longer_delim(
     disease_terms,
     delim = ":"
-  )
+  ) |>
+  mutate(disease_terms = ifelse(disease_terms == "", 
+                                NA, 
+                                disease_terms)
+         )
                                  
 
 gwas_study_info <- 
 rows_update(gwas_study_info,
-            rbind(add_missed_breast_cancer,
-              add_missed_colorectal_cancer,
+            rbind(
+              add_breast_cancer,
+              add_colorectal_cancer,
+              add_colon_cancer,
               add_lung_carcinoma,
               add_small_cell_lung_carcinoma,
               add_prostate_cancer,
@@ -2477,7 +2486,7 @@ length(not_disease_pubmeds)
 add_missed_copd <-
 gwas_study_info |>
     filter(PUBMED_ID %in% not_disease_pubmeds) |> 
-    filter(grepl("chronic osbtructive pulmonary disease|COPD|chronic obstructive pulmonary disease", `DISEASE/TRAIT`, ignore.case = T)) |>
+    filter(grepl("\\bCOPD\\b|\\bchronic obstructive pulmonary disease\\b|\\bchronic osbtructive pulmonary disease\\b", `DISEASE/TRAIT`, ignore.case = T)) |>
     mutate(MAPPED_TRAIT_CATEGORY = "Disease/Disorder",
            disease_terms = "chronic obstructive pulmonary disease",
            DISEASE_STUDY = T)
@@ -3009,7 +3018,7 @@ length(not_disease_pubmeds)
 
 # Removing disease terms that don't seem to come from disease studies
 
-## age at assessment 
+### age at assessment 
 
 ```{r}
 
@@ -3073,7 +3082,7 @@ gwas_study_info = gwas_study_info |>
 
 ### Hypersensitivity reaction disease
 
-```{r hypersensitivity reaction disease}
+```{r hypersensitivity_reaction_disease}
 
 gwas_study_info |> 
   filter(grepl(vec_to_grep_pattern("hypersensitivity reaction disease"), 
