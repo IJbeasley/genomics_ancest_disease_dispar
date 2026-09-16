@@ -365,8 +365,10 @@ def merge_brackets(sentences: List[str]) -> List[str]:
   """
   merged = []
   for sent in sentences:
-    # sentence contains opening brackets
-    if sent.count('(') + sent.count('[') > sent.count(')') + sent.count(']'):
+    # If the PREVIOUS sentence left a bracket open, the current sentence is a
+    # continuation of it (e.g. "... (Fig." + "2, table S2), highlighting ...").
+    if merged and (merged[-1].count('(') + merged[-1].count('[') >
+                   merged[-1].count(')') + merged[-1].count(']')):
         merged[-1] = merged[-1].rstrip() + ' ' + sent.strip()
     else:
         merged.append(sent)
@@ -439,19 +441,28 @@ def merge_unmatched_closing_brackets(sentences: List[str]) -> List[str]:
 def remove_trailing_numbers_after_period(sentences: List[str]) -> List[str]:
     """
     Remove trailing citation patterns like:
-    - ".30" or ".30-40", or "30,40" at the end of sentence,
-    (only if NOT preceded by a digit, e.g. to preserve "v2.1")
+    - ".30" or ".30-40", or ".30,40" at the end of sentence
+      (only if NOT preceded by a digit or Fig./Tab./Sup.)
     - [15].
     """
     cleaned = []
     
     for sent in sentences:
-        # Remove trailing citation patterns like: [15]
+        # Remove trailing citation patterns like [15]
         sent = re.sub(r'\[\d+\]$', '', sent)
         sent = re.sub(r'\[\d+\]\.$', '.', sent)
 
-        # Remove .30 / .30-40 / .30,40 (but not 2.1)
-        sent = re.sub(r'(?<!\d)\.(\d+(?:[-,]\d+)*)\s*$', '.', sent)
+        # Remove .30 / .30-40 / .30,40, but not:
+        #   2.1
+        #   Fig.30
+        #   Tab.30
+        #   Sup.30
+        sent = re.sub(
+            r'(?<!\d)(?<!Fig)(?<!Tab)(?<!Sup)\.(\d+(?:[-,]\d+)*)\s*$',
+            '.',
+            sent,
+            flags=re.IGNORECASE
+        )
         
         cleaned.append(sent)
         
@@ -498,9 +509,14 @@ def clean_sentences(sentences: List[str]) -> List[str]:
 
     # Further split long sentences on ". " followed by a capital letter,
     # but avoid splitting on common abbreviations.
+    # split_regex = re.compile(
+    #     r"(?<!St\.)(?<!Fig\.)(?<!no\.)(?<!nos\.)(?<!Nos\.)(?<!No\.)(?<!vs\.)(?<!inc\.)(?<!i\.e\.)(?<!et\.al\.)(?<!e\.g\.)(?<!Inc\.)(?<!Co\.)"
+    #     r"(?<=[a-z]\.)\s+(?=[A-Z])"
+    # )
     split_regex = re.compile(
-        r"(?<!St\.)(?<!Fig\.)(?<!no\.)(?<!nos\.)(?<!Nos\.)(?<!No\.)(?<!vs\.)(?<!inc\.)(?<!i\.e\.)(?<!et\.al\.)(?<!e\.g\.)(?<!Inc\.)(?<!Co\.)"
-        r"(?<=[a-z]\.)\s+(?=[A-Z])"
+    r"(?<!St\.)(?<!Fig\.)(?<!fig\.)(?<!no\.)(?<!nos\.)(?<!Nos\.)(?<!No\.)"
+    r"(?<!vs\.)(?<!inc\.)(?<!i\.e\.)(?<!et\.al\.)(?<!e\.g\.)(?<!Inc\.)(?<!Co\.)"
+    r"(?<=[a-z]\.)\s+(?=[A-Z])"
     )
     
     split_sentences = []
@@ -557,6 +573,15 @@ def clean_sentences(sentences: List[str]) -> List[str]:
 
     return sentences
 
+# Sentence-boundary regex used when chunking long text. The negative
+# lookbehinds stop us breaking inside abbreviations such as "Fig. 2".
+_CHUNK_SPLIT_RE = re.compile(
+    r"(?<!St\.)(?<!Fig\.)(?<!fig\.)(?<!Figs\.)(?<!figs\.)(?<!Tab\.)(?<!tab\.)"
+    r"(?<!Sup\.)(?<!sup\.)(?<!no\.)(?<!No\.)(?<!nos\.)(?<!Nos\.)(?<!al\.)"
+    r"(?<!vs\.)(?<!inc\.)(?<!Inc\.)(?<!Co\.)(?<!i\.e\.)(?<!e\.g\.)(?<!et\.al\.)"
+    r"(?<=[.!?])\s+(?=[A-Z(\[])"
+)
+
 def split_text_into_chunks(text: str, max_tokens: int = 400) -> List[str]:
     """
     Split text into chunks that stay within the model's token limit.
@@ -584,8 +609,10 @@ def split_text_into_chunks(text: str, max_tokens: int = 400) -> List[str]:
         parts = text_unit.split("\n")
         if len(parts) > 1:
             return _pack(parts)
-        # Fall back to splitting on sentence-ending punctuation
-        parts = re.split(r'(?<=[.!?])\s+', text_unit)
+        # Fall back to splitting on sentence-ending punctuation, but never
+        # inside an abbreviation (Fig. 2, et al. 2020, No. 4, vs. ...), since
+        # _pack joins units and spacy treats the seam as a hard break.
+        parts = _CHUNK_SPLIT_RE.split(text_unit)
         if len(parts) > 1:
             return _pack(parts)
         # Last resort: hard split by word count
@@ -599,7 +626,7 @@ def split_text_into_chunks(text: str, max_tokens: int = 400) -> List[str]:
         current = ""
         for unit in units:
             if token_count(current) + token_count(unit) <= max_tokens:
-                current = (current + "\n" + unit).strip() if current else unit
+                current = (current + " " + unit).strip() if current else unit
             else:
                 if current:
                     chunks.append(current)
@@ -645,8 +672,8 @@ def break_text_into_sentences(input_dir: str, pubmed_id:str, output_dir: str) ->
     # convert LaTeX math expressions to readable plain text.
     file_text = strip_latex(file_text)
     
-    # remove \n in sentences (spacy sometimes leaves these in)
-    file_text = file_text.replace("\n", " ")
+    # NOTE: newlines are deliberately kept here so that split_text_into_chunks
+    # can chunk on real paragraph breaks; they are flattened per-chunk below.
     
     # remove □ character
     file_text = file_text.replace("□", " ")
@@ -657,6 +684,11 @@ def break_text_into_sentences(input_dir: str, pubmed_id:str, output_dir: str) ->
     all_sentences = []
     for chunk in chunks:
         try:
+            # Flatten any remaining newlines: spacy treats them as hard
+            # sentence boundaries.
+            chunk = re.sub(r'\s+', ' ', chunk).strip()
+            if not chunk:
+                continue
             # Process text with spaCy
             doc = nlp(chunk)
             # Extract sentences
@@ -691,7 +723,10 @@ def break_text_into_sentences(input_dir: str, pubmed_id:str, output_dir: str) ->
 
 # get all pubmed ids from texts directory
 texts_dir = args.input_dir
-pubmed_ids = [f.split(".")[0] for f in os.listdir(texts_dir) if f.endswith(".txt")]
+pubmed_ids = [
+    f.split(".")[0] for f in os.listdir(texts_dir)
+    if f.endswith(".txt") and (f.startswith("PMC") or f[0].isdigit())
+]
 
 print(f"\n Processing {len(pubmed_ids)} files from {texts_dir}...")
 
