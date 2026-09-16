@@ -319,16 +319,28 @@ disease_mapping <- disease_mapping |>
 ```{r convert_phecodes_to_icd10, message=FALSE}
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
+phecodes <- data.table::fread(
+  here::here("data/icd/phecode_international_version_unrolled.csv"),
+  encoding = "UTF-8"          # correct — the file really is UTF-8
+)
 
-phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"),
-                              encoding = "Latin-1")
+# Repair malformed bytes, fold diacritics, and convert to ASCII.  This is important because the PheCode mapping file contains some non-ASCII characters (e.g., "é" in "Meniere disease") that are not present in the GWAS Catalog disease terms.  If we don't do this, we won't be able to match these terms.
+ascii_key <- function(x) {
+  x |>
+    stringi::stri_enc_toutf8(validate = TRUE) |>   # malformed bytes -> U+FFFD
+    stringi::stri_trans_nfc() |>                   # é as e+U+0301 folds like é as U+00E9
+    stringi::stri_trans_general("Latin-ASCII") |>  # é->e  ö->o  ç->c  ß->ss
+    stringi::stri_replace_all_regex("[\u2010-\u2015]", "-") |>  # en/em dashes
+    stringi::stri_replace_all_regex("[^\\p{ASCII}]", "") |>     # U+FFFD, β, × ...
+    stringi::stri_trim_both() 
+}
 
+# H81.0 cannot be recovered from its bytes — repair it explicitly.
 phecodes <- phecodes |>
-  mutate(ICD_DESCRIPTION = iconv(
-  ICD_DESCRIPTION,
-  from = "ISO-8859-1",
-  to = "UTF-8"
-))
+  mutate(ICD_DESCRIPTION = if_else(ICD10 == "H81.0", "Meniere disease", ICD_DESCRIPTION)) |>
+  mutate(
+         ICD_DESCRIPTION        = ascii_key(ICD_DESCRIPTION),
+         Phenotype   = ascii_key(Phenotype))
 
 # drop badly mapped conversions
 # Nonrheumatic heart disorders being mapped to rheumatic heart disorders (I08.1, I08.2) in the PheCode to ICD10 mapping file
@@ -466,7 +478,8 @@ missing_icd_phecodes <- disease_mapping |>
 
 # load manual mapping file
 phecode_icd_manual = 
-  readxl::read_xlsx(here::here("data/icd/phecode_to_icd10_manual_mapping_v5.xlsx"))
+  readxl::read_xlsx(here::here("data/icd/phecode_to_icd10_manual_map.xlsx")) |>
+  select(-icd10_desc)
 
 to_add = phecode_icd_manual |>
   mutate(phecode = as.numeric(phecode),
