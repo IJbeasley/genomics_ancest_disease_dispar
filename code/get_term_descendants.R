@@ -38,16 +38,23 @@ get_descendants <- function(url){
   }
 
   iri_url = unlist(iri_url)
-  iri_url = stringr::str_trim(tolower(iri_url))
-  iri_url = unique(iri_url)
+  iri_url = stringr::str_trim(iri_url)
 
   terms = unlist(terms)
   terms = stringr::str_trim(tolower(terms))
-  terms = unique(terms)
 
-  iri_url = iri_url[order(nchar(terms), decreasing = TRUE)]
-  terms = str_length_sort(terms)
+  stopifnot(length(terms) == length(iri_url))   # <- fail loudly, never recycle
 
+
+  descendants_df <-
+  data.frame(iri_url = iri_url,
+             terms = terms) |>
+  dplyr::distinct() |>
+  dplyr::arrange(dplyr::desc(nchar(terms)),
+                 terms)
+
+  iri_url = descendants_df$iri_url
+  terms = descendants_df$terms
 
   print("Number of terms collected:")
   print(length(terms))
