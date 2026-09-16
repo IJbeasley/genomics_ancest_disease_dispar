@@ -320,27 +320,52 @@ disease_mapping <- disease_mapping |>
 
 # phecode to ICD10 mapping from https://wei-lab.app.vumc.org/phecode-data/phecode_international_version
 
-phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"))
+phecodes <- data.table::fread(here::here("data/icd/phecode_international_version_unrolled.csv"),
+                              encoding = "Latin-1")
+
+phecodes <- phecodes |>
+  mutate(ICD_DESCRIPTION = iconv(
+  ICD_DESCRIPTION,
+  from = "ISO-8859-1",
+  to = "UTF-8"
+))
 
 # drop badly mapped conversions
 # Nonrheumatic heart disorders being mapped to rheumatic heart disorders (I08.1, I08.2) in the PheCode to ICD10 mapping file
+# and Type 1 diabetes mellitus complications being mapped to Type 2 diabetes mellitus (E10.4, E10.3) in the PheCode to ICD10 mapping file
 bad_phecode_icd_map = 
   data.frame(
-    ICD10 = c("I08.1", "I08.2"),
+    ICD10 = c("I08.1", 
+              "I08.2",
+              "E10.4",
+              "E10.3"),
     ICD_DESCRIPTION = c(
       "Disorders of both mitral and tricuspid valves",
-      "Disorders of both aortic and tricuspid valves"),
-    PheCode = c(395.1, 395.2),
-    Phenotypes = c(
+      "Disorders of both aortic and tricuspid valves",
+      "Type 1 diabetes mellitus, With neurological complications",
+      "Type 1 diabetes mellitus, With ophthalmic complications"),
+    PheCode = c(395.1, 
+                395.2,
+                250.24,
+                250.23),
+    Phenotype = c(
       "Nonrheumatic mitral valve disorders",
-      "Nonrheumatic aortic valve disorders"
+      "Nonrheumatic aortic valve disorders",
+      "Type 2 diabetes with neurological manifestations",
+      "Type 2 diabetes with ophthalmic manifestations"
     )
   )
 
 phecodes <-
 dplyr::rows_delete(phecodes,
                    bad_phecode_icd_map,
-                   by = c("ICD10", "PheCode"))
+                   by = names(bad_phecode_icd_map))
+
+# also remove Phecode 260.2 mappings 
+# severe protein-calorie malnutrition mappings are weird/wrong
+phecodes  <-
+  phecodes  |>
+  filter(PheCode != "260.2")
 
 phecode_icd_map =
   phecodes |>
@@ -486,7 +511,7 @@ disease_mapping |>
 disease_mapping  |> 
 group_by(icd10_source) |>
   summarise(n = length(unique(STUDY_ACCESSION)),
-          percent = round(100 * length(unique(STUDY_ACCESSION)), 
+          percent = round(100 * length(unique(STUDY_ACCESSION)) / n_studies, 
                           digits = 2)
           ) |> 
 arrange(icd10_source, desc(n))
