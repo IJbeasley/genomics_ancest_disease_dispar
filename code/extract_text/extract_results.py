@@ -158,6 +158,75 @@ def _is_methods_title(title):
 
 
 # ---------------------------------------------------------------------------
+# Back-matter truncation (whole-body / "Main" fallbacks only)
+# ---------------------------------------------------------------------------
+
+# Headings that mark the start of back matter in a whole-body extraction.
+# Matched case-sensitively in title case: the lowercase words appear in
+# ordinary prose ("see references therein"), the headings do not.
+_BODY_TAIL_HEADINGS = (
+    r'References',
+    r'Bibliography',
+    r'Literature\s+Cited',
+    r'Footnotes?',
+    r'Acknowledge?ments?',
+    r'Competing\s+(?:financial\s+)?interests',
+    r'Conflicts?\s+of\s+interest',
+    r'Author\s+[Cc]ontributions?',
+    r'Disclosures?',
+    r'Data\s+[Aa]vailability',
+    r'Code\s+[Aa]vailability',
+)
+
+# A heading counts only at a sentence boundary and only when followed by
+# punctuation and then more text — "... interests. References. Nathan DM, ..."
+_BODY_TAIL_RE = re.compile(
+    r'(?:(?<=\.)|(?<=\?)|(?<=!))\s+(?:' + '|'.join(_BODY_TAIL_HEADINGS) + r')\s*[.:]\s+'
+)
+
+# Back matter lives at the end of a document.  Refusing to cut in the first
+# part of the text keeps an in-text mention from truncating real results.
+_BODY_TAIL_MIN_FRACTION = 0.4
+
+
+def _truncate_body_tail(text, source=''):
+    """
+    Drop back matter from a whole-body extraction.
+
+    The `_main` fallbacks take the entire <body> (or every "Main" passage),
+    which in some publisher XML runs past the end of the narrative and into
+    footnotes, competing-interest statements and the full reference list.
+    Explicitly tagged results sections end at their own section boundary and
+    never need this, so callers apply it only to `is_main` text.
+
+    Returns the text cut at the earliest back-matter heading that falls in the
+    last 60% of the document, or the text unchanged when there is none.
+    """
+    if not text:
+        return text
+
+    cut = None
+    threshold = len(text) * _BODY_TAIL_MIN_FRACTION
+    for match in _BODY_TAIL_RE.finditer(text):
+        if match.start() >= threshold:
+            cut = match
+            break
+
+    if cut is None:
+        return text
+
+    truncated = text[:cut.start()].rstrip()
+    dropped_words = len(text[cut.start():].split())
+    label = f" in {source}" if source else ''
+    print(
+        f"  dropped {dropped_words} words of back matter{label} "
+        f"(cut at '{cut.group().strip()}')",
+        file=sys.stderr,
+    )
+    return truncated
+
+
+# ---------------------------------------------------------------------------
 # JATS XML extraction
 # ---------------------------------------------------------------------------
 
@@ -708,6 +777,8 @@ def extract_results_section(xml_file):
 
         if fmt == 'bioc':
             text, is_main = extract_bioc_results(root)
+            if is_main:
+                text = _truncate_body_tail(text, Path(xml_file).name)
             return {'text': text, 'is_main': is_main}
 
         if fmt == 'unknown':
@@ -747,9 +818,14 @@ def extract_results_section(xml_file):
                     if body is not None:
                         body_text = extract_text_from_element(body).strip()
                         if body_text and len(body_text.split()) >= 50:
+                            body_text = _truncate_body_tail(
+                                body_text, Path(xml_file).name)
                             return {'text': body_text, 'is_main': True}
                 print("Results are only available online (not extracted).", file=sys.stderr)
                 return {'text': None, 'is_main': False}
+
+        if is_main:
+            results_text = _truncate_body_tail(results_text, Path(xml_file).name)
 
         return {'text': results_text, 'is_main': is_main}
 

@@ -147,13 +147,36 @@ def clean_extracted_text(text):
     text = re.sub(r'([,;.])\s*([,;.])', r'\2', text)
     text = re.sub(r'\s+([,;.])', r'\1', text)
 
-    # Remove author citations
-    text = re.sub(r'\([A-Z][a-zA-Z\s&,;.]+et al[,;\s.]*\)', '', text)
+    # Remove author citations, with or without a trailing year:
+    #   "(Smith et al.)"  "(Mahajan et al. 2011)"  "(Woo et al, 2014)"
+    # The year alternative is kept separate from the name character class so a
+    # digit can never be absorbed into the author list.
+    text = re.sub(
+        r'\(\s*[A-Z][A-Za-z\s&,;.\'\-]*?et\s+al\.?'
+        r'(?:\s*[,;]?\s*(?:19|20)\d{2}[a-z]?)?'
+        r'\s*[,;.]?\s*\)',
+        '', text,
+    )
+
+    # Remove numbered bracket citations: "[20]", "[1,2]", "[3-5]", "[7, 9, 11]".
+    # Integers only, so decimal intervals such as "[1.2, 3.4]" and notation
+    # like "[Ca2+]" are left alone.  A preceding space is consumed so
+    # "risk [20], we" closes up to "risk, we".
+    text = re.sub(
+        r'\s*\[\s*\d+\s*(?:[,;–—\-]\s*\d+\s*)*\]',
+        '', text,
+    )
 
     # Remove empty brackets
     text = re.sub(r'\[\s*[,;–—\-\s]*\s*\]', '', text)
     text = re.sub(r'\(\s*[,;–—\-\s]*\s*\)', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
+
+    # Repair parentheses left holding stray punctuation by the removals above,
+    # e.g. "regions (, www.t1dbase.org)" or "plot (; Figure 4)".
+    text = re.sub(r'\(\s*[,;]\s*', '(', text)
+    text = re.sub(r'\s*[,;]\s*\)', ')', text)
+    text = re.sub(r'\(\s*\)', '', text)
 
     # Clean trailing punctuation artifacts
     text = re.sub(r'[,;]\s*[–—\-]\s*[,;.]', '.', text)
