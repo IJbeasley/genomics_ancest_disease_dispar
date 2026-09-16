@@ -90,7 +90,7 @@ def _is_letter_to_editor(root):
     pattern = re.compile(r'^\s*(to the editor|dear editor)\b', re.IGNORECASE)
 
     for p in root.findall('.//{*}p'):
-        text = ''.join(p.itertext())
+        text = flatten_without_citations(p)
         if not text:
             continue
 
@@ -126,8 +126,128 @@ def extract_bioc_main(root):
 
 
 # ---------------------------------------------------------------------------
+# Citation elements (shared across formats)
+# ---------------------------------------------------------------------------
+
+# Element names that carry a bibliographic citation.  Publishers disagree on
+# both the name and the attribute:
+#   PMC / JATS  <xref ref-type="bibr" rid="CR1">1</xref>
+#   GROBID TEI  <ref type="bibr" target="#b0">[1]</ref>
+#   Elsevier    <ce:cross-ref refid="bib15"><ce:sup>15</ce:sup></ce:cross-ref>
+# The Elsevier form has no ref-type at all, so an attribute-only test misses
+# it and its <ce:sup> digits end up glued to the preceding word
+# ("hazards models15,16").  Hence a test on name AND attribute.
+_CITATION_ELEMENT_NAMES = ('cross-ref', 'cross-refs')
+
+
+def _is_citation_element(elem):
+    """True when an element is a bibliographic citation reference."""
+    if elem.get('ref-type') == 'bibr' or elem.get('type') == 'bibr':
+        return True
+    tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+    if tag in _CITATION_ELEMENT_NAMES and elem.get('refid'):
+        return True
+    # Elsevier also emits <ce:cross-refs> whose refid lives on the wrapper;
+    # a bare cross-ref with no refid is an internal figure/table link, which
+    # the narrative needs, so it is deliberately kept.
+    return False
+
+
+def flatten_without_citations(elem):
+    """
+    Flatten an element to text, dropping bibliographic citations.
+
+    The drop-in replacement for ''.join(elem.itertext()) wherever a paragraph
+    is flattened: itertext() has no way to skip a subtree, so it pulls the
+    citation's own digits into the prose.  Tail text after a dropped citation
+    is preserved, because that is ordinary sentence text.
+    """
+    parts = []
+
+    if not _is_citation_element(elem):
+        if elem.text:
+            parts.append(elem.text)
+        for child in elem:
+            parts.append(flatten_without_citations(child))
+            if child.tail:
+                parts.append(child.tail)
+
+    return ''.join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Text cleaning (shared across formats)
 # ---------------------------------------------------------------------------
+
+# A reference marker flattened onto the end of a word: "populations10,11,12".
+# Host word must be 4+ LOWERCASE letters, which excludes gene symbols
+# (TCF7L2, PRDM15, MPPED2) and rsIDs (rs10795076).  Requires two or more
+# numbers: the single-digit form ("association9") is indistinguishable from
+# gene and software names (zranb3, plink2, minimac3, ggplot2, impute2) and is
+# deliberately NOT matched -- see _PROSE_REF_HOSTS below for that case.
+# The host may be capitalised ("Asians7,18", "Europeans6,12", "Biobank18,19")
+# but its remaining letters must be lowercase, which excludes all-caps gene
+# symbols (TCF7L2, ZRANB3).  Capitalised mouse gene symbols (Notch3, Tcf7l2)
+# are safe here because this rule requires TWO OR MORE numbers, and a gene
+# symbol never carries a comma-separated digit list.
+_GLUED_REFS_RE = re.compile(
+    r'(?<![A-Za-z0-9])([A-Za-z][a-z]{3,})(\d{1,3}(?:[,\u2013-]\d{1,3}){1,})(?![\d,]*\d{3}\b)'
+)
+
+# A thousands-separated number, not a reference list: "the13,026 subjects"
+# (a lost space before a sample size) must survive untouched.
+_THOUSANDS_RE = re.compile(r'^\d{1,3}(?:,\d{3})+$')
+
+# Ordinary prose nouns that precede a citation.  Used for the single-number
+# form, where shape alone cannot separate a reference marker from a gene or
+# software name, so only these known-safe hosts are stripped.
+_PROSE_REF_HOSTS = (
+    'studies', 'study', 'analysis', 'analyses', 'population', 'populations',
+    'cohort', 'cohorts', 'patients', 'participants', 'individuals', 'carriers',
+    'controls', 'cases', 'association', 'associations', 'susceptibility',
+    'heritability', 'meta-analysis', 'report', 'reports', 'reported',
+    'described', 'previously', 'elsewhere', 'respectively', 'others',
+    'work', 'works', 'literature', 'review', 'reviews', 'guidelines',
+    'method', 'methods', 'protocol', 'criteria', 'disease', 'diseases',
+    'cancer', 'carcinoma', 'risk', 'variants', 'loci', 'locus', 'gene',
+    'genes', 'sequence', 'kinetics', 'program', 'software',
+)
+
+_PROSE_GLUED_REF_RE = re.compile(
+    r'(?<![A-Za-z0-9])(' + '|'.join(sorted(_PROSE_REF_HOSTS, key=len, reverse=True))
+    + r')(\d{1,3})(?![\dA-Za-z.,\-/])',
+    re.IGNORECASE,
+)
+
+
+def _strip_glued_refs(text):
+    """
+    Strip superscript reference markers flattened onto the preceding word.
+
+    Two rules, both conservative:
+      * two or more numbers after any 4+ letter lowercase word, rejecting
+        thousands separators, descending runs and numbers above 300
+      * a single number, but only after a known prose noun
+    """
+    def _multi(match):
+        word, digits = match.group(1), match.group(2)
+        if _THOUSANDS_RE.match(digits):
+            return match.group(0)
+        numbers = [int(n) for n in re.split(r'[,\u2013-]', digits) if n]
+        if numbers != sorted(numbers):
+            return match.group(0)
+        if any(n > 300 for n in numbers):
+            return match.group(0)
+        return word
+
+    def _single(match):
+        if int(match.group(2)) > 300:
+            return match.group(0)
+        return match.group(1)
+
+    text = _GLUED_REFS_RE.sub(_multi, text)
+    return _PROSE_GLUED_REF_RE.sub(_single, text)
+
 
 def clean_extracted_text(text):
     """
@@ -158,6 +278,13 @@ def clean_extracted_text(text):
         '', text,
     )
 
+    # Remove superscript reference markers that a converter already flattened
+    # onto the preceding word ("populations10,11,12").  Only reachable for
+    # BioC/Auto-CORPus input, where the markup is gone by the time we see the
+    # text; every format that still has markup is handled structurally by
+    # flatten_without_citations() instead.
+    text = _strip_glued_refs(text)
+
     # Remove numbered bracket citations: "[20]", "[1,2]", "[3-5]", "[7, 9, 11]".
     # Integers only, so decimal intervals such as "[1.2, 3.4]" and notation
     # like "[Ca2+]" are left alone.  A preceding space is consumed so
@@ -166,6 +293,15 @@ def clean_extracted_text(text):
         r'\s*\[\s*\d+\s*(?:[,;–—\-]\s*\d+\s*)*\]',
         '', text,
     )
+
+    # Remove hanging Nature-style reference parentheticals left behind when the
+    # citation inside them was stripped: "(ref.)", "(refs)", "(refs,)",
+    # "(refs. -)".  Only punctuation and whitespace may follow "ref"/"refs",
+    # so an intact citation ("(ref. 98)", "(refs. 6,18,19)") and unrelated
+    # parentheticals ("(reference number 11/NW/0382)") are left alone.  The
+    # leading space is consumed so "IGF2BP2 (refs,)." closes to "IGF2BP2.".
+    text = re.sub(r'\s*\(\s*refs?\s*[-–—,;.\s]*\)', '', text,
+                  flags=re.IGNORECASE)
 
     # Remove empty brackets
     text = re.sub(r'\[\s*[,;–—\-\s]*\s*\]', '', text)
@@ -333,7 +469,7 @@ def extract_tei_methods(root):
 
         # Extract paragraphs from this div
         for p in div.findall('tei:p', TEI_NS) or div.findall('p'):
-            para_text = ''.join(p.itertext()).strip()
+            para_text = flatten_without_citations(p).strip()
             if para_text:
                 text_parts.append(clean_extracted_text(para_text) + ' ')
 
@@ -542,8 +678,7 @@ def extract_text_from_element(element, parent_tag=None):
             child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
             
             #print(child.get('target'))
-            if child.get('ref-type') == 'bibr':
-            #if child_tag == 'xref' and child.get('ref-type') == 'bibr':  
+            if _is_citation_element(child):
                 # Skip this citation, but keep any tail text
                 if child.tail:
                     tail_text = child.tail.strip()
@@ -631,7 +766,7 @@ def extract_text_from_element(element, parent_tag=None):
     else:
         # For non-section, non-paragraph elements, process normally
         # Skip citation references entirely
-        if element.tag.endswith('xref') and element.get('ref-type') == 'bibr':
+        if _is_citation_element(element):
             return ''  # Return empty string for citations
         
         # Skip LaTeX source in tex-math tags (but keep MathML)
@@ -1045,7 +1180,12 @@ def extract_methods_section(xml_file):
             return {'text': None, 'is_main': False}
         
         # Extract all text from the methods section
-        methods_text = extract_text_from_element(methods_section)
+        # extract_text_from_element does its own inline tidying, but NOT the
+        # shared clean_extracted_text pass, so until now the JATS methods path
+        # was the one route that skipped the shared citation cleaning
+        # (numbered brackets, flattened superscript markers).  The TEI and
+        # BioC paths above, and both sibling extractors, all clean here.
+        methods_text = clean_extracted_text(extract_text_from_element(methods_section))
         
         # Final cleanup: strip trailing whitespace
         methods_text = methods_text.strip()
@@ -1084,7 +1224,8 @@ def extract_methods_section(xml_file):
                 if len(all_methods_sections) > 1:
                     # Try the next methods section
                     for section in all_methods_sections[1:]:
-                        alt_text = extract_text_from_element(section).strip()
+                        alt_text = clean_extracted_text(
+                            extract_text_from_element(section)).strip()
                         if alt_text and len(alt_text.split()) >= 50:
                             # Found a real methods section
                             return {'text': alt_text, 'is_main': False}
@@ -1098,7 +1239,8 @@ def extract_methods_section(xml_file):
                 if _is_main_journal(root):
                     body = root.find('.//{*}body')
                     if body is not None:
-                        body_text = extract_text_from_element(body).strip()
+                        body_text = clean_extracted_text(
+                            extract_text_from_element(body)).strip()
                         if body_text and len(body_text.split()) >= 50:
                             return {'text': body_text, 'is_main': True}
 

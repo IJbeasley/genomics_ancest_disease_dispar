@@ -30,6 +30,7 @@ from extract_methods import (
     detect_xml_format,
     clean_extracted_text,
     extract_text_from_element,
+    flatten_without_citations,
     extract_bioc_main,
     _is_main_journal,
     _is_letter_to_editor,
@@ -471,7 +472,9 @@ def extract_tei_results(root):
             text_parts.append(clean_title + '. ')
 
         for p in _tei_findall(div, 'p'):
-            para_text = ''.join(p.itertext()).strip()
+            # Not itertext(): GROBID keeps <ref type="bibr">[1]</ref> inline,
+            # and itertext() would pull those bracketed numbers into the prose.
+            para_text = flatten_without_citations(p).strip()
             if para_text:
                 text_parts.append(clean_extracted_text(para_text) + ' ')
 
