@@ -40,6 +40,50 @@ args = parser.parse_args()
 # let's use the scispacy model for better performance on scientific text
 nlp = spacy.load(args.model)
 
+
+def _get_transformer_tokenizer(pipeline):
+    """Return the underlying HuggingFace tokenizer of a transformer pipeline.
+
+    Returns None for non-transformer models (e.g. en_core_sci_sm), in which
+    case we fall back to a whitespace word count.
+    """
+    for pipe_name in ("transformer", "trf_wordpiecer"):
+        if pipe_name not in pipeline.pipe_names:
+            continue
+        model = getattr(pipeline.get_pipe(pipe_name), "model", None)
+        if model is None:
+            continue
+        try:
+            tokenizer = model.attrs.get("tokenizer")
+        except Exception:
+            tokenizer = None
+        if tokenizer is None:
+            tokenizer = getattr(model, "tokenizer", None)
+        if tokenizer is not None:
+            return tokenizer
+    return None
+
+
+_HF_TOKENIZER = _get_transformer_tokenizer(nlp)
+
+# SciBERT's hard limit is 512 positions, 2 of which go to [CLS]/[SEP].
+# With the real tokenizer we can budget close to that; without it we have to
+# keep the conservative word-count proxy, since flattened tables such as
+# "0.8260.8040.8221.37 x 10-8" expand ~5x from words to sub-word tokens.
+MAX_CHUNK_TOKENS = 480 if _HF_TOKENIZER is not None else 300
+print(f"Chunk budget: {MAX_CHUNK_TOKENS} tokens "
+      f"({'model tokenizer' if _HF_TOKENIZER is not None else 'word-count proxy'})")
+
+
+def count_tokens(text: str) -> int:
+    """Number of model sub-word tokens in text (word count as a fallback)."""
+    if _HF_TOKENIZER is not None:
+        try:
+            return len(_HF_TOKENIZER.tokenize(text))
+        except Exception:
+            pass
+    return len(text.split())
+
 def strip_latex(text: str) -> str:
     """Convert LaTeX math expressions to readable plain text."""
     # Remove \( ... \) and \[ ... \] delimiters
@@ -582,28 +626,42 @@ _CHUNK_SPLIT_RE = re.compile(
     r"(?<=[.!?])\s+(?=[A-Z(\[])"
 )
 
-def split_text_into_chunks(text: str, max_tokens: int = 400) -> List[str]:
+def _hard_split(text_unit: str, max_tokens: int) -> List[str]:
+    """Last-resort split of an unbreakable run of text, measured in tokens."""
+    pieces = []
+    for word in text_unit.split():
+        # A single "word" can itself blow the budget (long flattened table rows)
+        if count_tokens(word) > max_tokens:
+            pieces.extend(word[i:i + 100] for i in range(0, len(word), 100))
+        else:
+            pieces.append(word)
+
+    chunks, current, current_n = [], [], 0
+    for piece in pieces:
+        n = max(1, count_tokens(piece))
+        if current and current_n + n > max_tokens:
+            chunks.append(" ".join(current))
+            current, current_n = [], 0
+        current.append(piece)
+        current_n += n
+    if current:
+        chunks.append(" ".join(current))
+    return chunks
+
+
+def split_text_into_chunks(text: str, max_tokens: int = MAX_CHUNK_TOKENS) -> List[str]:
     """
     Split text into chunks that stay within the model's token limit.
 
     Splits first on double newlines (paragraphs), then on single newlines,
-    then on sentence-ending punctuation if any individual unit still
-    exceeds max_tokens. Token count is estimated using the scispacy
-    tokenizer (whitespace + punctuation), which is a close proxy for
-    BERT sub-word tokens without needing the full model vocab.
-
-    max_tokens is set conservatively at 400 to stay safely under
-    SciBERT's 512 limit after sub-word expansion.
+    then on sentence-ending punctuation (abbreviation-safe) if any individual
+    unit still exceeds max_tokens. Token counts come from the model's own
+    sub-word tokenizer when one is available, because a whitespace word count
+    badly under-estimates dense scientific text and flattened tables.
     """
-    def token_count(s: str) -> int:
-        # Fast proxy: count whitespace-separated words.
-        # Sub-word tokenisers typically expand by ~1.2–1.5x, so
-        # a budget of 400 words keeps us under 512 BERT tokens.
-        return len(s.split())
-
     def split_unit(text_unit: str) -> List[str]:
         """Recursively split a unit until every piece is within budget."""
-        if token_count(text_unit) <= max_tokens:
+        if count_tokens(text_unit) <= max_tokens:
             return [text_unit]
         # Try splitting on single newlines first
         parts = text_unit.split("\n")
@@ -615,33 +673,67 @@ def split_text_into_chunks(text: str, max_tokens: int = 400) -> List[str]:
         parts = _CHUNK_SPLIT_RE.split(text_unit)
         if len(parts) > 1:
             return _pack(parts)
-        # Last resort: hard split by word count
-        words = text_unit.split()
-        return [" ".join(words[i:i + max_tokens])
-                for i in range(0, len(words), max_tokens)]
+        # Last resort: hard split by measured token budget
+        return _hard_split(text_unit, max_tokens)
 
     def _pack(units: List[str]) -> List[str]:
         """Greedily pack units into chunks without exceeding max_tokens."""
         chunks = []
         current = ""
+        current_n = 0
         for unit in units:
-            if token_count(current) + token_count(unit) <= max_tokens:
-                current = (current + " " + unit).strip() if current else unit
+            unit = unit.strip()
+            if not unit:
+                continue
+            n = count_tokens(unit)
+            if current and current_n + n <= max_tokens:
+                current = current + " " + unit
+                current_n += n
+                continue
+            if current:
+                chunks.append(current)
+                current, current_n = "", 0
+            # The unit itself may still be too large - recurse
+            if n > max_tokens:
+                chunks.extend(split_unit(unit))
             else:
-                if current:
-                    chunks.append(current)
-                # The unit itself may still be too large — recurse
-                if token_count(unit) > max_tokens:
-                    chunks.extend(split_unit(unit))
-                    current = ""
-                else:
-                    current = unit
+                current, current_n = unit, n
         if current:
             chunks.append(current)
         return chunks
 
-    paragraphs = text.split("\n\n")
-    return _pack(paragraphs)
+    chunks = _pack(text.split("\n\n"))
+
+    # Safety net: guarantee nothing handed to the model exceeds the budget
+    safe_chunks = []
+    for chunk in chunks:
+        if count_tokens(chunk) > max_tokens:
+            safe_chunks.extend(_hard_split(chunk, max_tokens))
+        else:
+            safe_chunks.append(chunk)
+    return safe_chunks
+
+
+def sentences_for_chunk(chunk: str, pubmed_id: str, depth: int = 0) -> List[str]:
+    """Run the model on one chunk, halving and retrying if it still overflows.
+
+    Previously an over-long chunk was skipped entirely, silently dropping that
+    text from the output.
+    """
+    try:
+        doc = nlp(chunk)
+        return [sent.text.strip() for sent in doc.sents]
+    except RuntimeError as e:
+        words = chunk.split()
+        if depth >= 5 or len(words) < 2:
+            print(f"Warning: Could not process chunk in {pubmed_id}: {e}")
+            return []
+        mid = len(words) // 2
+        sentences = []
+        for half in (" ".join(words[:mid]), " ".join(words[mid:])):
+            sentences.extend(sentences_for_chunk(half, pubmed_id, depth + 1))
+        return sentences
+
 
 def break_text_into_sentences(input_dir: str, pubmed_id:str, output_dir: str) -> List[str]:
     # Read the file
@@ -679,24 +771,16 @@ def break_text_into_sentences(input_dir: str, pubmed_id:str, output_dir: str) ->
     file_text = file_text.replace("□", " ")
     
     # Split into chunks if too long (to avoid BERT token limit of 512)
-    chunks = split_text_into_chunks(file_text, max_tokens=400)
+    chunks = split_text_into_chunks(file_text, max_tokens=MAX_CHUNK_TOKENS)
     
     all_sentences = []
     for chunk in chunks:
-        try:
-            # Flatten any remaining newlines: spacy treats them as hard
-            # sentence boundaries.
-            chunk = re.sub(r'\s+', ' ', chunk).strip()
-            if not chunk:
-                continue
-            # Process text with spaCy
-            doc = nlp(chunk)
-            # Extract sentences
-            sentences = [sent.text.strip() for sent in doc.sents]
-            all_sentences.extend(sentences)
-        except RuntimeError as e:
-            print(f"Warning: Could not process chunk in {pubmed_id}: {e}")
+        # Flatten any remaining newlines: spacy treats them as hard
+        # sentence boundaries.
+        chunk = re.sub(r'\s+', ' ', chunk).strip()
+        if not chunk:
             continue
+        all_sentences.extend(sentences_for_chunk(chunk, pubmed_id))
     
     sentences = all_sentences
     sentences = clean_sentences(sentences)
