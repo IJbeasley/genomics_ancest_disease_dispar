@@ -19,6 +19,7 @@ library(purrr)
 library(tidyr)
 library(data.table)
 library(ComplexHeatmap)
+library(ggplot2)
 
 ```
 
@@ -367,56 +368,56 @@ disease_mapping_annotated |>
   unique() |>
   length()
 
-spec_icd10_diabetes_ranges <-
-  disease_mapping_annotated |> 
-  filter(cause == "Type 1 diabetes mellitus"|
-         cause == "Type 2 diabetes mellitus") |> 
-  pull(matched_range) |> 
-  unique()
-
-disease_mapping_annotated |>
-  filter(matched_range %in% spec_icd10_diabetes_ranges) |>
-  pull(cause) |>
-  unique()
+# spec_icd10_diabetes_ranges <-
+#   disease_mapping_annotated |> 
+#   filter(cause == "Type 1 diabetes mellitus"|
+#          cause == "Type 2 diabetes mellitus") |> 
+#   pull(matched_range) |> 
+#   unique()
+# 
+# disease_mapping_annotated |>
+#   filter(matched_range %in% spec_icd10_diabetes_ranges) |>
+#   pull(cause) |>
+#   unique()
 
 # Diabetes mellitus is a broader category that includes both Type 1 and Type 2 diabetes mellitus
 # So don't duplicate where the same study is mapped to Type 1 or Type 2 diabetes and also mapped to Diabetes mellitus
-rows_to_drop <-
-  disease_mapping_annotated |>
-  filter(matched_range %in% spec_icd10_diabetes_ranges)  |>
-  filter(cause == "Diabetes mellitus")
-
-
-disease_mapping_annotated <-
-  rows_delete(disease_mapping_annotated, 
-              rows_to_drop,
-              by = names(rows_to_drop)
-              )
+# rows_to_drop <-
+#   disease_mapping_annotated |>
+#   filter(matched_range %in% spec_icd10_diabetes_ranges)  |>
+#   filter(cause == "Diabetes mellitus")
+# 
+# 
+# disease_mapping_annotated <-
+#   rows_delete(disease_mapping_annotated, 
+#               rows_to_drop,
+#               by = names(rows_to_drop)
+#               )
 
 # same but for Chronic kidney disease
 # Chronic kidney disease due to diabetes mellitus type 1 and Chronic kidney disease due to diabetes mellitus type 2 are also broader categories that include Type 1 and Type 2 diabetes mellitus
-spec_icd10_ckd_ranges <-
-  disease_mapping_annotated |> 
-  filter(cause == "Chronic kidney disease due to diabetes mellitus type 1"|
-         cause == "Chronic kidney disease due to diabetes mellitus type 2") |> 
-  pull(matched_range) |> 
-  unique()
+# spec_icd10_ckd_ranges <-
+#   disease_mapping_annotated |> 
+#   filter(cause == "Chronic kidney disease due to diabetes mellitus type 1"|
+#          cause == "Chronic kidney disease due to diabetes mellitus type 2") |> 
+#   pull(matched_range) |> 
+#   unique()
+# 
+# disease_mapping_annotated |>
+#   filter(matched_range %in% spec_icd10_ckd_ranges) |>
+#   pull(cause) |>
+#   unique()
+# 
+# rows_to_drop <-
+#   disease_mapping_annotated |>
+#   filter(matched_range %in% spec_icd10_ckd_ranges)  |>
+#   filter(cause == "Chronic kidney disease")
 
-disease_mapping_annotated |>
-  filter(matched_range %in% spec_icd10_ckd_ranges) |>
-  pull(cause) |>
-  unique()
-
-rows_to_drop <-
-  disease_mapping_annotated |>
-  filter(matched_range %in% spec_icd10_ckd_ranges)  |>
-  filter(cause == "Chronic kidney disease")
-
-disease_mapping_annotated <- 
-  disease_mapping_annotated |>
-  rows_delete(rows_to_drop,
-              by = names(rows_to_drop)
-              )
+# disease_mapping_annotated <- 
+#   disease_mapping_annotated |>
+#   rows_delete(rows_to_drop,
+#               by = names(rows_to_drop)
+#               )
 
 disease_mapping_with_cause <-
 disease_mapping_annotated |>
@@ -495,6 +496,66 @@ disease_mapping_with_cause |>
   unique() |> 
   sort()
                                 
+```
+
+# Plot: number of papers per cause: 
+
+```{r}
+
+pdf(here::here("figures/number_of_gwas_catalog_papers_per_cause.pdf"),
+    width = 17, 
+    height = 8
+)
+
+disease_mapping_with_cause |>
+  dplyr::filter(include == TRUE) |>
+  # group into broader categories 
+  mutate(cause = case_when(
+    grepl("diabetes", cause, ignore.case = TRUE) ~ "Diabetes",
+    grepl("chronic kidney disease", cause, ignore.case = TRUE) ~ "Chronic kidney disease",
+    grepl("hemorr", cause, ignore.case = TRUE) ~ "Hemorrhagic stroke",
+    grepl("lip|pharynx", cause, ignore.case = TRUE) ~ "Mouth and throat cancer",
+    grepl("lung cancer", cause, ignore.case = TRUE) ~ "Lung Cancer",
+    grepl("cirrhosis", cause, ignore.case = TRUE) ~ "Chronic Liver Disease",
+    TRUE ~ cause
+  )) |>
+  mutate(cause = 
+           stringr::str_to_title(
+           stringr::str_replace_all(cause, 
+                                          pattern = "and", 
+                                          replacement = "&")
+           )
+           ) |>
+  distinct(PUBMED_ID, cause) |>
+  group_by(cause) |>
+  summarise(n_papers = n()) |>
+  ggplot(aes(x= reorder(cause, n_papers), y=n_papers)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Cause", 
+       y = "Number of Papers") + 
+  theme_bw() +
+      theme(
+    axis.text.x  = element_text(size = 25),   # 8pt for axis text
+    axis.text.y  = element_text(size = 25),   # 8pt for axis text
+    axis.title.x = element_text(size = 25),  # 10pt for labels
+    axis.title.y = element_blank(),
+    #title        = element_text(size = 8),  # 10pt for labels
+    strip.text   = element_text(size = 25),  # 10pt for labels
+    # legend.title = element_text(size = 18),  # 10pt for labels
+    # legend.text  = element_text(size = 18),   # 8pt for legend text
+    # legend.position = "right",           # Bottom left corner
+    # legend.justification = "left",
+    # #legend.justification = c(0, 0),      # Anchor at bottom left
+    # #legend.background = element_rect(fill = "white", color = "grey80"),
+    # legend.margin = margin(l = -0.25, unit = "npc"),
+    #legend.margin = margin(5, 5, 5, 5),
+    # legend.position = "bottom"
+  )
+
+dev.off()
+
+
 ```
 
 
