@@ -143,7 +143,7 @@ The code creating the final map of disease traits to ICD-10 codes is
 below:
 
 -   [Extract author-provided ICD-10 terms](05_extract_icd10.html)
--   [Mapping all traits to ICD-10 codes](06_map_trait_to_icd10.html)
+-   [Mapping all disease terms to ICD-10 codes](06_map_trait_to_icd10.html)
 
 <br>
 
@@ -187,49 +187,62 @@ print(paste0("Number of papers studying at least one of the selected Lancet Prio
 
 <br> 
 
-# Get text to fine tune model
+# Get and prepare article text to fine tune text-mining model
 
--   [Getting abstracts from GWAS Catalog](get_abstracts.html)
+Download relevant text: 
 
--   [Getting full-text of GWAS Catalog articles](get_full_text.html)
+-   [Getting abstracts from GWAS Catalog](11_get_abstracts.html)
 
-    Includes steps to extract methods and results .txt files from full-text xml using scripts in the code/extract_text folder:
+-   [Getting full-text of GWAS Catalog articles](12_get_full_text.html)
+
+-   [Getting supplement of GWAS Catalog articles](13_get_supplement.html) 
+
+-   [Pre-processing text for text mining](14_process_article_text.html)
+
+-  Extract methods and results .txt files from full-text xml using scripts in the code/extract_text folder:
     -  code/extract_text/batch_process_methods.sh
     -  code/extract_text/extract_methods.py
     -  code/extract_text/batch_process_results.sh
     -  code/extract_text/extract_results.py
+-   Convert text to sentences: code/extract_text/spacy_obtain_sentences.py
 
--   [Getting supplement of GWAS Catalog articles](get_supplement.html) 
-
-Pre-process article text for text mining:
-
--   Convert text to sentences: code/extract_text/spacy_obtain_sentences.pu
-
--   [Get initial training sentences](text_for_cohort_labels.html)
-    
-    Input into doccano
-    
--   [Fix / final preparation for selecting training set]
 
 # Extracting cohort labels
 
-Allowing us to deal with overlapping samples.
+Allowing us to identify overlapping samples.
 
--   [Fixing & harmonising GWAS Catalog cohort metadata](correcting_cohort_names.html)
+## Training model 
+
+-   [Determining test / train PUBMED ID split](21_training_set_selection.html)
+
+Get initial training annotations via a grep search
+
+-   [Preparing terms for grep search](22_grep_annotations_prep.html)
+-   [Get initial training annotations](23_first_parse_text_annotations.html)
+  
+  The output of this is jsonl file, to be used with doccano for annotation.
+
+-   [Fix / final preparation of training set annotations](24_prep_finetune_after_doccano.Rmd)
+
+Correcting any errors in annotations (i.e. including whitespace or commas at the end of annotations)
+
+### Fine tune text mining model and apply to all papers
+
+
+## From GWAS Catalog Cohort Metadata
+
+-   [Fixing & harmonising GWAS Catalog cohort metadata](31_correcting_gwas_meta_cohort_names..html)
 
     Mostly just correcting for typos and different ways of writing the
     same cohort name (e.g. Finland vs FINLAND). 
 
--   [Missing cohort metadata in the GWAS Catalog](missing_cohort_info.html)
+-   [Missing cohort metadata in the GWAS Catalog](32_gwas_meta_missing_cohort_info.html)
 
      Investigation into missingness of GWAS Catalog cohort metadata, is it more common in older studies, or more recent studies? 
 
--   [Distribution of cohort information exploration](cohort_dist.html)
+-   [Distribution of cohort information exploration](33_gwas_meta_cohort_dist.html)
      
      Explore the structure of GWAS Catalog metadata and how cohort labels are distributed across studies.
-
-## Fine tune text mining model 
-
 
 ### Other sources of cohort labels and sample sizes
 
@@ -241,8 +254,7 @@ dbGaP, EGA, JGA. Clinical trial Ids etc.
 
 ## Calculating ancestry biases
 
--   [Replicate observed ancestry biases figures in GWAS
-    dataset](replication_ancestry_bias.html)
+-   [Replicate observed ancestry biases figures in GWAS dataset](replication_ancestry_bias.html)
 
     Replicating Martin et al. 2019 Figure
 
