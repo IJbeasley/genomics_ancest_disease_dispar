@@ -1,0 +1,1700 @@
+---
+title: "Harmonizing Cohort Labels"
+author: "Isobel Beasley"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+# Load / pre-process GWAS Catalog data
+
+```{r load_gwas}
+# Load GWAS Catalog studies
+gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+                         sep = "\t", quote = "")
+
+# Standardize column names (remove spaces)
+gwas_study_info <- gwas_study_info |>
+  rename_all(~gsub(" ", "_", .x))
+
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, " \\| ", "|")) |>
+mutate(COHORT = str_replace_all(COHORT, "\\| ", "|")) |>
+  mutate(COHORT = str_replace_all(COHORT, " \\|", "|"))
+
+# some use commas instead of | to designate multiple cohorts
+gwas_study_info <- gwas_study_info |>
+    mutate(COHORT = str_replace_all(COHORT, ", ", "|")) 
+
+```
+
+# Remove uninformative labels
+
+```{r remove_uninformative_cohort_names}
+# making "multiple" designation to be the same
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                   "(\\(Multiple cohorts\\))|(\\(multiple\\))|Multiple",
+                                  "multiple")) 
+
+
+# number of cohorts listed as 'multiple'
+gwas_study_info |> 
+  filter(grepl("multiple", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n())
+
+# remove cohorts listed as multiple
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "multiple",
+                                          string = COHORT)
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "multiple",
+                                          string = COHORT)
+         )
+
+
+# making others be the same  
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Other", "other")) |> 
+  mutate(COHORT = str_replace_all(COHORT, "OTHER", "other")) |>
+  mutate(COHORT = str_replace_all(COHORT, "others", "other")) 
+
+# number of cohorts listed as other
+gwas_study_info |> 
+  filter(grepl("other", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+gwas_study_info |>
+  filter(grepl("other", COHORT)) |> 
+  nrow()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "(^other$)|(^other\\|)|(\\|other$)",
+                                          string = COHORT)
+         ) |>
+  mutate(COHORT = stringr::str_replace_all(pattern = "\\|other\\|",
+                                          string = COHORT,
+                                          replacement = "|")
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "other",
+                                          string = COHORT)
+         )
+
+# not reported: 
+gwas_study_info |> 
+  filter(grepl("NR", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+
+gwas_study_info |> 
+  filter(grepl("NR", COHORT)) |>
+  nrow()
+
+gwas_study_info = 
+gwas_study_info |>
+  dplyr::mutate(COHORT = stringr::str_remove_all(pattern ="(^NR$)|(^NR\\|)|(\\|NR$)", 
+                                                 string = COHORT)) |>
+    mutate(COHORT = stringr::str_replace_all(pattern = "(\\|NR\\|)",
+                                          string = COHORT,
+                                          replacement = "|")
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_remove_all(pattern = "\\|$",
+                                 string = COHORT))
+
+```
+
+# Accounting for some discrepancies in cohort names across studies 
+
+## Check in: how many unique cohorts (at the start)? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+```
+
+
+## Accounting for some discrepancies in cohort names across studies 
+
+```{r}
+
+# Correct for discrepancies within same paper
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "AWI-Gen", "AWI-GEN")) |> # PUBMED ID :40229280
+  mutate(COHORT = str_replace_all(COHORT, "AddHealth", "Add Health")) |> # PUBMED ID: 37494057
+  mutate(COHORT = str_replace_all(COHORT, fixed("EB|FinnGen|UKBB"), "EB|FinnGen|UKB")) |> # 39067062
+  mutate(COHORT = str_replace_all(COHORT, "Estonian Biobank", "EB")) |> # PUBMED ID: 39500877
+  mutate(COHORT = str_replace_all(COHORT, "AWIGEN", "AWI-GEN"))  # 40229280
+
+
+# Makes TwinsUK consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "TWINS-UK|TWINSUK", "TwinsUK")) 
+
+# Make epic norfolk consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "EPIC-Norfolk cohort", "EPIC-Norfolk")) 
+
+# Make emerge consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "EMERGE", "eMERGE")) 
+
+# Make twingene consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "TWINGENE", "TwinGene"))
+
+# Make QSkin consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "QSkin|Qskin", "QSKIN")) 
+
+# Make 23andme consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "23ANDME", "23andMe")) 
+
+# Make PopGen consistent
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "PopGen", "POPGEN")) 
+
+# Make decode consistent
+gwas_study_info <- gwas_study_info |>
+ mutate(COHORT = str_replace_all(COHORT, "DECODE|deCode|DeCODE", "deCODE"))
+
+# Make FinnGen consistent
+gwas_study_info <- gwas_study_info |>
+mutate(COHORT = str_replace_all(COHORT, "Finngen|FINNGEN", "FinnGen")) 
+
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "genomicc", "GenOMICC")) |>
+  mutate(COHORT = str_replace_all(COHORT, "IPSYCH", "iPSYCH")) |>
+  mutate(COHORT = str_replace_all(COHORT, "SIMES", "SiMES")) |>
+  mutate(COHORT = str_replace_all(COHORT, "HELIX", "Helix")) 
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "FINLAND", "Finland"))
+
+```
+
+## Check in: how many unique cohorts now? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+```
+
+# Correcting for cardiogram cohort meta-analyses 
+
+```{r}
+# CARDIoGRAMplusC4D cohort includes both CARDIoGRAM and C4D cohorts
+# see: https://cardiogramplusc4d.org/data-downloads/
+# for coding, therefore, we change this to CARDIoGRAM|C4D
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "CARDIoGRAMplusC4D", "CARDIoGRAM|C4D"))
+
+```
+
+
+# Correcting for UK Biobank naming differences ... 
+
+```{r}
+
+all_cohorts[grep("ukb", tolower(all_cohorts))] |> unique()
+
+  gwas_study_info |>
+  filter(grepl("UKBS", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+  
+  
+# for PUBMED_ID: 37653029
+# UKBS seems to be UK Biobank Bank
+
+# for pubmed id: 34127860
+# UKBS is UK Blood Service (UKBS)
+
+ gwas_study_info |>
+   filter(grepl("UKB-PPP", COHORT)) |>
+   select(PUBMED_ID, COHORT) |>
+   distinct()
+# pubmed id 37794183 is uk biobank - protein
+ 
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = ifelse(COHORT == "UKB-PPP", "UKB", COHORT)) |>
+  mutate(COHORT = str_replace_all(COHORT, "UKBB White British", "UKB")) |>
+  mutate(COHORT = gsub("\\bUKB\\b", "UKBB", COHORT))
+
+```
+
+## Check in: how many unique cohorts now? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+```
+
+# Correcting for naming cohort differences across studies (Confirmed by checking papers)
+
+## NIHR BioResource 
+
+```{r}
+
+# seems NIHR Cambridge BioResource & NIHR BIORESOURCE are the same
+# https://www.cambridgebioresource.group.cam.ac.uk/ 
+
+gwas_study_info |>
+  filter(grepl("NIHR Cambridge BioResource", COHORT)) |>
+  select(PUBMED_ID, COHORT) 
+
+gwas_study_info |>
+    filter(grepl("NIHR BIORESOURCE", COHORT)) |>
+    select(PUBMED_ID, COHORT) |> 
+    distinct()
+
+gwas_study_info |>
+    filter(grepl(tolower("BIORESOURCE"), tolower(COHORT))) |>
+    select(PUBMED_ID, COHORT) |>
+    distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "NIHR Cambridge BioResource|NIHR BIORESOURCE" , "NIHR BioResource"))
+
+
+```
+
+## Living biobank typo
+
+```{r}
+
+
+# Leivin biobank appears to a typo - for Living Biobank
+# see PUBMED ID 34059833; https://pmc.ncbi.nlm.nih.gov/articles/PMC7610958/#SD1
+gwas_study_info |> filter(grepl("Leivin Biobank", COHORT))
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Leivin Biobank", "Living Biobank"))
+
+```
+
+## Ghana Prostate
+
+```{r}
+
+gwas_study_info |>
+  filter(grepl("Ghana", COHORT)) |>
+  select(PUBMED_ID,COHORT) |>
+  distinct()
+
+# if look at papers they are referring to the same cohorts: 
+# PUBMED_ID: 36872133 https://pmc.ncbi.nlm.nih.gov/articles/PMC10424812/#S9
+# PUBMED_ID: 39358599 https://www.nature.com/articles/s41588-024-01931-3#Sec12
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Ghana_Prostate", "Ghana"))
+
+```
+
+## Sardinia 
+
+```{r}
+
+# from reading sup table: https://pmc.ncbi.nlm.nih.gov/articles/instance/7611832/bin/EMS136340-supplement-Supplementary_Information.pdf
+# for pubmed 34349265
+# seems SARDINIA should be combined into SardiNIA
+gwas_study_info |>
+  filter(grepl("SARDINIA", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+gwas_study_info |>
+  filter(grepl("SardiNIA", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "SARDINIA", "SardiNIA"))
+
+gwas_study_info |>
+  filter(grepl("Sardinia", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+# not sure about case control Sardinia ... 
+# see second sup table from https://pmc.ncbi.nlm.nih.gov/articles/PMC8099827/#_ad93_
+# Sardinia
+
+
+```
+
+## Odd naming convention in PUBMED_ID 32949544
+
+Seems like mentioned ancestry groups, rather than cohorts (e.g. UKBB is used in this study)
+
+see cohort information here: 
+https://pmc.ncbi.nlm.nih.gov/articles/instance/8220892/bin/NIHMS1709432-supplement-Supp_Materials.pdf
+
+
+```{r}
+
+gwas_study_info |>
+  dplyr::filter(PUBMED_ID == 32949544)
+
+gwas_study_info = 
+    rows_update(gwas_study_info ,tibble(PUBMED_ID = 32949544, COHORT = "multiple"), unmatched = "ignore")
+
+```
+
+## Odd naming convention in PUBMED ID 33649486
+
+```{r}
+
+gwas_study_info |>
+  filter(grepl("Multiethnic samples from the UK", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+gwas_study_info |>
+    filter(PUBMED_ID == 33649486)
+
+# looking at this study, discovery
+# controls come from UKBB
+# cases recruited from various places across the UK - so 
+
+gwas_study_info = 
+rows_update(gwas_study_info ,tibble(PUBMED_ID = 33649486, COHORT = "UKBB|other"), 
+            unmatched = "ignore")
+
+
+```
+
+## GAINT to GIANT
+
+```{r}
+# GAINT appears to be a typo 
+# see PUBMED_ID: 	36376304 (https://pmc.ncbi.nlm.nih.gov/articles/PMC9663411/)
+
+gwas_study_info |>
+filter(grepl("GAINT", COHORT)) |>
+select(PUBMED_ID, COHORT) |>
+ distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "GAINT", "GIANT"))
+
+
+```
+
+## 1982 Pelotas (Brazil) Birth Cohort Study
+
+```{r}
+unique(all_cohorts)[grepl("1982", unique(all_cohorts))]
+
+gwas_study_info |>
+  filter(grepl("1982", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+# can confirm, 39885687 (https://pmc.ncbi.nlm.nih.gov/articles/PMC11875162/) 
+# 1982 PELOTAS refers to 1982 Pelotas (Brazil) Birth Cohort Study
+
+# can confirm: 40537477 (https://pmc.ncbi.nlm.nih.gov/articles/PMC12179276/#MOESM2)
+# 1982 PELOTAS refers to 1982 Pelotas (Brazil) Birth Cohort Study
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "1982 Pelotas (Brazil) Birth Cohort Study", "1982 PELOTAS"))
+
+gwas_study_info |>
+  filter(grepl("\\bPELOTAS\\b", COHORT)) |>
+  filter(!grepl("1982", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+# can confirm: 34059833 
+# PELOTAS refers to the 1982 PELOTAS study
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "(?<!1982 )PELOTAS", "1982 PELOTAS"))
+
+```
+
+## GR@ACE
+
+```{r}
+
+# i notice there are studies with cohort listed as
+# GR@CE & GR@ACE - perhaps these are the same?
+
+# checking GR@CE - as there is fewer of these studies listed ... 
+gwas_study_info |>
+filter(grepl("GR@CE", COHORT)) |>
+select(PUBMED_ID, COHORT) |>
+distinct() 
+
+# 35379992 -GR@CE appears to be a typo, should be: GR@ACE (https://pmc.ncbi.nlm.nih.gov/articles/PMC9005347/#Sec8)
+
+# 39046104 - GR@CE also appears to be a typo,  should be: GR@ACE
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC11497727/#alz14115-sec-0080
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "GR@CE", "GR@ACE"))
+
+```
+
+## Tohoku Medical Megabank
+
+```{r}
+gwas_study_info |> 
+  filter(grepl("tohoku", tolower(COHORT))) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Tohoku Medical Megabank Project", "Tohoku Medical Megabank"))
+
+```
+
+## Steno Diabetes
+
+```{r}
+
+gwas_study_info |> 
+  filter(grepl("steno", tolower(COHORT))) |>
+  select(PUBMED_ID, COHORT, `DISEASE/TRAIT`) |>
+  distinct()
+
+all_cohorts[grep("steno", tolower(all_cohorts))] |> unique()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "Steno Diabetes Center", 
+                                  "Steno")
+         )
+  
+
+```
+
+## Nagahama
+
+```{r}
+
+gwas_study_info |>
+  filter(grepl("nagahama", tolower(COHORT))) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Nagahama_Study|NagahamaStudy", "Nagahama Study")) |> 
+  # ? maybe check Nagahama == Nagahama Study
+  mutate(COHORT = str_replace_all(COHORT, "Nagahama Study", "Nagahama")) 
+
+```
+
+## WTCCC - Bipolar disease cases
+
+```{r}
+
+gwas_study_info |>
+  filter(grepl("WTCCC - Bipolar disease cases", COHORT)) |>
+  select(1:5)
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 33830302) |>
+  select(PUBMED_ID, COHORT)
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "WTCCC - Bipolar disease cases", "WTCCC"))
+
+
+```
+
+
+## Qatar Genome Project
+
+```{r}
+gwas_study_info |>
+  filter(grepl("QGP", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+# Checked 36168886 - QGP is Qatar Genome Project
+
+# so 
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Qatar Genome Program (QGP)", "QGP"))
+
+```
+
+## Check in: how many unique cohorts now? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+```
+
+# Discrepancies corrected across papers (only quick manual review - could have errors):
+
+## 1982 Pelotas (Brazil) Birth Cohort Study -> 1982 PELOTAS
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  '1982 Pelotas \\(Brazil\\) Birth Cohort Study',
+                                  '1982 PELOTAS'))
+
+```
+
+## ABCD study
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "ABCD study", 
+                                  "ABCD"))
+
+```
+
+## canSCAD example: 
+
+```{r}
+
+# canSCAD"  "CanSCAD cases and MGI controls" 
+gwas_study_info |>
+  filter(grepl("CanSCAD cases and MGI controls", COHORT)) |>
+select(PUBMED_ID, COHORT) |>
+ distinct()
+
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "CanSCAD cases and MGI controls", "canSCAD|MGI"))
+
+
+```
+
+## Potentionally simple checking similar names (just differ in capitalisation)
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+
+unique_cohort_names = unique(all_cohorts) 
+
+# Convert to lowercase and check duplicates
+dup_groups <- tapply(unique_cohort_names, 
+                     tolower(unique_cohort_names), 
+                     I)
+
+# Keep only groups with >1 element (i.e., capitalization differences)
+dup_groups[lengths(dup_groups) > 1]
+
+```
+
+## Potentionally simple checking similar names (just different in spaces and _)
+
+```{r}
+# Normalize by removing spaces and underscores
+normalized <- gsub("[ _]", "", sort(unique_cohort_names))
+
+# Group by normalized value
+dup_groups <- tapply(sort(unique_cohort_names), normalized, I)
+
+# Keep only groups with >1 element (i.e. variants)
+dup_groups[lengths(dup_groups) > 1]
+
+
+```
+
+
+## Airwave
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "AIRWAVE", "Airwave"))
+
+```
+
+## AllOfUs
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "AllOfUs", "AllofUs"))
+
+```
+
+## Baependi
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, toupper("Baependi"), "Baependi"))
+
+```
+
+## BioMe
+
+```{r}
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "BIOME|BioME", "BioMe"))
+
+```
+
+## BioVU
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "BIOVU|BioVu", "BioVU"))
+
+```
+
+## British 1958 birth cohort
+
+### British 1958 birth cohort -> B58C
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "British 1958 birth cohort", "B58C"))
+
+```
+
+### BC58 -> B58C
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "BC58", 
+                                  "B58C")
+         )
+
+```
+
+## China Kadoorie Biobank
+
+```{r}
+
+# CKB is the acronym for the China Kadoorie Biobank (see:pubmed id 36777997) https://pmc.ncbi.nlm.nih.gov/articles/PMC9903787/#tbl1
+
+gwas_study_info |>
+  filter(grepl("\\bCKB\\b", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct() |>
+  tail()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                  "China Kadoorie Biobank", 
+                                  "CKB")
+         )
+
+
+```
+
+## Cilento
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, toupper("Cilento"), "Cilento"))
+
+```
+
+
+## Colaus
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, "COLAUS", "CoLaus"))
+
+```
+
+## CROATIA-Korcula
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, "CROATIA-KORCULA", "CROATIA-Korcula"))
+
+```
+
+## DRS_EXTRA
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, "DRSEXTRA", "DRS_EXTRA"))
+
+```
+
+## FamHS
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, toupper("FamHS"), "FamHS"))
+
+```
+
+## Fenland
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "FENLAND", "Fenland"))
+
+```
+
+## GALA II
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "GALA_II", "GALA II"))
+
+```
+
+## GEL
+
+```{r}
+
+gwas_study_info |>
+  filter(grepl("GeL", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+# Only one study uses GeL (36124557)- from 
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC9512401/#s4 
+# Appears to be typo, for Genomics England (GEL)
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "GeL", "GEL"))
+
+
+```
+
+## GeneSTAR
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, "GENESTAR|GeneStar", "GeneSTAR"))
+
+```
+
+## GENSalt
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, "GENSALT|GenSalt", "GENSalt"))
+
+```
+
+## GoDARTS
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("godarts"), "GoDARTS"))
+
+```
+
+## InCHIANTI
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("InCHIANTI"), "InCHIANTI"))
+
+```
+
+## Inter99
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("Inter99"), "Inter99"))
+
+```
+
+## "Health ABC" 
+
+```{r}
+
+gwas_study_info  = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Health ABC", "HealthABC")) 
+
+```
+
+## "Health 2000" 
+
+```{r}
+
+gwas_study_info  = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Health 2000", "Health2000")) 
+
+```
+
+## HyperGen
+
+```{r}
+
+gwas_study_info  = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "HyperGEN|HYPERGEN", "HyperGen")) 
+
+# ? LifeLines Deep
+
+```
+
+## INGI-Val Borbera
+
+```{r}
+
+gwas_study_info  = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "INGI-Val_Borbera", "INGI-Val Borbera")) 
+
+# ? LifeLines Deep
+
+```
+
+## KoGES
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("KoGES"), "KoGES"))
+
+```
+
+## Lifeheart
+
+```{r}
+
+gwas_study_info  = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "LIFE-HEART", "LIFE-Heart"))
+
+```
+
+## LifeLines
+
+```{r}
+
+gwas_study_info  = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Lifelines", "LifeLines")) 
+
+# ? LifeLines Deep
+
+```
+
+## Living Biobank
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Living-biobank|LivingBiobank", "Living Biobank"))
+
+```
+
+## Mayo-VDB
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("Mayo-VDB"), "Mayo-VDB"))
+
+```
+
+## A Multiethnic Genome-wide Scan of Prostate Cancer -> MEC
+
+? I think refers to this: 
+https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs000306.v4.p1
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'A Multiethnic Genome-wide Scan of Prostate Cancer',
+                                  'MEC')) |>
+    mutate(COHORT = str_replace_all(COHORT,
+                                  'Multiethnic Genome-wide Scan of Prostate Cancer',
+                                  'MEC'))
+
+```
+
+## MoBa
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("MoBa"), "MoBa"))
+
+```
+
+## Nugene
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Nugene", "NUGENE"))
+
+```
+
+## Orcades
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("Orcades"), "Orcades"))
+
+```
+
+## Oxford Regional Prospective Study of Childhood Diabetes (ORPS) -> ORPS
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'Oxford Regional Prospective Study of Childhood Diabetes \\(ORPS\\)',
+                                  'ORPS'))
+
+```
+
+## 	Qatar Genome Program (QGP) -> QGP
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'Qatar Genome Program \\(QGP\\)',
+                                  'QGP'))
+
+```
+
+## PanScan
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("PanScan"), "PanScan"))
+
+```
+
+## Raine
+
+```{r}
+
+gwas_study_info = gwas_study_info |> 
+  mutate(COHORT = str_replace_all(COHORT, toupper("Raine"), "Raine"))
+
+```
+
+
+## ROSMAP
+
+```{r}
+
+all_cohorts[grep("rosmap", tolower(all_cohorts))] |> unique()
+
+gwas_study_info |>
+  filter(grepl("ROSMAP 1|ROSMAP 2", COHORT)) |>
+  select(PUBMED_ID, COHORT) |>
+  distinct()
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "ROSMAP 1|ROSMAP 2", "ROSMAP"))
+
+
+```
+
+## SHIP trend
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "SHIP-Trend", "SHIP-TREND"))
+
+# ? "SHIPNATREND"  - comes from one study
+gwas_study_info |>
+ filter(grepl("SHIPNATREND", COHORT)) |>
+ select(PUBMED_ID, COHORT) |>
+ distinct() 
+
+# from sup table, seems like SHIPNATREND is SHIP-TREND - 
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC7480402/#SD1
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "SHIPNATREND", "SHIP-TREND"))
+
+```
+
+## Sign
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "SIGN", "SiGN"))
+
+```
+
+## Taiwan -> TWB
+
+```{r}
+
+# for PUBMED_IDs
+twb_pubmed_ids <-  c("34026292",
+                     "36329257",
+                     "36009466",
+                     "35046404",
+                     "34934334",
+                     "34834521",
+                     "34404248",
+                     "36778051",
+                     "34522458"
+                    )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID %in% twb_pubmed_ids,
+                         str_replace_all(COHORT, "Taiwan", "TWB"),
+                       COHORT
+  )
+  )
+
+```
+
+## 	T2D SIGMA Studies -> SIGMA T2D
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'T2D SIGMA Studies',
+                                  'SIGMA T2D'))
+
+
+```
+
+## Tohoku Medical Megabank -> TMM
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'Tohoku Medical Megabank',
+                                  'TMM'))
+
+```
+
+## Understanding Society -> UnderstandingSociety
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Understanding Society", "UnderstandingSociety"))
+
+```
+
+## VIVA 
+
+```{r}
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Viva", "VIVA"))
+
+```
+
+## Rotterdam
+
+```{r}
+
+gwas_study_info |>
+  filter(grepl("Rotterdam", COHORT))
+
+# Rotterdam study is typically listed as "RS"
+
+# see e.g. 36568030 https://pmc.ncbi.nlm.nih.gov/articles/PMC9772568/
+gwas_study_info |>
+  filter(grepl("\\bRS\\b", COHORT))
+
+gwas_study_info = gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Rotterdam", "RS"))
+
+```
+
+
+
+
+
+## Check in: how many unique cohorts now? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+```
+
+## Check in: how many cohorts are only used in one PUBMED ID (indicating possibly misnaming error?)
+
+```{r}
+
+single_use_cohorts  =   
+data.frame(cohort = all_cohorts) |>
+  group_by(cohort) |>
+  summarise(n_studies = n()) |>
+  filter(n_studies == 1) |>
+  pull(cohort)
+
+length(single_use_cohorts)
+
+```
+
+
+## Check in: have we corrected the simple changes we sought to corect? 
+
+```{r}
+
+unique_cohort_names = unique(all_cohorts) 
+
+# Convert to lowercase and check duplicates
+dup_groups <- tapply(unique_cohort_names, tolower(unique_cohort_names), I)
+
+# Keep only groups with >1 element (i.e., capitalization differences)
+dup_groups[lengths(dup_groups) > 1]
+
+normalized <- gsub("[ _]", "", sort(unique_cohort_names))
+
+# Group by normalized value
+dup_groups <- tapply(sort(unique_cohort_names), normalized, I)
+
+# Keep only groups with >1 element (i.e. variants)
+dup_groups[lengths(dup_groups) > 1]
+
+```
+
+## Aditional checks: 
+
+```{r}
+
+normalized <- gsub("[ _]", "", sort(unique_cohort_names))
+
+# Group by normalized value
+dup_groups <- tapply(sort(unique_cohort_names), tolower(normalized), I)
+
+# Keep only groups with >1 element (i.e. variants)
+dup_groups[lengths(dup_groups) > 1]
+
+```
+
+## Checking: Any fuzzy names to check? 
+
+```{r}
+
+library(stringdist)
+library(dplyr)
+
+# Identify pairs with small distance (e.g., <=2 edits)
+small_dist_pairs <- function(threshold, 
+                             dist_matrix_method,
+                             all_cohorts) {
+  
+  # Create a vector of unique cohort names
+  cohorts <- unique(all_cohorts)
+  
+  single_use_cohorts  =   data.frame(cohort = all_cohorts) |>
+                          group_by(cohort) |>
+                          summarise(n_studies = n()) |>
+                          filter(n_studies == 1) |>
+                          pull(cohort)
+  
+  # Compute pairwise string distances (Levenshtein distance)
+  dist_matrix <- stringdistmatrix(single_use_cohorts, 
+                                  cohorts, 
+                                  method = dist_matrix_method)
+  
+  matches <- which(dist_matrix > 0 & dist_matrix <= threshold, 
+                   arr.ind = TRUE)
+  
+  matches <- data.frame(
+    cohort1 = single_use_cohorts[matches[,1]],
+    cohort2 = cohorts[matches[,2]],
+    distance = dist_matrix[matches]
+  )
+  
+  matches <- matches[matches$cohort1 != matches$cohort2, ]
+  matches <- unique(matches)
+  
+  return(matches)
+  
+}
+
+small_dist_pairs(threshold = 2, 
+                 dist_matrix_method = "lv",
+                 all_cohorts = all_cohorts) |>
+  arrange(distance) |>
+  head()
+
+small_dist_pairs(threshold = 2,
+                 dist_matrix_method = "lcs",
+                 all_cohorts = all_cohorts) |>
+  arrange(distance) |>
+  head()
+
+# COHRA1 vs COHRA
+# COHRA2 vs COHRA
+
+# EGLE vs EAGLE
+# GHS-II GHS-I
+
+# B-PROOF BPROOF
+gwas_study_info |>
+  filter(grepl("\\bB-PROOF\\b", COHORT))
+
+gwas_study_info |>
+  filter(grepl("\\bBPROOF\\b", COHORT))
+
+# WAMHS WASHS
+
+# CALGB 40502 CALGB 40503
+
+# matches <- which(dist_matrix > 0 & dist_matrix <= threshold, arr.ind = TRUE)
+# matches <- data.frame(
+#   cohort1 = single_use_cohorts[matches[,1]],
+#   cohort2 = cohorts[matches[,2]],
+#   distance = dist_matrix[matches]
+# )
+# 
+# 
+# matches |>
+#   arrange(distance) |>
+#   head()
+
+```
+
+# Specific studies 
+
+## Mount Sinai -> BioMe (34604815)
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 34604815,
+                         str_replace_all(COHORT, "Mount Sinai", "BioMe"),
+                         COHORT
+  )
+  )
+
+```
+
+## BHS_b -> BHS (40181193)
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 40181193,
+                         str_replace_all(COHORT, "BHS_b", "BHS"),
+                         COHORT
+  )
+  )
+
+```
+
+## B-PROOF (39103364) -> BPROOF
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "B-PROOF", "BPROOF")
+  )
+
+```
+
+
+## other -> AGORA (Pubmed id: 36551779)
+
+```{r}
+# replace other with: AGORA
+# for PUBMED_ID 36551779
+
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 36551779,
+                         str_replace_all(COHORT, "other", "AGORA"),
+                         COHORT
+  )
+  )
+
+```
+
+## Estonian Biobank (34791234)
+
+```{r}
+# if first author, COVID-19 Host Genetics Initiative
+# replace Estonia with: EB
+gwas_study_info = 
+  gwas_study_info |>
+  mutate(COHORT = ifelse(FIRST_AUTHOR == "COVID-19 Host Genetics Initiative",
+                         str_replace_all(COHORT, "Estonia", "EB"),
+                         COHORT
+  )
+  )
+
+
+# then pubmed id: 34791234
+# replace Estonia with EB
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(PUBMED_ID == 34791234,
+                         str_replace_all(COHORT, "Estonia", "EB"),
+                         COHORT
+  )
+  )
+
+```
+
+## The ""European NAFLD Registry"" Metacohort -> European NAFLD Registry (32298765)
+
+```{r euro_nafld}
+
+# PUBMED_ID = 32298765
+# European NAFLD Registry Metacohort
+# if STAGE = "initial"
+# then set
+# COHORT = European NAFLD Registry Metacohort|WTCCC|HYPERGENES|KORA|Understanding Society
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = ifelse(COHORT == "" & PUBMED_ID == "32298765",
+                       "European NAFLD Registry Metacohort|WTCCC|HYPERGENES|KORA|Understanding Society",
+                       COHORT
+  )
+  )
+
+# PUBMED_ID = 32298765
+# if STAGE = "replication"
+# then set:
+# COHORT = European NAFLD Registry Metacohort
+# gwas_study_info =
+#   gwas_study_info |>
+#   mutate(COHORT = ifelse(COHORT == "" &
+#                          PUBMED_ID == "32298765" &
+#                          STAGE == "replication",
+#                        "European NAFLD Registry Metacohort",
+#                        COHORT
+#   )
+#   )
+```
+
+```{r}
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'The ""European NAFLD Registry"" Metacohort',
+                                  'European NAFLD Registry Metacohort')) |>
+  mutate(COHORT = str_replace_all(COHORT,
+                                  'The "European NAFLD Registry" Metacohort',
+                                  'European NAFLD Registry Metacohort'))  
+
+```
+
+
+## Check in: how many unique cohorts now? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+```
+
+# Any cohorts missing from data-dictionary?
+
+```{r}
+
+cohort_names_df <- readxl::read_xlsx(here::here("data/cohort/cohort_desc.xlsx")) |>
+  mutate(across(everything(), 
+                ~stringr::str_replace_all(.x,
+                                          pattern = "\u00A0",
+                                          replacement = " "))) 
+
+# all cohort names:
+all_cohort_names <- 
+  c(cohort_names_df$cohort,
+    cohort_names_df$full_name,
+    cohort_names_df$synyoms)
+
+all_cohort_names <- unique(all_cohort_names)
+
+length(all_cohort_names)
+
+gwas_cat_names <- unique(all_cohorts)
+
+not_found_names <-gwas_cat_names[!(gwas_cat_names %in% all_cohort_names)]
+
+checked_all_cohort_names <- tolower(stringr::str_trim(all_cohort_names))
+
+found_with_edits <- gwas_cat_names[(tolower(gwas_cat_names) %in% checked_all_cohort_names)]
+
+# names that match when case is ignored: 
+not_found_names[not_found_names %in% found_with_edits] 
+
+print("Number of cohorts not (yet) included in data-dictionary")
+length(not_found_names)
+
+print("Most used cohorts that are not included in the data-dictionary")
+data.frame(
+  cohort_name = 
+all_cohorts[all_cohorts %in% not_found_names]) |>
+  group_by(cohort_name) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+```
+
+# Saving: 
+
+```{r}
+
+# cohorts used per paper:
+
+
+gwas_study_info =
+  gwas_study_info |>
+  select(PUBMED_ID,
+         DATE,
+         COHORT) |>
+  distinct()
+
+gwas_study_info =
+  gwas_study_info |>
+  tidyr::separate_rows(COHORT, sep = "\\|") |>
+  # mutate(COHORT = ifelse(COHORT != "",
+  #                        tidyr::separate_rows(COHORT, sep = "\\|"),
+  #                        # unlist(str_split(string = COHORT,
+  #                        #                  pattern = "\\|")
+  #                               # ),
+  #                        "")
+  #        ) |>
+  group_by(PUBMED_ID) |>
+  summarise(COHORT = str_flatten(unique(COHORT), 
+                                 collapse = "|",
+                                 na.rm = T),
+            DATE = unique(DATE))
+  
+data.table::fwrite(gwas_study_info,
+                  here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"), 
+                  sep = ",")
+
+```
+
+# Others to look into: 
+
+```{r, eval = F}
+# in below study, unlisted cohort is combination of two cohorts
+gwas_study_info |>
+  filter(PUBMED_ID  == 32605384) |>
+  select(PUBMED_ID, 
+         COHORT, 
+         STUDY_ACCESSION, 
+         "DISEASE/TRAIT", 
+         "INITIAL_SAMPLE_SIZE", 
+         "REPLICATION_SAMPLE_SIZE")
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 30510241) |>
+    select(PUBMED_ID, 
+           COHORT, 
+           STUDY_ACCESSION, 
+           "DISEASE/TRAIT", 
+           "INITIAL_SAMPLE_SIZE", 
+           "REPLICATION_SAMPLE_SIZE"
+           )
+# if go to supplement, can see made up of many many many studies - I believe includes other all other subsamples
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 33307546) |>
+    select(PUBMED_ID, 
+           COHORT, 
+           STUDY_ACCESSION, 
+           "DISEASE/TRAIT", 
+           "INITIAL_SAMPLE_SIZE", 
+           "REPLICATION_SAMPLE_SIZE")
+
+# COVID-19 Host Genetics Initiative (HGI) is this hispanic individuals I believe
+#  European ancestry from the ‘broad respiratory phenotype’ study of 23andMe
+# See replication section of https://www.nature.com/articles/s41586-020-03065-y#Sec4
+gwas_study_info |>
+  filter(PUBMED_ID == 38184787) |> 
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, 
+         "DISEASE/TRAIT", 
+         "INITIAL_SAMPLE_SIZE", 
+         "REPLICATION_SAMPLE_SIZE")
+
+# cohorts listed are for
+
+
+```
+
+## MAYO
+
+Mayo Clinic Bipolar Biobank (STUDY_ACCESSION: GCST90554822)
+
+MAYO-Clinic RGC Project Generation. (PUBMED_ID: 37949852)
+
+Mayo Clinic (PUBMED_ID: 40050615)
+
+Mayo-VDB|
+
+
+
+
+
+
+
+
+```{r, eval = F}
+
+# Stanford_ADRC
+
+# CROATIA
+
+# Raine Study -- ? Raine
+
+# Penn - UPenn etc.
+
+# ?CALGB  
+# "SIGNET-REGARDS"  >? "SIGNET"  
+
+
+
+# "RISC" & "RISK" appear to be different
+# Relationship Between Insulin Sensitivity and Cardiovascular Disease Risk (RISC)
+
+# Risk Stratification and Identification of Immunogenetic and Microbial Markers of Rapid Disease Progression in Children with Crohn’s Disease (RISK) 
+
+
+
+ "CKB" 
+
+ [231] "COHRA"                                                                                                                                                    
+ [232] "COHRA1"                                                                                                                                                   
+ [233] "COHRA2"  
+
+# UK Blood Service (UKBS)
+
+ [294] "DiscovEHR"                                                                                                                                                
+ [295] "DISCOVeRY-BMT"   
+
+ [330] "ELSA"                                                                                                                                                     
+ [331] "ELSA-Brasil"   
+
+ [340] "EPIC"                                                                                                                                                     
+ [341] "EPIC_CAD"                                                                                                                                                 
+ [342] "EPIC_Obs"                                                                                                                                                 
+ [343] "EPIC-Norfolk"                                                                                                                                             
+ [344] "EPICURE"        
+
+ [372] "FinnTwin"                                                                                                                                                 
+ [373] "FinnTwin12"  
+
+ [463] "GOCS"                                                                                                                                                     
+ [464] "GOCS_Chilean" 
+
+ [480] "GRAAD"                                                                                                                                                    
+ [481] "GRaD" 
+
+# Colo2&3
+
+ [513] "HELIC"                                                                                                                                                    
+ [514] "HELIC-MANOLIS"                                                                                                                                            
+ [515] "HELIC-Pomak"   
+
+# ? QTR == QTR_Qindao
+
+# ? is "other|UKB" == "UKB|other"
+
+# ? is UK|NR == UKB|NR
+
+# ? CF_TSS == TSS
+
+gwas_study_info |>
+  filter(grepl("ORPS", COHORT))
+
+gwas_study_info |>
+  filter(PUBMED_ID == 39749473) |>
+  select(COHORT)
+
+# PAGE vs PAGES
+
+# PUBMED ID: 35754128 - should be PAGES
+# see sup table 1. https://pmc.ncbi.nlm.nih.gov/articles/PMC9671132/
+
+# COGEND COGENT
+
+```
