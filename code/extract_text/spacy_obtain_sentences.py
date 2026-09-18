@@ -84,6 +84,43 @@ def count_tokens(text: str) -> int:
             pass
     return len(text.split())
 
+# --- sentence boundary detection --------------------------------------------
+# An abbreviation should only block a split when what follows is a LABEL
+# (a figure/table number or letter): "Fig. 2" must stay joined, but
+# "... depicted in Fig. Association with glucose ..." must still split, since
+# the figure number is often lost upstream.
+_ABBREV_END = re.compile(
+    r"(?:^|[\s(\[])(?:St|Figs?|figs?|Tabs?|tabs?|Tables?|tables?|Sup|Supp|Suppl"
+    r"|sup|supp|suppl|Eqs?|eqs?|Refs?|refs?|Nos?|nos?|al|vs|approx|ca|cf|Inc|inc"
+    r"|Co|Dr|e\.g|i\.e|et\.al)\.$"
+)
+# What a genuine figure/table label looks like: 2, 2A, S1, IV, A
+_LABEL_NEXT = re.compile(r"^(?:\d|[A-Za-z]\d|[IVXivx]+\b|[A-Z]\b)")
+
+_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\[])")
+
+
+def split_on_sentence_boundaries(text: str, require_lower_before: bool = False) -> List[str]:
+    """Split on sentence-ending punctuation, skipping abbreviation boundaries.
+
+    require_lower_before mirrors the old clean_sentences behaviour: only split
+    after a lowercase letter + period, so "S2." or "10." are left alone.
+    """
+    parts = []
+    start = 0
+    for m in _BOUNDARY.finditer(text):
+        before = text[:m.start()]
+        after = text[m.end():]
+        if require_lower_before and not re.search(r"[a-z]\.$", before):
+            continue
+        if _ABBREV_END.search(before) and _LABEL_NEXT.match(after):
+            continue
+        parts.append(text[start:m.start()])
+        start = m.end()
+    parts.append(text[start:])
+    return [p for p in (part.strip() for part in parts) if p]
+
+
 def strip_latex(text: str) -> str:
     """Convert LaTeX math expressions to readable plain text."""
     # Remove \( ... \) and \[ ... \] delimiters
@@ -220,13 +257,18 @@ def merge_lone_punctuation(sentences: List[str]) -> List[str]:
             merged[-1] = merged[-1].rstrip() + sent.strip()
             continue
 
-        # Case 2: leading opening bracket → attach to previous sentence
-        while s and s[0] in '([':
-            if merged:
-                merged[-1] = merged[-1].rstrip() + ' ' + s[0]
-                s = s[1:].lstrip()
-            else:
-                break  # nothing to attach to
+        # Case 2: leading opening bracket → attach to previous sentence, but
+        # ONLY when that sentence is unfinished. If it already ends in
+        # terminal punctuation the bracket opens a genuine new sentence
+        # (e.g. "... analysis. (Figures S74 ...) revealed that ...") and
+        # moving it glues a heading onto the following sentence.
+        if (s and s[0] in '(['
+                and merged and merged[-1].strip()
+                and not re.search(r'[.!?][\"\u201d\)\]]?$', merged[-1].rstrip())):
+            # whole fragment is a continuation - keep the bracket attached to
+            # its own content rather than stranding it on the previous sentence
+            merged[-1] = merged[-1].rstrip() + ' ' + s
+            continue
 
         # Only append remainder if non-empty
         if s:
@@ -316,6 +358,44 @@ def merge_sentences_ending_with_conjunction(sentences: List[str]) -> List[str]:
         else:
             merged.append(sent)
     return merged
+
+# Lowercase words that can only start a FRAGMENT, never a real sentence in
+# this corpus. Domain terms that legitimately begin a sentence in lowercase
+# (eQTL, eGFR, rs12345, cDNA, siRNA, cis-eQTL, beta, lambda ...) are absent by
+# design, so they are never merged away.
+_FRAGMENT_STARTS = (
+    'with', 'without', 'the', 'a', 'an', 'in', 'on', 'of', 'for', 'from', 'to',
+    'at', 'by', 'as', 'that', 'which', 'who', 'whose', 'where', 'while',
+    'whereas', 'than', 'we', 'were', 'was', 'is', 'are', 'using', 'mapping',
+    'including', 'included', 'compared', 'based', 'associated', 'when',
+    'after', 'before', 'during', 'between', 'among', 'although', 'though',
+    'because', 'however', 'therefore', 'thus',
+)
+
+
+def merge_lowercase_fragments(sentences: List[str]) -> List[str]:
+    """
+    Merge sentences that begin with a lowercase English function word back
+    onto the previous sentence, e.g.
+
+      "... identified in the published TB GWAS."
+      "with susceptibility to TB based on our data set."
+    """
+    merged = []
+    for sent in sentences:
+        stripped = sent.lstrip()
+        first = stripped.split(' ')[0].strip('(,;:').lower() if stripped else ''
+        if (merged
+                and merged[-1].strip()
+                and stripped[:1].islower()
+                and first in _FRAGMENT_STARTS):
+            # the period before the fragment is spurious - drop it
+            previous = re.sub(r'\.\s*$', '', merged[-1].rstrip())
+            merged[-1] = previous + ' ' + sent.strip()
+        else:
+            merged.append(sent)
+    return merged
+
 
 def merge_continuation_starts(sentences: List[str]) -> List[str]:
     """
@@ -552,25 +632,17 @@ def clean_sentences(sentences: List[str]) -> List[str]:
     sentences = [s.replace("\n", " ") for s in sentences]
 
     # Further split long sentences on ". " followed by a capital letter,
-    # but avoid splitting on common abbreviations.
-    # split_regex = re.compile(
-    #     r"(?<!St\.)(?<!Fig\.)(?<!no\.)(?<!nos\.)(?<!Nos\.)(?<!No\.)(?<!vs\.)(?<!inc\.)(?<!i\.e\.)(?<!et\.al\.)(?<!e\.g\.)(?<!Inc\.)(?<!Co\.)"
-    #     r"(?<=[a-z]\.)\s+(?=[A-Z])"
-    # )
-    split_regex = re.compile(
-    r"(?<!St\.)(?<!Fig\.)(?<!fig\.)(?<!no\.)(?<!nos\.)(?<!Nos\.)(?<!No\.)"
-    r"(?<!vs\.)(?<!inc\.)(?<!i\.e\.)(?<!et\.al\.)(?<!e\.g\.)(?<!Inc\.)(?<!Co\.)"
-    r"(?<=[a-z]\.)\s+(?=[A-Z])"
-    )
-    
+    # skipping abbreviation boundaries that are followed by a figure/table
+    # label (see split_on_sentence_boundaries).
     split_sentences = []
     
     for sent in sentences:
         sent = sent.strip()
           
         if len(sent) > 50:
-           parts = [p.strip() for p in split_regex.split(sent) if p.strip()]
-           split_sentences.extend(parts) 
+           split_sentences.extend(
+               split_on_sentence_boundaries(sent, require_lower_before=True)
+           )
         
         else:
           split_sentences.append(sent)
@@ -592,6 +664,10 @@ def clean_sentences(sentences: List[str]) -> List[str]:
     # merge sentences that end with "and", "or", "but" back onto the
     sentences = merge_sentences_ending_with_conjunction(sentences)
     
+    # merge fragments that start with a lowercase function word
+    # (e.g. "with susceptibility to TB ...") back onto the previous sentence
+    sentences = merge_lowercase_fragments(sentences)
+    
     # merge sentences that end with an unmatched closing bracket/paren back onto the previous sentence
     sentences = merge_unmatched_closing_brackets(sentences)
     # merge unmatched brackets back together
@@ -612,19 +688,14 @@ def clean_sentences(sentences: List[str]) -> List[str]:
     sentences = merge_bracket_continuations(sentences)
     sentences = merge_sentences_starting_with_parenthetical(sentences)
 
-    # drop sentences that are just blank "" or " "
-    sentences = [s for s in sentences if s.strip()]
+    # drop sentences that are just blank "" or " ", and orphaned citation
+    # markers left behind by superscript extraction (e.g. "1", "21", "3,5")
+    sentences = [
+        s for s in sentences
+        if s.strip() and not re.fullmatch(r'[\d\s,\-\u2013.]+', s.strip())
+    ]
 
     return sentences
-
-# Sentence-boundary regex used when chunking long text. The negative
-# lookbehinds stop us breaking inside abbreviations such as "Fig. 2".
-_CHUNK_SPLIT_RE = re.compile(
-    r"(?<!St\.)(?<!Fig\.)(?<!fig\.)(?<!Figs\.)(?<!figs\.)(?<!Tab\.)(?<!tab\.)"
-    r"(?<!Sup\.)(?<!sup\.)(?<!no\.)(?<!No\.)(?<!nos\.)(?<!Nos\.)(?<!al\.)"
-    r"(?<!vs\.)(?<!inc\.)(?<!Inc\.)(?<!Co\.)(?<!i\.e\.)(?<!e\.g\.)(?<!et\.al\.)"
-    r"(?<=[.!?])\s+(?=[A-Z(\[])"
-)
 
 def _hard_split(text_unit: str, max_tokens: int) -> List[str]:
     """Last-resort split of an unbreakable run of text, measured in tokens."""
@@ -670,7 +741,7 @@ def split_text_into_chunks(text: str, max_tokens: int = MAX_CHUNK_TOKENS) -> Lis
         # Fall back to splitting on sentence-ending punctuation, but never
         # inside an abbreviation (Fig. 2, et al. 2020, No. 4, vs. ...), since
         # _pack joins units and spacy treats the seam as a hard break.
-        parts = _CHUNK_SPLIT_RE.split(text_unit)
+        parts = split_on_sentence_boundaries(text_unit)
         if len(parts) > 1:
             return _pack(parts)
         # Last resort: hard split by measured token budget
@@ -760,6 +831,12 @@ def break_text_into_sentences(input_dir: str, pubmed_id:str, output_dir: str) ->
     
     # remove space between 	p and ‐value in the text, as spacy often splits these into separate sentences
     file_text = re.sub(r'\bp\s*[-‐]\s*value\b', 'p-value', file_text)
+    
+    # normalise scientific notation mangled by superscript extraction:
+    # "6.41 × 10 −9" -> "6.41×10−9"
+    file_text = re.sub(r'(\d)\s*[×x]\s*10\s*([-−–])\s*(\d)', r'\1×10\2\3', file_text)
+    # tidy comparison operators: "P =5.6" / "p< 0.05" -> "P = 5.6" / "p < 0.05"
+    file_text = re.sub(r'\b([Pp])\s*([<>=≤≥])\s*(?=[\d.])', r'\1 \2 ', file_text)
     
     # convert LaTeX math expressions to readable plain text.
     file_text = strip_latex(file_text)

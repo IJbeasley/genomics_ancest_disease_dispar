@@ -210,6 +210,88 @@ _TRADEMARK_RE = re.compile(r'\s*[\u00ae\u2122\u00a9]')
 _SPLIT_EXPONENT_RE = re.compile(r'10\s+([-\u2212\u2013])\s*(\d)')
 
 
+# A citation number stranded after a closing parenthesis: "(LDSC)41",
+# "SNPTEST (v2.5)50".  Deliberately narrow.  The general ")<digits>" rule is
+# unsafe in this corpus: it destroys HLA alleles (HLA-DQA1(*)0601), gene
+# symbols formed from an expanded abbreviation (interleukin (IL)10 -> "(IL)"),
+# chromosome numbers (chromosome (chr)1), amino-acid positions (methionine
+# (M)67), RT primers (oligo(dT)18), chemistry (1,25(OH)2D3) and the BMI
+# formula (weight (kg)/height (m)2).  So only two unambiguous shapes are
+# accepted, and only when the digits TERMINATE -- nothing alphanumeric, no
+# decimal, no range dash, no nested close and no unit sign may follow, which
+# is what keeps "(H1N1)2009", "(SLC)17A" and "(1.12-1.25)0.590" intact.
+_TRAILING_REF_RE = re.compile(
+    r'(?<!\\)\(([A-Za-z0-9][A-Za-z0-9.\-]{1,24})\)(\d{1,3})'
+    r'(?![\dA-Za-z]|\.\d|[-\u2013\u2014]\d|\)|%|/|\u00b0|\u00d7)'
+)
+
+# Shape 1 -- a version string: "v1.0.1", "v2.5", "v.1.0", "3.0", "0.5.5".
+# A dot or a leading "v" is required, so a bare "(2)15" (an equation or
+# footnote number) is never touched.
+_VERSION_INNER_RE = re.compile(r'^(?:[vV]\.?\d+(?:\.\d+)*[a-z]?|\d+(?:\.\d+)+[a-z]?)$')
+
+# Shape 2 -- a NAMED TOOL, matched against an explicit allowlist rather than
+# by shape.  Shape cannot do this job: "(PSCA)5" and "(MUC1)6" are gene
+# symbols followed by a reference number (strip the number), while "(ERK)1"
+# and "(PCDH)9" are gene symbols SPLIT from their digit (ERK1, PCDH9 -- keep
+# it), and the two are indistinguishable by pattern.  Cohort acronyms
+# ((FHS)78, (MESA)82) are likewise the same shape as a split gene symbol, so
+# they are not accepted either.  An allowlist gives up some true positives and
+# in exchange can never invent a wrong gene name.
+_KNOWN_TOOLS = {
+    # imputation / phasing
+    'beagle', 'impute', 'impute2', 'impute4', 'mach', 'minimac', 'minimac2',
+    'minimac3', 'minimac4', 'shapeit', 'shapeit2', 'shapeit4', 'eagle',
+    'eagle2', 'hapi-ur', 'fastphase',
+    # association / QC / meta-analysis
+    'plink', 'snptest', 'bolt-lmm', 'bolt', 'saige', 'regenie', 'gemma',
+    'emmax', 'fastgwa', 'gcta', 'metal', 'metasoft', 'gwama', 'quicktest',
+    'probabel', 'rvtests', 'epacts', 'smmat', 'seqmeta', 'skat', 'acat-v',
+    # heritability / genetic correlation / pathway
+    'ldsc', 's-ldsc', 'gnova', 'hess', 'popcorn', 'magma', 'depict', 'fuma',
+    'pascal', 'vegas', 'vegas2', 'gsea', 'ai-reml',
+    # annotation / functional
+    'annovar', 'vep', 'cadd', 'gwava', 'dann', 'sift', 'polyphen',
+    'polyphen-2', 'snpeff', 'regulomedb', 'haploreg',
+    # PRS
+    'prsice', 'prsice-2', 'ldpred', 'ldpred2', 'prs-cs', 'prscs', 'lassosum',
+    # ancestry / structure
+    'eigenstrat', 'eigensoft', 'admixture', 'structure', 'rfmix', 'flare',
+    'terastructure', 'peddy', 'king',
+    # alignment / variant calling / general
+    'bwa', 'bowtie', 'bowtie2', 'samtools', 'bcftools', 'vcftools', 'gatk',
+    'picard', 'fastqc', 'trimmomatic', 'star', 'salmon', 'kallisto',
+    'htseq', 'deseq2', 'edger', 'limma', 'liftover', 'crossmap',
+    # stats environments
+    'stata', 'sas', 'spss', 'matlab', 'ggplot2', 'metafor', 'mendelianrandomization',
+}
+
+
+def _is_known_tool(inner):
+    """True when the parenthetical names a tool on the allowlist."""
+    name = inner.strip().lower()
+    # Tolerate a trailing version glued to the name ("PLINK1.9", "GCTA-1.94").
+    name = re.sub(r'[-\s]?v?\d+(?:\.\d+)*$', '', name) or name
+    return name in _KNOWN_TOOLS
+
+
+def _strip_trailing_refs(text):
+    """
+    Drop a citation number stranded after a closing parenthesis, for the two
+    safe cases only: a version string ("(v1.0.1)36") and a tool named on the
+    allowlist ("(LDSC)41").  Anything else -- a cohort acronym, a gene symbol
+    -- is left alone, because "(PCDH)9" (gene PCDH9) and "(PSCA)5" (gene plus
+    reference 5) are the same shape.
+    """
+    def repl(match):
+        inner = match.group(1)
+        if _VERSION_INNER_RE.match(inner) or _is_known_tool(inner):
+            return '(' + inner + ')'
+        return match.group(0)
+
+    return _TRAILING_REF_RE.sub(repl, text)
+
+
 # A reference marker flattened onto the end of a word: "populations10,11,12".
 # Host word must be 4+ LOWERCASE letters, which excludes gene symbols
 # (TCF7L2, PRDM15, MPPED2) and rsIDs (rs10795076).  Requires two or more
@@ -340,6 +422,9 @@ def clean_extracted_text(text):
     # text; every format that still has markup is handled structurally by
     # flatten_without_citations() instead.
     text = _strip_glued_refs(text)
+
+    # Citation numbers stranded after "(toolname)" or "(version)".
+    text = _strip_trailing_refs(text)
 
     # Remove numbered bracket citations: "[20]", "[1,2]", "[3-5]", "[7, 9, 11]".
     # Integers only, so decimal intervals such as "[1.2, 3.4]" and notation
