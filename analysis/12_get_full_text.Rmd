@@ -5,8 +5,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
-                      eval = F)
+knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(engine.opts = list(bash = "-l"))
 ```
 
@@ -198,7 +197,7 @@ download_pmc_text(article)
 ```
 
 
-```{r downloaded_european_full_texts}
+```{r retrieved_european_full_texts}
 
 euro_pmcids <-list.files(here::here("output/fulltexts/europe_pmc/"),
                   pattern = "\\.xml$")
@@ -223,144 +222,57 @@ round(100 * n_euro_pmc / length(all_pmids), digits = 2)
 
 # Download full texts from NCBI Cloud Service
 
-For remaining PMCIDs / PMIDs without full text, try downloading using NCBI Cloud Service. 
+For remaining PMCIDs without full text downloaded from European PMC, try downloading using NCBI Cloud Service. 
 
-```{bash download_full_texts_ncbi_cloud, eval = FALSE}
+Sep 18th 2026 - Needed to update as structure of NCBI PMC Cloud Service changed. Now need to get latest version of PMCID from S3 bucket, then download the xml and json metadata for that version.
 
-# get list of pmcids with full text - author_manuscript available
-# available in XML and plain text for text mining purposes.
-aws s3 cp s3://pmc-oa-opendata/author_manuscript/txt/metadata/txt/author_manuscript.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+```{r download_pmc_aws, eval = F}
 
-aws s3 ls s3://pmc-oa-opendata/oa_noncomm/  --no-sign-request  | head
+pmc_s3 <- "https://pmc-oa-opendata.s3.amazonaws.com"
 
+# Latest available version prefix (e.g. "PMC123.2") or NA if not in bucket
+get_pmc_latest_version <- function(pmcid) {
+  resp <- GET(pmc_s3, query = list(`list-type` = 2,
+                                   prefix    = paste0(pmcid, "."),  # "." stops PMC123 matching PMC1234
+                                   delimiter = "/"))
+  if (status_code(resp) != 200) return(NA_character_)
+  prefixes <- read_xml(content(resp, "text", encoding = "UTF-8")) |>
+    xml_find_all("//*[local-name()='CommonPrefixes']/*[local-name()='Prefix']") |>
+    xml_text()
+  if (length(prefixes) == 0) return(NA_character_)
+  versions <- as.integer(str_match(prefixes, "\\.(\\d+)/$")[, 2])
+  sub("/$", "", prefixes[which.max(versions)])
+}
 
-aws s3 cp ls s3://pmc-oa-opendata/author_manuscript/txt/metadata/txt/author_manuscript.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
-# get list of pmcids with full text - non-commercial use
-# oa_noncomm 
-aws s3 cp s3://pmc-oa-opendata/oa_noncomm/txt/metadata/txt/oa_noncomm.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+download_pmc_aws <- function(pmcid,
+                             out_dir  = here::here("output/fulltexts/ncbi_cloud"),
+                             meta_dir = here::here("output/fulltexts/ncbi_cloud/metadata")) {
+  out_xml <- file.path(out_dir, paste0(pmcid, ".xml"))
+  if (file.exists(out_xml)) return(TRUE)
 
-# get list of pmcids with full text, commercial list
-# oa_comm
-aws s3 cp s3://pmc-oa-opendata/oa_comm/txt/metadata/txt/oa_comm.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+  prefix <- get_pmc_latest_version(pmcid)
+  if (is.na(prefix)) return(FALSE)
 
-# get list of pmcids with full text, commercial list
-# oa_other
-aws s3 cp s3://pmc-oa-opendata/oa_other/txt/metadata/txt/oa_other.filelist.txt output/fulltexts/aws_locations/  --no-sign-request 
+  resp <- GET(sprintf("%s/%s/%s.xml", pmc_s3, prefix, prefix))
+  if (status_code(resp) != 200) return(FALSE)
+  writeBin(content(resp, "raw"), out_xml)   # save as PMCxxx.xml (no version) so downstream matching works
 
-```
+  # keep JSON metadata for licence / manuscript status
+  meta <- GET(sprintf("%s/%s/%s.json", pmc_s3, prefix, prefix))
+  if (status_code(meta) == 200)
+    writeBin(content(meta, "raw"), file.path(meta_dir, paste0(pmcid, ".json")))
+  TRUE
+}
 
-## Identify full texts already downloaded through European PMC
+dir.create(here::here("output/fulltexts/ncbi_cloud/metadata"), 
+           recursive = TRUE, 
+           showWarnings = FALSE)
 
-```{r identify_full_texts}
-
-europeanpmc_full_texts <- 
-list.files(here::here("output/fulltexts/europe_pmc"),
-                  pattern = "\\.xml"
-           )
-
-# get pmcids of these files
-europeanpmc_full_texts <-
-  gsub("\\.xml$", 
-       "", 
-       europeanpmc_full_texts
-       ) 
-
-```
-
-## Get NCBI download paths for remaining full texts (where available)
-
-```{r get_full_text_paths}
-
-left_over_pmcids = pmcids[!pmcids %in% europeanpmc_full_texts]
-
-print("Number of remaining pmcids without full text:")
-length(left_over_pmcids)
-
-print("+ Number of pmids without pmcid mapping:")
-length(not_converted_pmids)
-
-author_manu = data.table::fread(here::here("output/fulltexts/aws_locations/author_manuscript.filelist.txt"))
-
-oa_noncomm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_noncomm.filelist.txt"))
-
-oa_comm = data.table::fread(here::here("output/fulltexts/aws_locations/oa_comm.filelist.txt"))
-
-author_manu_to_get <-
-author_manu |>
-  dplyr::filter(AccessionID %in% left_over_pmcids | 
-                PMID %in% not_converted_pmids)
-
-print("Number of papers to download in Author Manuscripts section:")
-nrow(author_manu_to_get)
-
-oa_noncomm_to_get = 
-oa_noncomm |>
-  dplyr::filter(AccessionID %in% left_over_pmcids | 
-                PMID %in% not_converted_pmids)
-
-# remove any overlaps between sections
-oa_noncomm_to_get <-
-  oa_noncomm_to_get |>
-  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID))
-
-print("Number of additional papers to download in the Non-commericial Open Access PMC section:")
-nrow(oa_noncomm_to_get)
-
-oa_comm_to_get = 
-oa_comm |>
-  dplyr::filter(AccessionID %in% left_over_pmcids |
-                PMID %in% not_converted_pmids)
-
-oa_comm_to_get <-
-  oa_comm_to_get |>
-  dplyr::filter(!c(PMID %in% author_manu_to_get$PMID)) |>
-  dplyr::filter(!c(PMID %in% oa_noncomm_to_get$PMID))
-
-# remove any overlaps between sections
-print("Number of additional papers to download in the Commercial Open Access PMC section after removing overlaps with Author Manuscripts:")
-nrow(oa_comm_to_get)
-
-file_paths = 
-c(oa_noncomm_to_get$Key,
-  oa_comm_to_get$Key,
-  author_manu_to_get$Key)
-
-file_paths <- str_replace_all(file_paths,
-                              pattern = "txt",
-                              replacement = "xml")
-
-file_paths <- unique(file_paths)
-
-# don't re-download files that have already been retrieved
-file_paths_to_get <- 
-file_paths[
-basename(file_paths) %in% list.files(here::here("output/fulltexts/ncbi_cloud/"))
-]
-
-writeLines(
-  file_paths_to_get,
-  here::here("output/fulltexts/aws_locations/selected_paths.txt")
-)
+left_over_pmcids <- pmcids[!pmcids %in% euro_pmcids]
+aws_status <- purrr::map_lgl(left_over_pmcids, download_pmc_aws)
+table(aws_status)
 
 ```
-
-## Download remaining full texts from NCBI Cloud Service
-
-```{r download_remaining_full_texts, eval = F}
-
-system(
-  paste(
-    "xargs -I {} aws s3 cp",
-    "s3://pmc-oa-opendata/{}",
-    shQuote(here::here("output/fulltexts/ncbi_cloud/")),
-    "--no-sign-request",
-    "<",
-    shQuote(here::here("output/fulltexts/aws_locations/selected_paths.txt"))
-  )
-)
-
-```
-
 
 ```{r ncbi_full_text_stats}
 
@@ -380,7 +292,7 @@ ncbi_pmcids_retrieved <-
 
 pmids_retrieved <-
 converted_ids  |>
-  filter(pmcids %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |>
+  filter(PMCID %in% c(ncbi_pmcids_retrieved, euro_pmcids)) |>
   pull(PMID)
 
 not_available <- all_pmids[!c(all_pmids %in% pmids_retrieved)] 
@@ -685,7 +597,9 @@ length(list.files(here::here("output/fulltexts/sage"),
 
 ### Download full text from Springer Nature Open Access API 
 
-- JATS xml format
+- Initially try Springer Nature Open Access API,
+ otherwise
+- Download html (for articles UCSF has non-commercial text mining access to) and convert to JATS xml format using auto-corpus 
 
 ```{r get_springer_full_texts_links, eval = F}
 
@@ -702,9 +616,8 @@ length(springer_nature_links)
 
 ```{r download_springer_full_texts, eval = F}
 
-springer_to_get <- doi_information %>%
-  filter(DOI %in% paste0("https://doi.org/", 
-                         springer_nature_links))
+springer_to_get <- doi_information |>
+  filter(DOI %in% springer_nature_links)
 
 springer_nature_links <- springer_to_get$DOI |> 
   str_remove_all(pattern = "https://doi.org/")
@@ -734,17 +647,6 @@ url <- modify_url(
         q = query
     )
 )
-  
-  # url<- paste0('https://api.springernature.com/openaccess/',
-  #               'jats?',
-  #              'api_key=', api_key,
-  #              '&callback=&s=1&p=1',
-  #              '&q=(doi:', '"', doi, '"', ")"
-  # )
-  
-  # url <-  'https://api.springernature.com/openaccess/jats?api_key=237213d679b2c31096e6e777bd122f5c&q=(doi="10.1038/nature05616")'
-  
-  print(url)
   
   response <- GET(url)
   
@@ -795,7 +697,8 @@ purrr::map2(springer_nature_links,
   
   oa_status_df <- oa_status |> bind_rows()
   
-  oa_status_df |> group_by(openaccess) |>
+  oa_status_df |> 
+    group_by(openaccess) |>
     summarise(n = n())
   
   oa_status_df |>
@@ -808,6 +711,8 @@ purrr::map2(springer_nature_links,
 ```
 
 ```{bash convert_springer_html_to_xml}
+
+source spacyr_venv/bin/activate
 
 auto-corpus -b NATURE_GENETICS -t "output/fulltexts/springer_nature" -f "output/fulltexts/springer_nature/html" -o XML
 
@@ -856,10 +761,10 @@ length(wiley_dois)
 
 ```{r download_wiley_full_texts, eval = F, message=FALSE}
 
-pmids_wiley_dois <- doi_information %>%
+pmids_wiley_dois <- doi_information |>
   filter(DOI %in% paste0("https://doi.org/",
                          wiley_dois)
-                         ) %>%
+                         ) |>
   pull(PMID)
 
 download_wiley_pdf<- function(doi,
@@ -895,14 +800,15 @@ purrr::walk2(wiley_dois,
 # remove zero byte files - ? I think these are failed downloads as not open access
 system("find output/fulltexts/wiley/pdf -type f -size 0 -delete")
 
-# xmls downloaded manually using https://onlinelibrary.wiley.com/doi/full-xml/[DOI]
-# downloaded to fulltexts/wiley/wiley_xml
 
 ```
 
 As xml files are in Wiley format, convert JATS XML (1.1) format to be consistent with PubMed etc. 
 
 ```{bash convert_wiley_xml}
+
+# xmls downloaded manually using https://onlinelibrary.wiley.com/doi/full-xml/[DOI]
+# downloaded to fulltexts/wiley/wiley_xml
 
 for file in output/fulltexts/wiley/wiley_xml/*.xml; do 
     filename=$(basename "$file")
@@ -915,8 +821,8 @@ done
 
 # how many wiley full text xml downloaded
 print("Number of downloaded full text files (xml) from Wiley:")
-length(list.files(here::here("output/fulltexts/wiley/xml/"), 
-                  recursive = TRUE,
+length(list.files(here::here("output/fulltexts/wiley/"), 
+                  recursive = FALSE,
                   pattern = "\\.xml$"))
 
 # how many wiley pdfs downloaded
@@ -1030,6 +936,8 @@ length(bmj_links)
 
 ```{bash convert_bmj_html_to_xml}
 
+source spacyr_venv/bin/activate
+
 auto-corpus \
 -b BMJ \
 -t "output/fulltexts/bmj" \
@@ -1080,6 +988,8 @@ length(cambridge_links)
 ```
 
 ```{bash convert_cambridge_full_texts}
+
+source spacyr_venv/bin/activate
 
 auto-corpus -b CAMBRIDGE_CORE -t "output/fulltexts/cambridge" -f "output/fulltexts/cambridge/html" -o XML
 
@@ -1193,7 +1103,10 @@ length(jama_links)
 
 ```{bash convert_jama_html_to_xml}
 
-auto-corpus -b JAMA -t "output/fulltexts/jama" -f "output/fulltexts/jama/html" -o XML
+source spacyr_venv/bin/activate
+auto-corpus -b JAMA \
+-t "output/fulltexts/jama" \
+-f "output/fulltexts/jama/html" -o XML
 
 ```
 
@@ -1385,12 +1298,9 @@ length(list.files(here::here("output/fulltexts/ovid"),
 
 Oxford Academic TDM policy: https://academic.oup.com/pages/purchasing/rights-and-permissions/text-and-data-mining
 
-*should reach out to confirm UCSF rights / possibly get xml formats 
+*should reach out to possibly get xml formats 
 
 ```{r oxford_full_texts_potential}
-
-ats_doi_patterns <- "10.1164|10.1165"
-# ? ATS: doi: 10.1164, 10.1165 (moving to Oxford Academic in March 2026)
 
 # go doi pages, and download html manually 
 oxford_dois <- grep("10.1093|10.1136/amiajnl|10.1210|10.1513|10.1164|10.1165", 
@@ -1420,6 +1330,8 @@ length(oxford_htmls)
 python3 code/full_text_conversion/preprocess_oxford_html.py \
        --input  output/fulltexts/oxford_academic/html \
        --output output/fulltexts/oxford_academic/html_ac_ready
+
+source spacyr_venv/bin/activate 
 
 auto-corpus -b OXFORD_ACADEMIC \
             -t output/fulltexts/oxford_academic \
@@ -1661,7 +1573,7 @@ full_text_files <- basename(full_text_files) |>
 # convert pmcids to pmids 
 converted_fulltext_pmcids <-
   converted_ids |>
-  filter(pmcids %in% full_text_files) |>
+  filter(PMCID %in% full_text_files) |>
   pull(PMID) |>
   unique() 
 
