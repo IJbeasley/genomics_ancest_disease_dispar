@@ -2,6 +2,10 @@
 # Elsevier XML to JATS XML Converter (local-name version)
 # Converts Elsevier journal article XML files to JATS XML 1.1 format
 # Uses local-name() to handle complex namespace structures
+#
+# 2026-09-18: tables (<ce:table>, CALS) and figures (<ce:figure>) are now converted
+# to JATS <table-wrap> / <fig>: floats go in <floats-group>; tables/figures in
+# in-text <ce:display> elements are written in place within their <sec>.
 
 library(xml2)
 library(stringr)
@@ -220,6 +224,225 @@ parse_elsevier_keywords <- function(doc) {
 
 # Parse Elsevier body sections
 #
+# ---------------------------------------------------------------------------
+# Tables and figures
+# ---------------------------------------------------------------------------
+# Elsevier tables (<ce:table>, CALS model: tgroup/thead/tbody/row/entry) and
+# figures (<ce:figure>) live either in <ce:floats> (outside the body text, the
+# usual case) or inside a <ce:display> within a section.  They are converted to
+# JATS <table-wrap> (XHTML table model) and <fig>.  Floats are written to a
+# JATS <floats-group> at the end of the article (as PMC does); in-section
+# displays are written in place inside their <sec>.
+#
+# The "ce:" prefix is often undeclared (so it is part of the literal element
+# name), while CALS elements carry a declared default namespace, so element
+# names are matched in both bare and "ce:"-prefixed forms.
+
+el_local_name <- function(node) sub("^[^:]+:", "", xml_name(node))
+
+lx <- function(name) {
+  sprintf("(local-name()='%s' or local-name()='ce:%s')", name, name)
+}
+lx_child <- function(name) paste0("./*[", lx(name), "]")
+
+is_missing_node <- function(node) {
+  length(node) == 0 || inherits(node, "xml_missing")
+}
+
+# Text of a node with Elsevier spacing elements (<ce:hsp>, <ce:br>, <ce:vsp>)
+# turned into spaces (otherwise adjacent words run together), whitespace
+# collapsed.
+float_text <- function(node) {
+  if (is_missing_node(node)) return("")
+  spacers <- xml_find_all(
+    node, paste0(".//*[", lx("hsp"), " or ", lx("br"), " or ", lx("vsp"), "]"))
+  for (s in spacers) xml_text(s) <- " "
+  str_squish(xml_text(node))
+}
+
+# Paragraph texts of a caption / legend / footnote.  Falls back to the node's
+# whole text when it has no paragraph children.  `skip_label` drops a leading
+# <ce:label> (used for footnotes, whose label is written separately).
+float_paras <- function(node, skip_label = FALSE) {
+  if (is_missing_node(node)) return(character())
+  paras <- xml_find_all(
+    node, paste0(".//*[", lx("simple-para"), " or ", lx("para"), " or ",
+                 lx("note-para"), "]"))
+  if (length(paras) > 0) {
+    txt <- vapply(paras, float_text, character(1))
+  } else {
+    if (skip_label) {
+      for (l in xml_find_all(node, lx_child("label"))) xml_remove(l)
+    }
+    txt <- float_text(node)
+  }
+  txt[nzchar(txt)]
+}
+
+# Parse one CALS <tgroup> into header / body rows.  Each cell records its text
+# and its column / row spans (namest..nameend -> colspan, morerows -> rowspan).
+parse_cals_tgroup <- function(tgroup) {
+  col_names <- xml_attr(xml_find_all(tgroup, lx_child("colspec")), "colname")
+
+  parse_rows <- function(section_name) {
+    sec <- xml_find_first(tgroup, lx_child(section_name))
+    if (is_missing_node(sec)) return(list())
+    lapply(xml_find_all(sec, lx_child("row")), function(row) {
+      lapply(xml_find_all(row, lx_child("entry")), function(entry) {
+        colspan <- 1L
+        start <- match(xml_attr(entry, "namest"), col_names)
+        end   <- match(xml_attr(entry, "nameend"), col_names)
+        if (!is.na(start) && !is.na(end) && end >= start) {
+          colspan <- end - start + 1L
+        }
+        more <- suppressWarnings(as.integer(xml_attr(entry, "morerows")))
+        rowspan <- if (!is.na(more) && more > 0) more + 1L else 1L
+        list(text    = float_text(entry),
+             colspan = colspan,
+             rowspan = rowspan,
+             align   = xml_attr(entry, "align"))
+      })
+    })
+  }
+
+  list(head = parse_rows("thead"), body = parse_rows("tbody"))
+}
+
+parse_elsevier_table <- function(table) {
+  footnotes <- lapply(
+    xml_find_all(table, lx_child("table-footnote")),
+    function(fn) {
+      list(id    = xml_attr(fn, "id"),
+           label = float_text(xml_find_first(fn, lx_child("label"))),
+           paras = float_paras(fn, skip_label = TRUE))
+    })
+
+  list(
+    type      = "table",
+    id        = xml_attr(table, "id"),
+    label     = float_text(xml_find_first(table, lx_child("label"))),
+    caption   = float_paras(xml_find_first(table, lx_child("caption"))),
+    legend    = float_paras(xml_find_first(table, lx_child("legend"))),
+    footnotes = footnotes,
+    groups    = lapply(xml_find_all(table, lx_child("tgroup")), parse_cals_tgroup)
+  )
+}
+
+parse_elsevier_figure <- function(figure) {
+  link <- xml_find_first(figure, lx_child("link"))
+  list(
+    type    = "fig",
+    id      = xml_attr(figure, "id"),
+    label   = float_text(xml_find_first(figure, lx_child("label"))),
+    caption = float_paras(xml_find_first(figure, lx_child("caption"))),
+    href    = if (is_missing_node(link)) NA_character_ else xml_attr(link, "locator")
+  )
+}
+
+# Tables and figures held in <ce:floats> (i.e. not inline in a section).
+parse_elsevier_floats <- function(content) {
+  nodes <- xml_find_all(
+    content,
+    paste0(".//*[", lx("floats"), "]/*[", lx("table"), " or ", lx("figure"), "]"))
+  lapply(nodes, function(n) {
+    if (el_local_name(n) == "table") parse_elsevier_table(n)
+    else parse_elsevier_figure(n)
+  })
+}
+
+# Tables / figures can also sit inside a <ce:display> nested in a <ce:para>.
+# Parse them, then detach them from the paragraph so their cell text is not
+# flattened into the paragraph text.  Returns a list of "table"/"fig" items.
+extract_para_floats <- function(para) {
+  displays <- xml_find_all(
+    para,
+    paste0(".//*[", lx("display"), "][./*[", lx("table"), " or ", lx("figure"), "]]"))
+  items <- list()
+  for (d in displays) {
+    for (n in xml_find_all(d, paste0("./*[", lx("table"), " or ", lx("figure"), "]"))) {
+      if (el_local_name(n) == "table") {
+        items[[length(items) + 1]] <- list(type = "table", value = parse_elsevier_table(n))
+      } else {
+        items[[length(items) + 1]] <- list(type = "fig", value = parse_elsevier_figure(n))
+      }
+    }
+    xml_remove(d)
+  }
+  items
+}
+
+# Write a parsed table as JATS <table-wrap>.
+write_jats_table <- function(parent, tbl) {
+  attrs <- list()
+  if (has_content(tbl$id)) attrs$id <- tbl$id
+  tw <- do.call(xml_add_child, c(list(.x = parent, .value = "table-wrap"), attrs))
+
+  if (has_content(tbl$label)) xml_add_child(tw, "label", tbl$label)
+  if (length(tbl$caption) > 0) {
+    cap <- xml_add_child(tw, "caption")
+    for (p in tbl$caption) xml_add_child(cap, "p", p)
+  }
+
+  jats_align <- c("left", "center", "right", "justify", "char")
+  write_rows <- function(table_node, rows, wrapper, cell_name) {
+    if (length(rows) == 0) return(invisible())
+    wrap <- xml_add_child(table_node, wrapper)
+    for (row in rows) {
+      tr <- xml_add_child(wrap, "tr")
+      for (cell in row) {
+        cell_attrs <- list()
+        if (cell$colspan > 1) cell_attrs$colspan <- as.character(cell$colspan)
+        if (cell$rowspan > 1) cell_attrs$rowspan <- as.character(cell$rowspan)
+        if (!is.na(cell$align) && cell$align %in% jats_align) {
+          cell_attrs$align <- cell$align
+        }
+        do.call(xml_add_child,
+                c(list(.x = tr, .value = cell_name, cell$text), cell_attrs))
+      }
+    }
+  }
+
+  for (group in tbl$groups) {
+    table_node <- xml_add_child(tw, "table")
+    write_rows(table_node, group$head, "thead", "th")
+    write_rows(table_node, group$body, "tbody", "td")
+  }
+
+  if (length(tbl$legend) > 0 || length(tbl$footnotes) > 0) {
+    foot <- xml_add_child(tw, "table-wrap-foot")
+    for (p in tbl$legend) xml_add_child(foot, "p", p)
+    for (fn in tbl$footnotes) {
+      fn_attrs <- list()
+      if (has_content(fn$id)) fn_attrs$id <- fn$id
+      fn_node <- do.call(xml_add_child, c(list(.x = foot, .value = "fn"), fn_attrs))
+      if (has_content(fn$label)) xml_add_child(fn_node, "label", fn$label)
+      for (p in fn$paras) xml_add_child(fn_node, "p", p)
+    }
+  }
+  invisible(tw)
+}
+
+# Write a parsed figure as JATS <fig>.
+write_jats_fig <- function(parent, fig) {
+  attrs <- list()
+  if (has_content(fig$id)) attrs$id <- fig$id
+  fig_node <- do.call(xml_add_child, c(list(.x = parent, .value = "fig"), attrs))
+  if (has_content(fig$label)) xml_add_child(fig_node, "label", fig$label)
+  if (length(fig$caption) > 0) {
+    cap <- xml_add_child(fig_node, "caption")
+    for (p in fig$caption) xml_add_child(cap, "p", p)
+  }
+  if (has_content(fig$href)) {
+    xml_add_child(fig_node, "graphic", "xlink:href" = fig$href)
+  }
+  invisible(fig_node)
+}
+
+write_jats_float <- function(parent, float) {
+  if (identical(float$type, "table")) write_jats_table(parent, float)
+  else write_jats_fig(parent, float)
+}
+
 # Walks both <ce:sections> and <ce:appendices>, preserving document order and
 # capturing:
 #   - <ce:section> elements (with nested subsections recursed into)
@@ -250,6 +473,8 @@ parse_elsevier_body <- function(doc) {
   #   - <ce:section> children become nested sections (recursive)
   #   - <ce:para> elements become "para" items
   #   - <ce:section-title> is skipped (handled by the caller)
+  #   - <ce:table> / <ce:figure> become "table" / "fig" items, including
+  #     those in a <ce:display> nested inside a <ce:para>
   #   - any other element is treated as a transparent container (e.g.
   #     <ce:display>, <ce:textbox>) so paragraphs nested inside callouts and
   #     other wrappers are still captured.
@@ -260,12 +485,21 @@ parse_elsevier_body <- function(doc) {
         items[[length(items) + 1]] <- list(type = "sec",
                                            value = parse_section(child))
       } else if (cname == "para") {
+        para_floats <- extract_para_floats(child)
         txt <- safe_text(child, trim = TRUE)
         if (has_content(txt)) {
           items[[length(items) + 1]] <- list(type = "para", value = txt)
         }
+        items <- c(items, para_floats)
       } else if (cname == "section-title") {
         # consumed by the caller
+      } else if (cname == "table") {
+        # table inside a <ce:display> within the section
+        items[[length(items) + 1]] <- list(type = "table",
+                                           value = parse_elsevier_table(child))
+      } else if (cname == "figure") {
+        items[[length(items) + 1]] <- list(type = "fig",
+                                           value = parse_elsevier_figure(child))
       } else {
         items <- walk_section_body(child, items)
       }
@@ -303,12 +537,11 @@ parse_elsevier_body <- function(doc) {
 
     flush_intro <- function() {
       if (length(intro) == 0) return(invisible())
-      items <- lapply(intro, function(t) list(type = "para", value = t))
       out[[length(out) + 1]] <<- list(
         id    = NULL,
         role  = default_role,
         title = "",
-        items = items
+        items = intro
       )
       intro <<- list()
     }
@@ -320,10 +553,12 @@ parse_elsevier_body <- function(doc) {
     for (child in children) {
       cname <- local_name(child)
       if (cname == "para") {
+        para_floats <- extract_para_floats(child)
         txt <- safe_text(child, trim = TRUE)
         if (has_content(txt)) {
-          intro[[length(intro) + 1]] <- txt
+          intro[[length(intro) + 1]] <- list(type = "para", value = txt)
         }
+        intro <- c(intro, para_floats)
       } else if (cname == "section") {
         flush_intro()
         sec <- parse_section(child)
@@ -496,13 +731,17 @@ convert_elsevier_to_jats <- function(elsevier_file, output_file) {
 
   body_sections <- parse_elsevier_body(content) # body sections
   references <- parse_elsevier_references(content) # references
+  floats <- parse_elsevier_floats(content) # tables / figures outside the body
 
-  cat(sprintf("Extracted: DOI=%s, Title=%s..., Authors=%d, Sections=%d, References=%d\n",
+  cat(sprintf("Extracted: DOI=%s, Title=%s..., Authors=%d, Sections=%d, References=%d, Floats=%d (tables=%d, figures=%d)\n",
               ifelse(has_content(doi), doi, "N/A"),
               substr(title, 1, 50),
               length(authors),
               length(body_sections),
-              length(references)))
+              length(references),
+              length(floats),
+              sum(vapply(floats, function(f) identical(f$type, "table"), logical(1))),
+              sum(vapply(floats, function(f) identical(f$type, "fig"), logical(1)))))
 
   # Create JATS XML structure
   jats_doc <- xml_new_root("article",
@@ -695,6 +934,10 @@ convert_elsevier_to_jats <- function(elsevier_file, output_file) {
         xml_add_child(sec, "p", item$value)
       } else if (identical(item$type, "sec")) {
         write_jats_section(sec, item$value)
+      } else if (identical(item$type, "table")) {
+        write_jats_table(sec, item$value)
+      } else if (identical(item$type, "fig")) {
+        write_jats_fig(sec, item$value)
       }
     }
   }
@@ -765,6 +1008,14 @@ convert_elsevier_to_jats <- function(elsevier_file, output_file) {
         # Use mixed-citation for unstructured references
         xml_add_child(ref_node, "mixed-citation", ref$source_text)
       }
+    }
+  }
+
+  # Floating tables and figures (JATS puts these after <back>)
+  if (length(floats) > 0) {
+    floats_group <- xml_add_child(jats_doc, "floats-group")
+    for (float in floats) {
+      write_jats_float(floats_group, float)
     }
   }
 
