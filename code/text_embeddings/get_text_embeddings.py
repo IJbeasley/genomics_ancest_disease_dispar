@@ -1,5 +1,6 @@
 """
-Embed GWAS-study text with NCBI's MedCPT Article Encoder.
+Embed every <PMID>.txt file in a directory with a HuggingFace article encoder
+(default: NCBI's MedCPT Article Encoder).
 
 Outputs (default: output/clustering/):
   - medcpt_embeddings.npy
@@ -8,7 +9,6 @@ Outputs (default: output/clustering/):
 """
 from __future__ import annotations
 
-import json
 from optparse import OptionParser
 from pathlib import Path
 
@@ -32,16 +32,10 @@ parser = OptionParser(
         ),
     )
 parser.add_option(
-        "-g", "--gwas-csv",
-        dest="gwas_csv",
-        type="string",
-        help="Path to GWAS Catalog Study CSV (relative path)",
-    )
-parser.add_option(
         "-t", "--text-dir",
         dest="text_dir",
         type="string",
-        help="Directory of *_sentences.json text files (relative path)",
+        help="Directory of <PMID>.txt text files (relative path)",
     )
 parser.add_option(
         "-o", "--out-path",
@@ -57,13 +51,6 @@ parser.add_option(
         dest="model_name",
         help="Name/path of the huggingface model used to embed text." 
     )
-parser.add_option(
-        "--mapping_file",
-        default = str(here("output/fulltexts/pmid_to_pmcid_mapping.csv")),
-        type="string",
-        dest="mapping_file",
-        help="Name/path of the file that provides pmid to pmid mapping" 
-    )
     
 opts, _ = parser.parse_args()
 
@@ -73,13 +60,6 @@ opts, _ = parser.parse_args()
 # ---- Embedding ----
 BATCH_SIZE = 16
 MAX_LEN = 512
-
-INFECTIOUS_CAUSES = {
-    "HIV/AIDS", "Tuberculosis", "Malaria",
-    "Lower respiratory infections", "Diarrhoeal diseases",
-    "Neonatal disorders", "Tetanus", "Diphtheria",
-    "Pertussis", "Measles", "Maternal disorders",
-}
 
 # model string name (for saving output files)
 MODEL_NAME = opts.model_name
@@ -94,68 +74,28 @@ else:
    emb_csv = here(opts.out_path + model_str + "_embeddings.csv")
 
 
-if opts.gwas_csv is None:
-    parser.error("--gwas-csv is required")
-
 if opts.text_dir is None:
     parser.error("--text-dir is required")
     
-gwas_csv = here(opts.gwas_csv)
 text_dir = here(opts.text_dir)
-
-# create mapping key
-map_df = pd.read_csv(opts.mapping_file)
-
-# keep only rows where pmcid exists
-map_df = map_df.dropna(subset=["pmcids"])
-
-map_df["pmcids"] = map_df["pmcids"].astype(str).str.strip()
-map_df["PMID"] = map_df["PMID"].astype(str)
-
-# build mapping: PMCID -> PMID
-pmcid_to_pmid = dict(zip(map_df["pmcids"], map_df["PMID"]))
 
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
-def load_study_pmids(gwas_csv: Path) -> set[str]:
-    try:
-        df = pd.read_csv(gwas_csv, encoding="utf-8")
-    except UnicodeDecodeError:
-        df = pd.read_csv(gwas_csv, encoding="latin-1")
-    df.columns = [c.replace(" ", "_") for c in df.columns]
-    df = df[~df["cause"].isin(INFECTIOUS_CAUSES)]
-    df = df[df["cause"].fillna("") != ""]
-    return {str(p) for p in df["PUBMED_ID"].dropna().unique()}
-
-
-def load_text(
-    text_dir: Path, study_pmids: set[str]
-) -> tuple[list[str], list[str]]:
+def load_text(text_dir: Path) -> tuple[list[str], list[str]]:
+    """Read every <PMID>.txt in text_dir; the file stem is used as the PMID."""
     pmids, texts = [], []
-    for jf in sorted(text_dir.glob("*_sentences.json")):
-        article_id = jf.name.split("_", 1)[0]
-        
-        if article_id.startswith("PMC"):
-           pmid = pmcid_to_pmid.get(article_id)
-        else:
-           pmid = article_id
-        
-        if pmid not in study_pmids:
-            continue
+    for tf in sorted(text_dir.glob("*.txt")):
         try:
-            with open(jf) as fh:
-                sentences = json.load(fh)
-        except Exception as e:
-            print(f"  ! could not parse {jf.name}: {e}")
+            text = tf.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = tf.read_text(encoding="latin-1")
+        text = " ".join(text.split())  # collapse newlines / extra whitespace
+        if not text:
+            print(f"  ! skipping empty file {tf.name}")
             continue
-        if not isinstance(sentences, list):
-            continue
-        sentences = [s for s in sentences if isinstance(s, str) and s.strip()]
-        if not sentences:
-            continue
-        pmids.append(pmid)
-        texts.append(" ".join(sentences))
+        pmids.append(tf.stem)
+        texts.append(text)
     return pmids, texts
 
 
@@ -195,12 +135,8 @@ def embed_texts(texts: list[str]) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def main(gwas_csv, text_dir, emb_csv) -> None:
-    
-    study_pmids = load_study_pmids(gwas_csv)
-    
-    print(f"Eligible studies after filtering: {len(study_pmids)}")
-    pmids, texts = load_text(text_dir, study_pmids)
+def main(text_dir, emb_csv) -> None:
+    pmids, texts = load_text(text_dir)
     
     print(f"Texts available for embedding: {len(pmids)}")
     if not pmids:
@@ -220,4 +156,4 @@ def main(gwas_csv, text_dir, emb_csv) -> None:
 
 
 if __name__ == "__main__":
-    main(gwas_csv, text_dir, emb_csv)
+    main(text_dir, emb_csv)
