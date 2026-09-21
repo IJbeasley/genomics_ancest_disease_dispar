@@ -33,7 +33,10 @@ source(here::here("code/get_term_descendants.R"))
 
 ```{r load_gwas_study_info}
 
-gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+#                          quote = "")
+
+gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2026-09-13.tsv"),
                          quote = "")
 
 gwas_study_info = 
@@ -49,6 +52,10 @@ gwas_study_info <-
 gwas_study_info  <-
   gwas_study_info |>
   mutate(YEAR = lubridate::year(DATE))
+
+gwas_study_info  <-
+  gwas_study_info |>
+  filter(YEAR < 2026)
 
 ```
 
@@ -935,18 +942,8 @@ To ensure splitting MAPPED_TERM column by commas would split distinct traits
 
 ```{r fix_splitting_by_commas}
 
-# in MAPPED_BACKGROUND_TRAIT, replace commas with "*" in:
-# migraine without aura, susceptibility to, 4
-gwas_study_info =
-gwas_study_info |>
-  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(grepl("migraine without aura, susceptibility to, 4", MAPPED_BACKGROUND_TRAIT),
-                                         stringr::str_replace_all(MAPPED_BACKGROUND_TRAIT, 
-                                                                  pattern = "migraine without aura, susceptibility to, 4", 
-                                                                  "migraine without aura* susceptibility to* 4"),
-                                         MAPPED_BACKGROUND_TRAIT)
-         )
+# In MAPPED_TRAIT, replace commas with "*" in:
 
-# in MAPPED_TRAIT, replace commas with "*" in:
 # migraine without aura, susceptibility to, 4
 gwas_study_info =
 gwas_study_info |>
@@ -957,12 +954,23 @@ gwas_study_info |>
                                MAPPED_TRAIT)
          )
 
-# Other MAPPED_TRAIT fixes
+# periodontitis, aggressive 1
 gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("periodontitis, aggressive 1", MAPPED_TRAIT),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "periodontitis, aggressive 1", 
+                                                        "periodontitis* aggressive 1"),
+                               MAPPED_TRAIT)
+         )
+
+
+# osteoarthritis terms: 
+gwas_study_info <-
 gwas_study_info |> 
   mutate(MAPPED_TRAIT = case_when(
                          # osteoarthritis, hip ... http://www.ebi.ac.uk/efo/EFO_1000786
-                         grepl("EFO_1000786", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                         grepl("EFO_1000786|MONDO_0006629", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "osteoarthritis, hip", 
                                                                                            "osteoarthritis* hip"),
                          
@@ -972,15 +980,32 @@ gwas_study_info |>
                                                                                            "osteoarthritis* hand"
                                                                                            ),
                          # osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
-                         grepl("EFO_0004616", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                         grepl("EFO_0004616|MONDO_0005416", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "osteoarthritis, knee", 
                                                                                            "osteoarthritis* knee"),
                          
                          # 	osteoarthritis, spine ... http://www.ebi.ac.uk/efo/EFO_1000787
-                         grepl("EFO_1000787", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                         grepl("EFO_1000787|MONDO_0006630", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "osteoarthritis, spine", 
                                                                                            "osteoarthritis* spine"),
-                         
+                        TRUE ~ MAPPED_TRAIT
+                       ))
+
+
+# monounsaturated fatty acids; 16:1, 18:1 measurement
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_TRAIT = ifelse(grepl("monounsaturated fatty acids; 16:1, 18:1 measurement", MAPPED_TRAIT),
+                               stringr::str_replace_all(MAPPED_TRAIT, 
+                                                        pattern = "monounsaturated fatty acids; 16:1, 18:1 measurement", 
+                                                        "monounsaturated fatty acids; 16:1* 18:1 measurement"),
+                               MAPPED_TRAIT)
+         )
+
+# Other MAPPED_TRAIT fixes
+gwas_study_info =
+  gwas_study_info |>
+  mutate(MAPPED_TRAIT = case_when(  
                          # 	Hepatitis, Alcoholic, http://www.ebi.ac.uk/efo/EFO_1001345
                          grepl("EFO_1001345", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                            pattern = "hepatitis, alcoholic", 
@@ -1017,7 +1042,7 @@ gwas_study_info |>
                                                                                           pattern = "polyarticular juvenile idiopathic arthritis, rheumatoid factor negative", 
                                                                                           "polyarticular juvenile idiopathic arthritis* rheumatoid factor negative"),
                          # http://www.ebi.ac.uk/efo/EFO_0007294, hand, foot and mouth disease, 
-                         grepl("EFO_0007294", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
+                         grepl("EFO_0007294|MONDO_0005779", MAPPED_TRAIT_URI) ~ stringr::str_replace_all(MAPPED_TRAIT, 
                                                                                           pattern = "hand, foot and mouth disease", 
                                                                                           "hand* foot and mouth disease"),
                          # neural tube defects, susceptibility to, http://purl.obolibrary.org/obo/MONDO_0020705
@@ -1067,7 +1092,7 @@ gwas_study_info =
                                MAPPED_TRAIT)
          ) |>
   mutate(MAPPED_TRAIT =                          # osteoarthritis, knee ... http://www.ebi.ac.uk/efo/EFO_0004616
-                         ifelse(grepl("EFO_0004616", MAPPED_TRAIT_URI),
+                         ifelse(grepl("EFO_0004616|MONDO_0005416", MAPPED_TRAIT_URI),
                                 stringr::str_replace_all(MAPPED_TRAIT, 
                                                          pattern = "osteoarthritis, knee", 
                                                          "osteoarthritis* knee"),
@@ -1085,6 +1110,18 @@ gwas_study_info =
                                                         "cys-gly* oxidized measurement"),
                                MAPPED_TRAIT)
          )
+
+# in MAPPED_BACKGROUND_TRAIT, replace commas with "*" in:
+# migraine without aura, susceptibility to, 4
+gwas_study_info =
+gwas_study_info |>
+  mutate(MAPPED_BACKGROUND_TRAIT = ifelse(grepl("migraine without aura, susceptibility to, 4", MAPPED_BACKGROUND_TRAIT),
+                                         stringr::str_replace_all(MAPPED_BACKGROUND_TRAIT, 
+                                                                  pattern = "migraine without aura, susceptibility to, 4", 
+                                                                  "migraine without aura* susceptibility to* 4"),
+                                         MAPPED_BACKGROUND_TRAIT)
+         )
+
 
 ```
 
