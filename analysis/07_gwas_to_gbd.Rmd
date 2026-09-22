@@ -470,6 +470,108 @@ disease_mapping_with_cause |>
   unique() |>
   length()
                            
+```
+
+## Should we keep 'Cause of Death Specific' codes: 
+
+Let's drop cause of death specific cause codes, as these relate less to the diseases studied. 
+
+```{r compare_cod_mapping}
+# per paper mapping
+per_paper_disease_map <-
+disease_mapping_with_cause |> 
+  filter(include == T) |> 
+  #filter(!icd10_code %in% c("B18", "B18.1", "B18.2", "D26", "D10", "D11")) |> 
+  distinct(PUBMED_ID, cause, cause_source) |> 
+  group_by(PUBMED_ID, cause) |> 
+  summarise(cause_source = stringr::str_flatten_comma(unique(cause_source, na.rm = T))) |> 
+  ungroup() 
+
+per_paper_disease_map <-
+  per_paper_disease_map |>
+  mutate(cause_source = 
+           ifelse(grepl("overlap", cause_source), 
+                  "overlap", cause_source))
+
+per_paper_disease_map |> distinct(cause_source)
+
+per_paper_disease_map  |>
+  filter(cause_source == "icd10_cod") |>
+  group_by(cause) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
+
+# chronic viral hepatitis codes explain 
+# these Cirrhosis and other chronic liver diseases causes (mapped by Cause of death codes only)
+
+per_paper_disease_map <-
+disease_mapping_with_cause |> 
+  filter(include == T) |> 
+  # exclude chronic viral hepatitis codes (B18, B18.1, B18.2) and benign neoplasms (D26, D10, D11) codes
+  filter(!icd10_code %in% c("B18", "B18.1", "B18.2", 
+                            "D26", "D10", "D10.6", "D11", "D38", "D10, D11",
+                            "N08", "N08.3",
+                            "I68.2")) |> 
+  distinct(PUBMED_ID, cause, cause_source) |> 
+  group_by(PUBMED_ID, cause) |> 
+  summarise(cause_source = stringr::str_flatten_comma(unique(cause_source, na.rm = T))) |> 
+  ungroup() 
+
+
+per_paper_disease_map <-
+  per_paper_disease_map |>
+  mutate(cause_source = 
+           ifelse(grepl("overlap", cause_source), 
+                  "overlap", cause_source))
+
+per_paper_disease_map  |>
+  filter(cause_source == "icd10_cod") |>
+  group_by(cause) |>
+  summarise(n_papers = length(unique(PUBMED_ID))) |>
+  arrange(desc(n_papers))
+
+
+```
+
+
+```{r drop_cod_only_mappings}
+
+code_to_cause <-
+  code_to_cause |> 
+  filter(cause_source == "overlap" | cause_source == "icd10_non_fatal") |>
+  mutate(cause_source = "icd10_non_fatal") |>
+  distinct()
+
+disease_mapping_annotated <- disease_mapping |>
+  left_join(code_to_cause, 
+            by = "icd10_code", 
+            relationship = "many-to-many")
+
+
+
+disease_mapping_with_cause <-
+disease_mapping_annotated |>
+  group_by(PUBMED_ID,
+           YEAR,
+           `DISEASE/TRAIT`, 
+           collected_all_disease_terms,
+           icd10_term,
+           cause,
+           cause_category,
+           lancet_condition,
+           lancet_group,
+           cause_hierarchy_level,
+           include) |>
+  summarise(icd10_code = stringr::str_flatten_comma(unique(sort(icd10_code)),
+                                                    na.rm = TRUE
+                                                    ),
+            cause_source = stringr::str_flatten_comma(unique(sort(cause_source)),
+                                                      na.rm = TRUE
+                                                      )
+  ) |>
+  ungroup() |>
+  distinct()
+
 
 print("Number of unique papers mapped to non-communicable diseases:")
 # filter out infectious diseases
@@ -480,13 +582,6 @@ disease_mapping_with_cause |>
   unique() |> 
   length()
 
-disease_mapping_with_cause |>
-    dplyr::filter(include == TRUE) |>
-    filter(!is.na(cause)) |> 
-  filter(cause_source == "overlap") |>
-  pull(PUBMED_ID) |> 
-  unique() |> 
-  length()
 
 print("List of non-communicable diseases mapped to GWAS Catalog studies:")
 disease_mapping_with_cause |>
@@ -494,8 +589,10 @@ disease_mapping_with_cause |>
   pull(cause) |>
   unique() |> 
   sort()
-                                
+                 
 ```
+
+
 
 # Plot: number of papers per cause: 
 
@@ -1476,7 +1573,8 @@ disease_mapping_with_cause,
 here::here("output/icd_map/gwas_study_gbd_causes.csv")
 )
 
-
 ```
+
+
 
 
