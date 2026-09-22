@@ -1,3 +1,14 @@
+ascii_key <- function(x) {
+  x |>
+    stringi::stri_enc_toutf8(validate = TRUE) |>   # malformed bytes -> U+FFFD
+    stringi::stri_trans_nfc() |>                   # é as e+U+0301 folds like é as U+00E9
+    stringi::stri_trans_general("Latin-ASCII") |>  # é->e  ö->o  ç->c  ß->ss
+    stringi::stri_replace_all_regex("[\u2010-\u2015]", "-") |>  # en/em dashes
+    stringi::stri_replace_all_regex("[^\\p{ASCII}]", "") |>     # U+FFFD, β, × ...
+    stringi::stri_trim_both()
+}
+
+
 clean_trait_documentation <- function(trait_vector) {
 
   trait_clean <- trait_vector |>
@@ -257,7 +268,11 @@ clean_trait_documentation <- function(trait_vector) {
     str_replace_all("\\s{2,}", " ") |>
     str_squish() |>
     str_remove("^[\\s,;:.-]+") |>
-    str_remove("[\\s,;:.-]+$")
+    str_remove("[\\s,;:.-]+$") |>
+    stringr::str_remove_all("'|’") |>
+    stringr::str_replace_all(pattern = ",$",
+                             replacement = "") |>
+    ascii_key()
 
   trait_clean <- tolower(trait_clean)
 
