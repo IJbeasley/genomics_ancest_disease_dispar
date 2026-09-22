@@ -398,6 +398,8 @@ get_crossref_links <- function(doi) {
 - Can download full text using this token for subscribed content (for non-commercial, academic purposes) after contacting Elsevier using the following information: https://dev.elsevier.com/api_key_settings.html
 - XMLS are in Elsevier's proprietary XML format (not JATS)
 
+* Needs to be run UCSF Network or UCSF VPN to access Elsevier API for subscribed content.
+
 ```{r get_elsevier_dois}
 
 # elsevier dois:
@@ -530,7 +532,7 @@ purrr::walk2(elsevier_links$URL,
 
 Convert Elsevier xmls to JATS xml files 
 
-```{bash convert_elsevier_to_jats}
+```{bash convert_elsevier_to_jats, echo = FALSE}
 
 for file in output/fulltexts/elsevier/elsevier_xml/*.xml; do 
     filename=$(basename "$file")
@@ -546,6 +548,16 @@ list.files(here::here("output/fulltexts/elsevier/elsevier_xml/"),
              pattern = "\\.xml$"
              ) |>
   length()
+
+
+# drop PMIDs with that have been downloaded from elsevier, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/elsevier/elsevier_xml/"),
+             pattern = "\\.xml$"
+             ) |> stringr::str_remove_all("\\.xml$")
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -592,6 +604,15 @@ length(list.files(here::here("output/fulltexts/sage"),
              pattern = "\\.xml$"
 )
 )
+
+# drop PMIDs with that have been downloaded from sage, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/sage"),
+             pattern = "\\.xml$"
+) |> stringr::str_remove_all("\\.xml$")
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -734,6 +755,19 @@ length(list.files(here::here("output/fulltexts/springer_nature"),
 )
 )
 
+
+# drop PMIDs with that have been downloaded from springer nature, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/springer_nature"),
+                  recursive = TRUE,
+             pattern = "\\.html$"
+) |> 
+  basename() |>
+  stringr::str_remove_all("\\.html$")
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ### Download full text from Wiley 
@@ -831,6 +865,18 @@ length(list.files(here::here("output/fulltexts/wiley/"),
                   recursive = TRUE,
                   pattern = "\\.pdf$"))
 
+# drop PMIDs with that have been downloaded from wiley, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/wiley/"), 
+                  recursive = FALSE,
+                  pattern = "\\.xml$") |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ## Download html full texts from publisher links
@@ -864,6 +910,17 @@ length(list.files(here::here("output/fulltexts/ajcr"),
                   pattern = "\\.xml$"
 )
 )
+
+pmids_to_drop <- list.files(here::here("output/fulltexts/ajcr"),
+                  pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -909,6 +966,19 @@ length(list.files(here::here("output/fulltexts/asm"),
              pattern = "\\.xml$"
 )
 )
+
+# drop PMIDs with that have been downloaded from ASM, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/asm"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -962,6 +1032,19 @@ length(list.files(here::here("output/fulltexts/bmj"),
 )
 )
 
+# drop PMIDs with that have been downloaded from BMJ, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/bmj"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ### Download full text from Cambridge
@@ -1011,6 +1094,20 @@ length(list.files(here::here("output/fulltexts/cambridge"),
 )
 )
 
+# drop PMIDs with that have been downloaded from Cambridge, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/cambridge"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
+
 ```
 
 ### Download from ERS
@@ -1050,6 +1147,19 @@ length(list.files(here::here("output/fulltexts/ers"),
 )
 )
 
+# drop PMIDs with that have been downloaded from ERS, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/ers"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ### Download full text from eScholarship repository
@@ -1082,6 +1192,18 @@ length(list.files(here::here("output/fulltexts/escholarship"),
                   pattern = "\\.xml$"
 )
 )
+
+# drop PMIDs with that have been downloaded from eScholarship, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/escholarship"),
+                  pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -1127,6 +1249,19 @@ length(list.files(here::here("output/fulltexts/jama"),
 )
 )
 
+# drop PMIDs with that have been downloaded from JAMA, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/jama"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ### Download full text from 'In vivo'
@@ -1161,6 +1296,19 @@ length(list.files(here::here("output/fulltexts/in_vivo"),
              pattern = "\\.xml$"
 )
 )
+
+# drop PMIDs with that have been downloaded from In vivo, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/in_vivo"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -1208,6 +1356,19 @@ length(list.files(here::here("output/fulltexts/karger"),
 )
 )
 
+# drop PMIDs with that have been downloaded from Karger, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/karger"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ### Download full text from Medica
@@ -1244,6 +1405,20 @@ length(list.files(here::here("output/fulltexts/medica"),
                   recursive = TRUE,
              pattern = "\\.xml$")
 )
+
+# drop PMIDs with that have been downloaded from Medica, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/medica"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <- 
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 
 ```
 
@@ -1291,6 +1466,20 @@ length(list.files(here::here("output/fulltexts/ovid"),
                   recursive = TRUE,
              pattern = "\\.xml$"
 ))
+
+# drop PMIDs with that have been downloaded from Ovid Lippincott Williams & Wilkins Total Access Collection, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/ovid"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <- 
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 
 ```
 
@@ -1354,6 +1543,19 @@ length(list.files(here::here("output/fulltexts/oxford_academic"),
 )
 )
 
+# drop PMIDs with that have been downloaded from Oxford Academic, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/oxford_academic"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
 ```
 
 ### Download full text from Taylor & Francis
@@ -1396,6 +1598,19 @@ length(list.files(here::here("output/fulltexts/taylor_and_francis"),
                   recursive = TRUE,
                   pattern = "\\.xml$")
 )
+
+
+pmids_to_drop <- list.files(here::here("output/fulltexts/taylor_and_francis"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
 
 ```
 
@@ -1555,15 +1770,13 @@ Text and data mining are permitted for noncommercial institutions with an active
 
 ```{r final_full_text_stats}
 
-# full_text_files <-
-#   list.files(here::here("output/fulltexts"), 
-#              recursive = T, 
-#              pattern = "\\.xml$|\\.html$|\\.pdf$") 
-
 full_text_files <-
   list.files(here::here("output/fulltexts"),
              recursive = T,
              pattern = "\\.xml$")
+
+# drop archived files:
+full_text_files <- full_text_files[!grepl("^archived/", full_text_files)]
 
 full_text_files <- basename(full_text_files) |> 
   stringr::str_remove_all("\\.pdf.tei.xml$|\\.html$|\\.xml$|\\.pdf$") |>
