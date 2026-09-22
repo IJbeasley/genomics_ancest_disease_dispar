@@ -374,7 +374,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2026-09-21
+<strong>Last updated:</strong> 2026-09-22
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -506,15 +506,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7a945251d9b0147709c7d444c9ccf245903140c3targetblank7a94525a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed2978ff00fc6c3f828ea5a116f13ceda5ed73163targetblankd2978ffa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7a945251d9b0147709c7d444c9ccf245903140c3" target="_blank">7a94525</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d2978ff00fc6c3f828ea5a116f13ceda5ed73163" target="_blank">d2978ff</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree7a945251d9b0147709c7d444c9ccf245903140c3targetblank7a94525a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreed2978ff00fc6c3f828ea5a116f13ceda5ed73163targetblankd2978ffa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -524,7 +524,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/7a945251d9b0147709c7d444c9ccf245903140c3" target="_blank">7a94525</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/d2978ff00fc6c3f828ea5a116f13ceda5ed73163" target="_blank">d2978ff</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -544,6 +544,7 @@ Ignored files:
     Ignored:    .Rproj.user/
     Ignored:    .venv/
     Ignored:    BioC.dtd
+    Ignored:    Claude outputs/
     Ignored:    FormatConverter.jar
     Ignored:    FormatConverter.zip
     Ignored:    analysis/.DS_Store
@@ -582,6 +583,7 @@ Ignored files:
     Ignored:    data/icd/~$IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
     Ignored:    data/icd/~$IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
     Ignored:    data/icd/~$lancet_conditions_icd10.xlsx
+    Ignored:    data/icd/~$manual_disease_map.xlsx
     Ignored:    data/nih/
     Ignored:    data/ontology/
     Ignored:    doccano_venv/
@@ -624,12 +626,12 @@ Unstaged changes:
     Modified:   analysis/12_get_full_text.Rmd
     Modified:   analysis/14_process_article_text.Rmd
     Modified:   analysis/21_training_set_selection.Rmd
+    Modified:   analysis/31_correcting_cohort_names.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
     Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
     Modified:   analysis/replication_ancestry_bias.Rmd
     Modified:   analysis/specific_aims_stats.Rmd
     Modified:   code/cohort_norm/normalize_cohort_names.R
-    Modified:   code/text_embeddings/get_text_embeddings.py
 
 </code></pre>
 <p>
@@ -674,6 +676,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/d2978ff00fc6c3f828ea5a116f13ceda5ed73163/analysis/06_map_trait_to_icd10.Rmd" target="_blank">d2978ff</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-22
+</td>
+<td>
+Repairing changes brought by using updated meta-data
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/a2dd678fa6088a593c24a3106c30e63cd64221b1/docs/06_map_trait_to_icd10.html" target="_blank">a2dd678</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-21
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -1182,9 +1218,16 @@ phecodes  &lt;-
   phecodes  |&gt;
   filter(PheCode != &quot;260.2&quot;)
 
+# normalise trait names/descriptions for matching
+phecodes  &lt;-
+  phecodes |&gt;
+  mutate(ICD_DESCRIPTION == clean_trait_documentation(ICD_DESCRIPTION),
+         Phenotype  = clean_trait_documentation(Phenotype)
+         )
+
 icd10_desc_map  = 
 phecodes |&gt;
-    mutate(trait_clean = tolower(ICD_DESCRIPTION)
+    rename(trait_clean = ICD_DESCRIPTION
            ) |&gt;
     select(trait_clean,    
            icd10_code = ICD10) 
@@ -1196,6 +1239,7 @@ icd10_desc_map  =
          trait_clean != &quot;&quot;) |&gt;
   filter(!is.na(icd10_code) &amp; 
          icd10_code != &quot;&quot;)
+
 
 matched_icd10_desc =
   icd10_desc_map  |&gt;
@@ -1249,11 +1293,10 @@ print(&quot;Number of ICD10 codes obtained&quot;)</code></pre>
   group_by(icd10_source_col) |&gt; 
   summarise(n = n(), 
             percent = n()/n_rows*100)</code></pre>
-<pre><code># A tibble: 2 × 3
-  icd10_source_col                         n percent
-  &lt;chr&gt;                                &lt;int&gt;   &lt;dbl&gt;
-1 DISEASE/TRAIT                        16654    31.1
-2 Extracted disease from DISEASE/TRAIT 17517    32.7</code></pre>
+<pre><code># A tibble: 1 × 3
+  icd10_source_col     n percent
+  &lt;chr&gt;            &lt;int&gt;   &lt;dbl&gt;
+1 DISEASE/TRAIT    15326    28.5</code></pre>
 <pre class="r"><code>print(&quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
@@ -1261,21 +1304,19 @@ print(&quot;Number of ICD10 codes obtained&quot;)</code></pre>
   pull(PUBMED_ID) |&gt;  
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 664</code></pre>
+<pre><code>[1] 21</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
     filter(!is.na(icd10_code)) |&gt; 
   group_by(icd10_source_col,
            icd10_source) |&gt; 
   summarise(n = length(unique(PUBMED_ID)))</code></pre>
-<pre><code># A tibble: 5 × 3
-# Groups:   icd10_source_col [2]
-  icd10_source_col                     icd10_source                    n
-  &lt;chr&gt;                                &lt;chr&gt;                       &lt;int&gt;
-1 DISEASE/TRAIT                        ICD Description               631
-2 DISEASE/TRAIT                        Study ICD10                    17
-3 DISEASE/TRAIT                        Study PheCode (Manual Map)      5
-4 DISEASE/TRAIT                        Study PheCode (PheCode Map)     6
-5 Extracted disease from DISEASE/TRAIT ICD Description                18</code></pre>
+<pre><code># A tibble: 3 × 3
+# Groups:   icd10_source_col [1]
+  icd10_source_col icd10_source                    n
+  &lt;chr&gt;            &lt;chr&gt;                       &lt;int&gt;
+1 DISEASE/TRAIT    Study ICD10                    17
+2 DISEASE/TRAIT    Study PheCode (Manual Map)      5
+3 DISEASE/TRAIT    Study PheCode (PheCode Map)     6</code></pre>
 </div>
 </div>
 <div id="phenotypes-corresponding-to-phecodes---match-diseasetrait"
@@ -1330,8 +1371,8 @@ disease_mapping |&gt;
 <pre><code># A tibble: 2 × 3
   icd10_source_col                         n percent
   &lt;chr&gt;                                &lt;int&gt;   &lt;dbl&gt;
-1 DISEASE/TRAIT                        17803    33.2
-2 Extracted disease from DISEASE/TRAIT 18126    33.8</code></pre>
+1 DISEASE/TRAIT                        17458   32.4 
+2 Extracted disease from DISEASE/TRAIT   617    1.15</code></pre>
 <pre class="r"><code>print(&quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
@@ -1339,23 +1380,21 @@ disease_mapping |&gt;
   pull(PUBMED_ID) |&gt;  
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 1237</code></pre>
+<pre><code>[1] 1075</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
     filter(!is.na(icd10_code)) |&gt; 
   group_by(icd10_source_col,
            icd10_source) |&gt; 
   summarise(n = length(unique(PUBMED_ID)))</code></pre>
-<pre><code># A tibble: 7 × 3
+<pre><code># A tibble: 5 × 3
 # Groups:   icd10_source_col [2]
   icd10_source_col                     icd10_source                    n
   &lt;chr&gt;                                &lt;chr&gt;                       &lt;int&gt;
-1 DISEASE/TRAIT                        ICD Description               631
-2 DISEASE/TRAIT                        Phecode Phenotype             607
-3 DISEASE/TRAIT                        Study ICD10                    17
-4 DISEASE/TRAIT                        Study PheCode (Manual Map)      5
-5 DISEASE/TRAIT                        Study PheCode (PheCode Map)     6
-6 Extracted disease from DISEASE/TRAIT ICD Description                18
-7 Extracted disease from DISEASE/TRAIT Phecode Phenotype              19</code></pre>
+1 DISEASE/TRAIT                        Phecode Phenotype            1035
+2 DISEASE/TRAIT                        Study ICD10                    17
+3 DISEASE/TRAIT                        Study PheCode (Manual Map)      5
+4 DISEASE/TRAIT                        Study PheCode (PheCode Map)     6
+5 Extracted disease from DISEASE/TRAIT Phecode Phenotype              25</code></pre>
 </div>
 </div>
 <div id="umls---match-diseasetrait" class="section level3">
@@ -1415,10 +1454,15 @@ umls_icd10  &lt;-
   mutate(STR = tolower(STR)) |&gt;
   distinct()
 
+# normalise disease/trait description
+umls_icd10  &lt;- 
+  umls_icd10 |&gt;
+  mutate(STR = clean_trait_documentation(STR))
+
 umls_icd10 &lt;-
   umls_icd10 |&gt;
   filter(STR != &quot;hypertension&quot;) |&gt;
-  filter(STR != &quot;cancer&quot;) |&gt;
+ # filter(STR != &quot;cancer&quot;) |&gt;
   filter(STR != &quot;high blood pressure&quot;)
 
 # where K76.1 is mapped to coronary artery disease
@@ -1460,12 +1504,12 @@ head(umls_icd10)</code></pre>
 <pre><code># A tibble: 6 × 4
   STR                                          icd10_code code_type icd10_source
   &lt;chr&gt;                                        &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;       
-1 &quot;\&quot;dermoid\&quot; tumor&quot;                          K09.8      ICD10CM   UMLS        
-2 &quot;\&quot;dermoid\&quot; tumor (morphologic abnormality… K09.8      ICD10CM   UMLS        
-3 &quot;\&quot;dermoid\&quot; tumour&quot;                         K09.8      ICD10CM   UMLS        
-4 &quot;\&quot;glue ear\&quot;&quot;                               H65.9, H6… ICD10CM   UMLS        
-5 &quot;\&quot;nerves\&quot;&quot;                                 R45.0      ICD10, I… UMLS        
-6 &quot;\&quot;nerves\&quot; - nervousness&quot;                   R45.0      ICD10, I… UMLS        </code></pre>
+1 # bone follow insertn/orthopaed implnt,jnt … M96.6      ICD10, I… UMLS        
+2 #-dis trapezo-metacarpal joint               S62.21     ICD10CM   UMLS        
+3 #/bne f insrt/o i,j pr,bn p                  M96.6      ICD10, I… UMLS        
+4 #fibula                                      S82.4      ICD10     UMLS        
+5 #metatarsal bone                             S92.3      ICD10, I… UMLS        
+6 #tibia                                       S82.20     ICD10CM   UMLS        </code></pre>
 <div id="cleaned-diseasetrait-2" class="section level4">
 <h4>Cleaned DISEASE/TRAIT</h4>
 <pre class="r"><code># overlap with umls terms
@@ -1510,8 +1554,8 @@ disease_trait_umls  &lt;-
 <pre><code># A tibble: 2 × 3
   icd10_source_col                         n percent
   &lt;chr&gt;                                &lt;int&gt;   &lt;dbl&gt;
-1 DISEASE/TRAIT                        20915    39.0
-2 Extracted disease from DISEASE/TRAIT 18460    34.4</code></pre>
+1 DISEASE/TRAIT                        21020    39.0
+2 Extracted disease from DISEASE/TRAIT 18461    34.3</code></pre>
 <pre class="r"><code> print(&quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
@@ -1519,7 +1563,7 @@ disease_trait_umls  &lt;-
   pull(PUBMED_ID) |&gt;  
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 2339</code></pre>
+<pre><code>[1] 2355</code></pre>
 </div>
 </div>
 <div id="manual-mapping-of-gwas-traits-to-icd-10"
@@ -1569,14 +1613,14 @@ disease_mapping =
              unmatched = &quot;ignore&quot;,
              by = &quot;collected_all_disease_terms&quot;)
 
- print(&quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;)</code></pre>
+print(&quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of papers where at least one ICD-10 has been obtained so far:&quot;</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
     filter(!is.na(icd10_code)) |&gt;
   pull(PUBMED_ID) |&gt;  
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 3397</code></pre>
+<pre><code>[1] 2759</code></pre>
 </div>
 <div id="match-collected_all_disease_terms-to-icd10-codes-by-phenotypes"
 class="section level3">
@@ -1604,7 +1648,7 @@ print(&quot;Number of papers where at least one ICD-10 has been obtained so far:
   pull(PUBMED_ID) |&gt;  
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 3751</code></pre>
+<pre><code>[1] 3595</code></pre>
 </div>
 <div id="manual-mapping-of-gwas-traits-to-icd-10-1"
 class="section level3">
@@ -1654,7 +1698,7 @@ print(&quot;Number of papers where at least one ICD-10 has been obtained so far:
   pull(PUBMED_ID) |&gt;  
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 4786</code></pre>
+<pre><code>[1] 4820</code></pre>
 </div>
 </div>
 <div id="how-was-icd-10-code-inferred" class="section level1">
@@ -1663,32 +1707,30 @@ print(&quot;Number of papers where at least one ICD-10 has been obtained so far:
 disease_mapping |&gt;
   group_by(icd10_source) |&gt;
   summarise(n = n())</code></pre>
-<pre><code># A tibble: 8 × 2
+<pre><code># A tibble: 7 × 2
   icd10_source                    n
   &lt;chr&gt;                       &lt;int&gt;
-1 ICD Description             21434
-2 Manual Map                   5152
-3 Phecode Phenotype            3909
-4 Study ICD10                  5983
-5 Study PheCode (Manual Map)   1118
-6 Study PheCode (PheCode Map)  8225
-7 UMLS                         6196
-8 &lt;NA&gt;                         1610</code></pre>
+1 Manual Map                   5137
+2 Phecode Phenotype            6668
+3 Study ICD10                  5983
+4 Study PheCode (Manual Map)   1118
+5 Study PheCode (PheCode Map)  8225
+6 UMLS                        25435
+7 &lt;NA&gt;                         1281</code></pre>
 <pre class="r"><code># number of papers with ICD-10 retrieved, by sources
 disease_mapping |&gt;
   group_by(icd10_source) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID)))</code></pre>
-<pre><code># A tibble: 8 × 2
+<pre><code># A tibble: 7 × 2
   icd10_source                n_papers
   &lt;chr&gt;                          &lt;int&gt;
-1 ICD Description                 1412
-2 Manual Map                      1614
-3 Phecode Phenotype               1116
-4 Study ICD10                       17
-5 Study PheCode (Manual Map)         5
-6 Study PheCode (PheCode Map)        6
-7 UMLS                            1756
-8 &lt;NA&gt;                             416</code></pre>
+1 Manual Map                      1583
+2 Phecode Phenotype               1974
+3 Study ICD10                       17
+4 Study PheCode (Manual Map)         5
+5 Study PheCode (PheCode Map)        6
+6 UMLS                            2235
+7 &lt;NA&gt;                             337</code></pre>
 <pre class="r"><code># number of ICD-10 codes obtained by column (i.e. whether from MAPPED TERM or DISEASE/TRAIT)
 disease_mapping |&gt;
   group_by(icd10_source_col) |&gt;
@@ -1696,20 +1738,20 @@ disease_mapping |&gt;
 <pre><code># A tibble: 4 × 2
   icd10_source_col                         n
   &lt;chr&gt;                                &lt;int&gt;
-1 DISEASE/TRAIT                        21904
-2 Extracted disease from DISEASE/TRAIT 18460
-3 MAPPED DISEASE TERM                  11653
-4 &lt;NA&gt;                                  1610</code></pre>
+1 DISEASE/TRAIT                        22094
+2 Extracted disease from DISEASE/TRAIT 18461
+3 MAPPED DISEASE TERM                  12011
+4 &lt;NA&gt;                                  1281</code></pre>
 <pre class="r"><code>disease_mapping |&gt;
   group_by(icd10_source_col) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID)))</code></pre>
 <pre><code># A tibble: 4 × 2
   icd10_source_col                     n_papers
   &lt;chr&gt;                                   &lt;int&gt;
-1 DISEASE/TRAIT                            2660
-2 Extracted disease from DISEASE/TRAIT       65
-3 MAPPED DISEASE TERM                      2531
-4 &lt;NA&gt;                                      416</code></pre>
+1 DISEASE/TRAIT                            2698
+2 Extracted disease from DISEASE/TRAIT       66
+3 MAPPED DISEASE TERM                      2537
+4 &lt;NA&gt;                                      337</code></pre>
 <pre class="r"><code>disease_mapping  |&gt; 
     group_by(icd10_source, icd10_source_col) |&gt; 
     summarise(n = n(), 
@@ -1721,25 +1763,22 @@ disease_mapping |&gt;
 ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
 ℹ Use `summarise(.by = c(icd10_source, icd10_source_col))` for per-operation
   grouping (`?dplyr::dplyr_by`) instead.</code></pre>
-<pre><code># A tibble: 15 × 4
-# Groups:   icd10_source [8]
+<pre><code># A tibble: 12 × 4
+# Groups:   icd10_source [7]
    icd10_source                icd10_source_col                       n n_papers
    &lt;chr&gt;                       &lt;chr&gt;                              &lt;int&gt;    &lt;int&gt;
- 1 ICD Description             DISEASE/TRAIT                       1328      631
- 2 ICD Description             Extracted disease from DISEASE/TR… 17517       18
- 3 ICD Description             MAPPED DISEASE TERM                 2589      859
- 4 Manual Map                  DISEASE/TRAIT                        989      487
- 5 Manual Map                  MAPPED DISEASE TERM                 4163     1219
- 6 Phecode Phenotype           DISEASE/TRAIT                       1149      607
- 7 Phecode Phenotype           Extracted disease from DISEASE/TR…   609       19
- 8 Phecode Phenotype           MAPPED DISEASE TERM                 2151      551
- 9 Study ICD10                 DISEASE/TRAIT                       5983       17
-10 Study PheCode (Manual Map)  DISEASE/TRAIT                       1118        5
-11 Study PheCode (PheCode Map) DISEASE/TRAIT                       8225        6
-12 UMLS                        DISEASE/TRAIT                       3112     1224
-13 UMLS                        Extracted disease from DISEASE/TR…   334       28
-14 UMLS                        MAPPED DISEASE TERM                 2750      596
-15 &lt;NA&gt;                        &lt;NA&gt;                                1610      416</code></pre>
+ 1 Manual Map                  DISEASE/TRAIT                       1074      510
+ 2 Manual Map                  MAPPED DISEASE TERM                 4063     1171
+ 3 Phecode Phenotype           DISEASE/TRAIT                       2132     1035
+ 4 Phecode Phenotype           Extracted disease from DISEASE/TR…   617       25
+ 5 Phecode Phenotype           MAPPED DISEASE TERM                 3919     1045
+ 6 Study ICD10                 DISEASE/TRAIT                       5983       17
+ 7 Study PheCode (Manual Map)  DISEASE/TRAIT                       1118        5
+ 8 Study PheCode (PheCode Map) DISEASE/TRAIT                       8225        6
+ 9 UMLS                        DISEASE/TRAIT                       3562     1385
+10 UMLS                        Extracted disease from DISEASE/TR… 17844       41
+11 UMLS                        MAPPED DISEASE TERM                 4029      966
+12 &lt;NA&gt;                        &lt;NA&gt;                                1281      337</code></pre>
 <pre class="r"><code># number of papers with at least one ICD-10 Code retrieved
 disease_mapping |&gt;
   group_by(PUBMED_ID) |&gt;
@@ -1748,7 +1787,7 @@ disease_mapping |&gt;
 <pre><code># A tibble: 1 × 1
   n_papers_with_icd10
                 &lt;int&gt;
-1                4786</code></pre>
+1                4820</code></pre>
 <pre class="r"><code># total number of papers
 disease_mapping |&gt; pull(PUBMED_ID) |&gt; unique() |&gt; length()</code></pre>
 <pre><code>[1] 4910</code></pre>
@@ -1789,9 +1828,9 @@ disease_mapping |&gt;
 <pre><code># A tibble: 3 × 2
   token_kind      n
   &lt;chr&gt;       &lt;int&gt;
-1 code       156934
-2 missing      1610
-3 range        1342</code></pre>
+1 code       192209
+2 missing      1281
+3 range        1568</code></pre>
 <pre class="r"><code># initial simplification of ranges 
 # e.g. reduce C30-C30 to C30, and C30-C30.9 to C30
 disease_mapping &lt;-
@@ -1821,9 +1860,9 @@ disease_mapping |&gt;
 <pre><code># A tibble: 3 × 2
   token_kind      n
   &lt;chr&gt;       &lt;int&gt;
-1 code       157297
-2 missing      1610
-3 range         979</code></pre>
+1 code       192576
+2 missing      1281
+3 range        1201</code></pre>
 <pre class="r"><code># expand ranges to include all subcomponents
 disease_mapping &lt;-
   disease_mapping |&gt; 
@@ -1850,8 +1889,8 @@ disease_mapping |&gt;
 <pre><code># A tibble: 2 × 2
   token_kind      n
   &lt;chr&gt;       &lt;int&gt;
-1 code       166832
-2 missing      1610</code></pre>
+1 code       215429
+2 missing      1281</code></pre>
 <pre class="r"><code>disease_mapping &lt;-
   disease_mapping |&gt; 
   mutate(icd10_code_clean = ifelse(icd10_code_clean == &quot;G45-G46.8&quot;,
@@ -1874,8 +1913,8 @@ disease_mapping |&gt;
 <pre><code># A tibble: 2 × 2
   token_kind      n
   &lt;chr&gt;       &lt;int&gt;
-1 code       166832
-2 missing      1610</code></pre>
+1 code       215429
+2 missing      1281</code></pre>
 <pre class="r"><code># one code range not properly expanded
 disease_mapping |&gt;
   filter(token_kind == &quot;range&quot;) |&gt;
@@ -1893,12 +1932,12 @@ disease_mapping |&gt;
 <pre><code># A tibble: 6 × 1
   icd10_code_clean
   &lt;chr&gt;           
-1 K50.90          
-2 Z82.62          
-3 K57.90          
-4 H35.32          
-5 K83.01          
-6 C34.90          </code></pre>
+1 R46.81          
+2 K50.90          
+3 Z82.62          
+4 K57.90          
+5 H35.32          
+6 K83.01          </code></pre>
 <pre class="r"><code>ICD10_3dp_CODE_RE &lt;- &quot;^[A-Z][0-9]{2}\\.[0-9]{3}$&quot;
 ICD10_2dp_CODE_RE &lt;- &quot;^[A-Z][0-9]{2}\\.[0-9]{2}$&quot;
 
@@ -1909,14 +1948,14 @@ disease_mapping |&gt;
   distinct(collected_all_disease_terms, icd10_code_clean) |&gt;
   head()</code></pre>
 <pre><code># A tibble: 6 × 2
-  collected_all_disease_terms  icd10_code_clean
-  &lt;chr&gt;                        &lt;chr&gt;           
-1 crohn disease                K50.90          
-2 osteoporosis                 Z82.62          
-3 diverticular disease         K57.90          
-4 hereditary retinal dystrophy H35.32          
-5 cholangitis                  K83.01          
-6 lung cancer                  C34.90          </code></pre>
+  collected_all_disease_terms   icd10_code_clean
+  &lt;chr&gt;                         &lt;chr&gt;           
+1 obsessive-compulsive disorder R46.81          
+2 crohn disease                 K50.90          
+3 osteoporosis                  Z82.62          
+4 diverticular disease          K57.90          
+5 hereditary retinal dystrophy  H35.32          
+6 cholangitis                   K83.01          </code></pre>
 <pre class="r"><code>disease_mapping &lt;- 
 disease_mapping |&gt;
   mutate(
@@ -1948,7 +1987,7 @@ disease_mapping |&gt;
 3 depression                                    F32.A           
 4 neuroendocrine tumor                          D3A.8           
 5 other specified hearing loss, unspecified ear H91.8X9         
-6 parkinsons disease                            G20.A1          
+6 parkinson disease                             G20.A1          
 7 neuroendocrine tumors                         D3A.8           </code></pre>
 <pre class="r"><code># remaining code conversion from ICDCM to ICD10 WHO
 # F32.A -&gt; F32.9
@@ -2037,6 +2076,7 @@ disease_mapping |&gt;
     icd10_code_clean %in% c(&quot;X60.0&quot;, &quot;X60.9&quot;) ~ &quot;X60&quot;,
     icd10_code_clean %in% c(&quot;X61.0&quot;, &quot;X61.9&quot;) ~ &quot;X61&quot;,
     icd10_code_clean == &quot;Z68.4&quot; ~ &quot;E66.0&quot;,
+    icd10_code_clean == &quot;L41.2&quot; ~ &quot;C86.6&quot;,
 
 # no who equivalent:
 # Y92, Y93        place / activity modifiers
@@ -2081,16 +2121,16 @@ validate_icd10(unique(disease_mapping$icd10_who),
 check_icd10_codes |&gt;
   filter(!grepl(&quot;\\bok\\b&quot;, status, ignore.case = TRUE)) |&gt;
   nrow()</code></pre>
-<pre><code>[1] 58</code></pre>
+<pre><code>[1] 61</code></pre>
 <pre class="r"><code>head(check_icd10_codes |&gt;
   filter(!grepl(&quot;\\bok\\b&quot;, status, ignore.case = TRUE)))</code></pre>
 <pre><code>  input matched title level terminal  status valid
 1  &lt;NA&gt;    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
-2 M26.6    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
-3 R33.9    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
-4 C83.2    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
-5 L41.2    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
-6 C95.2    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE</code></pre>
+2 C95.2    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
+3 C83.2    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
+4 R51.9    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
+5 M26.6    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE
+6 R33.9    &lt;NA&gt;  &lt;NA&gt;  &lt;NA&gt;       NA unknown FALSE</code></pre>
 <pre class="r"><code>validated_codes &lt;-
   check_icd10_codes |&gt;
   filter(grepl(&quot;\\bok\\b&quot;, status, ignore.case = TRUE)) |&gt;
