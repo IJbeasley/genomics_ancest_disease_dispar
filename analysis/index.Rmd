@@ -153,7 +153,7 @@ Use the above mapping of disease traits to ICD-10 codes to find GWAS Catalog stu
 
 -   [Matching GWAS traits to GBD causes / diseases](07_gwas_to_gbd.html)
 
-```{r, include=FALSE}
+```{r, echo = FALSE}
 
 
 gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
@@ -161,27 +161,13 @@ gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_c
 n_lancet_studies =
 gwas_study_info |> 
   dplyr::filter(cause != "") |> 
+  dplyr::filter(include == T) |>
   dplyr::pull(PUBMED_ID) |>
   unique() |>
   length()
 
-print(paste0("Number of papers studying at least one Lancet Commission Priority Disease", 
+print(paste0("Number of papers studying at least one of our selected priority Diseases: ", 
              n_lancet_studies))
-
-n_ncd7_studies =
-gwas_study_info |> 
-  dplyr::filter(cause != "") |> 
-  dplyr::filter(lancet_group == "NCD-7") |>
-  dplyr::filter(!c(lancet_condition %in% c("Suicide", 
-                                    "Road injury"))
-         ) |>
-  dplyr::pull(PUBMED_ID) |>
-  unique() |>
-  length()
-
-print(paste0("Number of papers studying at least one of the selected Lancet Priority Diseases",
-             "(NCD-7, excl. Suicide, Road injury)",
-             n_ncd7_studies))
 
 ```
 
