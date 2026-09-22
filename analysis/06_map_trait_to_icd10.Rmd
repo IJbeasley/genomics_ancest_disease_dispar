@@ -185,9 +185,16 @@ phecodes  <-
   phecodes  |>
   filter(PheCode != "260.2")
 
+# normalise trait names/descriptions for matching
+phecodes  <-
+  phecodes |>
+  mutate(ICD_DESCRIPTION == clean_trait_documentation(ICD_DESCRIPTION),
+         Phenotype  = clean_trait_documentation(Phenotype)
+         )
+
 icd10_desc_map  = 
 phecodes |>
-    mutate(trait_clean = tolower(ICD_DESCRIPTION)
+    rename(trait_clean = ICD_DESCRIPTION
            ) |>
     select(trait_clean,    
            icd10_code = ICD10) 
@@ -199,6 +206,7 @@ icd10_desc_map  =
          trait_clean != "") |>
   filter(!is.na(icd10_code) & 
          icd10_code != "")
+
 
 matched_icd10_desc =
   icd10_desc_map  |>
@@ -402,10 +410,15 @@ umls_icd10  <-
   mutate(STR = tolower(STR)) |>
   distinct()
 
+# normalise disease/trait description
+umls_icd10  <- 
+  umls_icd10 |>
+  mutate(STR = clean_trait_documentation(STR))
+
 umls_icd10 <-
   umls_icd10 |>
   filter(STR != "hypertension") |>
-  filter(STR != "cancer") |>
+ # filter(STR != "cancer") |>
   filter(STR != "high blood pressure")
 
 # where K76.1 is mapped to coronary artery disease
@@ -549,7 +562,7 @@ disease_mapping =
              unmatched = "ignore",
              by = "collected_all_disease_terms")
 
- print("Number of papers where at least one ICD-10 has been obtained so far:")
+print("Number of papers where at least one ICD-10 has been obtained so far:")
 disease_mapping |>
     filter(!is.na(icd10_code)) |>
   pull(PUBMED_ID) |>  
@@ -925,6 +938,7 @@ disease_mapping |>
     icd10_code_clean %in% c("X60.0", "X60.9") ~ "X60",
     icd10_code_clean %in% c("X61.0", "X61.9") ~ "X61",
     icd10_code_clean == "Z68.4" ~ "E66.0",
+    icd10_code_clean == "L41.2" ~ "C86.6",
 
 # no who equivalent:
 # Y92, Y93        place / activity modifiers
