@@ -507,15 +507,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree438fe71e5d31a91ddb52cbbc9023d6f5da4232a8targetblank438fe71a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree2e07565bf1e9e249cd7969aaaa1f2766fd741b4ctargetblank2e07565a">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/438fe71e5d31a91ddb52cbbc9023d6f5da4232a8" target="_blank">438fe71</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/2e07565bf1e9e249cd7969aaaa1f2766fd741b4c" target="_blank">2e07565</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree438fe71e5d31a91ddb52cbbc9023d6f5da4232a8targetblank438fe71a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree2e07565bf1e9e249cd7969aaaa1f2766fd741b4ctargetblank2e07565a"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -525,7 +525,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/438fe71e5d31a91ddb52cbbc9023d6f5da4232a8" target="_blank">438fe71</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/2e07565bf1e9e249cd7969aaaa1f2766fd741b4c" target="_blank">2e07565</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -677,6 +677,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/2e07565bf1e9e249cd7969aaaa1f2766fd741b4c/analysis/07_gwas_to_gbd.Rmd" target="_blank">2e07565</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-22
+</td>
+<td>
+Use only non-fatal ICD10 code categorisation
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/48de7532cd3c92fee381b898b66f9c77a0b4fc21/docs/07_gwas_to_gbd.html" target="_blank">48de753</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-09-22
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1492,7 +1526,7 @@ disease_mapping_with_cause |&gt;
   pull(PUBMED_ID) |&gt;
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 191</code></pre>
+<pre><code>[1] 190</code></pre>
 <pre class="r"><code># number of papers only mapped to a cause by overlap of cause of death ICD-10 codes
 disease_mapping_with_cause |&gt;
   filter(!is.na(cause)) |&gt;
@@ -1500,7 +1534,136 @@ disease_mapping_with_cause |&gt;
   pull(PUBMED_ID) |&gt;
   unique() |&gt;
   length()</code></pre>
-<pre><code>[1] 112</code></pre>
+<pre><code>[1] 113</code></pre>
+<div id="should-we-keep-cause-of-death-specific-codes"
+class="section level2">
+<h2>Should we keep ‘Cause of Death Specific’ codes:</h2>
+<p>Let’s drop cause of death specific cause codes, as these relate less
+to the diseases studied.</p>
+<pre class="r"><code># per paper mapping
+per_paper_disease_map &lt;-
+disease_mapping_with_cause |&gt; 
+  filter(include == T) |&gt; 
+  #filter(!icd10_code %in% c(&quot;B18&quot;, &quot;B18.1&quot;, &quot;B18.2&quot;, &quot;D26&quot;, &quot;D10&quot;, &quot;D11&quot;)) |&gt; 
+  distinct(PUBMED_ID, cause, cause_source) |&gt; 
+  group_by(PUBMED_ID, cause) |&gt; 
+  summarise(cause_source = stringr::str_flatten_comma(unique(cause_source, na.rm = T))) |&gt; 
+  ungroup() </code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by PUBMED_ID and cause.
+ℹ Output is grouped by PUBMED_ID.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(PUBMED_ID, cause))` for per-operation grouping
+  (`?dplyr::dplyr_by`) instead.</code></pre>
+<pre class="r"><code>per_paper_disease_map &lt;-
+  per_paper_disease_map |&gt;
+  mutate(cause_source = 
+           ifelse(grepl(&quot;overlap&quot;, cause_source), 
+                  &quot;overlap&quot;, cause_source))
+
+per_paper_disease_map |&gt; distinct(cause_source)</code></pre>
+<pre><code># A tibble: 3 × 1
+  cause_source   
+  &lt;chr&gt;          
+1 overlap        
+2 icd10_non_fatal
+3 icd10_cod      </code></pre>
+<pre class="r"><code>per_paper_disease_map  |&gt;
+  filter(cause_source == &quot;icd10_cod&quot;) |&gt;
+  group_by(cause) |&gt;
+  summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
+  arrange(desc(n_papers))</code></pre>
+<pre><code># A tibble: 7 × 2
+  cause                                                      n_papers
+  &lt;chr&gt;                                                         &lt;int&gt;
+1 Cirrhosis and other chronic liver diseases                       49
+2 Chronic kidney disease due to other and unspecified causes       18
+3 Cervical cancer                                                   3
+4 Intracerebral hemorrhage                                          3
+5 Larynx cancer                                                     1
+6 Lip and oral cavity cancer                                        1
+7 Nasopharynx cancer                                                1</code></pre>
+<pre class="r"><code># chronic viral hepatitis codes explain 
+# these Cirrhosis and other chronic liver diseases causes (mapped by Cause of death codes only)
+
+per_paper_disease_map &lt;-
+disease_mapping_with_cause |&gt; 
+  filter(include == T) |&gt; 
+  # exclude chronic viral hepatitis codes (B18, B18.1, B18.2) and benign neoplasms (D26, D10, D11) codes
+  filter(!icd10_code %in% c(&quot;B18&quot;, &quot;B18.1&quot;, &quot;B18.2&quot;, 
+                            &quot;D26&quot;, &quot;D10&quot;, &quot;D10.6&quot;, &quot;D11&quot;, &quot;D38&quot;, &quot;D10, D11&quot;,
+                            &quot;N08&quot;, &quot;N08.3&quot;,
+                            &quot;I68.2&quot;)) |&gt; 
+  distinct(PUBMED_ID, cause, cause_source) |&gt; 
+  group_by(PUBMED_ID, cause) |&gt; 
+  summarise(cause_source = stringr::str_flatten_comma(unique(cause_source, na.rm = T))) |&gt; 
+  ungroup() </code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by PUBMED_ID and cause.
+ℹ Output is grouped by PUBMED_ID.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(PUBMED_ID, cause))` for per-operation grouping
+  (`?dplyr::dplyr_by`) instead.</code></pre>
+<pre class="r"><code>per_paper_disease_map &lt;-
+  per_paper_disease_map |&gt;
+  mutate(cause_source = 
+           ifelse(grepl(&quot;overlap&quot;, cause_source), 
+                  &quot;overlap&quot;, cause_source))
+
+per_paper_disease_map  |&gt;
+  filter(cause_source == &quot;icd10_cod&quot;) |&gt;
+  group_by(cause) |&gt;
+  summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
+  arrange(desc(n_papers))</code></pre>
+<pre><code># A tibble: 0 × 2
+# ℹ 2 variables: cause &lt;chr&gt;, n_papers &lt;int&gt;</code></pre>
+<pre class="r"><code>code_to_cause &lt;-
+  code_to_cause |&gt; 
+  filter(cause_source == &quot;overlap&quot; | cause_source == &quot;icd10_non_fatal&quot;) |&gt;
+  mutate(cause_source = &quot;icd10_non_fatal&quot;) |&gt;
+  distinct()
+
+disease_mapping_annotated &lt;- disease_mapping |&gt;
+  left_join(code_to_cause, 
+            by = &quot;icd10_code&quot;, 
+            relationship = &quot;many-to-many&quot;)
+
+
+
+disease_mapping_with_cause &lt;-
+disease_mapping_annotated |&gt;
+  group_by(PUBMED_ID,
+           YEAR,
+           `DISEASE/TRAIT`, 
+           collected_all_disease_terms,
+           icd10_term,
+           cause,
+           cause_category,
+           lancet_condition,
+           lancet_group,
+           cause_hierarchy_level,
+           include) |&gt;
+  summarise(icd10_code = stringr::str_flatten_comma(unique(sort(icd10_code)),
+                                                    na.rm = TRUE
+                                                    ),
+            cause_source = stringr::str_flatten_comma(unique(sort(cause_source)),
+                                                      na.rm = TRUE
+                                                      )
+  ) |&gt;
+  ungroup() |&gt;
+  distinct()</code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by PUBMED_ID, YEAR, DISEASE/TRAIT,
+  collected_all_disease_terms, icd10_term, cause, cause_category,
+  lancet_condition, lancet_group, cause_hierarchy_level, and include.
+ℹ Output is grouped by PUBMED_ID, YEAR, DISEASE/TRAIT,
+  collected_all_disease_terms, icd10_term, cause, cause_category,
+  lancet_condition, lancet_group, and cause_hierarchy_level.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(PUBMED_ID, YEAR, DISEASE/TRAIT,
+  collected_all_disease_terms, icd10_term, cause, cause_category,
+  lancet_condition, lancet_group, cause_hierarchy_level, include))` for
+  per-operation grouping (`?dplyr::dplyr_by`) instead.</code></pre>
 <pre class="r"><code>print(&quot;Number of unique papers mapped to non-communicable diseases:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of unique papers mapped to non-communicable diseases:&quot;</code></pre>
 <pre class="r"><code># filter out infectious diseases
@@ -1510,15 +1673,7 @@ disease_mapping_with_cause |&gt;
   pull(PUBMED_ID) |&gt; 
   unique() |&gt; 
   length()</code></pre>
-<pre><code>[1] 1047</code></pre>
-<pre class="r"><code>disease_mapping_with_cause |&gt;
-    dplyr::filter(include == TRUE) |&gt;
-    filter(!is.na(cause)) |&gt; 
-  filter(cause_source == &quot;overlap&quot;) |&gt;
-  pull(PUBMED_ID) |&gt; 
-  unique() |&gt; 
-  length()</code></pre>
-<pre><code>[1] 947</code></pre>
+<pre><code>[1] 1001</code></pre>
 <pre class="r"><code>print(&quot;List of non-communicable diseases mapped to GWAS Catalog studies:&quot;)</code></pre>
 <pre><code>[1] &quot;List of non-communicable diseases mapped to GWAS Catalog studies:&quot;</code></pre>
 <pre class="r"><code>disease_mapping_with_cause |&gt;
@@ -1551,6 +1706,7 @@ disease_mapping_with_cause |&gt;
 [23] &quot;Tracheal, bronchus, and lung cancer&quot;                       
 [24] &quot;Type 1 diabetes mellitus&quot;                                  
 [25] &quot;Type 2 diabetes mellitus&quot;                                  </code></pre>
+</div>
 </div>
 <div id="plot-number-of-papers-per-cause" class="section level1">
 <h1>Plot: number of papers per cause:</h1>
@@ -1814,11 +1970,11 @@ UpSet(upset_matrix_lancet_conditions,
 <pre class="r"><code>print(&quot;Number of studies mapped to one Lancet condition:&quot;)</code></pre>
 <pre><code>[1] &quot;Number of studies mapped to one Lancet condition:&quot;</code></pre>
 <pre class="r"><code>comb_size(upset_matrix_lancet_conditions, degree = 1) |&gt; sum()</code></pre>
-<pre><code>[1] 889</code></pre>
+<pre><code>[1] 890</code></pre>
 <pre class="r"><code>print(&quot;All non-communicable disease studies mapped to a Lancet condition:&quot;)</code></pre>
 <pre><code>[1] &quot;All non-communicable disease studies mapped to a Lancet condition:&quot;</code></pre>
 <pre class="r"><code>overlap_lancet_conditions |&gt; purrr::list_c() |&gt; unique() |&gt; length()</code></pre>
-<pre><code>[1] 1024</code></pre>
+<pre><code>[1] 1023</code></pre>
 <div id="just-for-the-relevant-diseases" class="section level3">
 <h3>Just for the relevant diseases</h3>
 <pre class="r"><code>overlap_lancet_conditions =
@@ -2588,8 +2744,8 @@ orig_gwas_meta |&gt;
            `DISEASE/TRAIT`,
            collected_all_disease_terms,
            cause) </code></pre>
-<pre><code># A tibble: 30 × 4
-# Groups:   PUBMED_ID [15]
+<pre><code># A tibble: 60 × 4
+# Groups:   PUBMED_ID [16]
    PUBMED_ID `DISEASE/TRAIT`                        collected_all_diseas…¹ cause
        &lt;int&gt; &lt;chr&gt;                                  &lt;chr&gt;                  &lt;chr&gt;
  1  22503698 Oral cancers (chewing tobacco related) oral cavity neoplasm   &lt;NA&gt; 
@@ -2602,7 +2758,7 @@ orig_gwas_meta |&gt;
  8  33959723 Throat or larynx disorder              laryngeal disorder     &lt;NA&gt; 
  9  33959723 Throat or larynx disorder              throat disease         &lt;NA&gt; 
 10  34594039 Pharyngeal and laryngeal cancer        larynx cancer          Lary…
-# ℹ 20 more rows
+# ℹ 50 more rows
 # ℹ abbreviated name: ¹​collected_all_disease_terms</code></pre>
 </div>
 <div id="nasopharynx-cancer" class="section level2">
@@ -2668,20 +2824,17 @@ about cervical cancer?</p>
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 21 × 2
-   icd10_term                                                           n_papers
-   &lt;chr&gt;                                                                   &lt;int&gt;
- 1 cancer                                                                     24
- 2 cervical cancer                                                            20
- 3 Benign neoplasm of uterus (PheCode 218)                                     4
- 4 Cervical cancer (PheCode 180.1)                                             4
- 5 Cervical intraepithelial neoplasia [CIN] [Cervical dysplasia] (PheC…        4
- 6 Cervical cancer and dysplasia (PheCode 180)                                 3
- 7 benign neoplasm                                                             3
- 8 ICD10 D06.9: Carcinoma in situ of cervix, unspecified                       2
- 9 Other benign neoplasm of uterus (PheCode 218.2)                             2
-10 ICD10 C53.9: Malignant neoplasm of cervix uteri, unspecified                1
-# ℹ 11 more rows</code></pre>
+<pre><code># A tibble: 8 × 2
+  icd10_term                                                   n_papers
+  &lt;chr&gt;                                                           &lt;int&gt;
+1 cancer                                                             24
+2 cervical cancer                                                    20
+3 Cervical cancer (PheCode 180.1)                                     4
+4 Cervical cancer and dysplasia (PheCode 180)                         3
+5 ICD10 C53.9: Malignant neoplasm of cervix uteri, unspecified        1
+6 ICD10 C53: Malignant neoplasm of cervix uteri                       1
+7 Malignant neoplasm of cervix uteri (Union C53)                      1
+8 female reproductive organ cancer                                    1</code></pre>
 </div>
 <div id="chronic-kidney-disease" class="section level2">
 <h2>Chronic kidney disease</h2>
@@ -2691,7 +2844,7 @@ about cervical cancer?</p>
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 132 × 2
+<pre><code># A tibble: 135 × 2
    icd10_term                                         n_papers
    &lt;chr&gt;                                                 &lt;int&gt;
  1 chronic kidney disease                                   43
@@ -2704,7 +2857,7 @@ about cervical cancer?</p>
  8 nephritis and nephropathy with pathological lesion        7
  9 type 2 diabetes nephropathy                               6
 10 end-stage renal disease                                   5
-# ℹ 122 more rows</code></pre>
+# ℹ 125 more rows</code></pre>
 <div id="chronic-kidney-disease-due-to-diabetes-mellitus-type-1"
 class="section level3">
 <h3>Chronic kidney disease due to diabetes mellitus type 1</h3>
@@ -2714,7 +2867,7 @@ class="section level3">
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 13 × 2
+<pre><code># A tibble: 16 × 2
    icd10_term                                                           n_papers
    &lt;chr&gt;                                                                   &lt;int&gt;
  1 diabetic kidney disease                                                     7
@@ -2722,14 +2875,17 @@ class="section level3">
  3 Type 1 diabetes with renal manifestations (PheCode 250.12)                  2
  4 chronic kidney disease in type 1 diabetes                                   2
  5 diabetic nephropathy in type 1 diabetes                                     2
- 6 end-stage renal disease in type 1 diabetics                                 2
- 7 kidney disease in type 1 diabetes                                           2
- 8 chronic kidney disease (reduced egfr or end stage renal disease) in…        1
- 9 diabetic nephropathy                                                        1
-10 end-stage renal disease or diabetic nephropathy in type 1 diabetes          1
-11 kidney disease (early and late stages) in type 1 diabetes                   1
-12 kidney disease (end stage renal disease or albuminuria) in type 1 d…        1
-13 type 1 diabetes nephropathy                                                 1</code></pre>
+ 6 end-stage renal disease in diabetes                                         2
+ 7 end-stage renal disease in type 1 diabetics                                 2
+ 8 kidney disease in type 1 diabetes                                           2
+ 9 chronic kidney disease (reduced egfr or end stage renal disease) in…        1
+10 chronic kidney disease in diabetes                                          1
+11 diabetic nephropathy                                                        1
+12 early diabetic kidney disease in diabetes                                   1
+13 end-stage renal disease or diabetic nephropathy in type 1 diabetes          1
+14 kidney disease (early and late stages) in type 1 diabetes                   1
+15 kidney disease (end stage renal disease or albuminuria) in type 1 d…        1
+16 type 1 diabetes nephropathy                                                 1</code></pre>
 </div>
 <div id="chronic-kidney-disease-due-to-diabetes-mellitus-type-2"
 class="section level3">
@@ -2740,7 +2896,7 @@ class="section level3">
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 11 × 2
+<pre><code># A tibble: 14 × 2
    icd10_term                                                           n_papers
    &lt;chr&gt;                                                                   &lt;int&gt;
  1 diabetic kidney disease                                                     7
@@ -2748,12 +2904,15 @@ class="section level3">
  3 Diabetes mellitus (PheCode 250)                                             4
  4 Type 2 diabetes with renal manifestations (PheCode 250.22)                  3
  5 diabetic kidney disease in type 2 diabetes                                  3
- 6 diabetic nephropathy                                                        1
- 7 diabetic nephropathy in type 2 diabetes                                     1
- 8 early diabetic kidney disease in type 2 diabetes                            1
- 9 late diabetic kidney disease in type 2 diabetes                             1
-10 type 2 diabetes and end-stage kidney disease                                1
-11 type 2 diabetes and end-stage kidney disease in apol1 risk genotype…        1</code></pre>
+ 6 end-stage renal disease in diabetes                                         2
+ 7 chronic kidney disease in diabetes                                          1
+ 8 diabetic nephropathy                                                        1
+ 9 diabetic nephropathy in type 2 diabetes                                     1
+10 early diabetic kidney disease in diabetes                                   1
+11 early diabetic kidney disease in type 2 diabetes                            1
+12 late diabetic kidney disease in type 2 diabetes                             1
+13 type 2 diabetes and end-stage kidney disease                                1
+14 type 2 diabetes and end-stage kidney disease in apol1 risk genotype…        1</code></pre>
 </div>
 </div>
 <div id="chronic-obstructive-pulmonary-disease" class="section level2">
@@ -2788,20 +2947,20 @@ filter(cause == &quot;Cirrhosis and other chronic liver diseases&quot;) |&gt;
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 127 × 2
-   icd10_term                                               n_papers
-   &lt;chr&gt;                                                       &lt;int&gt;
- 1 nonalcoholic fatty liver disease                               18
- 2 metabolic dysfunction-associated steatotic liver disease       17
- 3 hepatitis c infection                                          12
- 4 chronic hepatitis b infection                                  11
- 5 chronic hepatitis c virus infection                            11
- 6 primary biliary cholangitis                                    11
- 7 drug-induced liver injury                                       8
- 8 chronic hepatitis c infection                                   7
- 9 cirrhosis                                                       7
-10 digestive system disorder                                       7
-# ℹ 117 more rows</code></pre>
+<pre><code># A tibble: 111 × 2
+   icd10_term                                                          n_papers
+   &lt;chr&gt;                                                                  &lt;int&gt;
+ 1 nonalcoholic fatty liver disease                                          18
+ 2 metabolic dysfunction-associated steatotic liver disease                  17
+ 3 primary biliary cholangitis                                               11
+ 4 drug-induced liver injury                                                  8
+ 5 cirrhosis                                                                  7
+ 6 digestive system disorder                                                  7
+ 7 Jaundice (not of newborn) (PheCode 573.5)                                  5
+ 8 Liver abscess and sequelae of chronic liver disease (PheCode 571.8)        5
+ 9 Other chronic nonalcoholic liver disease (PheCode 571.5)                   5
+10 alcoholic liver cirrhosis                                                  5
+# ℹ 101 more rows</code></pre>
 </div>
 <div id="diabetes-mellitus" class="section level2">
 <h2>Diabetes mellitus</h2>
@@ -2811,20 +2970,20 @@ filter(cause == &quot;Diabetes mellitus&quot;) |&gt;
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 107 × 2
+<pre><code># A tibble: 108 × 2
    icd10_term                                         n_papers
    &lt;chr&gt;                                                 &lt;int&gt;
  1 type 2 diabetes                                         126
  2 type 2 diabetes mellitus                                 80
- 3 diabetes mellitus                                        35
- 4 type 1 diabetes                                          35
+ 3 type 1 diabetes                                          35
+ 4 diabetes mellitus                                        34
  5 type 1 diabetes mellitus                                 27
  6 diabetic retinopathy                                     13
  7 diabetes                                                 11
  8 Type 1 diabetes with ketoacidosis (PheCode 250.11)        5
  9 Type 2 diabetes (PheCode 250.2)                           5
 10 type 2 diabetes with ophthalmic manifestations            5
-# ℹ 97 more rows</code></pre>
+# ℹ 98 more rows</code></pre>
 <pre class="r"><code># severe protein-calorie malnutrition </code></pre>
 <div id="type-1-diabetes-mellitus" class="section level3">
 <h3>Type 1 diabetes mellitus</h3>
@@ -2834,7 +2993,7 @@ filter(cause == &quot;Type 1 diabetes mellitus&quot;) |&gt;
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 33 × 2
+<pre><code># A tibble: 34 × 2
    icd10_term                                                           n_papers
    &lt;chr&gt;                                                                   &lt;int&gt;
  1 type 1 diabetes                                                            35
@@ -2846,8 +3005,8 @@ filter(cause == &quot;Type 1 diabetes mellitus&quot;) |&gt;
  7 Diabetic retinopathy (PheCode 250.7)                                        4
  8 Peripheral angiopathy in diseases classified elsewhere (PheCode 443…        4
  9 Type 1 diabetes (PheCode 250.1)                                             4
-10 diabetic macular edema                                                      4
-# ℹ 23 more rows</code></pre>
+10 diabetic neuropathy                                                         4
+# ℹ 24 more rows</code></pre>
 </div>
 <div id="type-2-diabetes-mellitus" class="section level3">
 <h3>Type 2 diabetes mellitus</h3>
@@ -2857,7 +3016,7 @@ filter(cause == &quot;Type 2 diabetes mellitus&quot;) |&gt;
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 48 × 2
+<pre><code># A tibble: 49 × 2
    icd10_term                                                           n_papers
    &lt;chr&gt;                                                                   &lt;int&gt;
  1 type 2 diabetes                                                           126
@@ -2870,7 +3029,7 @@ filter(cause == &quot;Type 2 diabetes mellitus&quot;) |&gt;
  8 Peripheral angiopathy in diseases classified elsewhere (PheCode 443…        4
  9 Type 2 diabetes with ketoacidosis (PheCode 250.21)                          4
 10 Type 2 diabetes with ophthalmic manifestations (PheCode 250.23)             4
-# ℹ 38 more rows</code></pre>
+# ℹ 39 more rows</code></pre>
 </div>
 </div>
 <div id="haemorrhagic-stroke" class="section level2">
@@ -2950,20 +3109,20 @@ filter(cause == &quot;Intracerebral hemorrhage&quot; | cause == &quot;Subarachno
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 28 × 2
-   icd10_term                                              n_papers
-   &lt;chr&gt;                                                      &lt;int&gt;
- 1 stroke                                                        32
- 2 intracerebral hemorrhage                                       9
- 3 Cerebrovascular disease (PheCode 433)                          4
- 4 Intracerebral hemorrhage (PheCode 430.2)                       4
- 5 Intracranial hemorrhage (PheCode 430)                          4
- 6 Subdural hemorrhage (PheCode 430.3)                            4
- 7 ICD10 I69: Sequelae of cerebrovascular disease                 3
- 8 Late effects of cerebrovascular disease (PheCode 433.8)        3
- 9 cerebrovascular disease                                        3
-10 ICD10 I61: Nontraumatic intracerebral hemorrhage               2
-# ℹ 18 more rows</code></pre>
+<pre><code># A tibble: 26 × 2
+   icd10_term                                                           n_papers
+   &lt;chr&gt;                                                                   &lt;int&gt;
+ 1 stroke                                                                     32
+ 2 intracerebral hemorrhage                                                    9
+ 3 Intracerebral hemorrhage (PheCode 430.2)                                    4
+ 4 Intracranial hemorrhage (PheCode 430)                                       4
+ 5 Subdural hemorrhage (PheCode 430.3)                                         4
+ 6 ICD10 I69: Sequelae of cerebrovascular disease                              3
+ 7 Late effects of cerebrovascular disease (PheCode 433.8)                     3
+ 8 ICD10 I61: Nontraumatic intracerebral hemorrhage                            2
+ 9 ICD10 I62: Other and unspecified nontraumatic intracranial hemorrha…        2
+10 cerebrovascular disorder                                                    2
+# ℹ 16 more rows</code></pre>
 </div>
 <div id="lip-and-oral-cavity-cancer-1" class="section level2">
 <h2>Lip and oral cavity cancer</h2>
@@ -2973,20 +3132,20 @@ filter(cause == &quot;Intracerebral hemorrhage&quot; | cause == &quot;Subarachno
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 27 × 2
-   icd10_term                                                     n_papers
-   &lt;chr&gt;                                                             &lt;int&gt;
- 1 cancer                                                               24
- 2 head and neck cancer                                                 16
- 3 Benign neoplasm of lip, oral cavity, and pharynx (PheCode 210)        4
- 4 Cancer of mouth (PheCode 145)                                         4
- 5 Cancer of tongue (PheCode 145.2)                                      4
- 6 Malignant neoplasm, other (PheCode 195.1)                             4
- 7 Cancer of larynx, pharynx, nasal cavities (PheCode 149)               3
- 8 Cancer of major salivary glands (PheCode 145.3)                       3
- 9 benign neoplasm                                                       3
-10 oral cavity and pharyngeal cancer                                     3
-# ℹ 17 more rows</code></pre>
+<pre><code># A tibble: 21 × 2
+   icd10_term                                              n_papers
+   &lt;chr&gt;                                                      &lt;int&gt;
+ 1 cancer                                                        24
+ 2 head and neck cancer                                          16
+ 3 Cancer of mouth (PheCode 145)                                  4
+ 4 Cancer of tongue (PheCode 145.2)                               4
+ 5 Malignant neoplasm, other (PheCode 195.1)                      4
+ 6 Cancer of larynx, pharynx, nasal cavities (PheCode 149)        3
+ 7 Cancer of major salivary glands (PheCode 145.3)                3
+ 8 oral cavity and pharyngeal cancer                              3
+ 9 Cancer of the mouth floor (PheCode 145.5)                      2
+10 lip and oral cavity cancer                                     2
+# ℹ 11 more rows</code></pre>
 </div>
 <div id="nasopharynx-cancer-1" class="section level2">
 <h2>Nasopharynx cancer</h2>
@@ -2996,19 +3155,18 @@ filter(cause == &quot;Intracerebral hemorrhage&quot; | cause == &quot;Subarachno
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 10 × 2
-   icd10_term                                                     n_papers
-   &lt;chr&gt;                                                             &lt;int&gt;
- 1 cancer                                                               24
- 2 head and neck cancer                                                 16
- 3 nasopharyngeal cancer                                                14
- 4 Benign neoplasm of lip, oral cavity, and pharynx (PheCode 210)        4
- 5 oral cavity and pharyngeal cancer                                     3
- 6 Cancer of nasopharynx (PheCode 149.2)                                 2
- 7 Malignant neoplasm of nasopharynx (Union C11)                         1
- 8 oral and pharynx cancer                                               1
- 9 overall survival in oral and pharynx cancer                           1
-10 upper aerodigestive tract neoplasm                                    1</code></pre>
+<pre><code># A tibble: 9 × 2
+  icd10_term                                    n_papers
+  &lt;chr&gt;                                            &lt;int&gt;
+1 cancer                                              24
+2 head and neck cancer                                16
+3 nasopharyngeal cancer                               14
+4 oral cavity and pharyngeal cancer                    3
+5 Cancer of nasopharynx (PheCode 149.2)                2
+6 Malignant neoplasm of nasopharynx (Union C11)        1
+7 oral and pharynx cancer                              1
+8 overall survival in oral and pharynx cancer          1
+9 upper aerodigestive tract neoplasm                   1</code></pre>
 </div>
 <div id="other-pharynx-cancer" class="section level2">
 <h2>Other pharynx cancer</h2>
@@ -3018,21 +3176,20 @@ filter(cause == &quot;Intracerebral hemorrhage&quot; | cause == &quot;Subarachno
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 12 × 2
-   icd10_term                                                     n_papers
-   &lt;chr&gt;                                                             &lt;int&gt;
- 1 cancer                                                               24
- 2 head and neck cancer                                                 16
- 3 Benign neoplasm of lip, oral cavity, and pharynx (PheCode 210)        4
- 4 Cancer of oropharynx (PheCode 149.1)                                  4
- 5 oral cavity and pharyngeal cancer                                     3
- 6 Cancer of hypopharynx (PheCode 149.3)                                 2
- 7 oropharynx cancer                                                     2
- 8 other pharynx cancer                                                  2
- 9 ICD10 C09.9: Malignant neoplasm of tonsil, unspecified                1
-10 oral and pharynx cancer                                               1
-11 overall survival in oral and pharynx cancer                           1
-12 upper aerodigestive tract neoplasm                                    1</code></pre>
+<pre><code># A tibble: 11 × 2
+   icd10_term                                             n_papers
+   &lt;chr&gt;                                                     &lt;int&gt;
+ 1 cancer                                                       24
+ 2 head and neck cancer                                         16
+ 3 Cancer of oropharynx (PheCode 149.1)                          4
+ 4 oral cavity and pharyngeal cancer                             3
+ 5 Cancer of hypopharynx (PheCode 149.3)                         2
+ 6 oropharynx cancer                                             2
+ 7 other pharynx cancer                                          2
+ 8 ICD10 C09.9: Malignant neoplasm of tonsil, unspecified        1
+ 9 oral and pharynx cancer                                       1
+10 overall survival in oral and pharynx cancer                   1
+11 upper aerodigestive tract neoplasm                            1</code></pre>
 </div>
 <div id="larynx-cancer" class="section level2">
 <h2>Larynx cancer</h2>
@@ -3042,19 +3199,15 @@ filter(cause == &quot;Intracerebral hemorrhage&quot; | cause == &quot;Subarachno
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 10 × 2
-   icd10_term                                                           n_papers
-   &lt;chr&gt;                                                                   &lt;int&gt;
- 1 cancer                                                                     24
- 2 head and neck cancer                                                       16
- 3 Benign neoplasm of respiratory and intrathoracic organs (PheCode 21…        4
- 4 Cancer of larynx (PheCode 149.4)                                            4
- 5 Neoplasm of uncertain behavior (PheCode 199)                                4
- 6 larynx cancer                                                               4
- 7 ICD10 C32.0: Malignant neoplasm of glottis                                  1
- 8 Neoplasm of uncertain or unknown behaviour of middle ear and respir…        1
- 9 behaviour of cancer tumour: uncertain whether benign or malignant           1
-10 upper aerodigestive tract neoplasm                                          1</code></pre>
+<pre><code># A tibble: 6 × 2
+  icd10_term                                 n_papers
+  &lt;chr&gt;                                         &lt;int&gt;
+1 cancer                                           24
+2 head and neck cancer                             16
+3 Cancer of larynx (PheCode 149.4)                  4
+4 larynx cancer                                     4
+5 ICD10 C32.0: Malignant neoplasm of glottis        1
+6 upper aerodigestive tract neoplasm                1</code></pre>
 </div>
 <div id="tracheal-bronchus-and-lung-cancer" class="section level2">
 <h2>Tracheal, bronchus, and lung cancer</h2>
@@ -3064,20 +3217,20 @@ filter(cause == &quot;Intracerebral hemorrhage&quot; | cause == &quot;Subarachno
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 25 × 2
+<pre><code># A tibble: 23 × 2
    icd10_term                                                           n_papers
    &lt;chr&gt;                                                                   &lt;int&gt;
  1 lung cancer                                                               103
  2 cancer                                                                     24
- 3 Benign neoplasm of respiratory and intrathoracic organs (PheCode 21…        4
- 4 Cancer of bronchus; lung (PheCode 165.1)                                    4
- 5 Cancer within the respiratory system (PheCode 165)                          4
- 6 Neoplasm of uncertain behavior (PheCode 199)                                4
- 7 ICD10 C34.1: Malignant neoplasm of upper lobe, bronchus or lung             2
- 8 ICD10 C34.3: Malignant neoplasm of lower lobe, bronchus or lung             2
- 9 ICD10 C34.9: Malignant neoplasm of unspecified part of bronchus or …        2
-10 ICD10 C34: Malignant neoplasm of bronchus and lung                          2
-# ℹ 15 more rows</code></pre>
+ 3 Cancer of bronchus; lung (PheCode 165.1)                                    4
+ 4 Cancer within the respiratory system (PheCode 165)                          4
+ 5 ICD10 C34.1: Malignant neoplasm of upper lobe, bronchus or lung             2
+ 6 ICD10 C34.3: Malignant neoplasm of lower lobe, bronchus or lung             2
+ 7 ICD10 C34.9: Malignant neoplasm of unspecified part of bronchus or …        2
+ 8 ICD10 C34: Malignant neoplasm of bronchus and lung                          2
+ 9 ICD10 C34.1: Malignant neoplasm of upper lobe, bronchus or lung (Ge…        1
+10 ICD10 C34.3: Malignant neoplasm of lower lobe, bronchus or lung (Ge…        1
+# ℹ 13 more rows</code></pre>
 </div>
 <div id="liver-cancer" class="section level2">
 <h2>Liver cancer</h2>
@@ -3087,24 +3240,23 @@ filter(cause == &quot;Liver cancer&quot;) |&gt;
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 15 × 2
+<pre><code># A tibble: 14 × 2
    icd10_term                                                           n_papers
    &lt;chr&gt;                                                                   &lt;int&gt;
  1 cancer                                                                     24
  2 liver cancer                                                               21
  3 hepatocellular carcinoma                                                   10
- 4 Benign neoplasm of other parts of digestive system (PheCode 211)            4
- 5 Cancer of liver and intrahepatic bile duct (PheCode 155)                    4
- 6 Malignant neoplasm of liver, primary (PheCode 155.1)                        4
- 7 hepatocellular carcinoma in hepatitis b infection                           4
- 8 ICD10 C22: Malignant neoplasm of liver and intrahepatic bile ducts          2
- 9 digestive system cancer                                                     2
-10 hepatitis b virus-related hepatocellular carcinoma                          2
-11 ICD10 C22.0: Liver cell carcinoma                                           1
-12 ICD10 C22.1: Intrahepatic bile duct carcinoma                               1
-13 ICD10 C22: Malignant neoplasm of liver and intrahepatic bile ducts …        1
-14 hepatic cancer                                                              1
-15 hepatitis virus-related hepatocellular cancer                               1</code></pre>
+ 4 Cancer of liver and intrahepatic bile duct (PheCode 155)                    4
+ 5 Malignant neoplasm of liver, primary (PheCode 155.1)                        4
+ 6 hepatocellular carcinoma in hepatitis b infection                           4
+ 7 ICD10 C22: Malignant neoplasm of liver and intrahepatic bile ducts          2
+ 8 digestive system cancer                                                     2
+ 9 hepatitis b virus-related hepatocellular carcinoma                          2
+10 ICD10 C22.0: Liver cell carcinoma                                           1
+11 ICD10 C22.1: Intrahepatic bile duct carcinoma                               1
+12 ICD10 C22: Malignant neoplasm of liver and intrahepatic bile ducts …        1
+13 hepatic cancer                                                              1
+14 hepatitis virus-related hepatocellular cancer                               1</code></pre>
 </div>
 <div id="rheumatic-heart-disease" class="section level2">
 <h2>Rheumatic heart disease</h2>
@@ -3137,25 +3289,20 @@ filter(cause == &quot;Rheumatic heart disease&quot;) |&gt;
   group_by(icd10_term) |&gt;
   summarise(n_papers = length(unique(PUBMED_ID))) |&gt;
   arrange(desc(n_papers))</code></pre>
-<pre><code># A tibble: 16 × 2
-   icd10_term                                                       n_papers
-   &lt;chr&gt;                                                               &lt;int&gt;
- 1 cancer                                                                 24
- 2 gastric cancer                                                         19
- 3 stomach cancer                                                         14
- 4 Benign neoplasm of other parts of digestive system (PheCode 211)        4
- 5 Cancer of stomach (PheCode 151)                                         4
- 6 Neoplasm of unspecified nature of digestive system (PheCode 158)        4
- 7 ICD10 C16: Malignant neoplasm of stomach                                2
- 8 digestive system cancer                                                 2
- 9 ICD10 C16.0: Malignant neoplasm of cardia of stomach                    1
-10 ICD10 C16.9: Malignant neoplasm of stomach, unspecified                 1
-11 ICD10 C16: Malignant neoplasm of stomach (Gene-based burden)            1
-12 ICD10 D13.1: Benign neoplasm of stomach                                 1
-13 ICD10 D13.1: Benign neoplasm of stomach (Gene-based burden)             1
-14 gastric polyp                                                           1
-15 upper gastrointestinal cancer                                           1
-16 upper gastrointestinal tract cancer                                     1</code></pre>
+<pre><code># A tibble: 11 × 2
+   icd10_term                                                   n_papers
+   &lt;chr&gt;                                                           &lt;int&gt;
+ 1 cancer                                                             24
+ 2 gastric cancer                                                     19
+ 3 stomach cancer                                                     14
+ 4 Cancer of stomach (PheCode 151)                                     4
+ 5 ICD10 C16: Malignant neoplasm of stomach                            2
+ 6 digestive system cancer                                             2
+ 7 ICD10 C16.0: Malignant neoplasm of cardia of stomach                1
+ 8 ICD10 C16.9: Malignant neoplasm of stomach, unspecified             1
+ 9 ICD10 C16: Malignant neoplasm of stomach (Gene-based burden)        1
+10 upper gastrointestinal cancer                                       1
+11 upper gastrointestinal tract cancer                                 1</code></pre>
 </div>
 </div>
 <div id="save-mapped-gwas-catalog-paper-mapping-to-gbd-causes"
