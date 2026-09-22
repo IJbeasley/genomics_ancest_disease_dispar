@@ -528,7 +528,7 @@ purrr::walk2(elsevier_links$URL,
 
 Convert Elsevier xmls to JATS xml files 
 
-```{bash convert_elsevier_to_jats, echo = FALSE}
+```{bash convert_elsevier_to_jats, results = 'hide'}
 
 for file in output/fulltexts/elsevier/elsevier_xml/*.xml; do 
     filename=$(basename "$file")
@@ -727,7 +727,7 @@ purrr::map2(springer_nature_links,
 
 ```
 
-```{bash convert_springer_html_to_xml}
+```{bash convert_springer_html_to_xml, results = 'hide'}
 
 source spacyr_venv/bin/activate
 
@@ -781,8 +781,6 @@ wiley_dois <- grep("10\\.1002/|10\\.1111/",
                    doi_information$DOI, 
                    value = TRUE)
 
-wiley_dois <- str_remove_all(wiley_dois, "https://doi.org/")
-
 print("Number of papers potentially can get from Wiley:")
 length(wiley_dois)
 
@@ -792,8 +790,7 @@ length(wiley_dois)
 ```{r download_wiley_full_texts, eval = F, message=FALSE}
 
 pmids_wiley_dois <- doi_information |>
-  filter(DOI %in% paste0("https://doi.org/",
-                         wiley_dois)
+  filter(DOI %in% wiley_dois)
                          ) |>
   pull(PMID)
 
@@ -835,7 +832,7 @@ system("find output/fulltexts/wiley/pdf -type f -size 0 -delete")
 
 As xml files are in Wiley format, convert JATS XML (1.1) format to be consistent with PubMed etc. 
 
-```{bash convert_wiley_xml}
+```{bash convert_wiley_xml, results = 'hide'}
 
 # xmls downloaded manually using https://onlinelibrary.wiley.com/doi/full-xml/[DOI]
 # downloaded to fulltexts/wiley/wiley_xml
@@ -863,7 +860,7 @@ length(list.files(here::here("output/fulltexts/wiley/"),
 
 # drop PMIDs with that have been downloaded from wiley, so we don't try to download them again from other publishers
 pmids_to_drop <- list.files(here::here("output/fulltexts/wiley/"), 
-                  recursive = FALSE,
+                  recursive = TRUE,
                   pattern = "\\.xml$") |>
   basename() |>
   stringr::str_remove_all("\\.xml$") |>
@@ -1000,7 +997,7 @@ length(bmj_links)
 ```
 
 
-```{bash convert_bmj_html_to_xml}
+```{bash convert_bmj_html_to_xml, results = 'hide'}
 
 source spacyr_venv/bin/activate
 
@@ -1066,11 +1063,15 @@ length(cambridge_links)
 
 ```
 
-```{bash convert_cambridge_full_texts}
+```{bash convert_cambridge_full_texts, results = 'hide'}
 
 source spacyr_venv/bin/activate
 
-auto-corpus -b CAMBRIDGE_CORE -t "output/fulltexts/cambridge" -f "output/fulltexts/cambridge/html" -o XML
+auto-corpus \
+-b CAMBRIDGE_CORE \
+-t "output/fulltexts/cambridge" \
+-f "output/fulltexts/cambridge/html" \
+-o XML
 
 ```
 
@@ -1219,9 +1220,10 @@ length(jama_links)
 
 ```
 
-```{bash convert_jama_html_to_xml}
+```{bash convert_jama_html_to_xml, results = 'hide'}
 
 source spacyr_venv/bin/activate
+
 auto-corpus -b JAMA \
 -t "output/fulltexts/jama" \
 -f "output/fulltexts/jama/html" -o XML
@@ -1510,7 +1512,7 @@ length(oxford_htmls)
 
 ```
 
-```{bash convert_oxford_full_texts}
+```{bash convert_oxford_full_texts, results = 'hide'}
 
 python3 code/full_text_conversion/preprocess_oxford_html.py \
        --input  output/fulltexts/oxford_academic/html \
@@ -1546,6 +1548,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/oxford_academic"),
 ) |>
   basename() |>
   stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all("_bioc") |>
   unique()
 
 doi_information <-
@@ -1575,9 +1578,13 @@ length(taylor_francis_dois)
 
 ```
 
-```{bash convert_taylor_francis_full_texts, eval = F}
+```{bash convert_taylor_francis_full_texts, results = 'hide', eval = F}
 
-auto-corpus -b TAYLOR_AND_FRANCIS -t "output/fulltexts/taylor_and_francis" -f "output/fulltexts/taylor_and_francis/html" -o XML
+auto-corpus \
+-b TAYLOR_AND_FRANCIS \
+-t "output/fulltexts/taylor_and_francis" \
+-f "output/fulltexts/taylor_and_francis/html" \
+-o XML
 
 ```
 
@@ -1819,39 +1826,4 @@ print("Assuming 10 minutes per paper to review, total time (hours):")
 n_manual_review * 10 / 60
 
 ```
-
-
-# Testing: 
-
-## Download PDFs using Open Access information from Open Alex
-
-```{r pdfs_open_alex, eval = F}
-
-doi_information <-
-converted_ids |>
-  filter(!c(PMID %in% full_text_pmids)) |>
-  pull(DOI)
-
-doi_information <- doi_information[doi_information != ""]
-
-library(openalexR)
-
-# get open alex works for pmids
-open_alex_works <- oa_fetch(
-  doi = unique(doi_information),
-  entity = "works",
-  options = list(select = c("doi", 
-                            "open_access"))
-)
-
-	
-oa_fetch(
-  doi = unique(doi_information)[10],
-  entity = "works",
-  options = list(select = c("doi",
-                            "licenses"))
-)
-
-```
-
 
