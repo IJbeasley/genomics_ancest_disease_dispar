@@ -119,12 +119,12 @@ def extract_bioc_main(root):
             if text_elem is not None and text_elem.text:
                 para_text = text_elem.text.strip()
                 if para_text:
-                    text_parts.append(clean_extracted_text(para_text) + ' ')
+                    text_parts.append(clean_extracted_text(para_text))
 
     # Clean the JOIN, not only each part: every part already ends in ' ', so a
     # plain join left a double space at each paragraph boundary -- the reason
     # BioC files differed from every other path on whitespace.
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     return result if result else None
 
 
@@ -397,8 +397,10 @@ def clean_extracted_text(text):
     # p-value parser can recover the magnitude.
     text = _SPLIT_EXPONENT_RE.sub(r'10\1\2', text)
 
-    # Remove section numbering at start of paragraphs
-    text = re.sub(r'^(\d+\.)+\d*\s*', '', text)
+    # Remove section numbering at start of paragraphs.  Now that this runs on
+    # every paragraph, the number must not run on into more digits or a '/',
+    # which would chop the "10.1136" off a DOI ("10.1136/bmj-...supp1").
+    text = re.sub(r'^(\d+\.)+\d*(?![\d/])\s*', '', text)
     text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', text)
 
     # Clean up punctuation artifacts from removed citations
@@ -473,6 +475,52 @@ def clean_extracted_text(text):
     text = re.sub(r',{2,}', ',', text)
 
     return text
+
+
+def clean_paragraphs(paragraphs):
+    """
+    Clean multi-paragraph text, keeping ONE PARAGRAPH PER LINE.
+
+    `paragraphs` is a list of paragraph strings, or a single string, in which
+    '\n' marks a paragraph break (a list item may itself hold several
+    '\n'-separated paragraphs, e.g. extract_text_from_element output).  Each
+    paragraph is cleaned with clean_extracted_text() and empty ones dropped.
+
+    Raw text straight from XML must go through clean_extracted_text() first:
+    a line break in the XML source is not a paragraph break.
+    """
+    if isinstance(paragraphs, str):
+        paragraphs = [paragraphs]
+    out = []
+    for para in paragraphs:
+        if not para:
+            continue
+        for line in para.split('\n'):
+            line = clean_extracted_text(line)
+            if not line:
+                continue
+            # A "paragraph" opening with closing punctuation is a mid-sentence
+            # split (GROBID breaks paragraphs around formulas and page breaks):
+            # rejoin it to the line before.
+            if out and line[0] in ',;:.)]':
+                out[-1] = clean_extracted_text(out[-1] + line)
+            else:
+                out.append(line)
+    return '\n'.join(out)
+
+
+def cap_words(text, max_words):
+    """Truncate text to `max_words` words, keeping its paragraph line breaks."""
+    out = []
+    remaining = max_words
+    for line in text.split('\n'):
+        if remaining <= 0:
+            break
+        words = line.split()[:remaining]
+        if words:
+            out.append(' '.join(words))
+            remaining -= len(words)
+    return '\n'.join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -613,18 +661,18 @@ def extract_tei_methods(root):
                     break
 
         if clean_title:
-            text_parts.append(clean_title + '. ')
+            text_parts.append(clean_title + '.')
 
         # Extract paragraphs from this div
         for p in div.findall('tei:p', TEI_NS) or div.findall('p'):
             para_text = flatten_without_citations(p).strip()
             if para_text:
-                text_parts.append(clean_extracted_text(para_text) + ' ')
+                text_parts.append(clean_extracted_text(para_text))
 
     # Clean the joined string, not just the individual parts: artifacts that
     # straddle a join (a citation stripped across a paragraph boundary leaving
     # " ;", doubled spaces) are invisible to the per-part cleaning above.
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     return result if result else None
 
 
@@ -672,10 +720,10 @@ def extract_bioc_methods(root):
             if text_elem is not None and text_elem.text:
                 para_text = text_elem.text.strip()
                 if para_text:
-                    text_parts.append(clean_extracted_text(para_text) + ' ')
+                    text_parts.append(clean_extracted_text(para_text))
 
     if text_parts:
-        result = clean_extracted_text(' '.join(text_parts))
+        result = clean_paragraphs(text_parts)
         return result if result else None
 
     # --- Fallback: scan passage text for inline section headers -----------
@@ -749,12 +797,12 @@ def _bioc_fallback_inline_headers(root):
             t = _METHODS_HEADER_RE.sub('', t, count=1).strip()
 
         if t:
-            text_parts.append(clean_extracted_text(t) + ' ')
+            text_parts.append(clean_extracted_text(t))
 
     # Clean the JOIN, not only each part: every part already ends in ' ', so a
     # plain join left a double space at each paragraph boundary -- the reason
     # BioC files differed from every other path on whitespace.
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     return result if result else None
 
 
@@ -799,7 +847,8 @@ def extract_text_from_element(element, parent_tag=None):
                         header_parts.append(title_text)
             
             if header_parts:
-                text_parts.append(' '.join(header_parts) + '. ')
+                # Heading on its own line (paragraph break after it)
+                text_parts.append(' '.join(header_parts) + '.\n')
         
         # Process other children (except label and title which we already handled)
         for child in element:
@@ -811,7 +860,7 @@ def extract_text_from_element(element, parent_tag=None):
             
             # Get the tail text (text after the child element)
             if child.tail:
-                tail_text = child.tail.strip()
+                tail_text = ' '.join(child.tail.split())
                 if tail_text:
                     text_parts.append(tail_text)
     
@@ -821,7 +870,7 @@ def extract_text_from_element(element, parent_tag=None):
         para_text_parts = []
         
         if element.text:
-            para_text_parts.append(element.text.strip())
+            para_text_parts.append(' '.join(element.text.split()))
         
         for child in element:
             # Skip citation references (xref with ref-type="bibr")
@@ -832,14 +881,14 @@ def extract_text_from_element(element, parent_tag=None):
             if _is_citation_element(child):
                 # Skip this citation, but keep any tail text
                 if child.tail:
-                    tail_text = child.tail.strip()
+                    tail_text = ' '.join(child.tail.split())
                     if tail_text:
                         para_text_parts.append(tail_text)
                 continue
           # if child.get('target') and child.get('target')="#b1" and hild.get('ref-type') == 'bibr':
           #       # Skip this citation, but keep any tail text
           #       if child.tail:
-          #           tail_text = child.tail.strip()
+          #           tail_text = ' '.join(child.tail.split())
           #           if tail_text:
           #               para_text_parts.append(tail_text)
           #       continue
@@ -849,7 +898,7 @@ def extract_text_from_element(element, parent_tag=None):
                 para_text_parts.append(child_text)
             
             if child.tail:
-                tail_text = child.tail.strip()
+                tail_text = ' '.join(child.tail.split())
                 if tail_text:
                     para_text_parts.append(tail_text)
         
@@ -910,9 +959,9 @@ def extract_text_from_element(element, parent_tag=None):
         para_text = re.sub(r',{2,}', ',', para_text)  # ",," or ",,," → ","
         
         
-        # Add paragraph with space after it
+        # One paragraph per line: end it with a line break
         if para_text:
-            text_parts.append(para_text + ' ')
+            text_parts.append(para_text + '\n')
     
     else:
         # For non-section, non-paragraph elements, process normally
@@ -935,7 +984,7 @@ def extract_text_from_element(element, parent_tag=None):
         
         # Get the element's own text
         if element.text:
-            text_parts.append(element.text.strip())
+            text_parts.append(' '.join(element.text.split()))
         
         # Process all child elements recursively
         for child in element:
@@ -945,14 +994,25 @@ def extract_text_from_element(element, parent_tag=None):
             
             # Get the tail text (text after the child element)
             if child.tail:
-                tail_text = child.tail.strip()
+                tail_text = ' '.join(child.tail.split())
                 if tail_text:
                     text_parts.append(tail_text)
     
-    # Join all parts with spaces
-    #result = ' '.join(filter(None, text_parts))
+    # Join all parts with spaces.  Each <p> and each section heading ends in
+    # '\n' (see above), so the result has one paragraph per line; normalise
+    # each line separately so those breaks survive.
     result = ' '.join(text_parts)
-    
+    lines = (_normalise_element_text(line) for line in result.split('\n'))
+    text = '\n'.join(line for line in lines if line)
+    # Block content (a <p>, or anything whose last child is one) keeps its
+    # trailing break, so the parent does not glue the next paragraph onto it.
+    if text and result.rstrip(' ').endswith('\n'):
+        text += '\n'
+    return text
+
+
+def _normalise_element_text(result):
+    """Whitespace/citation tidying for one paragraph of extract_text_from_element output."""
     # Final global normalization
     import re
     import unicodedata
@@ -1336,7 +1396,7 @@ def extract_methods_section(xml_file):
         # was the one route that skipped the shared citation cleaning
         # (numbered brackets, flattened superscript markers).  The TEI and
         # BioC paths above, and both sibling extractors, all clean here.
-        methods_text = clean_extracted_text(extract_text_from_element(methods_section))
+        methods_text = clean_paragraphs(extract_text_from_element(methods_section))
         
         # Final cleanup: strip trailing whitespace
         methods_text = methods_text.strip()
@@ -1375,7 +1435,7 @@ def extract_methods_section(xml_file):
                 if len(all_methods_sections) > 1:
                     # Try the next methods section
                     for section in all_methods_sections[1:]:
-                        alt_text = clean_extracted_text(
+                        alt_text = clean_paragraphs(
                             extract_text_from_element(section)).strip()
                         if alt_text and len(alt_text.split()) >= 50:
                             # Found a real methods section
@@ -1390,7 +1450,7 @@ def extract_methods_section(xml_file):
                 if _is_main_journal(root):
                     body = root.find('.//{*}body')
                     if body is not None:
-                        body_text = clean_extracted_text(
+                        body_text = clean_paragraphs(
                             extract_text_from_element(body)).strip()
                         if body_text and len(body_text.split()) >= 50:
                             return {'text': body_text, 'is_main': True}
@@ -1471,7 +1531,8 @@ def main():
         # handled by the caller (batch_process_methods.sh). Keep the output
         # path unchanged here so the caller can rely on what it passed in.
 
-        output_path.write_text(methods_text, encoding='utf-8')
+        # One paragraph per line; end the file with a newline.
+        output_path.write_text(methods_text + '\n', encoding='utf-8')
         print(f"Methods section extracted to: {output_path}")
     else:
         print(methods_text)

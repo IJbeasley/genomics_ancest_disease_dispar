@@ -29,6 +29,7 @@ from pathlib import Path
 from extract_methods import (
     detect_xml_format,
     clean_extracted_text,
+    clean_paragraphs,
     extract_text_from_element,
     flatten_without_citations,
     extract_bioc_main,
@@ -469,16 +470,16 @@ def extract_tei_results(root):
 
         clean_title = _strip_numbering(title).rstrip(' .;,:')
         if clean_title:
-            text_parts.append(clean_title + '. ')
+            text_parts.append(clean_title + '.')
 
         for p in _tei_findall(div, 'p'):
             # Not itertext(): GROBID keeps <ref type="bibr">[1]</ref> inline,
             # and itertext() would pull those bracketed numbers into the prose.
             para_text = flatten_without_citations(p).strip()
             if para_text:
-                text_parts.append(clean_extracted_text(para_text) + ' ')
+                text_parts.append(clean_extracted_text(para_text))
 
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     return result if result else None
 
 
@@ -556,12 +557,12 @@ def _bioc_subsection_results(root):
 
     # Pass 1 — an explicit "Results" subheading.
     parts = [
-        clean_extracted_text(_passage_text(p)) + ' '
+        clean_extracted_text(_passage_text(p))
         for p, h in zip(passages, heads)
         if _is_results_title(h) and _passage_text(p)
     ]
     if parts:
-        return clean_extracted_text(' '.join(parts))
+        return clean_paragraphs(parts)
 
     # Pass 2 — anchor on the methods block, collect until the discussion.
     methods_seen = False
@@ -578,9 +579,9 @@ def _bioc_subsection_results(root):
             break
         text = _passage_text(passage)
         if text:
-            parts.append(clean_extracted_text(text) + ' ')
+            parts.append(clean_extracted_text(text))
 
-    result = clean_extracted_text(' '.join(parts))
+    result = clean_paragraphs(parts)
     return result if result else None
 
 
@@ -601,10 +602,10 @@ def extract_bioc_results(root):
         if _is_results_title(title):
             para_text = _passage_text(passage)
             if para_text:
-                text_parts.append(clean_extracted_text(para_text) + ' ')
+                text_parts.append(clean_extracted_text(para_text))
 
     if text_parts:
-        return clean_extracted_text(' '.join(text_parts)), False
+        return clean_paragraphs(text_parts), False
 
     # Some publishers (Taylor & Francis, parts of Oxford Academic) file the
     # whole body under a single meaningless section_title_1 such as
@@ -658,9 +659,9 @@ def _bioc_fallback_inline_headers(root):
             text = _RESULTS_HEADER_RE.sub('', text, count=1).strip()
 
         if text:
-            text_parts.append(clean_extracted_text(text) + ' ')
+            text_parts.append(clean_extracted_text(text))
 
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     return result if result else None
 
 
@@ -799,7 +800,7 @@ def extract_results_section(xml_file):
             if sec_text:
                 parts.append(sec_text)
 
-        results_text = clean_extracted_text(' '.join(parts))
+        results_text = clean_paragraphs(parts)
 
         if not results_text:
             return {'text': None, 'is_main': False}
@@ -860,7 +861,8 @@ def main():
         # Whole-body fallback gets a '_main' marker, matching extract_methods.py
         if result['is_main']:
             output_path = output_path.parent / f"{output_path.stem}_main{output_path.suffix}"
-        output_path.write_text(results_text, encoding='utf-8')
+        # One paragraph per line; end the file with a newline.
+        output_path.write_text(results_text + '\n', encoding='utf-8')
         print(f"Results section extracted to: {output_path}")
     else:
         print(results_text)

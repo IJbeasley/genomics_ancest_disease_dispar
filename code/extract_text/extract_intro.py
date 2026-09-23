@@ -46,6 +46,8 @@ from pathlib import Path
 from extract_methods import (
     detect_xml_format,
     clean_extracted_text,
+    clean_paragraphs,
+    cap_words,
     extract_text_from_element,
     flatten_without_citations,
     _is_main_journal,
@@ -456,7 +458,7 @@ def extract_tei_intro(root):
             # and itertext() would pull those bracketed numbers into the prose.
             para = flatten_without_citations(p).strip()
             if para:
-                parts.append(clean_extracted_text(para) + ' ')
+                parts.append(clean_extracted_text(para))
         return parts
 
     # Primary pass: an explicit introduction head.
@@ -478,10 +480,10 @@ def extract_tei_intro(root):
             if i > intro_start:
                 clean_title = _strip_numbering(title).rstrip(' .;,:')
                 if clean_title:
-                    text_parts.append(clean_title + '. ')
+                    text_parts.append(clean_title + '.')
             text_parts.extend(div_text(div))
 
-        result = clean_extracted_text(' '.join(text_parts))
+        result = clean_paragraphs(text_parts)
         return (result, False) if result else (None, False)
 
     # Fallback: no introduction head — take the leading head-less divs, which
@@ -497,10 +499,10 @@ def extract_tei_intro(root):
         if len(' '.join(text_parts).split()) >= _LEAD_MAX_WORDS:
             break
 
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     if not result:
         return None, False
-    return ' '.join(result.split()[:_LEAD_MAX_WORDS]), True
+    return cap_words(result, _LEAD_MAX_WORDS), True
 
 
 # ---------------------------------------------------------------------------
@@ -589,12 +591,12 @@ def _bioc_subsection_intro(root):
         return None
 
     parts = [
-        clean_extracted_text(_passage_text(p)) + ' '
+        clean_extracted_text(_passage_text(p))
         for p, h in zip(passages, heads)
         if _is_intro_title(h) and _passage_text(p) and not _is_abstract_passage(p)
     ]
     if parts:
-        return clean_extracted_text(' '.join(parts))
+        return clean_paragraphs(parts)
 
     return None
 
@@ -616,14 +618,14 @@ def _bioc_main_lead(root):
         text = _passage_text(passage)
         if not text:
             continue
-        parts.append(clean_extracted_text(text) + ' ')
+        parts.append(clean_extracted_text(text))
         if len(parts) >= _LEAD_MAX_PARAGRAPHS:
             break
 
-    result = clean_extracted_text(' '.join(parts))
+    result = clean_paragraphs(parts)
     if not result:
         return None
-    return ' '.join(result.split()[:_LEAD_MAX_WORDS])
+    return cap_words(result, _LEAD_MAX_WORDS)
 
 
 def extract_bioc_intro(root):
@@ -652,10 +654,10 @@ def extract_bioc_intro(root):
             continue
         para_text = _passage_text(passage)
         if para_text:
-            text_parts.append(clean_extracted_text(para_text) + ' ')
+            text_parts.append(clean_extracted_text(para_text))
 
     if text_parts:
-        return clean_extracted_text(' '.join(text_parts)), False
+        return clean_paragraphs(text_parts), False
 
     # Publishers that file the whole body under one meaningless
     # section_title_1 and put the real headings in section_title_2.
@@ -710,9 +712,9 @@ def _bioc_fallback_inline_headers(root):
             text = _INTRO_HEADER_RE.sub('', text, count=1).strip()
 
         if text:
-            text_parts.append(clean_extracted_text(text) + ' ')
+            text_parts.append(clean_extracted_text(text))
 
-    result = clean_extracted_text(' '.join(text_parts))
+    result = clean_paragraphs(text_parts)
     return result if result else None
 
 
@@ -768,7 +770,7 @@ def extract_intro_section(xml_file):
             if elem_text:
                 parts.append(elem_text)
 
-        intro_text = clean_extracted_text(' '.join(parts))
+        intro_text = clean_paragraphs(parts)
 
         # extract_text_from_element prepends each section's title, which for
         # the introduction means a bare "Introduction." sentence in front of
@@ -782,7 +784,7 @@ def extract_intro_section(xml_file):
 
         if is_lead:
             intro_text = _truncate_body_tail(intro_text, Path(xml_file).name)
-            intro_text = ' '.join(intro_text.split()[:_LEAD_MAX_WORDS])
+            intro_text = cap_words(intro_text, _LEAD_MAX_WORDS)
 
         # An introduction this short is a standfirst, a teaser or a stray
         # caption — not a section worth passing downstream.
@@ -826,7 +828,8 @@ def main():
         # extractors.
         if result['is_lead']:
             output_path = output_path.parent / f"{output_path.stem}_lead{output_path.suffix}"
-        output_path.write_text(intro_text, encoding='utf-8')
+        # One paragraph per line; end the file with a newline.
+        output_path.write_text(intro_text + '\n', encoding='utf-8')
         print(f"Introduction section extracted to: {output_path}")
     else:
         print(intro_text)
