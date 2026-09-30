@@ -401,7 +401,9 @@ def clean_extracted_text(text):
     # every paragraph, the number must not run on into more digits or a '/',
     # which would chop the "10.1136" off a DOI ("10.1136/bmj-...supp1").
     text = re.sub(r'^(\d+\.)+\d*(?![\d/])\s*', '', text)
-    text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', text)
+    # the below tends to remove numbers from e.g. Fig.1 when at the end of the paragraph
+    # so drop it
+    # text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', text)
 
     # Clean up punctuation artifacts from removed citations
     text = re.sub(r'([,;.])\s*([,;.])', r'\2', text)
@@ -918,7 +920,10 @@ def extract_text_from_element(element, parent_tag=None):
         
         # Remove section numbering at start of sentences (e.g., "2.1", "2.3.1", "2.5.6.7")
         para_text = re.sub(r'^(\d+\.)+\d*\s*', '', para_text)  # at start of paragraph
-        para_text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', para_text)  # after period
+        
+        # the below tends to remove numbers from e.g. Fig.1 when at the end of the paragraph
+        # so drop it
+        # para_text = re.sub(r'\.\s+(\d+\.)+\d*\s+', '. ', para_text)  # after period
         
         # removing et al. citations 
         #para_text = re.sub(r'\(\s*(?:[^()]*?et al\.[^()]*)\)'), '', para_text)
