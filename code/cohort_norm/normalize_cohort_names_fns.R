@@ -188,139 +188,139 @@ clean_cohort_names <- function(cohort_names){
 
 }
 
-  # split UKBioBank into UK BioBank
-  cleaned_names <- stringr::str_replace_all(pattern = stringr::regex("(?<=\\S)(?=biobank)",
-                                                                     ignore_case = TRUE),
-                                            replacement = " ",
-                                            cleaned_names)
+  # # split UKBioBank into UK BioBank
+  # cleaned_names <- stringr::str_replace_all(pattern = stringr::regex("(?<=\\S)(?=biobank)",
+  #                                                                    ignore_case = TRUE),
+  #                                           replacement = " ",
+  #                                           cleaned_names)
+  #
+  #
+  # # replace UK with United Kingdom
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bUK\\b|\\bU\\.K\\.\\b",
+  #                                           replacement = "United Kingdom",
+  #                                           cleaned_names)
+  #
+  # # replace UK with United Kingdom
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bUS\\b",
+  #                                           replacement = "United States",
+  #                                           cleaned_names)
 
-
-  # replace UK with United Kingdom
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bUK\\b|\\bU\\.K\\.\\b",
-                                            replacement = "United Kingdom",
-                                            cleaned_names)
-
-  # replace UK with United Kingdom
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bUS\\b",
-                                            replacement = "United States",
-                                            cleaned_names)
-
-  # replace COPD with
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bCOPD\\b",
-                                            replacement = "Chronic Obstructive Pulmonary Disease",
-                                            cleaned_names)
-
-  # replace MI with
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bMI\\b",
-                                            replacement = "Myocardial Infarction",
-                                            cleaned_names)
-
-  # replace AD with
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bAD\\b",
-                                            replacement = "Alzheimer Disease",
-                                            cleaned_names)
-
-  # M.D. -> MD
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bM\\.D\\.\\b",
-                                            replacement = "MD",
-                                            cleaned_names)
-
-
+  # # replace COPD with
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bCOPD\\b",
+  #                                           replacement = "Chronic Obstructive Pulmonary Disease",
+  #                                           cleaned_names)
+  #
+  # # replace MI with
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bMI\\b",
+  #                                           replacement = "Myocardial Infarction",
+  #                                           cleaned_names)
+  #
+  # # replace AD with
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bAD\\b",
+  #                                           replacement = "Alzheimer Disease",
+  #                                           cleaned_names)
+  #
+  # # M.D. -> MD
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bM\\.D\\.\\b",
+  #                                           replacement = "MD",
+  #                                           cleaned_names)
 
 
 
-  # replace V before a number with Version
-  cleaned_names <- stringr::str_replace_all(
-    cleaned_names,
-    "\\b[Vv](?=\\d+)",
-    "Version "
-  )
+  #
+  #
+  # # replace V before a number with Version
+  # cleaned_names <- stringr::str_replace_all(
+  #   cleaned_names,
+  #   "\\b[Vv](?=\\d+)",
+  #   "Version "
+  # )
+  #
+  # # add space between letters and roman numerals
+  # cleaned_names <- stringr::str_replace_all(
+  #   cleaned_names,
+  #   "(?<=[a-z])(?<![IVXLCDM])(?=I{1,3}\\b)",
+  #   " "
+  # )
+  #
+  # # add space between letters and numbers
+  # cleaned_names <- stringr::str_replace_all(
+  #   cleaned_names,
+  #   "(?<=[A-Za-z])(?=[1-5]\\b)",
+  #   " "
+  # )
 
-  # add space between letters and roman numerals
-  cleaned_names <- stringr::str_replace_all(
-    cleaned_names,
-    "(?<=[a-z])(?<![IVXLCDM])(?=I{1,3}\\b)",
-    " "
-  )
+  # # remove citation weirdness
+  # cleaned_names <- ifelse(
+  #   stringr::str_detect(cleaned_names, "\\s") & stringr::str_detect(cleaned_names, "[a-z]{2,}\\d{2,3}$"),
+  #   stringr::str_remove_all(pattern = "\\d+$", cleaned_names),
+  #   cleaned_names
+  # )
+  #
+  # # convert all numbers to arabic numerals
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bIV\\b",
+  #                                           replacement = "4",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bIII\\b",
+  #                                           replacement = "3",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bII\\b",
+  #                                           replacement = "2",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bI\\b",
+  #                                           replacement = "1",
+  #                                           cleaned_names)
 
-  # add space between letters and numbers
-  cleaned_names <- stringr::str_replace_all(
-    cleaned_names,
-    "(?<=[A-Za-z])(?=[1-5]\\b)",
-    " "
-  )
+  # cleaned_names  <- stringr::str_squish(cleaned_names)
+  #
+  # # if multi-word cohort, title case:
+  # cleaned_names <- ifelse(
+  #   stringr::str_detect(cleaned_names, "\\s"),
+  #   title_except_caps(cleaned_names),
+  #   cleaned_names
+  # )
+  #
+  # # if single word, and all lower case, make upper case
+  # cleaned_names <- ifelse(
+  #   !stringr::str_detect(cleaned_names, "\\s") & tolower(cleaned_names) == cleaned_names,
+  #   stringr::str_to_upper(cleaned_names),
+  #   cleaned_names
+  # )
+  #
+  # cleaned_names <- stringr::str_remove_all(pattern = " &$|^& ",
+  #                                          cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bStudies\\b",
+  #                                           replacement = "Study",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bMetaanalysis\\b",
+  #                                           replacement = "Meta Analysis",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bGenetic$",
+  #                                           replacement = "Genetics",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bGenetic$",
+  #                                           replacement = "Genetics",
+  #                                           cleaned_names)
+  #
+  # cleaned_names <- stringr::str_replace_all(pattern = "\\bGenebank\\b",
+  #                                           replacement = "Gene Bank",
+  #                                           cleaned_names)
 
-  # remove citation weirdness
-  cleaned_names <- ifelse(
-    stringr::str_detect(cleaned_names, "\\s") & stringr::str_detect(cleaned_names, "[a-z]{2,}\\d{2,3}$"),
-    stringr::str_remove_all(pattern = "\\d+$", cleaned_names),
-    cleaned_names
-  )
-
-  # convert all numbers to arabic numerals
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bIV\\b",
-                                            replacement = "4",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bIII\\b",
-                                            replacement = "3",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bII\\b",
-                                            replacement = "2",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bI\\b",
-                                            replacement = "1",
-                                            cleaned_names)
-
-  cleaned_names  <- stringr::str_squish(cleaned_names)
-
-  # if multi-word cohort, title case:
-  cleaned_names <- ifelse(
-    stringr::str_detect(cleaned_names, "\\s"),
-    title_except_caps(cleaned_names),
-    cleaned_names
-  )
-
-  # if single word, and all lower case, make upper case
-  cleaned_names <- ifelse(
-    !stringr::str_detect(cleaned_names, "\\s") & tolower(cleaned_names) == cleaned_names,
-    stringr::str_to_upper(cleaned_names),
-    cleaned_names
-  )
-
-  cleaned_names <- stringr::str_remove_all(pattern = " &$|^& ",
-                                           cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bStudies\\b",
-                                            replacement = "Study",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bMetaanalysis\\b",
-                                            replacement = "Meta Analysis",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bGenetic$",
-                                            replacement = "Genetics",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bGenetic$",
-                                            replacement = "Genetics",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bGenebank\\b",
-                                            replacement = "Gene Bank",
-                                            cleaned_names)
-
-  cleaned_names <- stringr::str_replace_all(pattern = "\\bEnd Points\\b",
-                                            replacement = "Endpoints",
-                                            cleaned_names)
-
-
-  return(cleaned_names)
-
-}
+#   cleaned_names <- stringr::str_replace_all(pattern = "\\bEnd Points\\b",
+#                                             replacement = "Endpoints",
+#                                             cleaned_names)
+#
+#
+#   return(cleaned_names)
+#
+# }
 
 
 remove_project_terms <- function(cohort_names){
