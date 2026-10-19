@@ -1,0 +1,266 @@
+---
+title: "PubMedBERT entity extraction performance"
+subtitle: "Precision, recall and F1 of the fine-tuned model on the validation set"
+author: "Isobel Beasley"
+output: html_document
+---
+
+```{r setup_knitr, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_packages, message = FALSE, warning = FALSE}
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Introduction
+
+This analysis checks how well the fine-tuned PubMedBERT model picks out
+cohort names from article text. It compares the model's predicted
+entities with the hand-annotated (true) entities in the validation set
+in two ways:
+
+1. **Entity-level, per paper:** precision, recall and F1 for cohort
+   names, based on the set of distinct entities found in each paper.
+2. **Token-level confusion matrix:** how often each true entity class is
+   predicted as each class, across all entity types.
+
+# Entity-level performance (per paper)
+
+## Load validation predictions
+
+```{r load_predictions}
+# One row per sentence in the validation set, with true and predicted
+# entities stored as ";"-separated strings
+preds <- data.table::fread(
+  here::here("output/text_mining_predictions/validation_entity_predictions.csv")
+)
+```
+
+## Reshape to one row per entity
+
+```{r reshape_entities}
+ents <-
+  preds |>
+  # entity columns only, not the start / end positions
+  select(pubmed_id, predicted_cohorts, true_cohorts) |>
+  pivot_longer(
+    cols = c("predicted_cohorts", "true_cohorts"),
+    names_to = "col",
+    values_to = "ent"
+  ) |>
+  filter(!is.na(ent)) |>
+  # split ";"-separated entities into separate rows
+  separate_rows(ent, sep = ";") |>
+  mutate(
+    # "true" or "predicted"
+    source = str_extract(col, "^(true|predicted)"),
+    # entity type, e.g. "predicted_cohorts" -> "cohort"
+    type   = str_remove(str_remove(col, "^(true|predicted)_"), "s$"),
+    # normalise case / whitespace so near-identical strings match
+    ent    = str_squish(str_to_lower(ent))
+  ) |>
+  filter(ent != "") |>
+  # count each entity once per paper
+  distinct(pubmed_id, type, source, ent)
+```
+
+## Match true and predicted entities
+
+```{r match_entities}
+# For each paper and entity, flag whether it was annotated (true),
+# predicted, or both, and classify it as a TP, FP or FN
+matched <-
+  ents |>
+  mutate(present = TRUE) |>
+  pivot_wider(names_from = source,
+              values_from = present,
+              values_fill = FALSE) |>
+  mutate(tp = true & predicted,
+         fp = !true & predicted,
+         fn = true & !predicted)
+```
+
+## Calculate precision, recall and F1
+
+```{r prf_function}
+# Precision, recall and F1 for each paper, then the median across papers.
+# Any existing grouping (e.g. by entity type) is kept, so a grouped input
+# gives one row per group.
+prf <- function(d) {
+  d |>
+    group_by(pubmed_id, .add = TRUE) |>
+    summarise(across(c(tp, fp, fn), sum), .groups = "drop_last") |>
+    mutate(precision = tp / (tp + fp),
+           recall    = tp / (tp + fn),
+           f1        = 2 * precision * recall / (precision + recall)) |>
+    # 0/0 (e.g. no predictions in a paper) counts as 0
+    mutate(across(c(precision, recall, f1), ~ replace_na(.x, 0))) |>
+    summarise(across(c(precision, recall, f1), ~ median(.x, na.rm = TRUE)))
+}
+```
+
+```{r prf_results}
+# Per entity type
+matched |> group_by(type) |> prf()
+
+# All entity types together
+matched |> prf()
+```
+
+## Figure: performance heatmap
+
+```{r performance_plot, fig.width = 6.5, fig.height = 6.88}
+plot <-
+  matched |>
+  group_by(type) |>
+  prf() |>
+  mutate(type = "cohort") |>
+  pivot_longer(cols = !type,
+               names_to = "metric",
+               values_to = "value") |>
+  mutate(metric = case_when(metric == "precision" ~ "Precision",
+                            metric == "recall"    ~ "Recall",
+                            metric == "f1"        ~ "F1")) |>
+  ggplot(aes(y = metric,
+             x = type,
+             fill = value)) +
+  # one tile per metric
+  geom_tile(colour = "black", linewidth = 1) +
+  coord_fixed() +
+  scale_fill_viridis_c(option = "viridis",
+                       limits = c(0, 1),
+                       labels = as.character) +
+  # tall colour bar so it spans the tiles
+  guides(fill = guide_colourbar(
+    theme = theme(legend.key.height = unit(4.5, "in"))
+  )) +
+  # value printed on each tile
+  geom_text(aes(label = round(value, 2)),
+            colour = "black",
+            size = 30,
+            size.unit = "pt") +
+  theme_minimal() +
+  theme(text = element_text(family = "Atkinson Hyperlegible Next"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y  = element_text(size = 30, colour = "black"),
+        axis.text.x  = element_blank(),
+        legend.title = element_blank(),
+        legend.position = "right",
+        legend.text  = element_text(size = 30, colour = "black"),
+        legend.box.spacing = unit(30, "pt"),
+        legend.margin = margin(r = 0.3, unit = "in"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        plot.margin = margin(r = 0.3,
+                             l = 0.3,
+                             t = 0.4,
+                             b = 0.4,
+                             unit = "in")
+  )
+
+plot
+```
+
+```{r save_performance_plot}
+# PDF (cairo, to embed the Atkinson Hyperlegible font)
+ggsave(plot,
+       filename = here::here("figures/pubmedbert_performance.pdf"),
+       device = cairo_pdf,
+       width = 6.5,
+       height = 6.82,
+       units = "in"
+)
+
+# PNG
+ggsave(plot,
+       filename = here::here("figures/pubmedbert_performance.png"),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 6.5,
+       height = 6.88,
+       units = "in"
+)
+```
+
+# Confusion matrix (all entity types)
+
+## Load the confusion matrix
+
+```{r load_confusion_matrix}
+# Rows are true classes, columns are predicted classes; "O" means
+# "not an entity"
+confusion_mat <- data.table::fread(
+  here::here("output/text_mining_predictions/validation_entity_confusion_matrix.csv")
+)
+
+# The first column holds the true class labels
+names(confusion_mat)[1] <- "true"
+
+# Matrix version, with true classes as row names
+confusion_mat_m <-
+  tibble::column_to_rownames(confusion_mat, var = "true") |>
+  as.matrix()
+```
+
+## TP, FP, FN and TN for cohorts
+
+```{r cohort_counts}
+true_positives  <- confusion_mat_m["COHORT", "COHORT"]
+# true cohorts predicted as some other class
+false_negatives <- sum(confusion_mat_m["COHORT", ]) - true_positives
+# other classes predicted as cohorts
+false_positives <- sum(confusion_mat_m[, "COHORT"]) - true_positives
+# everything else
+true_negatives  <- sum(confusion_mat_m) - true_positives -
+  false_negatives - false_positives
+
+tibble(true_positives, false_positives, false_negatives, true_negatives) |>
+  mutate(precision = true_positives / (true_positives + false_positives),
+         recall    = true_positives / (true_positives + false_negatives))
+```
+
+## Figure: confusion matrix heatmap
+
+```{r confusion_matrix_plot, fig.width = 10, fig.height = 8}
+# Order of classes on both axes
+class_order <- c("COHORT", "COHORT_COUNTRY", "OTH_TOOL",
+                 "POP_DESC", "REF_PANEL", "O")
+
+# Long format, with the proportion of each true class (row) predicted
+# as each class
+confusion_mat_long <-
+  confusion_mat |>
+  pivot_longer(-true, names_to = "pred", values_to = "n") |>
+  group_by(true) |>
+  mutate(prop = n / sum(n)) |>
+  ungroup() |>
+  mutate(true = factor(true, levels = rev(class_order)),  # rev so COHORT is at the top
+         pred = factor(pred, levels = class_order))
+
+ggplot(confusion_mat_long, aes(x = pred, y = true, fill = prop)) +
+  geom_tile(colour = "white", linewidth = 1) +
+  # counts, in white on dark tiles
+  geom_text(aes(label = n, colour = prop > 0.5), size = 8) +
+  scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = "black"),
+                      guide = "none") +
+  scale_fill_gradient(low = "white", high = "#14828C", limits = c(0, 1),
+                      name = "Row\nproportion") +
+  scale_x_discrete(position = "top") +
+  coord_fixed() +
+  labs(x = "Predicted", y = "True") +
+  theme_minimal() +
+  theme(
+    panel.grid   = element_blank(),
+    axis.text.x  = element_text(size = 20, angle = 45, hjust = 0),
+    axis.text.y  = element_text(size = 20),
+    axis.title   = element_text(size = 22),
+    legend.text  = element_text(size = 18),
+    legend.title = element_text(size = 20)
+  )
+```
