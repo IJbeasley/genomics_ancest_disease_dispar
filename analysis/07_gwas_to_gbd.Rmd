@@ -572,6 +572,31 @@ disease_mapping_annotated |>
   ungroup() |>
   distinct()
 
+# study-accession level mapping: 
+study_disease_mapping_with_cause <-
+disease_mapping_annotated |>
+  group_by(PUBMED_ID,
+           STUDY_ACCESSION,
+           YEAR,
+           `DISEASE/TRAIT`, 
+           collected_all_disease_terms,
+           icd10_term,
+           cause,
+           cause_category,
+           lancet_condition,
+           lancet_group,
+           cause_hierarchy_level,
+           include) |>
+  summarise(icd10_code = stringr::str_flatten_comma(unique(sort(icd10_code)),
+                                                    na.rm = TRUE
+                                                    ),
+            cause_source = stringr::str_flatten_comma(unique(sort(cause_source)),
+                                                      na.rm = TRUE
+                                                      )
+  ) |>
+  ungroup() |>
+  distinct()
+
 
 print("Number of unique papers mapped to non-communicable diseases:")
 # filter out infectious diseases
@@ -598,10 +623,15 @@ disease_mapping_with_cause |>
 
 ```{r}
 
-pdf(here::here("figures/number_of_gwas_catalog_papers_per_cause.pdf"),
-    width = 17, 
-    height = 8
-)
+cairo_pdf(here::here("figures/number_of_gwas_catalog_papers_per_cause.pdf"),
+          width = 16.8,
+          height = 8.2,
+          family = "Atkinson Hyperlegible Next")
+
+# pdf(here::here("figures/number_of_gwas_catalog_papers_per_cause.pdf"),
+#     width = 17, 
+#     height = 8
+# )
 
 disease_mapping_with_cause |>
   dplyr::filter(include == TRUE) |>
@@ -625,19 +655,117 @@ disease_mapping_with_cause |>
   distinct(PUBMED_ID, cause) |>
   group_by(cause) |>
   summarise(n_papers = n()) |>
-  ggplot(aes(x= reorder(cause, n_papers), y=n_papers)) +
-  geom_col() +
+  ggplot(aes(x= reorder(cause, 
+                        n_papers),
+             y=n_papers)) +
+  geom_col(fill = "#14828C") +
+    scale_y_continuous(
+    expand = expansion(mult = c(0.02, 0.05)),
+    breaks = scales::breaks_width(50),
+    labels = function(x) ifelse(x %% 50 == 0, x, "")
+  ) +
   coord_flip() +
   labs(x = "Cause", 
        y = "Number of Papers") + 
   theme_bw() +
       theme(
-    axis.text.x  = element_text(size = 25),   # 8pt for axis text
-    axis.text.y  = element_text(size = 25),   # 8pt for axis text
-    axis.title.x = element_text(size = 25),  # 10pt for labels
+        
+     ####### axis labels and ticks:  ##########
+    axis.ticks.y = element_blank(), 
+    axis.text.x  = element_text(size = 30,
+                                colour = "black"),  
+    axis.text.y  = element_text(size = 30,
+                                margin = margin(r = 0.1,
+                                                unit = "in"),
+                                colour = "black"),   
+    axis.title.x = element_text(size = 30,
+                                colour = "black"), 
+    axis.title.y = element_blank(),    
+        
+    panel.border = element_blank(),     # remove panel border
+    axis.line = element_line(colour = "black"),
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.major.y = element_blank(), 
+    panel.grid.major.x = element_line(colour = "grey60", 
+                                      linewidth = unit(1, "in"),
+                                      linetype = "dashed"),
+    panel.grid.minor.x = element_blank(),
+
+    plot.margin = margin(t= 0.2, # top
+                         r= 0, # right
+                         b= 0.2,  # bottom
+                         l = 0.6, # left
+                         unit = "in"),
+  )
+
+dev.off()
+
+
+```
+
+For powerpoint: 
+
+```{r}
+
+plot <- 
+disease_mapping_with_cause |>
+  dplyr::filter(include == TRUE) |>
+  # group into broader categories 
+  mutate(cause = case_when(
+    grepl("diabetes", cause, ignore.case = TRUE) ~ "Diabetes",
+    grepl("chronic kidney disease", cause, ignore.case = TRUE) ~ "Chronic kidney disease",
+    grepl("hemorr", cause, ignore.case = TRUE) ~ "Hemorrhagic stroke",
+    grepl("lip|pharynx", cause, ignore.case = TRUE) ~ "Mouth and throat cancer",
+    grepl("lung cancer", cause, ignore.case = TRUE) ~ "Lung Cancer",
+    grepl("cirrhosis", cause, ignore.case = TRUE) ~ "Chronic Liver Disease",
+    TRUE ~ cause
+  )) |>
+  mutate(cause = 
+           stringr::str_to_title(
+           stringr::str_replace_all(cause, 
+                                          pattern = "and", 
+                                          replacement = "&")
+           )
+           ) |>
+  distinct(PUBMED_ID, cause) |>
+  group_by(cause) |>
+  summarise(n_papers = n()) |>
+  ggplot(aes(x= reorder(cause, 
+                        n_papers),
+             y=n_papers)) +
+  geom_col(fill = "#14828C") +
+    scale_y_continuous(
+    expand = expansion(mult = c(0.02, 0.05)),
+    breaks = scales::breaks_width(50),
+    labels = function(x) ifelse(x %% 50 == 0, x, "")
+  ) +
+  coord_flip() +
+  labs(x = "Cause", 
+       y = "Number of Papers") + 
+  theme_bw() +
+      theme(
+    panel.border = element_blank(),     # remove panel border
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.major.y = element_blank(), 
+    panel.grid.major.x = element_line(colour = "grey80", linetype = 2),
+    panel.grid.minor.x = element_blank(),
+      #element_line(colour = "grey90", linetype = 2),
+    axis.ticks.y = element_blank(), 
+    axis.text.x  = element_text(size = 30,
+                                colour = "black"),   # 8pt for axis text
+    axis.text.y  = element_text(size = 30,
+                                colour = "black"),   # 8pt for axis text
+    axis.title.x = element_text(size = 30,
+                                colour = "black"),  # 10pt for labels
     axis.title.y = element_blank(),
     #title        = element_text(size = 8),  # 10pt for labels
-    strip.text   = element_text(size = 25),  # 10pt for labels
+    strip.text   = element_text(size = 30, 
+                                colour = "black"),  # 10pt for labels
+    plot.margin = margin(7.2/2, # top
+                         0, # right
+                         7.2/2,  # bottom
+                         7.2*4, # left
+                         unit = "pt"),
     # legend.title = element_text(size = 18),  # 10pt for labels
     # legend.text  = element_text(size = 18),   # 8pt for legend text
     # legend.position = "right",           # Bottom left corner
@@ -649,11 +777,12 @@ disease_mapping_with_cause |>
     # legend.position = "bottom"
   )
 
-dev.off()
-
+ggsave(here::here("figures/number_of_gwas_catalog_papers_per_cause.png"),
+       plot,
+       width = 13, 
+       height = 8)
 
 ```
-
 
 # Check overlap (upset plot) of studies mapped to different causes
 
@@ -1563,7 +1692,7 @@ disease_mapping_with_cause |>
 
 ```{r save_final_gwas_gbd_mapping}
 
-# remove studies not mapping to a cause
+# remove papers not mapping to a cause
 disease_mapping_with_cause <-
  disease_mapping_with_cause |>
   filter(cause != "" & !is.na(cause))
@@ -1571,6 +1700,16 @@ disease_mapping_with_cause <-
 data.table::fwrite(
 disease_mapping_with_cause,
 here::here("output/icd_map/gwas_study_gbd_causes.csv")
+)
+
+# remove studies not mapping to a cause 
+study_disease_mapping_with_cause <-
+  study_disease_mapping_with_cause  |>
+   filter(cause != "" & !is.na(cause))
+
+data.table::fwrite(
+study_disease_mapping_with_cause,
+here::here("output/icd_map/gwas_study_accession_gbd_causes.csv")
 )
 
 ```
