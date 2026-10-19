@@ -2,8 +2,6 @@ library(tokenizers)
 
 # clean cohort + normalize cohort names
 
-
-
 {
 
 
@@ -232,4 +230,53 @@ cohorts |>
 # Veterans
 # Lipids
 # Treatments
+
+
+# shopt -s nullglob
+# mkdir -p output/abbreviations
+# out=output/abbreviations/paper_ab3p_abbreviations.tsv
+# log=output/abbreviations/ab3p_stderr.log
+#
+# printf 'pmid\tshort_form\tlong_form\tprecision\n' > "$out"
+# : > "$log"
+#
+# for txt_file in output/abstracts/[0-9]*.txt output/results_copy/[0-9]*.txt output/methods_copy/[0-9]*.txt; do
+# filename=$(basename "$txt_file")
+# if [[ "$filename" =~ ^([0-9]+) ]]; then
+# pmid="${BASH_REMATCH[1]}"
+
+# clean=$(mktemp /tmp/ab3p.XXXXXX)
+
+# remove / replace characters that may cause problems with ab3p processing
+# chunk text, so that text greater than ab3p's processing limit (1,000 characters)
+# can be run
+# iconv -f UTF-8 -t ASCII//TRANSLIT -c < "$txt_file" \
+# | tr '_\140' "-'" \
+# | tr '\n' ' ' | sed 's/  */ /g; s/ $//' \
+# | awk -v max=3000 -f code/cohort_norm/chunk_txt_for_ab3p.awk > "$clean"
+#
+# apptainer run -B /tmp ab3p.sif "$clean" 2>>"$log" |
+#   awk -F'|' -v pmid="$pmid" '
+#             /^  / && NF == 3 {
+#                 sf = $1; gsub(/^[ \t]+|[ \t]+$/, "", sf)
+#                 lf = $2; gsub(/^[ \t]+|[ \t]+$/, "", lf)
+#                 if ($3 + 0 > 0.9) print pmid "\t" sf "\t" lf "\t" $3 + 0
+#             }' >> "$out"
+#
+# rm -f "$clean"
+# else
+#   echo "No leading PMID: $txt_file" >&2
+# fi
+# done
+
+# # get only unique rows (i.e. unique abbreviations per pmid)
+# # save into temp file first
+# tmp=$(mktemp)
+# head -n 1 "$out" > "$tmp"
+# tail -n +2 "$out" | sort -u >> "$tmp"
+# mv "$tmp" "$out"
+#
+# wc -l "$out" # ~22,000 unique abbreviations
+#
+# grep -c 'Failed to find sentence' "$log"  # ~16702
 
