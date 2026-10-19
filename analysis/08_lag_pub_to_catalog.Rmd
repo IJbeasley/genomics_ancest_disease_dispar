@@ -1,0 +1,370 @@
+---
+title: "Lag between publication and GWAS Catalog deposition"
+subtitle: "How long after publication are GWAS papers added to the GWAS Catalog?"
+output: html_document
+---
+
+```{r setup_knitr, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Studies are added to the GWAS Catalog at a different time to when they are published. 
+Often this is after the publication date, but sometimes it is before. 
+
+This means the number of publications in more recent years is censored (incomplete).
+To decide how recent a publication can be while still expecting it to be in the Catalog, this analysis measures the gap between each study's publication
+date (`DATE`) and the date it was added to the Catalog (`DATE_ADDED_TO_CATALOG`).
+It then checks whether that gap has changed over time.
+
+```{r load_packages, message = FALSE, warning = FALSE}
+library(dplyr)
+library(ggplot2)
+```
+
+## Load GWAS Catalog study information
+
+```{r load_data}
+# GWAS Catalog study-level metadata (release 2026-09-13)
+gwas_study_info <- data.table::fread(
+  here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2026-09-13.tsv"),
+  quote = ""
+)
+
+# Replace spaces in column names with underscores so they are easier to use
+gwas_study_info <-
+  gwas_study_info |>
+  rename_all(~ gsub(" ", "_", .x))
+```
+
+## Calculate the publication-to-catalog gap
+
+```{r months_gap_function}
+# Number of months between two dates (fractional months)
+months_gap <- function(start_date, end_date) {
+
+  # Convert input dates to Date class
+  start_date <- lubridate::ymd(start_date)
+  end_date   <- lubridate::ymd(end_date)
+
+  # Interval length in months
+  months_gap <-
+    lubridate::time_length(
+      lubridate::interval(start_date, end_date),
+      unit = "months"
+    )
+
+  return(months_gap)
+}
+```
+
+```{r time_gap_summary}
+# One row per publication: its publication date, the date it was added to
+# the Catalog, the gap between them (months), and the publication year
+time_gap_summary <-
+  gwas_study_info |>
+  distinct(PUBMED_ID, DATE_ADDED_TO_CATALOG, DATE) |>
+  mutate(catalog_gap = months_gap(DATE, DATE_ADDED_TO_CATALOG)) |>
+  mutate(PUB_YEAR = lubridate::year(DATE))
+```
+
+## Has the gap changed over time?
+
+### Correlation between publication year and gap
+
+Spearman correlation between publication year and the publication-to-catalog
+gap, first for all years, then restricted to more recent publications.
+
+```{r cor_all_years}
+# All publication years
+time_gap_summary |>
+  summarise(cor_year = cor(PUB_YEAR,
+                           catalog_gap,
+                           use = "complete.obs",
+                           method = "spearman"))
+```
+
+```{r cor_2015_on}
+# Publications from 2015 onwards
+time_gap_summary |>
+  filter(PUB_YEAR >= 2015) |>
+  summarise(cor_year = cor(PUB_YEAR,
+                           catalog_gap,
+                           use = "complete.obs",
+                           method = "spearman"))
+```
+
+```{r cor_2010_on}
+# Publications from 2010 onwards
+time_gap_summary |>
+  filter(PUB_YEAR >= 2010) |>
+  summarise(cor_year = cor(PUB_YEAR,
+                           catalog_gap,
+                           use = "complete.obs",
+                           method = "spearman"))
+```
+
+### Gap by publication year
+
+Summary of the gap (in **years**) for each publication year.
+
+```{r gap_by_year}
+time_gap_summary |>
+  group_by(PUB_YEAR) |>
+  summarise(
+    median_gap  = median(catalog_gap, na.rm = TRUE) / 12,
+    quantile_95 = quantile(catalog_gap, 0.95, na.rm = TRUE) / 12,
+    min         = min(catalog_gap, na.rm = TRUE) / 12,
+    max         = max(catalog_gap, na.rm = TRUE) / 12
+  )
+```
+
+```{r gap_by_year_plot}
+# Distribution of the gap (months) for each publication year
+time_gap_summary |>
+  ggplot(aes(x = PUB_YEAR,
+             y = catalog_gap)) +
+  geom_point(alpha = 0.1) +
+  geom_boxplot(aes(group = PUB_YEAR),
+               outlier.shape = NA,
+               alpha = 0.5) +
+  labs(
+    y = "Publication-to-catalog gap (months)",
+    x = "Publication year"
+  ) +
+  theme_classic()
+```
+
+## Distribution of the gap for 2011–2020 publications
+
+The analysis is now restricted to publications:
+
+* **after 2010**, once the GWAS Catalog was established, and
+* **before 2021**, so that recent publications that have not been curated
+  yet do not bias the gap downwards.
+
+```{r filter_years}
+time_gap_summary <-
+  time_gap_summary |>
+  filter(PUB_YEAR < 2021 & PUB_YEAR > 2010)
+```
+
+### Quantiles of the gap
+
+```{r quantiles}
+# Empirical quantiles of the gap (months) on a fine grid
+quantiles <- seq(0, 1, by = 0.001)
+
+quantile_data <-
+  tibble(
+    quantile = quantiles,
+    months = quantile(
+      time_gap_summary$catalog_gap,
+      probs = quantiles,
+      na.rm = TRUE
+    )
+  )
+```
+
+```{r quantile_plot}
+# Cumulative distribution of the gap, in years (first 10 years)
+quantile_data |>
+  mutate(years = months / 12) |>
+  ggplot(aes(x = years,
+             y = quantile)) +
+  geom_line() +
+  labs(
+    y = "Quantile",
+    x = "Publication-to-catalog gap (years)"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  xlim(0, 10) +
+  theme_classic()
+```
+
+### Quantiles at specific gaps
+
+Which quantiles correspond to a gap of exactly 12 and 9 months?
+
+```{r quantile_at_12_months}
+quantile_data |> filter(months == 12)
+# Earlier result:
+#   quantile months
+#   0.83     12
+#   0.84     12
+```
+
+```{r quantile_at_9_months}
+quantile_data |> filter(months == 9)
+```
+
+## Figure: publication-to-catalog lag
+
+Cumulative distribution of the lag, with reference lines at the share of
+studies added within 9 months, 1 year and 2 years of publication.
+The figure is saved to `figures/gwas_cat_lag.png`.
+
+```{r lag_figure, fig.width = 12.3, fig.height = 5.8}
+
+plot <-
+  quantile_data |>
+  mutate(years = months / 12) |>
+  ggplot(aes(x = years,
+             y = quantile)) +
+  geom_line() +
+  labs(
+    y = "Quantile",
+    x = "Publication-to-catalog lag (years)"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+
+  # 2 years
+  geom_hline(yintercept = 0.92,
+             linetype = "dashed", color = "red") +
+  annotate("text",
+           x = 0.15, y = 0.96,
+           label = "92% within 2 years of pub",
+           color = "red",
+           hjust = 0,
+           size = 20,
+           size.unit = "pt") +
+
+  # 1 year
+  geom_hline(yintercept = 0.87,
+             linetype = "dashed", color = "blue") +
+  annotate("text",
+           x = 1.5,
+           y = 0.84,
+           label = "87% within 1 year of pub",
+           color = "blue",
+           hjust = 0,
+           size = 20,
+           size.unit = "pt") +
+
+  # 9 months
+  geom_hline(yintercept = 0.77,
+             linetype = "dashed", color = "blue") +
+  annotate("text",
+           x = 1.5,
+           y = 0.74,
+           label = "77% within 9 months of pub",
+           color = "blue",
+           hjust = 0,
+           size = 20,
+           size.unit = "pt") +
+
+  xlim(0, 5) +
+  theme_classic() +
+  theme(
+    axis.text  = element_text(size = 25),
+    axis.title = element_text(size = 25)
+  )
+
+plot
+```
+
+```{r save_figure}
+ggsave(plot,
+       filename = here::here("figures/gwas_cat_lag.png"),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.8,
+       units = "in"
+)
+```
+
+## Check does this pattern look different for priority conditions? 
+
+```{r}
+
+disease_mapping_with_cause <-
+data.table::fread(
+here::here("output/icd_map/gwas_study_gbd_causes.csv")
+)
+
+priority_condition_papers <-
+  disease_mapping_with_cause  |> 
+  filter(include == TRUE)  |>
+  pull(PUBMED_ID) |>
+  unique()
+
+length(priority_condition_papers)
+
+# Calculate the gap between Catalog deposition date them (months), and the publication year
+time_gap_summary <-
+  gwas_study_info |>
+  filter(PUBMED_ID %in% priority_condition_papers) |>
+  distinct(PUBMED_ID, DATE_ADDED_TO_CATALOG, DATE) |>
+  mutate(catalog_gap = months_gap(DATE, DATE_ADDED_TO_CATALOG)) |>
+  mutate(PUB_YEAR = lubridate::year(DATE))
+
+# Summary of the gap (in **years**) for each publication year.
+time_gap_summary |>
+  group_by(PUB_YEAR) |>
+  summarise(
+    median_gap  = median(catalog_gap, na.rm = TRUE) / 12,
+    quantile_95 = quantile(catalog_gap, 0.95, na.rm = TRUE) / 12,
+    min         = min(catalog_gap, na.rm = TRUE) / 12,
+    max         = max(catalog_gap, na.rm = TRUE) / 12
+  )
+
+time_gap_summary <-
+  time_gap_summary |>
+  filter(PUB_YEAR < 2021 & PUB_YEAR > 2010)
+
+quantiles <- seq(0, 1, by = 0.001)
+
+priority_conditions_quantile_data <-
+  tibble(
+    quantile = quantiles,
+    months = quantile(
+      time_gap_summary$catalog_gap,
+      probs = quantiles,
+      na.rm = TRUE
+    )
+  ) |>
+  rows_append(
+    tibble(
+      quantile = c(1),
+      months = c(120)
+    )
+  ) |>
+  mutate(type = "Priority Conditions") 
+
+all_quantile_data <-
+rbind(quantile_data |>
+      mutate(type = "All GWAS Catalog Papers"),
+      priority_conditions_quantile_data)
+
+plot <-
+all_quantile_data |>
+  mutate(years = months / 12) |>
+  ggplot(aes(x = years,
+             y = quantile,
+             colour = type)) +
+  geom_line() +
+  labs(
+    y = "Quantile",
+    x = "Publication-to-catalog lag (years)"
+  ) +
+  scale_y_continuous(labels = scales::percent) + 
+  scale_color_manual(values = c("All GWAS Catalog Papers" = "black",
+                        "Priority Conditions" = "red")) +
+  xlim(0, 10) + 
+  theme_bw() + 
+  theme(legend.title = element_blank())
+
+plot
+
+ggsave(plot,
+       filename = here::here("figures/gwas_cat_lag_by_type.png"),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.8,
+       units = "in"
+)
+
+```
