@@ -507,15 +507,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebdad86d57e9a1ad2ac7718e9ba1b1f819ebcebcatargetblankbdad86da">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeec7486e504edeeea59a47a569b31855b4408e65dtargetblankec7486ea">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/bdad86d57e9a1ad2ac7718e9ba1b1f819ebcebca" target="_blank">bdad86d</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ec7486e504edeeea59a47a569b31855b4408e65d" target="_blank">ec7486e</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebdad86d57e9a1ad2ac7718e9ba1b1f819ebcebcatargetblankbdad86da"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeec7486e504edeeea59a47a569b31855b4408e65dtargetblankec7486ea"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -525,7 +525,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/bdad86d57e9a1ad2ac7718e9ba1b1f819ebcebca" target="_blank">bdad86d</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ec7486e504edeeea59a47a569b31855b4408e65d" target="_blank">ec7486e</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -618,6 +618,7 @@ Untracked files:
     Untracked:  analysis/24_prep_finetune_after_doccano.Rmd
     Untracked:  analysis/ancestry_compositon.Rmd
     Untracked:  analysis/compare_cohort_annot.Rmd
+    Untracked:  analysis/lag_pub_to_catalog.Rmd
     Untracked:  analysis/normalise_cohort_annot.Rmd
     Untracked:  analysis/process_gwas_cat_ancestry_grp.Rmd
     Untracked:  code/journal_meta/
@@ -681,6 +682,41 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/ec7486e504edeeea59a47a569b31855b4408e65d/analysis/07_gwas_to_gbd.Rmd" target="_blank">ec7486e</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Add/save number proportion of papers for priority conditions of the
+entire GWAS Cat
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/f53c5f66f074931841e8ae4a1ee616a365f7efcc/docs/07_gwas_to_gbd.html" target="_blank">f53c5f6</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1939,6 +1975,107 @@ ggsave(here::here(&quot;figures/number_of_gwas_catalog_papers_per_cause.png&quot
        width = 13, 
        height = 8)</code></pre>
 </div>
+<div
+id="plot-proportion-of-gwas-catalog-these-papers-represent-over-time"
+class="section level1">
+<h1>Plot: proportion of GWAS Catalog these papers represent over
+time</h1>
+<pre class="r"><code>cairo_pdf(here::here(&quot;figures/priority_diseases_prop_gwas_cat_overtime.pdf&quot;),
+          width = 7.7,
+          height = 5,
+          family = &quot;Atkinson Hyperlegible Next&quot;)
+
+
+all_gwas_cat_papers &lt;-  data.table::fread(here::here(&quot;output/gwas_cat/gwas_study_info_trait_cat.csv&quot;),
+                                    select  = c(&quot;PUBMED_ID&quot;,
+                                                &quot;YEAR&quot;,
+                                                &quot;DISEASE_STUDY&quot;)) |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x)) |&gt;
+  distinct()
+
+all_gwas_cat_papers &lt;-
+  all_gwas_cat_papers |&gt;
+  group_by(PUBMED_ID, YEAR) |&gt;
+  summarise(DISEASE_STUDY = any(DISEASE_STUDY == T),
+            .groups = &quot;drop&quot;) 
+
+all_gwas_cat_papers  |&gt;
+  group_by(YEAR) |&gt;
+  summarise(n = n())</code></pre>
+<pre><code># A tibble: 21 × 2
+    YEAR     n
+   &lt;int&gt; &lt;int&gt;
+ 1  2005     2
+ 2  2006     8
+ 3  2007    89
+ 4  2008   147
+ 5  2009   237
+ 6  2010   330
+ 7  2011   394
+ 8  2012   393
+ 9  2013   394
+10  2014   352
+# ℹ 11 more rows</code></pre>
+<pre class="r"><code>selected_gwas_cat_papers &lt;-
+disease_mapping_with_cause |&gt;
+  dplyr::filter(include == TRUE) |&gt;
+  filter(cause != &quot;&quot;) |&gt;
+  filter(cause !=  &quot;Stroke&quot;) |&gt;
+  group_by(PUBMED_ID, YEAR) |&gt;
+  summarise(cause = paste(unique(cause), collapse = &quot;; &quot;))</code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by PUBMED_ID and YEAR.
+ℹ Output is grouped by PUBMED_ID.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(PUBMED_ID, YEAR))` for per-operation grouping
+  (`?dplyr::dplyr_by`) instead.</code></pre>
+<pre class="r"><code>gwas_cat_papers &lt;-
+left_join(all_gwas_cat_papers,
+          selected_gwas_cat_papers,
+          by = c(&quot;PUBMED_ID&quot;, &quot;YEAR&quot;)) |&gt;
+  mutate(priority_condition = ifelse(is.na(cause), &quot;No&quot;, &quot;Yes&quot;))
+
+gwas_cat_papers |&gt;  
+  summarise(n_disease_studies = sum(DISEASE_STUDY == T),
+            n_priority_condition_studies = sum(priority_condition == &quot;Yes&quot;),
+            n_total_studies = n()
+            ) |&gt;
+  mutate(percentage_disease_studies = 100 * n_disease_studies / n_total_studies,
+         percentage_priority_condition_studies = 100 * n_priority_condition_studies / n_total_studies) |&gt;
+  mutate(across(contains(&quot;percentage&quot;), ~ round(.x, 2))) |&gt;
+  select(-n_disease_studies, -n_priority_condition_studies)</code></pre>
+<pre><code># A tibble: 1 × 3
+  n_total_studies percentage_disease_studies percentage_priority_condition_stu…¹
+            &lt;int&gt;                      &lt;dbl&gt;                               &lt;dbl&gt;
+1            7670                       64.0                                  13
+# ℹ abbreviated name: ¹​percentage_priority_condition_studies</code></pre>
+<pre class="r"><code>gwas_cat_papers |&gt;
+  group_by(YEAR) |&gt;
+  summarise(n_disease_studies = sum(DISEASE_STUDY == T),
+            n_priority_condition_studies = sum(priority_condition == &quot;Yes&quot;),
+            n_total_studies = n()) |&gt;
+  mutate(percentage_disease_studies = 100 * n_disease_studies / n_total_studies,
+         percentage_priority_condition_studies = 100 * n_priority_condition_studies / n_total_studies) |&gt;
+  ggplot(aes(x= YEAR)) +
+  geom_line(aes(y= percentage_disease_studies)) +
+  geom_point(aes(y= percentage_disease_studies)) +
+  geom_text(x = 2012, 
+            y = 75, 
+            label = &quot;Studying any disease?&quot;,
+            color = &quot;black&quot;) +
+  geom_line(aes(y= percentage_priority_condition_studies)) +
+  geom_point(aes(y= percentage_priority_condition_studies)) +
+  geom_text(x = 2012, 
+            y = 20, label = &quot;Studying any priority condition?&quot;, color = &quot;black&quot;) +
+  labs(y = &quot;Percentage of GWAS Catalog Papers&quot;,
+       x = &quot;Year&quot;) +
+  theme_bw() +
+  lims(y = c(0,100))
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+</div>
 <div id="check-overlap-upset-plot-of-studies-mapped-to-different-causes"
 class="section level1">
 <h1>Check overlap (upset plot) of studies mapped to different
@@ -2176,7 +2313,7 @@ UpSet(upset_matrix_lancet_conditions,
       # matrix.color = &quot;#D55E00&quot;, 
       #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
       )</code></pre>
-<p><img src="figure/07_gwas_to_gbd.Rmd/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p><img src="figure/07_gwas_to_gbd.Rmd/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
 <pre class="r"><code># disease_mapping_with_cause |&gt;
 #   filter(include == TRUE) |&gt;
 #   filter(!is.na(lancet_condition)) |&gt;
@@ -3549,17 +3686,17 @@ loaded via a namespace (and not attached):
 [37] crayon_1.5.3        jquerylib_0.1.4     whisker_0.4.1      
 [40] cachem_1.1.0        iterators_1.0.14    foreach_1.5.2      
 [43] tidyselect_1.2.1    digest_0.6.37       stringi_1.8.9      
-[46] rprojroot_2.1.0     fastmap_1.2.0       here_1.0.1         
-[49] colorspace_2.1-2    cli_3.6.6           magrittr_2.0.5     
-[52] utf8_1.2.6          withr_3.0.3         scales_1.4.0       
-[55] promises_1.3.3      rmarkdown_2.30      httr_1.4.7         
-[58] matrixStats_1.5.0   cellranger_1.1.0    ragg_1.5.0         
-[61] png_0.1-8           GetoptLong_1.0.5    evaluate_1.0.5     
-[64] knitr_1.50          IRanges_2.36.0      doParallel_1.0.17  
-[67] rlang_1.3.0         Rcpp_1.1.0          glue_1.8.1         
-[70] BiocManager_1.30.26 renv_1.1.8          BiocGenerics_0.48.1
-[73] rstudioapi_0.17.1   jsonlite_2.0.0      R6_2.6.1           
-[76] systemfonts_1.3.2   fs_1.6.6           </code></pre>
+[46] labeling_0.4.3      rprojroot_2.1.0     fastmap_1.2.0      
+[49] here_1.0.1          colorspace_2.1-2    cli_3.6.6          
+[52] magrittr_2.0.5      utf8_1.2.6          withr_3.0.3        
+[55] scales_1.4.0        promises_1.3.3      rmarkdown_2.30     
+[58] httr_1.4.7          matrixStats_1.5.0   cellranger_1.1.0   
+[61] ragg_1.5.0          png_0.1-8           GetoptLong_1.0.5   
+[64] evaluate_1.0.5      knitr_1.50          IRanges_2.36.0     
+[67] doParallel_1.0.17   rlang_1.3.0         Rcpp_1.1.0         
+[70] glue_1.8.1          BiocManager_1.30.26 renv_1.1.8         
+[73] BiocGenerics_0.48.1 rstudioapi_0.17.1   jsonlite_2.0.0     
+[76] R6_2.6.1            systemfonts_1.3.2   fs_1.6.6           </code></pre>
 </div>
 </div>
 </div>
