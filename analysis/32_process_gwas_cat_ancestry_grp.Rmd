@@ -1,0 +1,675 @@
+---
+title: "Pre-process GWAS Catalog Ancestry Descriptions"
+author: "Isobel Beasley"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = F)
+```
+
+```{r load_packages, message=FALSE, warning=FALSE}
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+
+```
+
+In the GWAS Catalog, broad ancestry grouping in some cases is listed as 'NR' or includes multiple ancestry groups even though the descriptions provided would allow us to infer a more specific ancestry group. This script pre-processes the GWAS Catalog ancestry dataset to harmonize the broad ancestry grouping and extract population descriptors from the sample descriptions.
+
+# Filter ancestry description dataset to relevant study accessions 
+
+## Get relevant study accessions
+
+From GWAS study info that has been mapped to GBD causes / diseases, get the study accessions of studies that are relevant to our selected diseases.
+
+```{r get_study_accessions}
+
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_accession_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::filter(cause != "") |>
+  dplyr::filter(include == T)
+
+gwas_study_info  <-
+  gwas_study_info  |>
+  # group into broader categories 
+  mutate(cause_grp = case_when(
+    grepl("diabetes", cause, ignore.case = TRUE) ~ "Diabetes",
+    grepl("chronic kidney disease", cause, ignore.case = TRUE) ~ "Chronic kidney disease",
+    grepl("hemorr", cause, ignore.case = TRUE) ~ "Hemorrhagic stroke",
+    grepl("lip|pharynx", cause, ignore.case = TRUE) ~ "Mouth and throat cancer",
+    grepl("lung cancer", cause, ignore.case = TRUE) ~ "Lung Cancer",
+    grepl("cirrhosis", cause, ignore.case = TRUE) ~ "Chronic Liver Disease",
+    TRUE ~ cause
+  )) 
+
+selected_study_accessions <- gwas_study_info |> pull(STUDY_ACCESSION) |> 
+  unique()
+
+length(selected_study_accessions)
+
+```
+
+## Get relevant ancestry descriptions
+
+```{r load_gwas_ancest}
+
+gwas_ancest_info <-  data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2026-09-13.tsv"),
+                                       sep = "\t",
+                                       quote = "")
+
+gwas_ancest_info = gwas_ancest_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_ancest_subset <-
+  gwas_ancest_info |>
+  filter(STUDY_ACCESSION %in% selected_study_accessions)
+
+```
+
+## Freeze ancestry description columns
+
+That may be modified in the pre-processing steps below, so we can compare to original values later.
+
+```{r freeze_ancestry_columns}
+
+gwas_ancest_subset <-
+  gwas_ancest_subset |>
+  mutate(BROAD_ANCESTRAL_CATEGORY_ORIG = BROAD_ANCESTRAL_CATEGORY) |>
+  mutate(NUMBER_OF_INDIVIDUALS_ORIG = NUMBER_OF_INDIVIDUALS) |>
+  mutate(INITIAL_SAMPLE_DESCRIPTION_ORIG = INITIAL_SAMPLE_DESCRIPTION) 
+
+```
+
+
+# Pre-processing GWAS Catalog ancestry dataset
+
+## Harmonizing BROAD_ANCESTRAL_CATEGORY 
+
+### Order ancestry groups alphabetically
+
+```{r reorder_BROAD_ANCESTRAL_CATEGORY}
+
+# reorder BROAD_ANCESTRAL_CATEGORY alphabetically
+gwas_ancest_subset  <-
+  gwas_ancest_subset  |>
+  mutate(BROAD_ANCESTRAL_CATEGORY = purrr::map_chr(
+    str_split(BROAD_ANCESTRAL_CATEGORY,
+              stringr::regex("(?<!Eastern), ")),
+    ~ paste(sort(.x), collapse = ", ")))
+
+# don't split after eastern, as this tends to be 'Middle Eastern, North African or Persian'
+# gwas_ancest_subset |>
+    # filter(str_detect(BROAD_ANCESTRAL_CATEGORY_ORIG,
+    #                   "(?<=Eastern), "))  |> pull(BROAD_ANCESTRAL_CATEGORY_ORIG) |> unique()
+
+# check that this hasn't broken ancestry groups with commas in descriptions
+gwas_ancest_subset |>
+  filter(str_detect(BROAD_ANCESTRAL_CATEGORY_ORIG,
+                    "(?<!Eastern), ")) |>
+  pull(BROAD_ANCESTRAL_CATEGORY) |>
+  unique() 
+
+```
+
+## Apply manual edits
+
+Study-specific corrections are listed, with reasons, in
+`data/gwas_catalog/gwas_cat_ancestry_hardcoded_edits.xlsx`. They are applied in row order,
+so each `condition` sees the result of the edits above it.
+
+```{r}
+
+edits_xlsx <-  here::here("data/gwas_catalog/gwas_cat_ancestry_hardcoded_edits.xlsx")
+  
+key_cols   <- c("STUDY_ACCESSION", "STAGE",
+                "BROAD_ANCESTRAL_CATEGORY_ORIG", "NUMBER_OF_INDIVIDUALS_ORIG")
+
+read_edits <- function(sheet, value_col = NULL) {
+  readxl::read_excel(edits_xlsx, sheet = sheet) |>
+    select(all_of(c(key_cols, value_col)))   # drop the grey information columns
+}
+
+gwas_ancest_subset <- tibble::as_tibble(gwas_ancest_subset)
+
+# split rows that combine several ancestry groups but get per-group values below
+split_studies <- readxl::read_excel(edits_xlsx, sheet = "split_rows")$STUDY_ACCESSION
+
+gwas_ancest_subset <- bind_rows(
+  gwas_ancest_subset |> filter(!STUDY_ACCESSION %in% split_studies),
+  gwas_ancest_subset |>
+    filter(STUDY_ACCESSION %in% split_studies) |>
+    tidyr::separate_longer_delim(BROAD_ANCESTRAL_CATEGORY_ORIG,
+                                 delim = regex("(?<!Eastern), ")) |>
+    mutate(BROAD_ANCESTRAL_CATEGORY = BROAD_ANCESTRAL_CATEGORY_ORIG)
+)
+
+# the key must identify each row exactly once
+stopifnot(anyDuplicated(select(gwas_ancest_subset, all_of(key_cols))) == 0)
+
+gwas_ancest_subset <-
+  gwas_ancest_subset |>
+  rows_delete(read_edits("delete_rows"), by = key_cols) |>
+  rows_insert(readxl::read_excel(edits_xlsx, sheet = "insert_rows") |> select(-edit_id, -reason), by = key_cols) |>
+  rows_update(read_edits("update_ancestry",    "BROAD_ANCESTRAL_CATEGORY"),   by = key_cols) |>
+  rows_update(read_edits("update_description", "INITIAL_SAMPLE_DESCRIPTION"), by = key_cols) |>
+  rows_update(read_edits("update_n",           "NUMBER_OF_INDIVIDUALS"),      by = key_cols)
+
+```
+
+## Cleaning up  INITIAL_SAMPLE_DESCRIPTION
+
+```{r}
+
+# remove "(MTAG boosted by ...)" from sample descriptions, as it is not relevant to ancestry
+gwas_ancest_subset <-
+  gwas_ancest_subset |>
+  mutate(INITIAL_SAMPLE_DESCRIPTION = str_remove_all(INITIAL_SAMPLE_DESCRIPTION,
+                                                     pattern = "\\(MTAG boosted by [\\d,]+ [^)]+\\)"))
+
+# remove 'up to' from sample descriptions, as it is not relevant to ancestry
+gwas_ancest_subset <-
+  gwas_ancest_subset |>
+  mutate(INITIAL_SAMPLE_DESCRIPTION = str_remove_all(INITIAL_SAMPLE_DESCRIPTION,
+                                                     pattern = "(?<=^|, )[Uu]p to ")) |>
+  mutate(INITIAL_SAMPLE_DESCRIPTION = str_remove_all(INITIAL_SAMPLE_DESCRIPTION,
+                                                     pattern = "(?<=^|, )upto ")) |>
+    mutate(INITIAL_SAMPLE_DESCRIPTION = str_remove_all(INITIAL_SAMPLE_DESCRIPTION,
+                                                     pattern = "(?<=,)up to")) 
+
+# remove at least
+gwas_ancest_subset <-
+  gwas_ancest_subset |>
+  mutate(INITIAL_SAMPLE_DESCRIPTION = str_remove_all(INITIAL_SAMPLE_DESCRIPTION,
+                                                     pattern = "(?<=^|, )[Aa]t least "))
+
+# remove ~ or approximately 
+gwas_ancest_subset <-
+  gwas_ancest_subset |>
+  mutate(INITIAL_SAMPLE_DESCRIPTION = str_remove_all(INITIAL_SAMPLE_DESCRIPTION,
+                                                     pattern = "~|approximately"))
+
+
+```
+
+# Deal with multiple ancestry groups in BROAD_ANCESTRAL_CATEGORY
+
+## Extract population descriptors from INITIAL_SAMPLE_DESCRIPTION
+
+```{r extract_population_desc_INITIAL}
+
+initial_sample_desc_multiple <-
+gwas_ancest_subset |>
+  filter(STAGE == "initial") |>
+  filter(grepl("(?<!Eastern), ", BROAD_ANCESTRAL_CATEGORY, perl = T)) |>
+  select(INITIAL_SAMPLE_DESCRIPTION,
+         BROAD_ANCESTRAL_CATEGORY,
+         NUMBER_OF_INDIVIDUALS,
+         STUDY_ACCESSION,
+         PUBMED_ID)  |>
+  mutate(GWAS_SAMPLE_DESC = INITIAL_SAMPLE_DESCRIPTION) # |>
+  # tidyr::separate_longer_delim(BROAD_ANCESTRAL_CATEGORY,
+  #                              delim = regex("(?<!Eastern), ")) 
+# add column to help with grouping later
+
+# split each description into its components at ", " followed by a number
+# (splitting on the number itself would delete it, as separate_longer_delim
+# drops the delimiter)
+sample_split_pattern <- ",\\s+(?=\\d+)"
+
+initial_sample_desc_multiple <-
+  initial_sample_desc_multiple |>
+  tidyr::separate_longer_delim(INITIAL_SAMPLE_DESCRIPTION,
+                               delim = stringr::regex(sample_split_pattern)) |>
+  mutate(
+      n = INITIAL_SAMPLE_DESCRIPTION |>
+      str_extract("^\\d[\\d,]*(?=\\s)") |>  # leading number (may contain thousands commas)
+      str_remove_all(",") |>
+      as.integer(),
+    sample_description = INITIAL_SAMPLE_DESCRIPTION |>
+      str_remove("^(up to\\s+)?\\d[\\d,]*\\s+")  # drop "up to" + the number
+  ) 
+
+# check where there is not comma in INITIAL_SAMPLE_DESCRIPTION
+# n should equal n
+# initial_sample_desc |>
+#   filter(!str_detect(INITIAL_SAMPLE_DESCRIPTION,
+#                     ",\\s+(?=\\d)")) |>
+#   filter(!str_detect(BROAD_ANCESTRAL_CATEGORY,
+#                     ",")) |>
+#   #filter(!grepl(",[0", INITIAL_SAMPLE_DESCRIPTION)) |>
+#   filter(grepl("^[0-9]+", INITIAL_SAMPLE_DESCRIPTION)) |>
+#   filter(!grepl("trios|pairs", sample_description)) |>
+#   group_by(STUDY_ACCESSION, NUMBER_OF_INDIVIDUALS) |>
+#   summarise(n = sum(n)) |>
+#   filter(NUMBER_OF_INDIVIDUALS != n) |>
+#   nrow()
+# 
+# initial_sample_desc <-
+#   initial_sample_desc |>
+#   mutate(NUMBER_OF_INDIVIDUALS_ORIG = NUMBER_OF_INDIVIDUALS) |>
+#   mutate(NUMBER_OF_INDIVIDUALS = ifelse(!str_detect(INITIAL_SAMPLE_DESCRIPTION,
+#                     ",\\s+(?=\\d)") &
+#                                          grepl("^[0-9]+", INITIAL_SAMPLE_DESCRIPTION) &
+#                                          !grepl("trios|pairs", sample_description) & 
+#                                           NUMBER_OF_INDIVIDUALS != n,
+#                                         n,
+#                                         NUMBER_OF_INDIVIDUALS_ORIG)
+#   )
+#   
+
+# check no missed samples
+initial_sample_desc_multiple |>
+  filter(str_detect(sample_description,
+                    "(?<![Tt]ype )(?<!COVID-)(?<!\\< )(?<!\\> )\\b[0-9]+(?!\\%)(?!\\-)")) |>
+  nrow()
+
+initial_sample_desc_multiple |>
+  filter(str_detect(sample_description,
+                    "(?<![Tt]ype )(?<!COVID-)(?<!\\< )(?<!\\>)\\b[0-9]+\\b(?!\\%)")) |>
+  pull(sample_description) |>
+  unique()
+
+```
+
+### Account for sibling pairs / trios in numbers
+
+The leading number in a sample description usually counts individuals, including
+"N individuals from M families". Only when the description *ends* with a group
+unit (e.g. "69 European ancestry trios") does it count groups.
+NUMBER_OF_INDIVIDUALS is left unchanged; only `n` is converted.
+
+```{r account_for_family_units, eval = F}
+
+initial_sample_desc <-
+  initial_sample_desc |>
+  mutate(
+    n_text = n,  # number as written in the description
+    multiplier = case_when(
+      str_detect(sample_description, "\\btrios$")          ~ 3,
+      str_detect(sample_description, "\\b(duos|pairs)$")   ~ 2,
+      TRUE                                                ~ 1
+    ),
+    n = n_text * multiplier
+  )
+
+# Units with no fixed size: use the total reported in the paper.
+# GCST005536 (PMID 25751624): 10,796 individuals in 2,601 ASP families + 69 trios,
+# so ASP families = 10,796 - 3 * 69 = 10,589 individuals
+initial_sample_desc <-
+  initial_sample_desc |>
+  mutate(
+    n_overridden = STUDY_ACCESSION == "GCST005536" &
+                   str_detect(sample_description, "affected sibling pair families$"),
+    n = if_else(n_overridden, 10589, n)
+  )
+
+# Stop if a new catalog release adds a group unit that isn't handled above
+unhandled_units <-
+  initial_sample_desc |>
+  filter(str_detect(sample_description,
+                    "\\b(families|sibships|pedigrees|twins|quads)$"),
+         !str_detect(sample_description, "\\bfrom\\b"),  # "N people from M families" is fine
+         !n_overridden)
+
+unhandled_units |> select(STUDY_ACCESSION, sample_description, n_text)
+stopifnot(nrow(unhandled_units) == 0)
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST005570" & 
+#                     grepl("trios", sample_description),
+#                     3*n,
+#                     n
+#                     )
+#          
+#   ) 
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#     mutate(NUMBER_OF_INDIVIDUALS = ifelse(STUDY_ACCESSION == "GCST005570" & 
+#                     grepl("trios", sample_description),
+#                     n,
+#                     NUMBER_OF_INDIVIDUALS
+#                     )
+#          
+#   )
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST000141" & 
+#                     grepl("trios", sample_description),
+#                     3*n,
+#                     n
+#                     ))
+# 
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#     mutate(NUMBER_OF_INDIVIDUALS = ifelse(STUDY_ACCESSION == "GCST000141" & 
+#                     grepl("trios", sample_description),
+#                     n,
+#                     NUMBER_OF_INDIVIDUALS
+#                     )
+#          
+#   )
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST001689" & 
+#                     grepl("trios", sample_description),
+#                     3*n,
+#                     n
+#                     ))
+# 
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST000054" & 
+#                     grepl("trios", sample_description) &
+#                     grepl("trios", INITIAL_SAMPLE_DESCRIPTION),
+#                     3*n,
+#                     n
+#                     ))
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#     mutate(NUMBER_OF_INDIVIDUALS = ifelse(STUDY_ACCESSION == "GCST000054" & 
+#                     grepl("trios", sample_description),
+#                     n,
+#                     NUMBER_OF_INDIVIDUALS
+#                     )
+#          
+#   )
+# 
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST000244" & 
+#                     grepl("trios", INITIAL_SAMPLE_DESCRIPTION),
+#                     3*n,
+#                     n
+#                     )) 
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#     mutate(NUMBER_OF_INDIVIDUALS = ifelse(STUDY_ACCESSION == "GCST000244" & 
+#                     grepl("trios", sample_description),
+#                     n,
+#                     NUMBER_OF_INDIVIDUALS
+#                     )
+#          
+#   )
+
+# # 2,601 ASP families and 69 trio families (10,796 total)
+# initial_sample_desc |>
+#   filter(STUDY_ACCESSION == "GCST005536")
+# 
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST005536" & 
+#                     grepl("trios", INITIAL_SAMPLE_DESCRIPTION),
+#                     3*n,
+#                     n
+#                     ))
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#     mutate(NUMBER_OF_INDIVIDUALS = ifelse(STUDY_ACCESSION == "GCST005536" & 
+#                     grepl("trios", sample_description),
+#                     n,
+#                     NUMBER_OF_INDIVIDUALS
+#                     )
+#          
+#   )
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#   mutate(n = ifelse(STUDY_ACCESSION == "GCST005536" & 
+#                     grepl("families", INITIAL_SAMPLE_DESCRIPTION),
+#                     4.071126*n, # as (10796 - 3* 69 )/(2601)
+#                     n
+#                     ))
+
+
+# initial_sample_desc <- 
+# initial_sample_desc |>
+#     mutate(NUMBER_OF_INDIVIDUALS = ifelse(STUDY_ACCESSION == "GCST005536" & 
+#                     grepl("families", sample_description),
+#                     n,
+#                     NUMBER_OF_INDIVIDUALS
+#                     )
+#          
+#   )
+
+```
+
+
+
+## Get broad ancestry group of each sample description
+
+```{r get_broad_ancestry_INITIAL}
+
+source(here::here("code/pop_desc_processing/gwas_cat_metadata.R"))
+
+initial_ancestry_sample_desc <-
+  initial_sample_desc_multiple  |>
+  # extract population descriptors
+  mutate(sample_ancestry = get_ancestry_from_sample_desc(sample_description)) |>
+  distinct()
+
+# initial_ancestry_sample_desc <-
+# initial_ancestry_sample_desc |>
+#    tidyr::separate_longer_delim(sample_ancestry, "; ") |>
+#     mutate(sample_broad_ancestry = group_pop_labels(sample_ancestry)
+#   ) 
+
+initial_ancestry_sample_desc <-
+initial_ancestry_sample_desc |>
+# group population descriptors
+rowwise() |>
+mutate(sample_broad_ancestry =
+           paste0(sort(
+                        unique(group_pop_labels(
+                          
+                          unlist(str_split(string = sample_ancestry, "; "))
+                                                )
+                               )
+                        ),
+                  collapse = ", ")
+  ) |>
+  ungroup()
+
+# initial_ancestry_sample_desc <-
+# initial_ancestry_sample_desc |>
+# group_by(STUDY_ACCESSION) |>
+# summarise(BROAD_ANCESTRAL_CATEGORY =
+#             paste0(sort(
+#             unique(unlist(str_split(string = BROAD_ANCESTRAL_CATEGORY, ", ")
+#                                ))
+#             ),
+#                         
+#                   collapse = ", "),
+# sample_broad_ancestry =
+#            paste0(sort(
+#                         unique(group_pop_labels(
+#                           
+#                           unlist(str_split(string = sample_ancestry, "; "))
+#                                                 )
+#                                )
+#                         ),
+#                   collapse = ", ")
+#   ) |>
+#   ungroup()
+
+initial_ancestry_sample_desc <-
+  initial_ancestry_sample_desc |>
+  distinct()
+
+initial_ancestry_sample_desc  <-
+initial_ancestry_sample_desc |>
+  group_by(PUBMED_ID,
+         STUDY_ACCESSION,
+         GWAS_SAMPLE_DESC
+) |>
+  summarise(sample_broad_ancestry = 
+              paste0(sort(
+                        unique(group_pop_labels(
+                          
+                          unlist(str_split(string = sample_ancestry, "; "))
+                                                )
+                               )
+                        ),
+                  collapse = ", "),
+BROAD_ANCESTRAL_CATEGORY =
+  paste0(sort(unique(unlist(
+    str_split(BROAD_ANCESTRAL_CATEGORY, regex("(?<!Eastern), "))
+  ))), collapse = ", "),
+N = sum(n)
+)
+
+unmatched_pmids <-
+initial_ancestry_sample_desc |>
+  group_by(PUBMED_ID,
+         STUDY_ACCESSION,
+         GWAS_SAMPLE_DESC
+         #NUMBER_OF_INDIVIDUALS
+) |>
+  summarise(sample_broad_ancestry = 
+              paste0(sort(
+                        unique(group_pop_labels(
+                          
+                          unlist(str_split(string = sample_ancestry, "; "))
+                                                )
+                               )
+                        ),
+                  collapse = ", "),
+BROAD_ANCESTRAL_CATEGORY =
+  paste0(sort(unique(unlist(
+    str_split(BROAD_ANCESTRAL_CATEGORY, regex("(?<!Eastern), "))
+  ))), collapse = ", ")
+) |>
+  filter(!any(sample_broad_ancestry %in% BROAD_ANCESTRAL_CATEGORY)) |>
+  pull(PUBMED_ID) |>
+  unique()
+
+
+         
+
+# initial_ancestry_sample_desc |>
+#   filter(str_detect(sample_broad_ancestry,
+#                     "(?<!Eastern), "))
+
+```
+
+## Compare estimated total number of samples
+
+```{r compare_total_n_INITIAL}
+
+initial_ancestry_sample_desc <-
+  initial_ancestry_sample_desc |>
+  filter(sample_broad_ancestry == BROAD_ANCESTRAL_CATEGORY)
+
+# NA's introduced for GCST90449028
+# fine - number of individuals is NA for this STUDY_ACCESSION
+  initial_summed_sample_desc <-
+  initial_ancestry_sample_desc |>
+  ungroup() |>
+  mutate(n = as.integer(n)) |>
+  # select(PUBMED_ID,
+  #          STUDY_ACCESSION,
+  #          NUMBER_OF_INDIVIDUALS,
+  #          GWAS_SAMPLE_DESC,
+  #          BROAD_ANCESTRAL_CATEGORY,
+  #          n,
+  #        n_text) |>
+  # distinct() |>
+  #filter(sample_broad_ancestry == BROAD_ANCESTRAL_CATEGORY) |>
+  group_by(PUBMED_ID,
+           STUDY_ACCESSION,
+           NUMBER_OF_INDIVIDUALS,
+           GWAS_SAMPLE_DESC,
+           BROAD_ANCESTRAL_CATEGORY) |>
+  summarise(n_sample_desc = sum(n)) 
+
+  
+  initial_summed_sample_desc |>
+  filter(!between(NUMBER_OF_INDIVIDUALS,
+                 n_sample_desc,
+                 n_sample_desc + 10)) |>
+  nrow()
+  
+    initial_summed_sample_desc |>
+  filter(!between(NUMBER_OF_INDIVIDUALS,
+                 n_sample_desc,
+                 n_sample_desc + 10)) |> 
+      filter(PUBMED_ID != "36738649")
+  
+  initial_summed_sample_desc |>
+  filter(n_sample_desc != NUMBER_OF_INDIVIDUALS) |>
+  nrow()
+  
+    initial_summed_sample_desc |>
+    filter(n_sample_desc != NUMBER_OF_INDIVIDUALS)  |>
+    pull(PUBMED_ID) |>
+    unique() |> 
+      length()
+
+
+```
+
+## Initial ancestry sample description components
+
+```{r}
+
+discovery_sample_ancestry_desc <-
+rbind(
+  gwas_ancest_subset |>
+    filter(STAGE == "initial") |>
+    filter(!grepl("(?<!Eastern), ", BROAD_ANCESTRAL_CATEGORY, perl = T)) |>
+    distinct(PUBMED_ID,
+           STUDY_ACCESSION,
+           BROAD_ANCESTRAL_CATEGORY,
+           NUMBER_OF_INDIVIDUALS),
+   initial_ancestry_sample_desc |>
+    select(BROAD_ANCESTRAL_CATEGORY = sample_broad_ancestry,
+           STUDY_ACCESSION,
+           PUBMED_ID,
+           NUMBER_OF_INDIVIDUALS = N)
+  )
+
+out_dir <- here::here("output/gwas_cat")
+
+# cleaned GWAS Catalog ancestry table (all stages),
+# with corrected BROAD_ANCESTRAL_CATEGORY and sample descriptions
+data.table::fwrite(discovery_sample_ancestry_desc,
+                   file.path(out_dir, "gwas_ancest_discovery_subset_processed.csv"))
+
+
+```
+
+
+
+
+# Save processed tables
+
+```{r save_processed_tables}
+
+out_dir <- here::here("output/gwas_cat")
+
+# cleaned GWAS Catalog ancestry table (all stages),
+# with corrected BROAD_ANCESTRAL_CATEGORY and sample descriptions
+data.table::fwrite(gwas_ancest_subset,
+                   file.path(out_dir, "gwas_ancest_subset_processed.csv"))
+
+# initial-stage sample description components, one row per
+# (study, ancestry group, sample description component),
+# with extracted sample size (n) and inferred broad ancestry;
+# restricted to components whose inferred ancestry matches BROAD_ANCESTRAL_CATEGORY
+data.table::fwrite(initial_ancestry_sample_desc,
+                   file.path(out_dir, "gwas_ancest_initial_sample_desc_processed.csv"))
+
+```
