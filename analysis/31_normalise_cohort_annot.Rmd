@@ -1,0 +1,906 @@
+---
+title: "Normalise cohort names"
+author: "Isobel Beasley"
+output: html_document
+---
+
+Aims: Want to take NER cohort annotations, and make them consistent across all papers, such that we can identify what papers are studying the same cohorts. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_packages}
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tokenizers)
+library(ggplot2)
+library(ggsankey)
+library(ggalluvial)
+
+#source(here::here("code/cohort_norm/normalize_cohort_names.R"))
+source(here::here("code/cohort_norm/normalize_cohort_names_fns.R"))
+
+```
+
+```{r load_annotations}
+
+pubmedbert_abstract_cohort_annotations <- data.table::fread(here::here("output/text_mining_predictions/test_abstracts_entity_predictions.csv"))
+
+# pubmedbert_abstract_cohort_annotations <-
+#   pubmedbert_abstract_cohort_annotations |>
+#   distinct(pubmed_id, sentence,
+#            cohort_annot = predicted_cohorts)
+
+pubmedbert_abstract_cohort_annotations <-
+  pubmedbert_abstract_cohort_annotations |>
+  distinct(pubmed_id, 
+           sentence,
+           cohort_annot = true_cohorts) |>
+  group_by(pubmed_id) |> 
+  filter(any(cohort_annot != "")) 
+
+pubmedbert_methods_cohort_annotations <-
+  data.table::fread(here::here("output/text_mining_predictions/test_methods_entity_predictions.csv"))
+
+# pubmedbert_methods_cohort_annotations <-
+#   pubmedbert_methods_cohort_annotations |>
+#   distinct(pubmed_id, sentence,
+#            cohort_annot = predicted_cohorts)
+
+pubmedbert_methods_cohort_annotations <-
+  pubmedbert_methods_cohort_annotations |>
+  distinct(pubmed_id, 
+           sentence,
+           cohort_annot = true_cohorts) |>
+  group_by(pubmed_id) |> 
+  filter(any(cohort_annot != "")) 
+
+cohorts <- rbind(pubmedbert_abstract_cohort_annotations,
+                 pubmedbert_methods_cohort_annotations)
+
+
+cohorts <-
+  cohorts |>
+  distinct()
+
+# unique row per sentence
+cohorts |>
+  group_by(pubmed_id, sentence) |>
+  summarise(n = n()) |>
+  filter(n > 1)
+
+
+
+```
+
+
+```{r testing_pipeline}
+
+testing_pmids <- c("17903303",
+                   "23388002",
+                   "23982368",
+                   "26516778",
+                   "28492228",
+                   "28928442",
+                   "30104761",
+                   "30251476",
+                   "32066683",
+                   "32488134",
+                   "32915819",
+                   "33350037",
+                   "34106200",
+                   "34594039",
+                   "34662886",
+                   "34737426",
+                   "36716318",
+                   "37033211",
+                   "39024449",
+                   "40164586"
+)
+
+cohorts <-
+  cohorts  |>
+  filter(pubmed_id %in% testing_pmids)
+
+```
+
+
+```{r n_detected)cohort_names}
+
+cohorts |>
+  tidyr::separate_longer_delim(cohort_annot, delim = "; ") |>
+  distinct(cohort_annot) |>
+  nrow()
+
+```
+
+# Fixing any mistakes in labelling 
+
+```{r fix_not_full_labels}
+
+pad_to_words <- function(annot, sentence) {
+    stringr::str_extract(
+      sentence,
+      paste0("[\\w'’-]*", stringr::str_escape(annot), "[\\w'’-]*")
+    )
+}
+
+cohorts <- cohorts |>
+    filter(cohort_annot != "") |>
+    mutate(cohort_annot_full = pad_to_words(cohort_annot, sentence),
+           cohort_annot_update = dplyr::coalesce(cohort_annot_full, cohort_annot) |>
+             stringr::str_remove_all(pattern = "'s$|’s$|-based$|’$|-individuals$")  |>
+             stringr::str_remove_all(pattern = "rapid-gwas-of-thousands-of-phenotypes-for-337000-samples-in-the-") |>
+             stringr::str_remove_all(pattern = "study--")
+
+    )
+
+cohorts |>
+    filter(cohort_annot_update != cohort_annot) |>
+    distinct(cohort_annot_update, cohort_annot) |>
+    head()
+
+cohorts <-
+    cohorts |>
+    rename(cohort_annot_orig = cohort_annot,
+           cohort_annot = cohort_annot_update
+    ) |>
+    select(-cohort_annot_full) |>
+    distinct()
+
+# drop weird annotations
+cohorts <-
+  cohorts |>
+  filter(stringr::str_length(cohort_annot) != 1)
+
+cohorts <-
+  cohorts |>
+  tidyr::separate_longer_delim(cohort_annot, delim = "; ") 
+
+
+
+```
+
+# Extract paper-specific abbreviations
+
+```{bash ab3p_abbrev, eval = FALSE}
+
+shopt -s nullglob
+mkdir -p output/abbreviations
+out=output/abbreviations/paper_ab3p_abbreviations.tsv
+log=output/abbreviations/ab3p_stderr.log
+
+printf 'pmid\tshort_form\tlong_form\tprecision\n' > "$out"
+: > "$log"
+
+for txt_file in output/abstracts/*.txt output/results_copy/*.txt output/methods_copy/*.txt; do
+    filename=$(basename "$txt_file")
+    if [[ "$filename" =~ ^([0-9]+) ]]; then
+        pmid="${BASH_REMATCH[1]}"
+
+        clean=$(mktemp /tmp/ab3p.XXXXXX)
+        # iconv -f UTF-8 -t ASCII//TRANSLIT -c < "$txt_file" \
+        #    | tr '\n' ' ' | sed 's/  */ /g; s/ $//' > "$clean"
+        # echo >> "$clean"
+        
+        iconv -f UTF-8 -t ASCII//TRANSLIT -c < "$txt_file" \
+            | tr '_' '-' \
+            | tr '\n' ' ' | sed 's/  */ /g; s/ $//' > "$clean"
+            echo >> "$clean"
+
+        apptainer run -B /tmp ab3p.sif "$clean" 2>>"$log" |
+        awk -F'|' -v pmid="$pmid" '
+            /^  / && NF == 3 {
+                sf = $1; gsub(/^[ \t]+|[ \t]+$/, "", sf)
+                lf = $2; gsub(/^[ \t]+|[ \t]+$/, "", lf)
+                if ($3 + 0 > 0.9) print pmid "\t" sf "\t" lf "\t" $3 + 0
+            }' >> "$out"
+
+        rm -f "$clean"
+    else
+        echo "No leading PMID: $txt_file" >&2
+    fi
+done
+
+wc -l "$out" # ~22,000 abbreviations
+
+grep -c 'Failed to find sentence' "$log"  # ~16702
+
+```
+
+
+```{r, eval = F}
+
+ab3p_abbrev <- data.table::fread(here::here("output/abbreviations/paper_ab3p_abbreviations.tsv"),
+                                 sep = "\t",
+                                 quote = "")
+
+
+abbrev_map  <-
+ab3p_abbrev |>
+  rename(cohort_annot = short_form,
+         pubmed_id = pmid
+         )  |>
+  select(-precision)
+
+cohorts <-
+    cohorts |>
+    tidyr::separate_longer_delim(cohort_annot, delim = ";") |>
+    mutate(cohort_annot = stringr::str_squish(cohort_annot))
+
+cohorts <-
+left_join(
+  cohorts,
+  abbrev_map,
+by = c("pubmed_id", "cohort_annot"),
+relationship = "many-to-many"
+) |>
+  mutate(long_form = ifelse(is.na(long_form),
+                       cohort_annot,
+                       long_form
+                       )
+  )
+
+cohorts  |>
+  distinct(long_form) |>
+  nrow()
+
+data.table::fwrite(cohorts, 
+                   "training_papers_test.csv",
+                   sep = ",")
+
+# now check for cohorts in the same pubmed that are one word different, 
+
+```
+
+
+```{r, eval = F}
+
+cohorts <-
+  cohorts |>
+  mutate(long_form_clean = clean_cohort_names(long_form))
+
+cohorts  |>
+  distinct(long_form_clean) |>
+  nrow()
+
+```
+
+```{r, eval = F}
+
+
+
+match_names <-
+  cohort_names |>
+    distinct(full_name) |>
+    rename(long_form = full_name) |>
+    mutate(long_form_clean = clean_cohort_names(long_form))
+
+unique(cohorts$long_form_clean) %in% match_names$long_form_clean |> sum()
+
+anti_join(
+  cohorts |>
+    distinct(long_form_clean),
+  match_names,
+   by = "long_form_clean")
+
+
+```
+
+
+# Plotting normalised cohorts 
+
+```{r load_final_normalised_names}
+
+# normalised cohort names
+cohort_norm <- data.table::fread(here::here("training_papers_test_cohort_norm.csv"))
+
+cohort_norm <-
+cohort_norm  |>
+  filter(not_cohort == FALSE) 
+
+# remove probable reference cohort mentions
+cohort_norm <-
+cohort_norm  |>
+filter(!grepl("imputation|imputed|panel|reference", sentence, ignore.case = T)) |>
+filter(!grepl("\\bLD\\b", sentence)) |>
+filter(!grepl("\\blinkage disequilbrium\\b", sentence)) 
+
+cohort_norm <-
+cohort_norm  |>
+filter(!grepl(" HapMap3 (SNPs|variants)", sentence)) 
+
+cohort_norm <-
+cohort_norm  |>
+filter(
+  !(
+  grepl("gnomAD", sentence) & 
+  grepl("minor allele|MAF| allele frequencies|AF|annotated|variant statistics", sentence)
+  )
+)
+
+cohort_norm <-
+cohort_norm  |>
+  filter(!cohort_annot %in% c("ukbbs", "gefos", "ukbb", "scapis"))
+
+
+# drop software 
+cohort_norm <-
+cohort_norm  |>
+  filter(
+    !(cohort_annot == "GENESIS" & grepl("GENESIS package|GENESIS R package", sentence))
+  ) |>
+  filter(
+    !(cohort_annot == "GENESIS" & pubmed_id %in% c("31217584",
+                                                   "37236969",
+                                                   "40210677",
+                                                   "35156446"))
+  )
+
+cohort_norm <-
+cohort_norm  |>
+  filter(
+    !(cohort_annot == "ADC" & grepl("lung ADC", sentence))
+  )
+
+cohort_norm <-
+cohort_norm  |>
+  filter(
+    !(cohort_annot == "MACS" & grepl("MACS version|called peaks using MACS|MACS Miltenyl Biotec", sentence))
+  ) 
+
+cohort_norm <-
+cohort_norm  |>
+  mutate(cohort_norm = ifelse(cohort_norm == "",
+                              long_form,
+                              cohort_norm))
+
+cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc_v3_sep17.xlsx"),
+                                    sheet = 1) |>
+                select(short_name, cohort_norm = full_name, cohort_group) |>
+                distinct()
+
+cohort_names <- cohort_names |>
+    dplyr::mutate(
+        cohort_norm = gsub("\u00A0", " ", cohort_norm)
+    )
+
+cohort_norm <- 
+left_join(
+  cohort_norm,
+  cohort_names,
+  relationship = "many-to-many") 
+
+cohort_norm <-
+cohort_norm |>
+  distinct(pubmed_id, 
+           cohort_norm,
+           cohort_group)
+
+
+cohort_norm |>
+  distinct(cohort_group) |>
+  nrow()
+
+cohort_norm  <-
+  cohort_norm  |>
+  tidyr::separate_longer_delim(cohort_group, delim = "Biobank, ") |>
+  tidyr::separate_longer_delim(cohort_norm, delim = "/") |>
+  mutate(cohort_group = ifelse(is.na(cohort_group),
+                               cohort_norm,
+                               cohort_group)
+  ) |>
+  mutate(cohort_group = case_when(
+    cohort_group == "Health, Aging and Body Composition Study" ~ "Health, Aging and Body Composition Study (HABC)",
+    cohort_group == "PanUK Biobank" ~ "UK Biobank",
+    cohort_group == "CHARGE" ~ "Cohorts for Heart and Aging Research in Genomic Epidemiology (CHARGE)",
+    cohort_group == "DIAGRAMv3" ~ "Diabetes Genetics Replication and Meta-analysis Consortium",
+    cohort_group == "deCODE" ~ "deCODE genetics",
+    cohort_group %in% c("National Blood Service", "UK Blood Service") ~ "UK National Blood Service",
+    cohort_group == "Korean Cancer Prevention Study-II cohort" ~ "	Korean Cancer Prevention Study (KCPS)",
+    cohort_group %in% c("Multicenter AIDS Cohort Study", "MACS") ~ "Multicenter AIDS Cohort Study (MACS)",
+    cohort_group %in% c("AGEN", "AGEN-T2D",
+                        "Asian Genetic Epidemiology Network")
+                        ~ "Asian Genetic Epidemiology Network (AGEN)",
+    cohort_group == "BBJNCCH" ~ "Biobank Japan (BBJ)",
+    grepl("TWB-for-|Taiwan Biobank|TWB1\\b|TWB2\\b", cohort_group) ~ c("Taiwan Biobank (TWB)"),
+    grepl("EPIC-", cohort_group) ~ "European Prospective Investigation into Cancer",
+    cohort_group == "AoURE" ~ "All of Us",
+    grepl("GoKinD", cohort_group) ~ "Genetics of Kidneys in Diabetes (GoKinD)",
+    cohort_group == "Wellcome Trust" ~ "WTCCC",
+    cohort_group == "IARC-GWA" ~ "International Agency for Research on Cancer (IARC)",
+    TRUE ~ cohort_group
+  ))
+
+# exclude probable reference cohorts:
+cohort_norm  <-
+cohort_norm  |>
+  filter(!cohort_group %in% 
+           c("gnomAD",
+             "GTEx",
+             "1000 Genomes",
+             "HapMap",
+             "ENCODE",
+             "Roadmap Epigenomics",
+             "eQTLGen",
+             "HGDP",
+             "eQTLGen Consortium",
+             "Simons Genome Diversity Project",
+             "HRC"))
+
+
+cohort_norm |>
+  count(cohort_norm) |>
+  arrange(desc(n)) |>
+  head()
+
+cohort_norm |>
+  count(cohort_group) |>
+  arrange(desc(n)) |>
+  head()
+
+```
+
+
+```{r}
+
+# reintroduce year into cohorts data frame
+gwas_paper_data <- data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_cat.csv"),
+                                     select = c("PUBMED_ID", "YEAR")) |>
+                   dplyr::rename_with(~tolower(.x)) |>
+                   distinct()
+
+# count number of papers per year
+gwas_paper_data <-
+  gwas_paper_data |>
+  group_by(year) |>
+  mutate(n_paper_year = n()) |>
+  ungroup()
+
+cohort_norm <-
+left_join(cohort_norm,
+          gwas_paper_data,
+          by = c("pubmed_id"))
+
+
+# pick cohorts to highlight
+increasing_cohorts <-
+cohort_norm |>
+  filter(cohort_group != "Other") |>
+  distinct(year, cohort_group, n_paper_year, pubmed_id) |>
+  group_by(year, cohort_group) |>
+  summarise(prop_paper = n()/unique(n_paper_year),
+            .groups = "drop"
+            ) |>
+  tidyr::complete(year, cohort_group, fill = list(prop_paper = 0)) |>
+  arrange(cohort_group, year) |>
+  group_by(cohort_group) |>
+  summarise(non_decreasing_years = sum(diff(prop_paper) >= 0)) |>
+  filter(non_decreasing_years > 14) |>
+  pull(cohort_group)
+
+
+# pick cohorts to highlight
+decreasing_cohorts <-
+cohort_norm |>
+  filter(cohort_group != "Other") |>
+  distinct(year, cohort_group, n_paper_year, pubmed_id) |>
+  group_by(year, cohort_group) |>
+  summarise(prop_paper = n()/unique(n_paper_year),
+            .groups = "drop"
+            ) |>
+  tidyr::complete(year, cohort_group, fill = list(prop_paper = 0)) |>
+  arrange(cohort_group, year) |>
+  group_by(cohort_group) |>
+  summarise(decreasing_years = sum(diff(prop_paper) <= 0)) |>
+  filter(decreasing_years > 14) |>
+  pull(cohort_group)
+  
+
+# cohort that were top three in any year, and had more than one paper in that year
+top_cohorts <-
+cohort_norm  |>
+  filter(cohort_group != "Other") |>
+  distinct(year, cohort_group, pubmed_id) |>
+  group_by(year, cohort_group) |>
+  summarise(n_paper = n()) |>
+  slice_max(n_paper,
+            n = 3,
+            with_ties = TRUE) |>
+  filter(n_paper > 1) |>
+  ungroup() |>
+  pull(cohort_group)  |>
+  unique()
+
+multi_year_cohorts <-
+cohort_norm  |>
+  filter(cohort_group != "Other") |>
+  distinct(cohort_group, year) |>
+  group_by(cohort_group) |>
+  summarise(n = n()) |>
+  filter(n > 3) |>
+  pull(cohort_group)
+
+cohort_norm  |>
+  filter(year < 2010) |>
+  distinct(cohort_group, year, pubmed_id) |>
+  count(cohort_group) |> 
+  arrange(desc(n)) |> slice_max(n = 5, order_by = n)
+
+cohort_norm  |>
+  filter(year >= 2010 & year < 2015) |>
+  distinct(cohort_group, year, pubmed_id) |>
+  count(cohort_group) |> 
+  arrange(desc(n)) |> 
+  slice_max(n = 5, order_by = n)
+
+cohort_norm  |>
+  filter(year >= 2015 & year < 2020) |>
+  distinct(cohort_group, year, pubmed_id) |>
+  count(cohort_group) |> 
+  arrange(desc(n)) |> 
+  slice_max(n = 5, order_by = n)
+
+cohort_norm  |>
+  filter(year > 2020) |>
+  distinct(cohort_group, year, pubmed_id) |>
+  count(cohort_group) |> 
+  arrange(desc(n)) |> slice_max(n = 4, order_by = n)
+
+
+
+
+
+intersect(top_cohorts, multi_year_cohorts)
+
+intersect(top_cohorts, increasing_cohorts)
+
+intersect(top_cohorts, decreasing_cohorts)
+
+# highlighted_cohorts <- highlighted_cohorts[highlighted_cohorts %in% multi_year_cohorts]
+#   
+
+
+
+```
+
+
+```{r}
+
+# selected_cohorts <- sample(highlighted_cohorts, size = 6, replace = FALSE)
+
+selected_cohorts <-
+  c("WTCCC",
+    # "DIAGRAM",
+    "UK Biobank", #"UK Biobank",
+    "FinnGen",
+    # "KoGES (Korean Genome and Epidemiology Study)",
+    # "CARDIoGRAMplusC4D",
+    # "Framingham Heart Study",
+    # "deCODE genetics", 
+    # "TOPMed",
+    # "All of Us",
+    "Biobank Japan (BBJ)"
+    # "Multi-Ethnic Study of Atherosclerosis (MESA)"
+    )
+
+
+mapped_cohort_colours <-
+  c(
+    # very common european cohorts
+    "WTCCC" =  "#A6CEE3",
+    # "DIAGRAM" = "#B2DF8A",
+    # "PanUK Biobank/UK Biobank" = "#FB9A99",
+    "UK Biobank" = "#FB9A99",
+    "FinnGen" = "#FDBF6F",  
+    
+    # common Asian biobanks
+    # "KoGES (Korean Genome and Epidemiology Study)" = "#A6CEE3",
+    "Biobank Japan (BBJ)" =  "#CAB2D6",
+    
+    # multi-ancestry / ethnic US-based cohorts
+    # "TOPMed" = "#FDBF6F",
+    # "All of Us" = "#FF7F00" ,
+    # "Multi-Ethnic Study of Atherosclerosis (MESA)" =  "#FFFF99",
+    "Other" = "grey30"
+  )
+
+
+# if small number of papers, use most common cohort names across all years
+# highlighted_cohorts <-
+# cohort_norm |>
+#   filter(cohort_group != "" & cohort_group != "Other") |>
+#   count(cohort_group) |>
+#   arrange(desc(n)) |>
+#   slice_max(n,
+#             n = 6,
+#             with_ties = TRUE) |>
+#   pull(cohort_norm)
+
+cohorts_plot_df  <-
+  cohort_norm |>
+  select(pubmed_id, 
+         year, 
+         n_paper_year,
+         cohort_group) |>
+  mutate(cohort = ifelse(cohort_group %in% selected_cohorts,
+                         cohort_group,
+                         "Other")) |>
+  select(-cohort_group) |>
+  distinct()
+
+cohorts_plot_df <-
+  cohorts_plot_df  |>
+  group_by(year, cohort) |>
+  summarise(N_papers = n(),
+            n_paper_year = unique(n_paper_year)) |>
+  dplyr::rename_with(~stringr::str_to_title(.x))
+
+
+# pick factor ordering 
+cohort_order <- 
+cohorts_plot_df |>
+  group_by(Cohort) |>
+  summarise(total = sum(N_papers)) |>
+  arrange(desc(total)) |>
+  pull(Cohort)
+
+# make sure other is last: 
+cohort_order <- c("Other", cohort_order[cohort_order != "Other"])
+
+
+cohorts_plot_df <-
+  cohorts_plot_df  |>
+  mutate(Cohort = factor(Cohort, levels = cohort_order)) 
+
+```
+
+
+```{r}
+
+
+# pdf(here::here("figures/cohort_mentions_overtime.pdf"),
+#     width = 22.4, 
+#     height = 10
+# )
+
+cairo_pdf(here::here("figures/cohort_mentions_overtime.pdf"),
+          width = 21.4,
+          height = 12,
+          family = "Atkinson Hyperlegible Next")
+
+
+cohorts_plot_df |>
+    mutate(Cohort = factor(Cohort, levels = c("WTCCC",
+                                              "Biobank Japan (BBJ)",
+                                              "UK Biobank",
+                                              "FinnGen",
+                                              "Other"))) |>
+ggplot(aes(x = Year,
+           y = N_papers
+           )) +
+  geom_alluvium(aes(fill = Cohort,
+                    colour = Cohort,
+                    alluvium = Cohort),
+                alpha = .75,
+                decreasing = FALSE,
+                outline.type = "upper") +
+  # geom_col(aes(y= N_paper_year,
+  #               x = Year)) + 
+  # scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+  #                                 to = max(cohorts_plot_df$Year),
+  #                                 by = 2),
+  #                                 expand = c(0.02, 0)
+  #                    ) +
+    scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+                                  to = max(cohorts_plot_df$Year),
+                                  by = 1),
+                     labels = function(x) ifelse((x - min(cohorts_plot_df$Year)) %% 2 == 0, x, "")
+                     # expand = c(0.02, 0)
+                     ) +
+  scale_y_continuous(breaks = seq(from = 0,
+                                  to = cohorts_plot_df |>
+                                       group_by(Year) |>
+                                       summarise(total = sum(N_papers)) |>
+                                       slice_max(total, with_ties = FALSE) |>
+                                       pull(total) + 10,
+                                  by = 10),
+                     limits = c(0,
+                                cohorts_plot_df |>
+                                       group_by(Year) |>
+                                       summarise(total = sum(N_papers)) |>
+                                       slice_max(total, with_ties = FALSE) |>
+                                       pull(total) + 10),
+                                  expand = c(0, 0)) +
+  coord_cartesian(clip = "off") +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_colour_manual(values = mapped_cohort_colours ,
+                      name = "Cohort",
+                      labels = scales::label_wrap(20)) +
+  scale_fill_manual(values = mapped_cohort_colours ,
+                      name = "Cohort",
+                     labels = scales::label_wrap(20)) +
+  #   scale_fill_brewer(type = "qual", palette = "Set3",
+  #                   labels = scales::label_wrap(20)) +
+  # scale_color_brewer(type = "qual", palette = "Set3",
+  #                    labels = scales::label_wrap(20)) +
+  labs(y = "Number of Papers",
+       x = "Publication Year") + 
+  theme(
+    text = element_text(family = "Atkinson Hyperlegible Next"),
+    ####### axis labels and ticks:  ##########
+    axis.ticks.length = unit(0.1, "in"),
+    axis.text.x  = element_text(size = 30,
+                                colour = "black"
+                                # margin = margin(t = 0.1,
+                                #                 unit = "in")
+                                ),
+    axis.text.y  = element_text(size = 30,
+                                colour = "black"), 
+    axis.title.x = element_text(size = 30,
+                                colour = "black",
+                                margin = margin(t = 0.2,
+                                                unit = "in")), 
+    axis.title.y = element_text(size = 30,
+                                colour = "black"), 
+    
+    
+    ############ Legend text + options ##########
+    legend.title = element_blank(),
+    legend.text  = element_text(size = 30,
+                                colour = "black"),
+    legend.position = "top",
+    legend.box.margin = margin(t = 0.2, 
+                               unit = "in"),
+    legend.key.spacing.x = unit(30, "pt"),
+    
+    
+    ###### Plot margins and panel options ##########
+    plot.margin = margin(
+                         t = 0.2, # top
+                         r = 0.2,
+                         b = 1,  # bottom
+                         # l = 1, # left
+                         l = 0.6,
+                         unit = "in"),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    panel.grid.major.y = element_line(colour = "grey50", 
+                                      linetype = "dashed",
+                                      linewidth = unit(1, "in")),
+    panel.grid.minor.y = element_blank(),
+    # panel.grid.minor.y = element_line(colour = "grey50", 
+    #                                   linetype = "dashed"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank()
+    )
+
+dev.off()
+
+```
+
+#### Powerpoint version
+
+
+```{r powerpoint}
+
+
+
+
+plot <- cohorts_plot_df |>
+    mutate(Cohort = factor(Cohort, levels = c("WTCCC",
+                                              "Biobank Japan (BBJ)",
+                                              "UK Biobank",
+                                              "FinnGen",
+                                              "Other"))) |>
+ggplot(aes(x = Year,
+           y = N_papers
+           )) +
+  geom_alluvium(aes(fill = Cohort,
+                    colour = Cohort,
+                    alluvium = Cohort),
+                alpha = .75,
+                decreasing = FALSE,
+                outline.type = "upper") +
+  # geom_col(aes(y= N_paper_year,
+  #               x = Year)) + 
+  # scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+  #                                 to = max(cohorts_plot_df$Year),
+  #                                 by = 2),
+  #                                 expand = c(0.02, 0)
+  #                    ) +
+    scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+                                  to = max(cohorts_plot_df$Year),
+                                  by = 1),
+                     labels = function(x) ifelse((x - min(cohorts_plot_df$Year)) %% 2 == 0, x, "")
+                     # expand = c(0.02, 0)
+                     ) +
+  scale_y_continuous(breaks = seq(from = 0,
+                                  to = cohorts_plot_df |>
+                                       group_by(Year) |>
+                                       summarise(total = sum(N_papers)) |>
+                                       slice_max(total, with_ties = FALSE) |>
+                                       pull(total) + 10,
+                                  by = 20),
+                     limits = c(0,
+                                cohorts_plot_df |>
+                                       group_by(Year) |>
+                                       summarise(total = sum(N_papers)) |>
+                                       slice_max(total, with_ties = FALSE) |>
+                                       pull(total) + 10),
+                                  expand = c(0, 0)) +
+  coord_cartesian(clip = "off") +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_colour_manual(values = mapped_cohort_colours ,
+                      name = "Cohort",
+                      labels = scales::label_wrap(20)) +
+  scale_fill_manual(values = mapped_cohort_colours ,
+                      name = "Cohort",
+                     labels = scales::label_wrap(20)) +
+  #   scale_fill_brewer(type = "qual", palette = "Set3",
+  #                   labels = scales::label_wrap(20)) +
+  # scale_color_brewer(type = "qual", palette = "Set3",
+  #                    labels = scales::label_wrap(20)) +
+  labs(y = "Number of Papers",
+       x = "Publication Year") + 
+  theme(
+    text = element_text(family = "Atkinson Hyperlegible Next"),
+    
+     ####### axis labels and ticks:  ##########
+    axis.ticks.length = unit(0.1, "in"),
+    axis.text.x  = element_text(size = 25,
+                                colour = "black"
+                                # margin = margin(t = 0.1,
+                                #                 unit = "in")
+                                ),
+    axis.text.y  = element_text(size = 25,
+                                colour = "black"), 
+    axis.title.x = element_text(size = 25,
+                                colour = "black",
+                                margin = margin(t = 0.2,
+                                                unit = "in")), 
+    axis.title.y = element_text(size = 25,
+                                colour = "black"), 
+    
+    
+     ############ Legend text + options ##########
+    legend.title = element_blank(),
+    legend.text  = element_text(size = 25,
+                                colour = "black"),
+    legend.box.margin = margin(t = 0, 
+                               unit = "in"),
+    legend.key.spacing.x = unit(10, "pt"),
+    
+    
+    
+    legend.position = "top",
+    plot.margin = margin(
+                         t = 0, # top
+                         r = 0,
+                         b = 0,  # bottom
+                         l = 0, # left
+                         unit = "in"),
+
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    panel.grid.major.y = element_line(colour = "grey60", linetype = "dashed"),
+    panel.grid.minor.y = element_line(colour = "grey60", linetype = "dashed"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank()
+    )
+
+ggsave(plot,
+       filename =here::here("figures/cohort_mentions_overtime.png"),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.8,
+       units = "in"
+)
+
+
