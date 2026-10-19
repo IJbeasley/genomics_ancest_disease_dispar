@@ -45,6 +45,7 @@ group_ancestry_fn = function(study_ancest){
                         'African unspecified, African American or Afro-Caribbean',
                         'African American or Afro-Caribbean, African unspecified',
                         'Sub-Saharan African, African unspecified',
+                        'African unspecified, Sub-Saharan African',
                         'African-American or Afro-Caribbean',
                         'Sub-Saharan African',
                         'African American or Afro-Caribbean',
@@ -87,6 +88,7 @@ group_ancestry_fn = function(study_ancest){
                         'Other, NR',
                         'NR, Other',
                         'other',
+                        'Other admixed ancestry',
                         'Native American') ~ "Other",
 
     # Not reported
@@ -119,9 +121,14 @@ custom_theme <-
 
 
 # Add final totals
-add_final_totals <- function(ancestry_df){
+add_final_totals <- function(ancestry_df, window_months = 6){
 
+  # get date of last publication
   max_date = ancestry_df$DATE |> max()
+
+  # get date of last publication for this ancestry group
+
+  # for each 6 months between final max date and the last date for that ancestry group, add a row with the final total
 
   ancestry_df_totals= ancestry_df |>
     dplyr::group_by(ancestry_group) |>
@@ -134,6 +141,41 @@ add_final_totals <- function(ancestry_df){
 
 
 
+}
+
+add_final_totals <- function(ancestry_df, window_months = 6) {
+
+  # Get date of the final publication across all ancestry groups
+  max_date <- max(ancestry_df$DATE, na.rm = TRUE)
+
+  # Get the last publication date and final cumulative total for each
+  # ancestry group
+  ancestry_df_totals <- ancestry_df |>
+    dplyr::group_by(ancestry_group) |>
+    dplyr::summarise(
+      last_date = max(DATE, na.rm = TRUE),
+      ancest_cumsum = max(ancest_cumsum, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      DATE = list(
+        seq(
+          from = last_date %m+% lubridate::months(window_months),
+          to = max_date,
+          by = paste(window_months, "months")
+        )
+      )
+    ) |>
+    tidyr::unnest(DATE) |>
+    dplyr::ungroup() |>
+    dplyr::select(ancestry_group, DATE, ancest_cumsum)
+
+  # Add the rows containing the final totals
+  dplyr::bind_rows(
+    ancestry_df,
+    ancestry_df_totals
+  )
 }
 
 # Add final totals, for reversed axis:
@@ -175,4 +217,62 @@ add_final_totals_reversed <- function(ancestry_df){
 
   return(ancestry_df)
 
+}
+
+
+add_final_totals <- function(ancestry_df,
+                             window_months = 12) {
+
+  max_date <- max(ancestry_df$DATE,
+                  na.rm = TRUE)
+
+  dates_to_add_total_tally_to <-
+  ancestry_df |>
+    dplyr::ungroup() |>
+    dplyr::filter(!is.na(DATE)) |>
+    dplyr::group_by(ancestry_group) |>
+    dplyr::slice_max(DATE, with_ties = FALSE) |>
+    select(ancestry_group, DATE) |>
+    mutate(
+      date_windows =
+      stringr::str_flatten(
+      c(
+      seq(ymd(DATE),
+          ymd(max_date),
+          by= paste0(window_months, " months")),
+      max_date),
+     collapse = ";")
+    ) |>
+    tidyr::separate_longer_delim(date_windows,
+                                 delim = ";") |>
+    select(-DATE) |>
+    rename(DATE = date_windows) |>
+    ungroup() |>
+    distinct()
+
+  total_tally <- ancestry_df |>
+    dplyr::group_by(ancestry_group) |>
+    dplyr::slice_max(ancest_cumsum,
+                     n = 1,
+                     with_ties = FALSE) |>
+    ungroup() |>
+    dplyr::select(ancestry_group, ancest_cumsum)
+
+  totals <-
+  left_join(
+  dates_to_add_total_tally_to,
+  total_tally,
+  by = "ancestry_group"
+  ) |>
+    dplyr::select(ancestry_group,
+                  DATE,
+                  ancest_cumsum) |>
+    dplyr::mutate(DATE = lubridate::ymd(DATE))
+
+  ancestry_df <-
+  dplyr::bind_rows(dplyr::ungroup(ancestry_df) |>
+                   dplyr::mutate(DATE = lubridate::ymd(DATE)),
+                   totals)
+
+  return(ancestry_df)
 }

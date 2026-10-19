@@ -71,7 +71,7 @@ get_ancestry_from_sample_desc = function(sample_description){
     '(?<!Afro-Caribbean or )African(?:-|\\s)American(?! or Afro-Cari)',
     '(?<!or )Afro-Caribbean(?! or Afr)',
     'African unspecified',
-    '^African(?= cases)',
+    '^African(?=( cases|-like))',
     '(?<!(South|North|West|Sub-[Ss]aharan) )African(?= (ancestry|and))',
     '(?<!(South|North|West|Sub-[Ss]aharan) )African(?!(-|\\s)|(or))',
     'South African Zulu(?= ancestry)',
@@ -84,6 +84,7 @@ get_ancestry_from_sample_desc = function(sample_description){
     'Black(?! or)(?! British)',
     'Kenyan(?= ancestry)',
     '(?<!or )Zulu(?= ancestry)',
+    'African',
 
     # Oceanian
     'Fijian Indian',
@@ -94,6 +95,7 @@ get_ancestry_from_sample_desc = function(sample_description){
     'Pacific Islander',
 
     # American Native, Latino, American Admixed
+    "Admixed American(?=-like)",
     'American Indian\\/Alaskan Native',
     'American Indian(?!\\/)',
     '(?<!Indigenous )Mexican and other Latin American',
@@ -216,7 +218,8 @@ get_ancestry_from_sample_desc = function(sample_description){
     "White(?= ancestry)",
     'Mixed race',
     'Greenlandic Inuit(?= ancestry)',
-    'Greenlandic(?= ancestry)'
+    'Greenlandic(?= ancestry)',
+    'First Nation'
   )
 
   ancestry_terms <- single_ancestry_terms
@@ -555,7 +558,8 @@ group_pop_labels <- function(study_desc) {
     ) ~ "Aboriginal Australian",
 
     # Other
-    study_desc %in% c('Other') ~ "Other",
+    study_desc %in% c('Other',
+                      'First Nation') ~ "Other",
 
     # Other Admixed
     study_desc %in% c('Other-Admixed',
