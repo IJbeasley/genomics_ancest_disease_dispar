@@ -507,15 +507,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeec7486e504edeeea59a47a569b31855b4408e65dtargetblankec7486ea">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebabadbc28c999422a8857ae3da4171f03905aba1targetblankbabadbca">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ec7486e504edeeea59a47a569b31855b4408e65d" target="_blank">ec7486e</a>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/babadbc28c999422a8857ae3da4171f03905aba1" target="_blank">babadbc</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreeec7486e504edeeea59a47a569b31855b4408e65dtargetblankec7486ea"
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartreebabadbc28c999422a8857ae3da4171f03905aba1targetblankbabadbca"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -525,7 +525,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/ec7486e504edeeea59a47a569b31855b4408e65d" target="_blank">ec7486e</a>.
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/babadbc28c999422a8857ae3da4171f03905aba1" target="_blank">babadbc</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -618,13 +618,10 @@ Untracked files:
     Untracked:  analysis/24_prep_finetune_after_doccano.Rmd
     Untracked:  analysis/ancestry_compositon.Rmd
     Untracked:  analysis/compare_cohort_annot.Rmd
-    Untracked:  analysis/lag_pub_to_catalog.Rmd
     Untracked:  analysis/normalise_cohort_annot.Rmd
     Untracked:  analysis/process_gwas_cat_ancestry_grp.Rmd
     Untracked:  code/journal_meta/
     Untracked:  code/training_set/
-    Untracked:  lag_to_catalog.R
-    Untracked:  papers_over_time.R
     Untracked:  plot_pubmedert_performance.R
 
 Unstaged changes:
@@ -633,6 +630,7 @@ Unstaged changes:
     Modified:   analysis/31_correcting_cohort_names.Rmd
     Modified:   analysis/disease_inves_by_ancest.Rmd
     Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
+    Modified:   analysis/index.Rmd
     Modified:   analysis/replication_ancestry_bias.Rmd
     Modified:   analysis/specific_aims_stats.Rmd
     Modified:   code/cohort_norm/normalize_cohort_names.R
@@ -682,6 +680,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/babadbc28c999422a8857ae3da4171f03905aba1/analysis/07_gwas_to_gbd.Rmd" target="_blank">babadbc</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Update figures
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/IJbeasley/genomics_ancest_disease_dispar/448d0d3e790f7223b5ed73d78c67e2a7d53f2f5f/docs/07_gwas_to_gbd.html" target="_blank">448d0d3</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -2075,6 +2107,36 @@ gwas_cat_papers |&gt;
 dev.off()</code></pre>
 <pre><code>quartz_off_screen 
                 2 </code></pre>
+<pre class="r"><code>cairo_pdf(here::here(&quot;figures/priority_diseases_prop_gwas_cat_overtime_stackedbar.pdf&quot;),
+          width = 7.7,
+          height = 5,
+          family = &quot;Atkinson Hyperlegible Next&quot;)
+
+gwas_cat_papers |&gt;
+  mutate(study_type = case_when(DISEASE_STUDY == T &amp; priority_condition == &quot;Yes&quot; ~ &quot;Priority Condition&quot;,
+                                            DISEASE_STUDY == T &amp; priority_condition == &quot;No&quot; ~ &quot;Other Disease&quot;,
+                                            DISEASE_STUDY == F ~ &quot;Non-Disease&quot;)) |&gt;
+  # group_by(YEAR) |&gt;
+  # summarise(n_disease_studies = sum(DISEASE_STUDY == T),
+  #           n_priority_condition_studies = sum(priority_condition == &quot;Yes&quot;),
+  #           n_total_studies = n()) |&gt;
+  # mutate(n_other = n_total_studies - n_disease_studies) |&gt;
+  # select(-n_total_studies) |&gt;
+  # tidyr::pivot_longer(cols = c(n_disease_studies, n_priority_condition_studies, n_other),
+  #                     names_to = &quot;study_type&quot;,
+  #                     values_to = &quot;n_studies&quot;) |&gt;
+  # mutate(study_type = stringr::str_remove_all(study_type, &quot;n_&quot;)) |&gt;
+  ggplot(aes(x = YEAR, fill = study_type)) +
+  geom_bar() +
+  scale_fill_brewer(palette = &quot;Dark2&quot;)  +
+  labs(x = &quot;Publication year&quot;,
+       y = &quot;Number of Papers&quot;,
+       fill = &quot;GWAS Study Phenotype&quot;) +
+  theme_bw()
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
 </div>
 <div id="check-overlap-upset-plot-of-studies-mapped-to-different-causes"
 class="section level1">
@@ -2313,7 +2375,7 @@ UpSet(upset_matrix_lancet_conditions,
       # matrix.color = &quot;#D55E00&quot;, 
       #text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
       )</code></pre>
-<p><img src="figure/07_gwas_to_gbd.Rmd/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p><img src="figure/07_gwas_to_gbd.Rmd/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
 <pre class="r"><code># disease_mapping_with_cause |&gt;
 #   filter(include == TRUE) |&gt;
 #   filter(!is.na(lancet_condition)) |&gt;
