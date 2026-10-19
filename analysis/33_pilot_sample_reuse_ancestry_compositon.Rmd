@@ -1,0 +1,1905 @@
+---
+title: "Estimate Ancestry Composition Correcting for Cohort Reuse/Overlap"
+author: "Isobel Beasley"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_packages, message=FALSE, warning=FALSE}
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(ggstar)
+library(ggplot2)
+library(slider)
+
+```
+
+# Loading GWAS Study Data
+
+```{r load_gwas_date_data}
+
+gwas_date <- data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2026-09-13.tsv"),
+                               select = c("STUDY ACCESSION", "DATE", "PUBMED ID"),
+                               sep = "\t", 
+                               quote = "")
+
+gwas_date = gwas_date |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_date <- gwas_date |>
+  distinct()
+
+```
+
+```{r load_gwas_study_data}
+
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_accession_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::filter(cause != "") |>
+  dplyr::filter(include == T)
+
+gwas_study_info  <-
+  gwas_study_info  |>
+  # group into broader categories 
+  mutate(cause_grp = case_when(
+    grepl("diabetes", cause, ignore.case = TRUE) ~ "Diabetes",
+    grepl("chronic kidney disease", cause, ignore.case = TRUE) ~ "Chronic kidney disease",
+    grepl("hemorr", cause, ignore.case = TRUE) ~ "Hemorrhagic stroke",
+    grepl("lip|pharynx", cause, ignore.case = TRUE) ~ "Mouth and throat cancer",
+    grepl("lung cancer", cause, ignore.case = TRUE) ~ "Lung Cancer",
+    grepl("cirrhosis", cause, ignore.case = TRUE) ~ "Chronic Liver Disease",
+    TRUE ~ cause
+  )) 
+  # mutate(cause = 
+  #          stringr::str_to_title(
+  #          stringr::str_replace_all(cause, 
+  #                                         pattern = "and", 
+  #                                         replacement = "&")
+  #          )
+  #          ) 
+
+
+gwas_study_info <-
+gwas_study_info |>
+  distinct(PUBMED_ID, STUDY_ACCESSION, cause, cause_grp)
+
+gwas_study_info  |>
+  distinct(cause_grp, PUBMED_ID) |>
+  group_by(cause_grp) |>
+  summarise(n_papers = n()) |>
+  arrange(n_papers)
+
+
+```
+
+## Load ancestry + sample size information
+
+```{r load_gwas_ancestry_date}
+
+gwas_ancest_info <-  data.table::fread(here::here("output/gwas_cat/gwas_ancest_discovery_subset_processed.csv"))
+
+gwas_ancest_info  = 
+  gwas_ancest_info  |>
+  rename_all(~gsub(" ", "_", .x))
+
+# filter only to included STUDY ACCESSIONS
+gwas_study_info$STUDY_ACCESSION |> unique() |> length()
+
+gwas_ancest_info <-
+  gwas_ancest_info |>
+  dplyr::filter(STUDY_ACCESSION %in% unique(gwas_study_info$STUDY_ACCESSION))
+
+gwas_ancest_info |>
+    dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS)) 
+
+gwas_ancest_info  =
+gwas_ancest_info |>
+dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS))
+
+
+```
+
+```{r group_ancestry}
+
+source(here::here("code/pop_desc_processing/plot_gwas_ancest_comp.R"))
+
+grouped_ancest = vector()
+broad_ancest_cat = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+
+for(study_ancest in broad_ancest_cat){
+  
+grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
+
+}
+
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = broad_ancest_cat
+                                )
+
+
+print("See some example mappings between BROAD_ANCESTRAL_CATEGORY and ancestry_group")
+print(dplyr::slice_sample(grouped_ancest_map, n = 5))
+
+gwas_ancest_info = dplyr::left_join(
+            gwas_ancest_info,
+            grouped_ancest_map,
+            by = "BROAD_ANCESTRAL_CATEGORY")
+
+gwas_ancest_info = gwas_ancest_info |>
+                    dplyr::mutate(ancestry_group = factor(ancestry_group, 
+                                                          levels = ancestry_levels))
+
+
+gwas_ancest_info <-
+  left_join(gwas_ancest_info,
+            gwas_date,
+            by = c("STUDY_ACCESSION", "PUBMED_ID"))
+
+
+gwas_info <- full_join(
+  gwas_ancest_info, 
+  gwas_study_info,
+  by = c("PUBMED_ID", "STUDY_ACCESSION"),
+  relationship = "many-to-many"
+)
+
+
+```
+
+
+## Load / clean up annotated cohort names 
+
+```{r clean_cohort_annotations}
+
+cohort_norm <- data.table::fread(here::here("training_papers_test_cohort_norm.csv"))
+
+cohort_norm <-
+cohort_norm  |>
+  filter(not_cohort == FALSE) 
+
+cohort_names <- readxl::read_xlsx(here::here("data/cohort/cohort_desc_v3_sep17.xlsx"),
+                                    sheet = 1) |>
+                select(short_name, cohort_norm = full_name, cohort_group) |>
+                distinct()
+
+cohort_norm <-
+cohort_norm  |>
+  mutate(cohort_norm = ifelse(cohort_norm == "",
+                              "Other",
+                              cohort_norm))
+
+cohort_names <- cohort_names |>
+    dplyr::mutate(
+        cohort_norm = gsub("\u00A0", " ", cohort_norm)
+    )
+
+cohort_norm <- 
+left_join(
+  cohort_norm,
+  cohort_names,
+  relationship = "many-to-many",
+  by = "cohort_norm") 
+
+# drop cohorts without cohort groups and are likely not cohorts
+cohort_norm  <- 
+  cohort_norm  |>
+  filter(not_cohort == F | !is.na(cohort_group))
+
+cohort_norm  <-
+  cohort_norm  |>
+  tidyr::separate_longer_delim(cohort_group, ", ")
+
+# exclude probable reference or functional genetics cohorts:
+cohort_norm  <-
+cohort_norm  |>
+  filter(!cohort_group %in% 
+           c("gnomAD",
+             "GTEx",
+             "1000 Genomes",
+             "HapMap",
+             "ENCODE",
+             "Roadmap Epigenomics",
+             "eQTLGen",
+             "HRC"))
+
+cohort_norm <-
+  cohort_norm |>
+  mutate(cohort_group = 
+           case_when(is.na(cohort_group) & 
+                       cohort_norm == "Genetics Of Sepsis and Septic Shock" ~ 
+                       "Genetics Of Sepsis and Septic Shock (GenOSept)",
+                     is.na(cohort_group) & cohort_norm == "deCODE genetics" ~ 
+                       "deCODE genetics",
+                     cohort_group == "CHARGE" ~ 
+                       "Cohorts for Heart and Aging Research in Genomic Epidemiology (CHARGE)",
+            TRUE ~ cohort_group)
+         )
+
+```
+
+
+
+
+# Ancestry composition by disease
+
+## Rheumatic heart disease
+
+```{r rhd_numbers}
+
+gwas_info |>
+  filter(cause_grp == "Rheumatic heart disease")  |>
+  distinct(PUBMED_ID, STUDY_ACCESSION) |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  filter(n > 1)
+
+```
+
+### Without any correction 
+
+```{r rhd_no_correction}
+
+window_months <- 6
+  
+rhd_no_correction <- gwas_info |>
+  filter(cause_grp == "Rheumatic heart disease") |>
+  arrange(DATE) |>
+  group_by(ancestry_group) |>
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) |>
+  add_final_totals(window_months = window_months) |>
+  ungroup()
+
+rhd_no_correction_smooth <- rhd_no_correction |>
+  mutate(month = floor_date(DATE, "month")) |>
+  group_by(ancestry_group, month) |>
+  summarise(ancest_cumsum = max(ancest_cumsum), 
+            .groups = "drop") |>
+  complete(ancestry_group,
+           month = seq(min(month), 
+                       max(month), 
+                       by = "month")) |>   # same grid for all groups
+  group_by(ancestry_group) |>
+  arrange(month, .by_group = TRUE) |>
+  fill(ancest_cumsum, .direction = "down") |>                       # carry totals forward
+  replace_na(list(ancest_cumsum = 0)) |>                            # 0 before first study
+  mutate(smooth = slide_dbl(ancest_cumsum, mean,
+                            .before = window_months, 
+                            .after = 0)) |>  # trailing window
+  ungroup()
+
+ggplot(rhd_no_correction_smooth, aes(x = month, 
+                       y = smooth / 1e6, 
+                       fill = ancestry_group)) +
+  geom_area(position = "stack") +
+  scale_x_date(date_labels = "%Y", 
+               date_breaks = "2 years") +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Individuals in GWAS catalog (millions)",
+       title = "Rheumatic heart disease papers (standard figure)") +
+  scale_fill_manual(values = ancestry_colors, name = "Ancestry group")
+
+
+```
+
+
+### Correcting for overlap within the same paper
+
+```{r rhd_within_paper_overlap}
+
+# some PAPERS have multiple study accession per PUBMED_ID for rhd
+multiple_study_accessions <-
+  gwas_info |>
+  filter(cause_grp == "Rheumatic heart disease")  |>
+  distinct(PUBMED_ID, STUDY_ACCESSION) |>
+  group_by(PUBMED_ID) |>
+  summarise(n = n()) |>
+  filter(n > 1) |>
+  pull(PUBMED_ID)
+
+# which of these have difference sample sizes per STUDY_ACCESSION + ANCESTRY_GROUP
+# if they have have the sample size per  STUDY_ACCESSION + ANCESTRY_GROUP we'll assume
+# these are the same participants duplicated
+difference_sample_size_per_study <-
+gwas_info |>
+    filter(cause_grp == "Rheumatic heart disease") |> 
+    filter(PUBMED_ID %in% multiple_study_accessions) |>  
+    distinct(PUBMED_ID, 
+             STUDY_ACCESSION, 
+             ancestry_group, 
+             NUMBER_OF_INDIVIDUALS)  |> 
+  group_by(PUBMED_ID, 
+           ancestry_group) |> 
+  summarise(NUMBER_OF_INDIVIDUALS_MAX = max(NUMBER_OF_INDIVIDUALS), 
+            NUMBER_OF_INDIVIDUALS_MIN = min(NUMBER_OF_INDIVIDUALS),
+            n = n(),
+            .groups = "drop") |>
+  ungroup() |>
+  filter(NUMBER_OF_INDIVIDUALS_MAX != NUMBER_OF_INDIVIDUALS_MIN) |>
+  mutate(dif  = NUMBER_OF_INDIVIDUALS_MAX - NUMBER_OF_INDIVIDUALS_MIN)
+
+difference_sample_size_per_study 
+
+difference_sample_size_per_study  |>
+  mutate(dif_prop = 100 * dif / NUMBER_OF_INDIVIDUALS_MIN) |> 
+  filter()
+
+# manual review of STUDY SAMPLE SIZES  34594039, 40465716, 39024449, 34662886, 34662886, 30104761
+# same samples used for discovery across all STUDY_ACCESSION
+# difference is just availability of phenotype info
+# taking max sample size per ancestry group is appropriate
+
+rhd_control_in_paper <- gwas_info |>
+  filter(cause_grp == "Rheumatic heart disease") |>
+  group_by(PUBMED_ID, BROAD_ANCESTRAL_CATEGORY) |>
+  slice_max(order_by = NUMBER_OF_INDIVIDUALS,
+            n = 1, 
+            with_ties = FALSE) |>  # avoid double-counting ties
+  ungroup() |>
+  arrange(DATE) |>
+  group_by(ancestry_group) |>
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) 
+
+# double check not multiple STUDY ACCESSION per ancestry group:
+rhd_control_in_paper |> 
+  group_by(ancestry_group, PUBMED_ID) |> 
+  summarise(n = n(),
+            .groups = 'drop') |> 
+  filter(n > 1)
+
+rhd_control_in_paper_plot_df <-
+  rhd_control_in_paper |>
+  add_final_totals() |>
+  ungroup()
+
+rhd_smooth_in_paper <- rhd_control_in_paper_plot_df |>
+  mutate(month = floor_date(DATE, "month")) |>
+  group_by(ancestry_group, month) |>
+  summarise(ancest_cumsum = max(ancest_cumsum), .groups = "drop") |>
+  complete(ancestry_group,
+           month = seq(min(month), max(month), by = "month")) |>   # same grid for all groups
+  group_by(ancestry_group) |>
+  arrange(month, .by_group = TRUE) |>
+  fill(ancest_cumsum, .direction = "down") |>                       # carry totals forward
+  replace_na(list(ancest_cumsum = 0)) |>                            # 0 before first study
+  mutate(smooth = slide_dbl(ancest_cumsum, mean,
+                            .before = window_months, .after = 0)) |>  # trailing window
+  ungroup()
+
+ggplot(rhd_smooth_in_paper, 
+       aes(x = month, 
+           y = smooth / 1e6, 
+           fill = ancestry_group)) +
+  geom_area(position = "stack") +
+  scale_x_date(date_labels = "%Y", 
+               date_breaks = "2 years") +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Individuals in GWAS catalog (millions)",
+       title = "Rheumatic heart disease papers (accounting for within paper overlap)") +
+  scale_fill_manual(values = ancestry_colors, 
+                    name = "Ancestry group")
+
+```
+
+### Correctiion for all overlap
+
+Cohort reuse etc. 
+
+
+### Get full set of cohorts for RHD
+
+```{r}
+
+rhd_pmids <-
+gwas_info |>
+    filter(cause_grp == "Rheumatic heart disease") |> 
+     pull(PUBMED_ID) |> 
+     unique()
+
+rhd_cohort_norm <- cohort_norm |>
+                   filter(pubmed_id %in% rhd_pmids)
+
+# manual check of cohorts by reading papers
+# remove non-discovery cohorts
+
+# WTCCC is not a GWAS discovery cohort for 28492228, it is a method of recruitment etc. followed
+# by this paper
+# 'Following the approach of the Wellcome Trust Case Control Consortium' 
+# thus drop
+
+# Also HGDP is just used as a reference panel in this paper, thus drop:
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+  filter(!(pubmed_id == "28492228" & cohort_group == "WTCCC")) |>
+  filter(!(pubmed_id == "28492228" & cohort_group == "HGDP")) 
+  
+# Similarly for 32488134, 
+# WTCCC is not a GWAS discovery cohort, it is a method of recruitment etc. 
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+   filter(!(pubmed_id == "32488134" & cohort_group == "WTCCC"))
+
+# For pubmed 34662886
+# Only discovery cohort is UK Biobank, other cohorts are for imputation or replication
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+  filter(!(pubmed_id == "34662886" & cohort_group != "UK Biobank")) 
+
+# For pubmed id: 36716318
+# FinnGen is a replication cohort only
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+  filter(!(pubmed_id == "36716318" & cohort_group == "FinnGen"))
+
+# for pubmed id: 23388002
+# discovery cohort is three CHARGE cohorts
+# AGES, Framingham, and MESA
+# drop all other cohorts 
+
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+      filter(
+        !(pubmed_id == "23388002" & 
+              !(cohort_group %in% c("Age Gene/Environment Susceptibility Reykjavik Study (AGES)", 
+                                                           "Framingham Heart Study", 
+                                                           "Multi-Ethnic Study of Atherosclerosis (MESA)")
+      )))
+
+# for PUBMED ID, GCST9028115 is the only RHD relevant study
+# and only UK Biobank Data was used for discovery in this Study
+# drop all other cohorts
+gwas_study_info |>
+  filter(PUBMED_ID == "36716318")
+
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+      filter(
+        !(pubmed_id == "36716318" & 
+              !(cohort_group %in% c("UK Biobank")
+      )))
+
+# for 32488134, UK Biobank is replication only
+# Type 1 Diabetes Genetics Consortium is HLA imputation / reference panel 
+rhd_cohort_norm <-
+  rhd_cohort_norm |>
+      filter(!(pubmed_id == "32488134" & cohort_group == "UK Biobank")) |> 
+      filter(!(pubmed_id == "32488134" & cohort_group == "Type 1 Diabetes Genetics Consortium (T1DGC)"))
+
+
+# 34594039, only  Biobank Japan (BBJ), FinnGen, UK Biobank are discovery cohorts
+# drop all other cohorts
+rhd_cohort_norm <-
+    rhd_cohort_norm |>
+      filter(
+        !(pubmed_id == "34594039" & 
+              !(cohort_group %in% c("Biobank Japan (BBJ)",
+                                    "FinnGen",
+                                    "UK Biobank")
+      )))
+  
+rhd_cohort_norm  <-
+  rhd_cohort_norm  |>
+  distinct(pubmed_id, cohort_group)
+
+# manually add any missing cohorts
+add_manual_cohort_annot <-
+  data.frame(pubmed_id = c(34106200, 
+                           40465716, 
+                           40770095, 
+                           32066683, 
+                           28492228, 
+                           32488134),
+             cohort_group = c("Genetics of Rheumatic Heart Disease (RHDGen)",
+                              "HiGenome",
+                              "UK Biobank",
+                              "Unspecified Australian (Described in 21524186, 23010488, 20361910)",
+                              "Pacific Islands Rheumatic Heart Disease Genetics Network",
+                              "Pacific Islands Rheumatic Heart Disease Genetics Network; Unspecified Samples from Sanjay Gandhi Postgraduate Institute of Medical Sciences (SGPGIMS) (Described in 23749169, 24797343, 25273327)"
+             )
+  )
+
+rhd_cohort_norm <-
+  rows_append(rhd_cohort_norm,
+              add_manual_cohort_annot) |>
+  tidyr::separate_longer_delim(cohort_group, ";") |>
+  distinct()
+
+
+# for 32488134 Fijian Indian Samples come from 28492228 (Pacific Islands Rheumatic Heart Disease Genetics Network)
+# so although cohort not specified, add cohort here to ensure overlap is accounted for 
+# gwas_ancest_info |> filter(PUBMED_ID == "28492228")  - 2017
+# 168 Fijian Indian cases, 151 Fijian Indian controls
+# the South Asian                   319   
+
+# gwas_ancest_info_orig |> filter(PUBMED_ID == "32488134") - 2020
+# 162 Fijian Indian cases, 147 Fijian Indian controls
+
+# number of cohorts per pubmed id
+rhd_cohort_norm  |>
+  group_by(pubmed_id) |>
+  summarise(n = n()) |>
+  filter(n > 1) |>
+  arrange(desc(n)) |>
+  head()
+
+# number of pubmeds with only one cohort
+rhd_cohort_norm  |>
+  group_by(pubmed_id) |>
+  summarise(n = n())  |>
+  filter(n == 1) |>
+  nrow()
+
+rhd_cohort_pmids <-
+rhd_cohort_norm |>
+  pull(pubmed_id) |>
+  unique()
+
+# check that have cohort info for all relevant pmids:
+
+stopifnot(all(rhd_cohort_pmids %in% rhd_pmids))
+stopifnot(all(rhd_pmids %in% rhd_cohort_pmids))
+
+# use semicolon instead of comma, to prevent later unwanted splitting
+rhd_cohort_norm  <-
+rhd_cohort_norm  |>
+  group_by(pubmed_id) |>
+  summarise(cohort = stringr::str_flatten(sort(cohort_group), 
+                                          collapse = "; "),
+            
+            ) |>
+  mutate(cohort = stringr::str_squish(cohort))
+
+```
+
+
+### Match cohorts to sample sizes 
+
+```{r}
+
+rhd_cohort_correction <-
+left_join(
+  rhd_cohort_norm |> rename(PUBMED_ID = pubmed_id),
+  rhd_control_in_paper |> 
+    select(-STUDY_ACCESSION, -ancest_cumsum),
+  by = "PUBMED_ID"
+) |>
+  tidyr::separate_longer_delim(cohort, "; ") |>
+  mutate(cohort = stringr::str_squish(cohort))
+
+
+# drop mismatching cohorts to ancestry groups 
+
+# all FinnGen Samples are European ancestry
+rhd_cohort_correction <-
+  rhd_cohort_correction |>
+  filter(!c(ancestry_group != "European" & cohort == "FinnGen")) 
+
+# no "Pacific Islands Rheumatic Heart Disease Genetics Network",
+# Unspecified Samples from Sanjay Gandhi Postgraduate Institute of Medical Sciences (SGPGIMS) (Described in 23749169, 24797343, 25273327) are European
+rhd_cohort_correction <-
+  rhd_cohort_correction |>
+  filter(!c(ancestry_group == "European" & grepl("SGPGIMS|Pacific Islands", cohort)))
+
+rhd_cohort_correction <-
+  rhd_cohort_correction |>
+  # 32488134 only uses European samples of 23&Me and UK Biobank 
+  filter(!c(ancestry_group != "European" & cohort == "UK Biobank" & PUBMED_ID == "32488134")) |>
+  filter(!c(ancestry_group != "European" & cohort == "23&Me" & PUBMED_ID == "32488134")) 
+
+# 34594039o only uses European ancestry samples of UK Biobank
+# and no samples in Biobank Japan (BBJ) are European ancestry
+rhd_cohort_correction <-
+  rhd_cohort_correction |>
+   filter(!c(ancestry_group != "European" & cohort == "UK Biobank" & PUBMED_ID == "34594039")) |>
+  filter(!c(ancestry_group == "European" & cohort %in% c("Biobank Japan (BBJ)", 
+                                                         "Tohoku Medical Megabank") & PUBMED_ID == "34594039")
+         ) 
+
+
+# separate out Pacific Islands Rheumatic Heart Disease Genetics Network Samples 
+# and other samples for PUBMED_ID: 32488134
+rhd_cohort_correction <- 
+  rhd_cohort_correction |>
+  mutate(NUMBER_OF_INDIVIDUALS = 
+    case_when(
+    PUBMED_ID == 32488134 & 
+      ancestry_group != "European" &
+      cohort == "Pacific Islands Rheumatic Heart Disease Genetics Network" ~ 309,
+    PUBMED_ID == 32488134 & 
+      ancestry_group != "European" &
+      cohort != "Pacific Islands Rheumatic Heart Disease Genetics Network" ~ NUMBER_OF_INDIVIDUALS - 309,
+    TRUE ~ NUMBER_OF_INDIVIDUALS )
+  )
+
+rhd_cohort_correction <- 
+rhd_cohort_correction |>
+  group_by(PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS, DATE) |>
+  summarise(cohort = stringr::str_flatten(sort(cohort), 
+                                          collapse = "; "),
+            .groups = 'drop') |> 
+  # if only single cohort per PUBMED and ancestry_group then all samples come from this cohort
+  mutate(N_cohort = 
+           ifelse(!grepl(";", cohort),
+                           NUMBER_OF_INDIVIDUALS,
+                           NA)) 
+
+# multi-study cohorts:
+multi_study_cohorts <-
+    rhd_cohort_norm  |>
+    tidyr::separate_longer_delim(cohort, "; ") |>
+    mutate(cohort = stringr::str_squish(cohort)) |>
+    distinct(pubmed_id, cohort) |>
+    group_by(cohort) |>
+    summarise(n = n())  |>
+    filter(n > 1) |>
+    pull(cohort)
+
+
+rhd_cohort_correction |> filter(is.na(N_cohort))
+
+uses_shared <- sapply(strsplit(rhd_cohort_correction$cohort, "; "),
+                      \(x) any(x %in% multi_study_cohorts))
+
+# if N cannot be assigned to any cohort, but none of the cohorts are used as discovery in other papers
+# no need to separate N_cohort out by cohort, so just assign N_cohort to NUMBER_OF_INDIVIDUALS
+rhd_cohort_correction <-
+rhd_cohort_correction |>
+  ungroup() |>
+  mutate(N_cohort = 
+           ifelse(!uses_shared & is.na(N_cohort),
+                  NUMBER_OF_INDIVIDUALS,
+                  N_cohort
+                  )
+         )
+
+# what N left to assign: 
+rhd_cohort_correction |> filter(is.na(N_cohort))
+
+# just need to disambiguate FinnGen from UK Biobank for 34594039
+# ? can't see in paper how to disambiguate .. 
+# so estimate from relative proportions of FinnGen to UK Biobank overall taken from Extended Data Fig. 1
+# (assuming approximately same level of missing phenotypes per biobank)
+
+ukbb_34594039_ratio = 358000 / (136000 + 358000)
+
+# double check that spliting on FinnGen; is not going to create problems
+stopifnot(
+nrow(
+rhd_cohort_correction |> 
+  filter(grepl("FinnGen; ", cohort)) 
+) == 1
+)
+
+stopifnot(
+nrow(
+rhd_cohort_correction |> 
+  filter(grepl("FinnGen; ", cohort))  |>
+  filter(PUBMED_ID == "34594039")
+) == 1
+)
+
+rhd_cohort_correction <-
+rhd_cohort_correction |>
+  ungroup() |>
+  tidyr::separate_longer_delim(cohort, 
+                               delim = 
+                                 stringr::regex("FinnGen; ")
+) |>
+  mutate(cohort = ifelse(
+    cohort == "" & PUBMED_ID == 34594039,
+    "FinnGen",
+    cohort
+  )) |>
+  mutate(N_cohort = 
+           case_when(PUBMED_ID == 34594039 & cohort == "UK Biobank" & is.na(N_cohort) ~ 
+                      round(ukbb_34594039_ratio  * NUMBER_OF_INDIVIDUALS, digits = 0),
+                     PUBMED_ID == 34594039 & cohort == "FinnGen" & is.na(N_cohort) ~ 
+                      round((1 - ukbb_34594039_ratio) * NUMBER_OF_INDIVIDUALS, digits = 0), 
+                     TRUE ~ N_cohort
+                     )
+         )
+
+
+# check no shared cohort is within a multi-cohort row
+uses_shared <- sapply(strsplit(rhd_cohort_correction$cohort, "; "),
+                      \(x) any(x %in% multi_study_cohorts))
+
+stopifnot(
+nrow(
+rhd_cohort_correction  |>
+  filter(grepl(";", cohort) & uses_shared) 
+) == 0
+)
+  
+stopifnot(
+nrow(
+rhd_cohort_correction |> 
+  filter(is.na(N_cohort)) 
+)== 0
+)
+
+
+rhd_cohort_correction |>
+  select( -NUMBER_OF_INDIVIDUALS) |> 
+  data.table::fwrite(here::here("rhd_paper_cohorts_sample_n.csv"), 
+                     sep = ",")
+
+```
+
+
+### Plot cumulative samples 
+
+```{r}
+
+rhd_cohort_correction_final <-
+  rhd_cohort_correction |>
+  arrange(ancestry_group, cohort, DATE) |>
+  group_by(ancestry_group, cohort) |>
+  mutate(
+    previous_max = lag(cummax(N_cohort), default = 0),
+    N_new        = pmax(N_cohort - previous_max, 0),
+    N_cumsum     = cumsum(N_new)
+  ) |>
+  ungroup() |>
+  arrange(ancestry_group, DATE) |>          # <- add this
+  group_by(ancestry_group) |>
+  mutate(ancest_cumsum = cumsum(as.numeric(N_new))) |>
+  ungroup()
+
+# rhd_cohort_correction_final <-
+# rhd_cohort_correction |>
+#     arrange(ancestry_group, cohort, DATE) |>
+#     group_by(ancestry_group, cohort) |>
+#     mutate(
+#         previous_max = lag(cummax(N_cohort), default = 0),
+#         N_new = pmax(N_cohort - previous_max, 0),
+#         N_cumsum = cumsum(N_new)
+#     ) |>
+#   ungroup() |>
+#   group_by(ancestry_group) |>
+#   arrange(ancestry_group, cohort, DATE) |>
+#   mutate(ancest_cumsum = cumsum(as.numeric(N_new))) 
+
+rhd_cohort_correction_final_plot_df <-
+rhd_cohort_correction_final  |>
+  add_final_totals() |>
+  ungroup()
+
+rhd_cohort_correction_smooth_final_plot_df <- 
+  rhd_cohort_correction_final_plot_df |>
+  arrange(ancestry_group, cohort, DATE) |> 
+  group_by(ancestry_group) |>
+  mutate(month = floor_date(DATE, "month")) |>
+  arrange(month) |>
+  group_by(ancestry_group, month) |>
+  summarise(ancest_cumsum = max(ancest_cumsum), 
+            .groups = "drop") |>
+  complete(ancestry_group,
+           month = seq(min(month), max(month), 
+                       by = "month")) |>   # same grid for all groups
+  group_by(ancestry_group) |>
+  arrange(month, .by_group = TRUE) |>
+  fill(ancest_cumsum, .direction = "down") |>                       # carry totals forward
+  replace_na(list(ancest_cumsum = 0)) |>                            # 0 before first study
+  mutate(smooth = slide_dbl(ancest_cumsum, mean,
+                            .before = window_months, 
+                            .after = 0)) |>  # trailing window
+  ungroup()
+
+
+# # check the first date that 
+# first_publication <-
+# rhd_cohort_correction  |>
+# arrange(DATE) |>
+#   group_by(cohort, ancestry_group) |> 
+#   summarise(first_publication = first(PUBMED_ID),
+#             first_n_cohort = first(N_cohort))
+
+
+# rhd_cohort_correction <-
+#   left_join(
+#     rhd_cohort_correction,
+#     first_publication,
+#     by = c("cohort", "ancestry_group")
+#   )
+
+# drop not European samples for 32488134, 34594039 & UK Biobank
+# for FinnGen 
+
+# # for 36716318, N = 486,484 from the UK Biobank study.
+# # 32488134 23&Me samples come from 28928442
+# rhd_cohort_correction <-
+#   rhd_cohort_correction |>
+#   mutate(N_cohort = case_when(
+#           PUBMED_ID == 32488134 & cohort == "UK Biobank" & BROAD_ANCESTRAL_CATEGORY == "European" ~ 1459,
+#           PUBMED_ID == "36716318" & cohort == "UK Biobank" & BROAD_ANCESTRAL_CATEGORY == "European" ~ 486484,
+#           PUBMED_ID == "32488134" & cohort == "23&Me" & first_publication == "28928442" ~ first_n_cohort,
+#           PUBMED_ID == "34594039" & cohort == "UK Biobank" & BROAD_ANCESTRAL_CATEGORY == "European" ~ 361194,
+#           PUBMED_ID == "34594039" & cohort == "FinnGen" & BROAD_ANCESTRAL_CATEGORY == "European" ~ 135638,
+#           TRUE ~ N_cohort 
+#            )
+#   )
+
+
+
+# rhd_cohort_correction  <-
+#   rhd_cohort_correction  |>
+#   group_by(ancestry_group) |>
+#   mutate(N_unique = case_when(
+#     !(cohort %in% multi_study_cohorts) ~ Inf, 
+#     # if it's the earliest appearance of the cohort, and N_cohort is not na
+#     # then N_unique = N_cohort
+#     first_publication == PUBMED_ID & !is.na(N_cohort) ~ N_cohort,
+#     
+#     # if it's an additional appearance of the cohort, and N_cohort is not na
+#     # then N_unique = N_cohort - N_cohort (first appearance)
+#     first_publication != PUBMED_ID & !is.na(first_n_cohort) & !is.na(N_cohort) ~ pmax(N_cohort - first_n_cohort, 0),
+#       #N_cohort - first_n_cohort, #max(c(N_cohort - first_n_cohort, 0)),
+#     
+#     # specific examples
+#     #PUBMED_ID == "32488134" & first_publication  == "28928442" & cohort == "23&Me" ~ 0,
+#     
+#     TRUE ~ NA
+#   ))
+# 
+# rhd_cohort_correction_final <-
+# rhd_cohort_correction |>
+#   group_by(PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS, N_unique, N_cohort) |>
+#   summarise(
+#     cohort = stringr::str_flatten_comma(cohort)
+#   ) |>
+#   group_by(PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS) |>
+#   mutate(N_unique = 
+#            ifelse(is.infinite(N_unique), 
+#                   unique(NUMBER_OF_INDIVIDUALS) - sum(unique(N_unique[is.finite(N_unique)]), na.rm = TRUE),
+#                   N_unique
+#                   )
+#   ) |>
+#   mutate(N_unique = 
+#            ifelse(is.na(N_unique),
+#                   N_cohort,
+#                   N_unique)) |>
+#   mutate(N_cohort = ifelse(
+#     is.na(N_cohort),
+#     N_unique,
+#     N_cohort
+#   ))
+
+# rhd_cohort_correction_final <-
+# left_join(
+#     rhd_cohort_correction_final,
+#     gwas_date |> distinct(PUBMED_ID, DATE) 
+# ) |>
+#   ungroup()
+
+ggplot(rhd_cohort_correction_smooth_final_plot_df, 
+       aes(x = month, 
+           y = smooth / 1e6, 
+           fill = ancestry_group)) +
+  geom_area(position = "stack") +
+  scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Individuals in GWAS catalog (millions)",
+       title = "Rheumatic heart disease papers (accounting for sample overlap)") +
+  scale_fill_manual(values = ancestry_colors, name = "Ancestry group")
+  
+
+```
+
+```{r}
+
+# check all pubmeds included in both datasets
+uncorrected_df_pmids <- rhd_no_correction  |> 
+                        filter(!is.na(PUBMED_ID)) |>
+                        pull(PUBMED_ID) |> 
+                        unique() 
+
+corrected_df_pmids <- rhd_cohort_correction_final_plot_df  |> 
+                      filter(!is.na(PUBMED_ID)) |>
+                      pull(PUBMED_ID) |> 
+                      unique()
+
+all(
+uncorrected_df_pmids %in% corrected_df_pmids
+)
+
+all(
+corrected_df_pmids %in% uncorrected_df_pmids
+)
+
+after_correction_ps <-
+rhd_cohort_correction_final_plot_df |> 
+  group_by(ancestry_group) |> 
+  slice_max(ancest_cumsum) |>
+  distinct(ancest_cumsum, ancestry_group) |>
+  ungroup() |>
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+before_correction_ps <-
+  rhd_no_correction |>
+  group_by(ancestry_group) |> 
+  slice_max(ancest_cumsum) |>
+  distinct(ancest_cumsum, ancestry_group) |>
+  ungroup() |>
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+total_n_analysed <-
+before_correction_ps |>
+pull(ancest_cumsum) |>
+sum()
+
+  
+rbinom(
+       n = 10,
+       size =  total_n_analysed,
+       prob = before_correction_ps |>
+            filter(ancestry_group == "European") |>
+            pull(percentage)
+         )
+
+# assuming random sampling from collected samples 
+
+# probability of observing >= number of European samples
+pbinom(
+  q = before_correction_ps |>
+      filter(ancestry_group == "European") |>
+      pull(ancest_cumsum),
+  size =  total_n_analysed, #total number of analysed samples
+  prob =  after_correction_ps |>
+          filter(ancestry_group == "European") |>
+           pull(percentage),
+  lower.tail = FALSE
+         )
+
+# 95% expected range of percentage 0.65
+qbinom(
+  p = c(0.025, 0.975),
+       size =  total_n_analysed,
+       prob = after_correction_ps |>
+               filter(ancestry_group == "European") |>
+               pull(percentage),
+  lower.tail = TRUE
+         ) / total_n_analysed
+
+
+qbinom(
+  p = c(0.025, 0.975),
+       size =  total_n_analysed,
+       prob = after_correction_ps |>
+            filter(ancestry_group == "Asian") |>
+            pull(percentage),
+  lower.tail = TRUE
+         ) / total_n_analysed
+
+# 
+# data.frame(min = 0.6554224,
+#            max = 0.6558132,
+#            orig = 0.6556178,
+#            obs = 0.8734481,
+#            ancestry_group = "European") |>
+#   mutate(max = max/orig,
+#          obs = obs/orig,
+#          min = min/orig) |>
+#   ggplot(aes(y = ancestry_group)) + 
+#   geom_errorbar(aes(xmin = min,
+#                     xmax = max)) + 
+#   geom_point(aes(x = obs)) + 
+#   theme_bw()
+  
+
+# prop.test(x = 
+#           n = total_n_analysed,
+#           p = c(before_correction_ps |>
+#             filter(ancestry_group == "European") |>
+#             pull(percentage),
+#              1 - before_correction_ps |>
+#             filter(ancestry_group == "European") |>
+#             pull(percentage))) 
+
+```
+
+
+### Plot ancestry composition change driven by cohort reuse etc.
+
+#### Line plot
+
+
+```{r}
+
+pdf(here::here("figures/rhd_ancestry_composition_change_lineplot.pdf"),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp <-
+rbind(
+  after_correction_ps |>
+  ungroup() |>
+  mutate(type = "After_correction"),
+  before_correction_ps |>
+  mutate(type = "Before_correction")
+)
+
+different_ancestry_comp  |>
+  mutate(type = ifelse(type == "After_correction",
+                       "Collected/recruited Samples",
+                       "All Analysed Samples")) |>
+  mutate(type = forcats::fct(type,
+                                   levels = c("Collected/recruited Samples",
+                                              "All Analysed Samples"))) |>
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group)) + 
+  geom_line() + 
+  geom_point() + 
+  scale_colour_manual(values = ancestry_colors, name = "Ancestry group") +
+  theme_bw() + 
+  labs(y = "% of samples") + 
+        theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5 
+        )
+        )
+
+
+dev.off()
+  
+
+```
+
+
+#### Scatterplot
+
+
+```{r}
+
+pdf(here::here("figures/rhd_ancestry_composition_change_scatterplot.pdf"),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp <-
+rbind(
+  after_correction_ps |>
+  ungroup() |>
+  mutate(type = "After_correction"),
+  before_correction_ps |>
+  mutate(type = "Before_correction")
+)
+
+different_ancestry_comp <-
+  different_ancestry_comp |>
+  select(-ancest_cumsum) |>
+  mutate(percentage = 100 * percentage) |>
+  tidyr::pivot_wider(names_from = "type",
+                     values_from = "percentage") 
+
+
+different_ancestry_comp  |>
+  ggplot(aes(y = Before_correction, 
+             x = After_correction,
+             colour = ancestry_group)) +
+  geom_point(size = 5) + 
+  scale_colour_manual(values = ancestry_colors, name = "Ancestry group") +
+  theme_bw() +
+  geom_abline(slope = 1,
+              intercept = 0,
+              linetype = 2) + 
+  xlim(0, 100) + 
+  ylim(0, 100) + 
+  labs(y = "Ancestry Composition (%) - Cohort Reuse",
+       x = "Ancestry Composition (%) - No Cohort Reuse") + 
+      theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5, 
+                         l = 2)
+      )
+
+dev.off()
+
+```
+
+
+#### Bargraph (Delta percentage)
+
+```{r}
+
+pdf(here::here("figures/rhd_ancestry_composition_change_bar_graph.pdf"),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp  |>
+  mutate(Difference = Before_correction - After_correction) |>
+  # mutate(ancestry_group  = ifelse(ancestry_group == "Hispanic/Latin American",
+  #                                 "Hispanic/\nLatin American",
+  #                                 ancestry_group)
+  #        )|>
+  ggplot(aes(x = ancestry_group, 
+             y = Difference,
+             fill = ancestry_group)) + 
+  geom_col() + 
+  theme_bw() + 
+  labs(x = "Ancestry group",
+       y = stringr::str_wrap("Over-representation due to sample overlap", 
+                             width = 50),
+       title = "A. Rheumatic Heart Disease Papers") + 
+  scale_fill_manual(values = ancestry_colors, 
+                      name = "Ancestry group") +
+  scale_y_continuous(labels = scales::label_percent(scale = 1)) +
+  scale_x_discrete(labels = scales::label_wrap(12)) + 
+  # scale_x_discrete(labels = \(x) stringr::str_wrap(gsub("/", "/ ", x), 
+  #                                                  width = 4)) + 
+    theme_minimal() +
+    theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    legend.position = "none",
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5, 
+                         l = 2),
+    # legend.position = "right",           # Bottom left corner
+    # legend.justification = "left",
+    # #legend.justification = c(0, 0),      # Anchor at bottom left
+    # #legend.background = element_rect(fill = "white", color = "grey80"),
+    # legend.margin = margin(l = -0.25, unit = "npc"),
+    #legend.margin = margin(5, 5, 5, 5),
+    
+    
+
+
+  )
+
+    dev.off()
+  
+
+```
+
+#### Bargraph (Percentage Enrichment)
+
+```{r plot_rhd_ancestry_enrichment}
+
+pdf(here::here("figures/rhd_ancestry_composition_change_enrichment_bar_graph.pdf"),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp  |>
+  mutate(Difference = (Before_correction - After_correction)/After_correction) |>
+  # mutate(ancestry_group  = ifelse(ancestry_group == "Hispanic/Latin American",
+  #                                 "Hispanic/\nLatin American",
+  #                                 ancestry_group)
+  #        )|>
+  ggplot(aes(x = ancestry_group, 
+             y = Difference,
+             fill = ancestry_group)) + 
+  geom_col() + 
+  theme_bw() + 
+  labs(x = "Ancestry group",
+       y = stringr::str_wrap("Relative representation due to cohort-reuse", 
+                             width = 50),
+       title = "A. Rheumatic Heart Disease Papers") + 
+  scale_fill_manual(values = ancestry_colors, 
+                      name = "Ancestry group") +
+  scale_y_continuous(labels = scales::label_percent(scale = 100)) +
+  scale_x_discrete(labels = scales::label_wrap(12)) + 
+  # scale_x_discrete(labels = \(x) stringr::str_wrap(gsub("/", "/ ", x), 
+  #                                                  width = 4)) + 
+    theme_minimal() +
+    theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    legend.position = "none",
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5, 
+                         l = 2),
+    # legend.position = "right",           # Bottom left corner
+    # legend.justification = "left",
+    # #legend.justification = c(0, 0),      # Anchor at bottom left
+    # #legend.background = element_rect(fill = "white", color = "grey80"),
+    # legend.margin = margin(l = -0.25, unit = "npc"),
+    #legend.margin = margin(5, 5, 5, 5),
+    
+
+  )
+
+    dev.off()
+  
+
+```
+
+
+#### Check how much driven by cohort reuse vs multiple studies per PUBMED_ID
+
+```{r rhd_plot_line_plot_all_corrections}
+
+cairo_pdf(here::here("figures/rhd_ancestry_composition_change_all_corrections.pdf"),
+          width = 32.9,
+          height = 12.5,
+          family = "Atkinson Hyperlegible Next")
+
+mid_correction  <-
+  rhd_control_in_paper |>
+  group_by(ancestry_group) |> 
+  slice_max(ancest_cumsum) |>
+  distinct(ancest_cumsum, ancestry_group) |>
+  ungroup() |>
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+different_ancestry_comp <-
+rbind(
+  after_correction_ps |>
+  ungroup() |>
+  mutate(type = "After_correction"),
+  before_correction_ps |>
+  mutate(type = "Before_correction")
+)
+
+different_ancestry_comp <-
+rbind(
+  different_ancestry_comp,
+  mid_correction  |>
+  mutate(type = "Mid_correction")
+)
+
+different_ancestry_comp  |>
+  filter(ancestry_group != "Not reported") |>
+  # mutate(type = 
+  #       case_when(type == "After_correction" ~ "Collection/recruitment",
+  #                 type == "Mid_correction" ~ "Cohort Reuse Across Papers",
+  #                 TRUE ~  "Cohort Reuse Within + Across Papers")) |>
+  # mutate(type = forcats::fct(type,
+  #                                  levels = c("Collection/recruitment",
+  #                                             "Cohort Reuse Across Papers",
+  #                                             "Cohort Reuse Within + Across Papers"))
+  #        ) |>
+  # every participant is counted once
+  # every participant is counted once per paper
+  # every participant is counted once per GWAS
+    mutate(type = 
+        case_when(type == "After_correction" ~ "Participants are counted once",
+                  type == "Mid_correction" ~ "Participants are counted once per paper",
+                  TRUE ~   "Participants are counted once per analysis")) |>
+  mutate(type = forcats::fct(type,
+                            levels = c("Participants are counted once per analysis",
+                                        "Participants are counted once per paper",
+                                        "Participants are counted once"
+                                       ))
+         ) |>
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             # shape = ancestry_group
+             )
+         ) + 
+  geom_line(linewidth = 2,
+            linetype = 2,
+            alpha = 0.75,
+            show.legend = FALSE) + 
+  # geom_point(size = 10) + 
+  geom_star(aes(starshape = ancestry_group), 
+            size = 12) +  
+  scale_colour_manual(values = ancestry_colors, name = "Ancestry group") +
+  scale_fill_manual(values = ancestry_colors,   name = "Ancestry group") +
+  scale_starshape_manual(values = c(15, 
+                                    13,
+                                    11,
+                                    23,
+                                    28,
+                                    1,
+                                    29
+                                    ),
+                         name = "Ancestry group") +
+  # scale_shape_manual(values = c(16, 
+  #                               17, 
+  #                               15, 
+  #                               18, 
+  #                               25, 
+  #                               8, 
+  #                               4, 
+  #                               3, 
+  #                               13),
+  #                    
+  #                    # c(21, 22, 23, 24, 25)
+                     # name = "Ancestry group") +
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  coord_cartesian(clip = "off") +
+  theme_bw() + 
+  labs(y = "Proportion of counted participants",
+       title = "A. Rheumatic Heart Disease Papers")+ 
+  scale_x_discrete(labels = scales::label_wrap(25)) +
+        theme(
+    axis.ticks.length.x = unit(20, "pt"),
+    #axis.ticks.x = element_line(linewidth = unit(0.2, "in")),
+    axis.text.x  = element_text(size = 35,
+                                colour = "black",
+                                margin = margin(t = 0.1,
+                                                unit = "in")),  
+    axis.text.y  = element_text(size = 35,
+                                colour = "black"), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 40,
+                              # hjust = -0.025,
+                              margin = margin(b = 0.2,
+                                              unit = "in")
+                              ),
+    plot.title.position = "plot",
+    axis.title.y = element_text(size = 35,
+                                colour = "black"), 
+    # legend.title = element_text(size = 32), 
+    legend.text  = element_text(size = 35,
+                                colour = "black"), 
+    legend.justification = "top",
+    legend.position = "right",
+    legend.key.spacing.y = unit(10, "pt"),
+    legend.title = element_text(size = 35, 
+                               margin = margin(b = 20),
+                               colour = "black"),
+    legend.box.margin = margin(l = 0.2,
+                                 unit = "in"
+                                 ),
+    plot.margin = margin(t =  0.5,
+                         r =  1,
+                         l =  1,
+                         b = 0.5,
+                         unit = "in"
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(colour = "grey60"),
+    panel.grid.minor.y = element_line(colour = "grey60")
+        )
+
+
+dev.off()
+
+```
+
+```{r rhd_plot_line_plot_all_corrections_powerpoint_pres}
+
+mid_correction  <-
+  rhd_control_in_paper |>
+  group_by(ancestry_group) |> 
+  slice_max(ancest_cumsum) |>
+  distinct(ancest_cumsum, ancestry_group) |>
+  ungroup() |>
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+different_ancestry_comp <-
+rbind(
+  after_correction_ps |>
+  ungroup() |>
+  mutate(type = "After_correction"),
+  before_correction_ps |>
+  mutate(type = "Before_correction")
+)
+
+different_ancestry_comp <-
+rbind(
+  different_ancestry_comp,
+  mid_correction  |>
+  mutate(type = "Mid_correction")
+)
+
+
+plot <-
+different_ancestry_comp  |>
+  filter(ancestry_group != "Not reported") |>
+    mutate(type = 
+        case_when(type == "After_correction" ~ "Participants are counted once",
+                  type == "Mid_correction" ~ "Participants are counted once per paper",
+                  TRUE ~   "Participants are counted once per analysis")) |>
+  mutate(type = forcats::fct(type,
+                            levels = c("Participants are counted once",
+                                        "Participants are counted once per paper",
+                                       "Participants are counted once per analysis"))
+         ) |>
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             # shape = ancestry_group
+             )
+         ) + 
+  geom_line(linewidth = 2,
+            linetype = 2,
+            alpha = 0.75,
+            show.legend = FALSE) + 
+  # geom_point(size = 10) + 
+    scale_colour_manual(values = ancestry_colors, 
+                      name = "Ancestry group",
+                      labels = \(x) gsub("/", "/\n", x)) +
+  scale_fill_manual(values = ancestry_colors,   
+                    name = "Ancestry group",
+                    labels = \(x) gsub("/", "/\n", x)) +
+  scale_starshape_manual(values = c(15, 
+                                    13,
+                                    11,
+                                    23,
+                                    28,
+                                    1,
+                                    29
+                                    ),
+                         name = "Ancestry group",
+                         labels = \(x) gsub("/", "/\n", x)) +
+  geom_star(aes(starshape = ancestry_group), 
+            size = 5) +  
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  coord_cartesian(clip = "off") +
+  theme_bw() + 
+  labs(y = "Proportion in GWAS catalog",
+       title = "A. Rheumatic Heart Disease Papers")+ 
+  scale_x_discrete(labels = scales::label_wrap(22)) +
+        theme(
+    text = element_text(family = "Atkinson Hyperlegible Next"),
+    #axis.ticks.x = element_line(linewidth = unit(0.2, "in")),
+    axis.text.x  = element_text(size = 20,
+                                colour = "black"),  
+    axis.text.y  = element_text(size = 20,
+                                colour = "black"), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 27,
+                              # hjust = -0.025,
+                              margin = margin(b = 0.4,
+                                              unit = "in")
+                              ),
+    plot.title.position = "plot",
+    axis.title.y = element_text(size = 20,
+                                colour = "black",
+                                margin = margin(r = 0.2,
+                                                unit = "in")
+                                ),
+    # legend.title = element_text(size = 32), 
+    legend.text  = element_text(size = 18,
+                                colour = "black"),
+    legend.justification = "bottom",
+    legend.position = "right",
+    legend.key.spacing.y = unit(2, "pt"),
+    legend.title = element_text(size = 18, 
+                                margin = margin(b = 0.1,
+                                               unit = "in"
+                                               ),
+                               colour = "black"),
+    legend.box.margin = margin(l = 0,
+                               unit = "in"
+                                 ),
+    plot.margin = margin(t =  0.1,
+                         r =  0,
+                         l =  0.1,
+                         b = 0.2,
+                         unit = "in"
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(colour = "grey60"),
+    panel.grid.minor.y = element_line(colour = "grey60")
+        )
+
+# powerpoint slide minus title 12.3 × 5.8 in
+ggsave(plot,
+       filename =here::here("figures/rhd_ancestry_composition_change_all_corrections.png"),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.8,
+       units = "in"
+)
+
+```
+
+
+
+
+
+##### Stacked barplot
+
+```{r rhd_plot_line_plot_all_corrections_stackedbarplot}
+
+mid_correction  <-
+  rhd_control_in_paper |>
+  group_by(ancestry_group) |> 
+  slice_max(ancest_cumsum) |>
+  distinct(ancest_cumsum, ancestry_group) |>
+  ungroup() |>
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+different_ancestry_comp <-
+rbind(
+  after_correction_ps |>
+  ungroup() |>
+  mutate(type = "After_correction"),
+  before_correction_ps |>
+  mutate(type = "Before_correction")
+)
+
+different_ancestry_comp <-
+rbind(
+  different_ancestry_comp,
+  mid_correction  |>
+  mutate(type = "Mid_correction")
+)
+
+# https://www.worldometers.info/world-population/#region
+world_pop <-
+data.frame(ancestry_group = c("European", 
+                            "Asian",
+                            "African", 
+                            "Hispanic/Latin American", 
+                            "Oceanic"),
+           percentage = c(0.137,
+                                0.586,
+                                0.191,
+                                0.081,
+                                0.005)
+           ) |>
+  mutate(type = "World Population",
+         ancest_cumsum = NA) 
+
+
+different_ancestry_comp <-
+  rbind(
+    different_ancestry_comp,
+    world_pop
+  )
+
+
+```
+
+```{r}
+
+
+cairo_pdf(here::here("figures/rhd_ancestry_composition_change_all_corrections_stackedbar.pdf"),
+          width = 33.9,
+          height = 12.5,
+          family = "Atkinson Hyperlegible Next")
+
+different_ancestry_comp  |>
+  filter(ancestry_group != "Not reported") |>
+  mutate(ancestry_group = forcats::fct_recode(ancestry_group, Other = "Oceanic")) |>
+    mutate(type = 
+        case_when(type == "After_correction" ~ "Unique\nParticipants",
+                  type == "Mid_correction" ~ "Participants\n(counted once per paper)",
+                  type == "World Population" ~ "World Population",
+                  TRUE ~   "Participants\n(counted once per analysis)")) |>
+  mutate(type = forcats::fct(type,
+                            levels = c("Participants\n(counted once per analysis)",
+                                        "Participants\n(counted once per paper)",
+                                        "Unique\nParticipants",
+                                        "World Population"
+                                       ))
+         ) |>
+    mutate(panel = if_else(type == "World Population",
+                         "",
+                         "GWAS Participants") |>
+           forcats::fct(levels = c("GWAS Participants", ""))) |>
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             )
+         ) + 
+  geom_col(data = ~ dplyr::filter(.x, panel != ""),
+           width = 0.7,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  geom_col(data = ~ dplyr::filter(.x, panel == ""),
+           width = 0.25,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  # geom_col(width = 0.7, 
+  #          position = position_stack(reverse = TRUE),
+  #          linewidth = 0) +
+  scale_colour_manual(values = ancestry_colors, 
+                      name = "Population",
+                      labels = \(x) gsub("/", "/\n", x)) +
+  scale_fill_manual(values = ancestry_colors,   
+                    name = "Population",
+                    labels = \(x) gsub("/", "/\n", x)) +
+  guides(fill = guide_legend(reverse = TRUE),
+         colour = guide_legend(reverse = TRUE)) +
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  facet_grid(cols = vars(panel),
+             scales = "free_x",
+             space = "free_x") +
+  ggh4x::force_panelsizes(cols = c(3, 0.6)) +
+  theme_bw() + 
+  labs(y = "Proportion of",
+       title = "A. Rheumatic Heart Disease Papers (n = 14)")+ 
+  # scale_x_discrete(labels = scales::label_wrap(25)) +
+        theme(
+    text = element_text(family = "Atkinson Hyperlegible Next"),
+    ####### axis labels and ticks:  ##########
+    axis.ticks.length.x = unit(20, "pt"),
+    #axis.ticks.x = element_line(linewidth = unit(0.2, "in")),
+    axis.text.x  = element_text(size = 35,
+                                colour = "black",
+                                margin = margin(t = 0.1,
+                                                unit = "in")),  
+    axis.text.y  = element_text(size = 35,
+                                colour = "black"), 
+    
+
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 35,
+                                colour = "black"), 
+    
+    ############## Plot title options ##############
+    plot.title.position = "plot",
+    plot.title = element_text(size = 40,
+                              colour = "black",
+                              margin = margin(b = 0.3,
+                                              l = 0.2,
+                                              unit = "in")
+                              ),
+    
+    ############## Facet title options #############
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    # strip.text = element_text(size = 35,
+    #                           colour = "black",
+    #                           margin = margin(b = 0.1, 
+    #                                           # t = 0.2,
+    #                                           unit = "in")),
+    
+    ############ Legend text + options ##########
+    legend.text  = element_text(size = 35,
+                                colour = "black"), 
+    legend.justification = "top",
+    legend.position = "right",
+    legend.location = "plot",
+    legend.key.spacing.y = unit(0.15, "in"),
+    legend.title = element_text(size = 35, 
+                               margin = margin(b = 0.2,
+                                               unit = "in"),
+                               colour = "black"),
+    legend.box.margin = margin(l = 0.5,
+                               # t = 0.2,
+                               unit = "in"
+                                 ),
+    
+    ###### Plot margins and panel options ##########
+    plot.margin = margin(t =  0.5,
+                         r =  1.2,
+                         l =  0.6,
+                         b = 0.5,
+                         unit = "in"
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    panel.grid.major.y = element_line(colour = "grey50", 
+                                      linetype = "dashed",
+                                      linewidth = unit(1, "in")),
+    panel.grid.minor.y = element_line(colour = "grey50", 
+                                      linetype = "dashed",
+                                      linewidth = unit(0.5, "in")),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank(),
+    # panel.grid.major.x = element_blank(),
+    # panel.grid.minor.x = element_blank(),
+    # panel.grid.major.y = element_line(colour = "grey60"),
+    # panel.grid.minor.y = element_line(colour = "grey60"),
+
+    panel.spacing.x = unit(1.25, "in")
+        )
+
+
+dev.off()
+
+```
+
+##### Stacked barplot (powerpoint)
+
+```{r}
+
+plot <-
+different_ancestry_comp  |>
+  filter(ancestry_group != "Not reported") |>
+    mutate(ancestry_group = forcats::fct_recode(ancestry_group, Other = "Oceanic")) |>
+    mutate(type = 
+        case_when(type == "After_correction" ~ "Unique\nParticipants",
+                  type == "Mid_correction" ~ "Participants (counted once per paper)",
+                  type == "World Population" ~ "World Population",
+                  TRUE ~   "Participants\n(counted once per analysis)")) |>
+  mutate(type = forcats::fct(type,
+                            levels = c("Participants\n(counted once per analysis)",
+                                        "Participants (counted once per paper)",
+                                        "Unique\nParticipants",
+                                        "World Population"
+                                       ))
+         ) |>
+    mutate(panel = if_else(type == "World Population",
+                         "",
+                         "GWAS Participants") |>
+           forcats::fct(levels = c("GWAS Participants", ""))) |>
+  filter(type != "Participants (counted once per paper)") |>
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             )
+         ) + 
+    geom_col(data = ~ dplyr::filter(.x, panel != ""),
+           width = 0.7,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  geom_col(data = ~ dplyr::filter(.x, panel == ""),
+           width = 0.25,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  # geom_col(width = 0.7, 
+  #          position = position_stack(reverse = TRUE),
+  #          linewidth = 0) +
+      scale_colour_manual(values = ancestry_colors, 
+                      name = "Population",
+                      labels = \(x) gsub("/", "/\n", x)) +
+  scale_fill_manual(values = ancestry_colors,   
+                    name = "Population",
+                    labels = \(x) gsub("/", "/\n", x)) +
+  guides(fill = guide_legend(reverse = TRUE),
+         colour = guide_legend(reverse = TRUE)) +
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  facet_grid(cols = vars(panel),
+             scales = "free_x",
+             space = "free_x") +
+  ggh4x::force_panelsizes(cols = c(3, 0.6)) +
+  theme_bw() + 
+  labs(y = "Proportion of",
+       title = "Rheumatic Heart Disease Papers (n = 14)")+ 
+  # scale_x_discrete(labels = scales::label_wrap(25)) +
+  # scale_x_discrete(labels = scales::label_wrap(25)) +
+    theme(
+    text = element_text(family = "Atkinson Hyperlegible Next"),
+    ####### axis labels and ticks:  ##########
+    axis.ticks.length.x = unit(0.1, 
+                               "in"),
+    axis.text.x  = element_text(size = 20,
+                                colour = "black",
+                                margin = margin(t = 0.1,
+                                                unit = "in")),  
+    axis.text.y  = element_text(size = 18,
+                                colour = "black"), 
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 20,
+                                colour = "black"), 
+    
+    ############## Plot title options ##############
+    plot.title.position = "plot",
+    plot.title = element_text(size = 20,
+                              colour = "black",
+                              margin = margin(b = 0.2,
+                                              t = 0,
+                                              unit = "in")
+                              ),
+    
+    ############## Facet title options #############
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    # strip.text = element_text(size = 20,
+    #                           colour = "black",
+    #                           margin = margin(b = 0, 
+    #                                           unit = "in")),
+    
+    ############ Legend text + options ##########
+    legend.text  = element_text(size = 18,
+                                colour = "black"), 
+    legend.justification = "top",
+    legend.position = "right",
+    legend.location = "plot",
+    legend.key.spacing.y = unit(0.05, "in"),
+    legend.title = element_text(size = 18, 
+                               margin = margin(b = 0.1,
+                                               unit = "in"),
+                               colour = "black"),
+    legend.box.margin = margin(l = 0,
+                               unit = "in"
+                                 ),
+    
+    ###### Plot margins and panel options ##########
+    plot.margin = margin(t =  0,
+                         r =  0,
+                         l =  0,
+                         b = 0,
+                         unit = "in"
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    panel.grid.major.y = element_line(colour = "grey50", 
+                                      linetype = "dashed",
+                                      linewidth = unit(0.2, "in")),
+    panel.grid.minor.y = element_line(colour = "grey50", 
+                                      linetype = "dashed",
+                                      linewidth = unit(0.1, "in")),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank(),
+    panel.spacing.x = unit(0.5, "in")
+        )
+
+ggsave(plot,
+       filename =here::here("figures/rhd_ancestry_composition_change_all_corrections_stackedbar.png"),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.5,
+       units = "in"
+)
+
+```
+
+
+
+
+
