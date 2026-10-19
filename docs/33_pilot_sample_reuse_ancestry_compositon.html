@@ -1,0 +1,2733 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+
+<title>Estimate Ancestry Composition Correcting for Cohort Reuse/Overlap</title>
+
+<script src="site_libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Estimate Ancestry Composition Correcting
+for Cohort Reuse/Overlap</h1>
+<h4 class="author">Isobel Beasley</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2026-10-19
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.2). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree23e9ac99851ed18d45d939a3f9645c31ce591bdbtargetblank23e9ac9a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/23e9ac99851ed18d45d939a3f9645c31ce591bdb" target="_blank">23e9ac9</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree23e9ac99851ed18d45d939a3f9645c31ce591bdbtargetblank23e9ac9a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/23e9ac99851ed18d45d939a3f9645c31ce591bdb" target="_blank">23e9ac9</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    .venv/
+    Ignored:    BioC.dtd
+    Ignored:    Claude outputs/
+    Ignored:    FormatConverter.jar
+    Ignored:    FormatConverter.zip
+    Ignored:    analysis/.DS_Store
+    Ignored:    ancestry_dispar_env/
+    Ignored:    code/.DS_Store
+    Ignored:    code/extract_text/__pycache__/
+    Ignored:    code/full_text_conversion/.DS_Store
+    Ignored:    code/full_text_conversion/__pycache__/
+    Ignored:    code/pop_desc_processing/.DS_Store
+    Ignored:    code/text_embeddings/__pycache__/
+    Ignored:    code/text_mining_models/__pycache__/
+    Ignored:    data/.DS_Store
+    Ignored:    data/cdc/
+    Ignored:    data/cohort/
+    Ignored:    data/europe_pmc/
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/IHME-GBD_2023_DATA-73cc01fd-1.csv
+    Ignored:    data/gbd/gbd_2019_california_percent_deaths.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/2025AA/
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/archived_assorted_map_files/
+    Ignored:    data/icd/icd102019enMeta/
+    Ignored:    data/icd/lancet_conditions_icd10.xlsx
+    Ignored:    data/icd/manual_disease_map.xlsx
+    Ignored:    data/icd/oxo/
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/phecode_to_icd10_manual_map.xlsx
+    Ignored:    data/nih/
+    Ignored:    data/ontology/
+    Ignored:    doccano_venv/
+    Ignored:    figures/
+    Ignored:    output/.DS_Store
+    Ignored:    output/abbreviations/
+    Ignored:    output/abstracts/
+    Ignored:    output/archived_fulltexts/
+    Ignored:    output/clustering/
+    Ignored:    output/doccano/
+    Ignored:    output/fulltexts/
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_cohorts/
+    Ignored:    output/icd_map/
+    Ignored:    output/intros/
+    Ignored:    output/journal_meta/
+    Ignored:    output/methods/
+    Ignored:    output/results/
+    Ignored:    output/supplement/
+    Ignored:    output/text_mining_predictions/
+    Ignored:    output/trait_ontology/
+    Ignored:    pubmedbert-cohort-ner-model/
+    Ignored:    pubmedbert-cohort-ner/
+    Ignored:    pubmedbert-grid/
+    Ignored:    renv/
+    Ignored:    rhd_paper_cohorts_sample_n.csv
+    Ignored:    spacy_venv_requirements.txt
+    Ignored:    spacyr_venv/
+    Ignored:    testing_papers.csv
+    Ignored:    testing_papers_cohort_norm.csv
+    Ignored:    training_papers_test.csv
+    Ignored:    training_papers_test_cohort_norm.csv
+
+Untracked files:
+    Untracked:  analysis/24_prep_finetune_after_doccano.Rmd
+    Untracked:  analysis/31_normalise_cohort_annot.Rmd
+    Untracked:  analysis/41_correcting_gwas_meta_cohort_names.Rmd
+    Untracked:  analysis/compare_cohort_annot.Rmd
+    Untracked:  code/training_set/
+    Untracked:  plot_pubmedert_performance.R
+
+Unstaged changes:
+    Modified:   analysis/14_process_article_text.Rmd
+    Modified:   analysis/21_training_set_selection.Rmd
+    Deleted:    analysis/31_correcting_cohort_names.Rmd
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/replication_ancestry_bias.Rmd
+    Modified:   analysis/specific_aims_stats.Rmd
+    Modified:   code/cohort_norm/normalize_cohort_names.R
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/33_pilot_sample_reuse_ancestry_compositon.Rmd</code>)
+and HTML
+(<code>docs/33_pilot_sample_reuse_ancestry_compositon.html</code>)
+files. If you’ve configured a remote Git repository (see
+<code>?wflow_git_remote</code>), click on the hyperlinks in the table
+below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/23e9ac99851ed18d45d939a3f9645c31ce591bdb/analysis/33_pilot_sample_reuse_ancestry_compositon.Rmd" target="_blank">23e9ac9</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Add page of RHD pilot study
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<pre class="r"><code>library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(ggstar)
+library(ggplot2)
+library(slider)</code></pre>
+<div id="loading-gwas-study-data" class="section level1">
+<h1>Loading GWAS Study Data</h1>
+<pre class="r"><code>gwas_date &lt;- data.table::fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2026-09-13.tsv&quot;),
+                               select = c(&quot;STUDY ACCESSION&quot;, &quot;DATE&quot;, &quot;PUBMED ID&quot;),
+                               sep = &quot;\t&quot;, 
+                               quote = &quot;&quot;)
+
+gwas_date = gwas_date |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_date &lt;- gwas_date |&gt;
+  distinct()</code></pre>
+<pre class="r"><code>gwas_study_info &lt;- data.table::fread(here::here(&quot;output/icd_map/gwas_study_accession_gbd_causes.csv&quot;))
+
+gwas_study_info = gwas_study_info |&gt;
+  dplyr::rename_with(~ gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_study_info = gwas_study_info |&gt;
+  dplyr::filter(cause != &quot;&quot;) |&gt;
+  dplyr::filter(include == T)
+
+gwas_study_info  &lt;-
+  gwas_study_info  |&gt;
+  # group into broader categories 
+  mutate(cause_grp = case_when(
+    grepl(&quot;diabetes&quot;, cause, ignore.case = TRUE) ~ &quot;Diabetes&quot;,
+    grepl(&quot;chronic kidney disease&quot;, cause, ignore.case = TRUE) ~ &quot;Chronic kidney disease&quot;,
+    grepl(&quot;hemorr&quot;, cause, ignore.case = TRUE) ~ &quot;Hemorrhagic stroke&quot;,
+    grepl(&quot;lip|pharynx&quot;, cause, ignore.case = TRUE) ~ &quot;Mouth and throat cancer&quot;,
+    grepl(&quot;lung cancer&quot;, cause, ignore.case = TRUE) ~ &quot;Lung Cancer&quot;,
+    grepl(&quot;cirrhosis&quot;, cause, ignore.case = TRUE) ~ &quot;Chronic Liver Disease&quot;,
+    TRUE ~ cause
+  )) 
+  # mutate(cause = 
+  #          stringr::str_to_title(
+  #          stringr::str_replace_all(cause, 
+  #                                         pattern = &quot;and&quot;, 
+  #                                         replacement = &quot;&amp;&quot;)
+  #          )
+  #          ) 
+
+
+gwas_study_info &lt;-
+gwas_study_info |&gt;
+  distinct(PUBMED_ID, STUDY_ACCESSION, cause, cause_grp)
+
+gwas_study_info  |&gt;
+  distinct(cause_grp, PUBMED_ID) |&gt;
+  group_by(cause_grp) |&gt;
+  summarise(n_papers = n()) |&gt;
+  arrange(n_papers)</code></pre>
+<pre><code># A tibble: 15 × 2
+   cause_grp                             n_papers
+   &lt;chr&gt;                                    &lt;int&gt;
+ 1 Rheumatic heart disease                     14
+ 2 Larynx cancer                               44
+ 3 Cervical cancer                             45
+ 4 Stomach cancer                              55
+ 5 Mouth and throat cancer                     64
+ 6 Liver cancer                                65
+ 7 Hemorrhagic stroke                          67
+ 8 Chronic obstructive pulmonary disease       78
+ 9 Ischemic stroke                            105
+10 Chronic Liver Disease                      120
+11 Lung Cancer                                125
+12 Stroke                                     129
+13 Ischemic heart disease                     170
+14 Chronic kidney disease                     172
+15 Diabetes                                   325</code></pre>
+<div id="load-ancestry-sample-size-information" class="section level2">
+<h2>Load ancestry + sample size information</h2>
+<pre class="r"><code>gwas_ancest_info &lt;-  data.table::fread(here::here(&quot;output/gwas_cat/gwas_ancest_discovery_subset_processed.csv&quot;))
+
+gwas_ancest_info  = 
+  gwas_ancest_info  |&gt;
+  rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+# filter only to included STUDY ACCESSIONS
+gwas_study_info$STUDY_ACCESSION |&gt; unique() |&gt; length()</code></pre>
+<pre><code>[1] 15438</code></pre>
+<pre class="r"><code>gwas_ancest_info &lt;-
+  gwas_ancest_info |&gt;
+  dplyr::filter(STUDY_ACCESSION %in% unique(gwas_study_info$STUDY_ACCESSION))
+
+gwas_ancest_info |&gt;
+    dplyr::filter(is.na(NUMBER_OF_INDIVIDUALS)) </code></pre>
+<pre><code>   PUBMED_ID STUDY_ACCESSION BROAD_ANCESTRAL_CATEGORY NUMBER_OF_INDIVIDUALS
+       &lt;int&gt;          &lt;char&gt;                   &lt;char&gt;                 &lt;int&gt;
+1:  39046104    GCST90449028                       NR                    NA</code></pre>
+<pre class="r"><code>gwas_ancest_info  =
+gwas_ancest_info |&gt;
+dplyr::filter(!is.na(NUMBER_OF_INDIVIDUALS))</code></pre>
+<pre class="r"><code>source(here::here(&quot;code/pop_desc_processing/plot_gwas_ancest_comp.R&quot;))
+
+grouped_ancest = vector()
+broad_ancest_cat = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+
+for(study_ancest in broad_ancest_cat){
+  
+grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
+
+}
+
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = broad_ancest_cat
+                                )
+
+
+print(&quot;See some example mappings between BROAD_ANCESTRAL_CATEGORY and ancestry_group&quot;)</code></pre>
+<pre><code>[1] &quot;See some example mappings between BROAD_ANCESTRAL_CATEGORY and ancestry_group&quot;</code></pre>
+<pre class="r"><code>print(dplyr::slice_sample(grouped_ancest_map, n = 5))</code></pre>
+<pre><code>                                                                                                                 ancestry_group
+Other admixed ancestry                                                                                                    Other
+African unspecified, Asian unspecified                                                                                 Multiple
+African American or Afro-Caribbean, Asian unspecified, NR, Oceanian                                                    Multiple
+African American or Afro-Caribbean, African American or Afro-Caribbean, African unspecified, African unspecified       Multiple
+NR                                                                                                                 Not reported
+                                                                                                                                                                                                         BROAD_ANCESTRAL_CATEGORY
+Other admixed ancestry                                                                                                                                                                                     Other admixed ancestry
+African unspecified, Asian unspecified                                                                                                                                                     African unspecified, Asian unspecified
+African American or Afro-Caribbean, Asian unspecified, NR, Oceanian                                                                                           African American or Afro-Caribbean, Asian unspecified, NR, Oceanian
+African American or Afro-Caribbean, African American or Afro-Caribbean, African unspecified, African unspecified African American or Afro-Caribbean, African American or Afro-Caribbean, African unspecified, African unspecified
+NR                                                                                                                                                                                                                             NR</code></pre>
+<pre class="r"><code>gwas_ancest_info = dplyr::left_join(
+            gwas_ancest_info,
+            grouped_ancest_map,
+            by = &quot;BROAD_ANCESTRAL_CATEGORY&quot;)
+
+gwas_ancest_info = gwas_ancest_info |&gt;
+                    dplyr::mutate(ancestry_group = factor(ancestry_group, 
+                                                          levels = ancestry_levels))
+
+
+gwas_ancest_info &lt;-
+  left_join(gwas_ancest_info,
+            gwas_date,
+            by = c(&quot;STUDY_ACCESSION&quot;, &quot;PUBMED_ID&quot;))
+
+
+gwas_info &lt;- full_join(
+  gwas_ancest_info, 
+  gwas_study_info,
+  by = c(&quot;PUBMED_ID&quot;, &quot;STUDY_ACCESSION&quot;),
+  relationship = &quot;many-to-many&quot;
+)</code></pre>
+</div>
+<div id="load-clean-up-annotated-cohort-names" class="section level2">
+<h2>Load / clean up annotated cohort names</h2>
+<pre class="r"><code>cohort_norm &lt;- data.table::fread(here::here(&quot;training_papers_test_cohort_norm.csv&quot;))
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  filter(not_cohort == FALSE) 
+
+cohort_names &lt;- readxl::read_xlsx(here::here(&quot;data/cohort/cohort_desc_v3_sep17.xlsx&quot;),
+                                    sheet = 1) |&gt;
+                select(short_name, cohort_norm = full_name, cohort_group) |&gt;
+                distinct()</code></pre>
+<pre><code>New names:
+• `` -&gt; `...17`</code></pre>
+<pre class="r"><code>cohort_norm &lt;-
+cohort_norm  |&gt;
+  mutate(cohort_norm = ifelse(cohort_norm == &quot;&quot;,
+                              &quot;Other&quot;,
+                              cohort_norm))
+
+cohort_names &lt;- cohort_names |&gt;
+    dplyr::mutate(
+        cohort_norm = gsub(&quot;\u00A0&quot;, &quot; &quot;, cohort_norm)
+    )
+
+cohort_norm &lt;- 
+left_join(
+  cohort_norm,
+  cohort_names,
+  relationship = &quot;many-to-many&quot;,
+  by = &quot;cohort_norm&quot;) 
+
+# drop cohorts without cohort groups and are likely not cohorts
+cohort_norm  &lt;- 
+  cohort_norm  |&gt;
+  filter(not_cohort == F | !is.na(cohort_group))
+
+cohort_norm  &lt;-
+  cohort_norm  |&gt;
+  tidyr::separate_longer_delim(cohort_group, &quot;, &quot;)
+
+# exclude probable reference or functional genetics cohorts:
+cohort_norm  &lt;-
+cohort_norm  |&gt;
+  filter(!cohort_group %in% 
+           c(&quot;gnomAD&quot;,
+             &quot;GTEx&quot;,
+             &quot;1000 Genomes&quot;,
+             &quot;HapMap&quot;,
+             &quot;ENCODE&quot;,
+             &quot;Roadmap Epigenomics&quot;,
+             &quot;eQTLGen&quot;,
+             &quot;HRC&quot;))
+
+cohort_norm &lt;-
+  cohort_norm |&gt;
+  mutate(cohort_group = 
+           case_when(is.na(cohort_group) &amp; 
+                       cohort_norm == &quot;Genetics Of Sepsis and Septic Shock&quot; ~ 
+                       &quot;Genetics Of Sepsis and Septic Shock (GenOSept)&quot;,
+                     is.na(cohort_group) &amp; cohort_norm == &quot;deCODE genetics&quot; ~ 
+                       &quot;deCODE genetics&quot;,
+                     cohort_group == &quot;CHARGE&quot; ~ 
+                       &quot;Cohorts for Heart and Aging Research in Genomic Epidemiology (CHARGE)&quot;,
+            TRUE ~ cohort_group)
+         )</code></pre>
+</div>
+</div>
+<div id="ancestry-composition-by-disease" class="section level1">
+<h1>Ancestry composition by disease</h1>
+<div id="rheumatic-heart-disease" class="section level2">
+<h2>Rheumatic heart disease</h2>
+<pre class="r"><code>gwas_info |&gt;
+  filter(cause_grp == &quot;Rheumatic heart disease&quot;)  |&gt;
+  distinct(PUBMED_ID, STUDY_ACCESSION) |&gt;
+  group_by(PUBMED_ID) |&gt;
+  summarise(n = n()) |&gt;
+  filter(n &gt; 1)</code></pre>
+<pre><code># A tibble: 8 × 2
+  PUBMED_ID     n
+      &lt;int&gt; &lt;int&gt;
+1  30104761     7
+2  34106200     3
+3  34594039     4
+4  34662886    10
+5  34737426     6
+6  39024449    21
+7  40465716     3
+8  40770095     7</code></pre>
+<div id="without-any-correction" class="section level3">
+<h3>Without any correction</h3>
+<pre class="r"><code>window_months &lt;- 6
+  
+rhd_no_correction &lt;- gwas_info |&gt;
+  filter(cause_grp == &quot;Rheumatic heart disease&quot;) |&gt;
+  arrange(DATE) |&gt;
+  group_by(ancestry_group) |&gt;
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) |&gt;
+  add_final_totals(window_months = window_months) |&gt;
+  ungroup()
+
+rhd_no_correction_smooth &lt;- rhd_no_correction |&gt;
+  mutate(month = floor_date(DATE, &quot;month&quot;)) |&gt;
+  group_by(ancestry_group, month) |&gt;
+  summarise(ancest_cumsum = max(ancest_cumsum), 
+            .groups = &quot;drop&quot;) |&gt;
+  complete(ancestry_group,
+           month = seq(min(month), 
+                       max(month), 
+                       by = &quot;month&quot;)) |&gt;   # same grid for all groups
+  group_by(ancestry_group) |&gt;
+  arrange(month, .by_group = TRUE) |&gt;
+  fill(ancest_cumsum, .direction = &quot;down&quot;) |&gt;                       # carry totals forward
+  replace_na(list(ancest_cumsum = 0)) |&gt;                            # 0 before first study
+  mutate(smooth = slide_dbl(ancest_cumsum, mean,
+                            .before = window_months, 
+                            .after = 0)) |&gt;  # trailing window
+  ungroup()
+
+ggplot(rhd_no_correction_smooth, aes(x = month, 
+                       y = smooth / 1e6, 
+                       fill = ancestry_group)) +
+  geom_area(position = &quot;stack&quot;) +
+  scale_x_date(date_labels = &quot;%Y&quot;, 
+               date_breaks = &quot;2 years&quot;) +
+  theme_classic() +
+  labs(x = &quot;Year&quot;,
+       y = &quot;Individuals in GWAS catalog (millions)&quot;,
+       title = &quot;Rheumatic heart disease papers (standard figure)&quot;) +
+  scale_fill_manual(values = ancestry_colors, name = &quot;Ancestry group&quot;)</code></pre>
+<p><img src="figure/33_pilot_sample_reuse_ancestry_compositon.Rmd/rhd_no_correction-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="correcting-for-overlap-within-the-same-paper"
+class="section level3">
+<h3>Correcting for overlap within the same paper</h3>
+<pre class="r"><code># some PAPERS have multiple study accession per PUBMED_ID for rhd
+multiple_study_accessions &lt;-
+  gwas_info |&gt;
+  filter(cause_grp == &quot;Rheumatic heart disease&quot;)  |&gt;
+  distinct(PUBMED_ID, STUDY_ACCESSION) |&gt;
+  group_by(PUBMED_ID) |&gt;
+  summarise(n = n()) |&gt;
+  filter(n &gt; 1) |&gt;
+  pull(PUBMED_ID)
+
+# which of these have difference sample sizes per STUDY_ACCESSION + ANCESTRY_GROUP
+# if they have have the sample size per  STUDY_ACCESSION + ANCESTRY_GROUP we&#39;ll assume
+# these are the same participants duplicated
+difference_sample_size_per_study &lt;-
+gwas_info |&gt;
+    filter(cause_grp == &quot;Rheumatic heart disease&quot;) |&gt; 
+    filter(PUBMED_ID %in% multiple_study_accessions) |&gt;  
+    distinct(PUBMED_ID, 
+             STUDY_ACCESSION, 
+             ancestry_group, 
+             NUMBER_OF_INDIVIDUALS)  |&gt; 
+  group_by(PUBMED_ID, 
+           ancestry_group) |&gt; 
+  summarise(NUMBER_OF_INDIVIDUALS_MAX = max(NUMBER_OF_INDIVIDUALS), 
+            NUMBER_OF_INDIVIDUALS_MIN = min(NUMBER_OF_INDIVIDUALS),
+            n = n(),
+            .groups = &quot;drop&quot;) |&gt;
+  ungroup() |&gt;
+  filter(NUMBER_OF_INDIVIDUALS_MAX != NUMBER_OF_INDIVIDUALS_MIN) |&gt;
+  mutate(dif  = NUMBER_OF_INDIVIDUALS_MAX - NUMBER_OF_INDIVIDUALS_MIN)
+
+difference_sample_size_per_study </code></pre>
+<pre><code># A tibble: 8 × 6
+  PUBMED_ID ancestry_group   NUMBER_OF_INDIVIDUAL…¹ NUMBER_OF_INDIVIDUAL…²     n
+      &lt;int&gt; &lt;fct&gt;                             &lt;int&gt;                  &lt;int&gt; &lt;int&gt;
+1  30104761 European                         407316                 403479     7
+2  34594039 European                         477240                 427911     2
+3  34594039 Asian                            177847                 170399     4
+4  34662886 European                         387930                 331754    10
+5  39024449 European                         451027                 438595    14
+6  39024449 African                          121609                 118726    10
+7  39024449 Hispanic/Latin …                  59324                  58881     4
+8  40465716 Asian                            235806                 232906     3
+# ℹ abbreviated names: ¹​NUMBER_OF_INDIVIDUALS_MAX, ²​NUMBER_OF_INDIVIDUALS_MIN
+# ℹ 1 more variable: dif &lt;int&gt;</code></pre>
+<pre class="r"><code>difference_sample_size_per_study  |&gt;
+  mutate(dif_prop = 100 * dif / NUMBER_OF_INDIVIDUALS_MIN) |&gt; 
+  filter()</code></pre>
+<pre><code># A tibble: 8 × 7
+  PUBMED_ID ancestry_group   NUMBER_OF_INDIVIDUAL…¹ NUMBER_OF_INDIVIDUAL…²     n
+      &lt;int&gt; &lt;fct&gt;                             &lt;int&gt;                  &lt;int&gt; &lt;int&gt;
+1  30104761 European                         407316                 403479     7
+2  34594039 European                         477240                 427911     2
+3  34594039 Asian                            177847                 170399     4
+4  34662886 European                         387930                 331754    10
+5  39024449 European                         451027                 438595    14
+6  39024449 African                          121609                 118726    10
+7  39024449 Hispanic/Latin …                  59324                  58881     4
+8  40465716 Asian                            235806                 232906     3
+# ℹ abbreviated names: ¹​NUMBER_OF_INDIVIDUALS_MAX, ²​NUMBER_OF_INDIVIDUALS_MIN
+# ℹ 2 more variables: dif &lt;int&gt;, dif_prop &lt;dbl&gt;</code></pre>
+<pre class="r"><code># manual review of STUDY SAMPLE SIZES  34594039, 40465716, 39024449, 34662886, 34662886, 30104761
+# same samples used for discovery across all STUDY_ACCESSION
+# difference is just availability of phenotype info
+# taking max sample size per ancestry group is appropriate
+
+rhd_control_in_paper &lt;- gwas_info |&gt;
+  filter(cause_grp == &quot;Rheumatic heart disease&quot;) |&gt;
+  group_by(PUBMED_ID, BROAD_ANCESTRAL_CATEGORY) |&gt;
+  slice_max(order_by = NUMBER_OF_INDIVIDUALS,
+            n = 1, 
+            with_ties = FALSE) |&gt;  # avoid double-counting ties
+  ungroup() |&gt;
+  arrange(DATE) |&gt;
+  group_by(ancestry_group) |&gt;
+  mutate(ancest_cumsum = cumsum(as.numeric(NUMBER_OF_INDIVIDUALS))) 
+
+# double check not multiple STUDY ACCESSION per ancestry group:
+rhd_control_in_paper |&gt; 
+  group_by(ancestry_group, PUBMED_ID) |&gt; 
+  summarise(n = n(),
+            .groups = &#39;drop&#39;) |&gt; 
+  filter(n &gt; 1)</code></pre>
+<pre><code># A tibble: 0 × 3
+# ℹ 3 variables: ancestry_group &lt;fct&gt;, PUBMED_ID &lt;int&gt;, n &lt;int&gt;</code></pre>
+<pre class="r"><code>rhd_control_in_paper_plot_df &lt;-
+  rhd_control_in_paper |&gt;
+  add_final_totals() |&gt;
+  ungroup()
+
+rhd_smooth_in_paper &lt;- rhd_control_in_paper_plot_df |&gt;
+  mutate(month = floor_date(DATE, &quot;month&quot;)) |&gt;
+  group_by(ancestry_group, month) |&gt;
+  summarise(ancest_cumsum = max(ancest_cumsum), .groups = &quot;drop&quot;) |&gt;
+  complete(ancestry_group,
+           month = seq(min(month), max(month), by = &quot;month&quot;)) |&gt;   # same grid for all groups
+  group_by(ancestry_group) |&gt;
+  arrange(month, .by_group = TRUE) |&gt;
+  fill(ancest_cumsum, .direction = &quot;down&quot;) |&gt;                       # carry totals forward
+  replace_na(list(ancest_cumsum = 0)) |&gt;                            # 0 before first study
+  mutate(smooth = slide_dbl(ancest_cumsum, mean,
+                            .before = window_months, .after = 0)) |&gt;  # trailing window
+  ungroup()
+
+ggplot(rhd_smooth_in_paper, 
+       aes(x = month, 
+           y = smooth / 1e6, 
+           fill = ancestry_group)) +
+  geom_area(position = &quot;stack&quot;) +
+  scale_x_date(date_labels = &quot;%Y&quot;, 
+               date_breaks = &quot;2 years&quot;) +
+  theme_classic() +
+  labs(x = &quot;Year&quot;,
+       y = &quot;Individuals in GWAS catalog (millions)&quot;,
+       title = &quot;Rheumatic heart disease papers (accounting for within paper overlap)&quot;) +
+  scale_fill_manual(values = ancestry_colors, 
+                    name = &quot;Ancestry group&quot;)</code></pre>
+<p><img src="figure/33_pilot_sample_reuse_ancestry_compositon.Rmd/rhd_within_paper_overlap-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="correctiion-for-all-overlap" class="section level3">
+<h3>Correctiion for all overlap</h3>
+<p>Cohort reuse etc.</p>
+</div>
+<div id="get-full-set-of-cohorts-for-rhd" class="section level3">
+<h3>Get full set of cohorts for RHD</h3>
+<pre class="r"><code>rhd_pmids &lt;-
+gwas_info |&gt;
+    filter(cause_grp == &quot;Rheumatic heart disease&quot;) |&gt; 
+     pull(PUBMED_ID) |&gt; 
+     unique()
+
+rhd_cohort_norm &lt;- cohort_norm |&gt;
+                   filter(pubmed_id %in% rhd_pmids)
+
+# manual check of cohorts by reading papers
+# remove non-discovery cohorts
+
+# WTCCC is not a GWAS discovery cohort for 28492228, it is a method of recruitment etc. followed
+# by this paper
+# &#39;Following the approach of the Wellcome Trust Case Control Consortium&#39; 
+# thus drop
+
+# Also HGDP is just used as a reference panel in this paper, thus drop:
+rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+  filter(!(pubmed_id == &quot;28492228&quot; &amp; cohort_group == &quot;WTCCC&quot;)) |&gt;
+  filter(!(pubmed_id == &quot;28492228&quot; &amp; cohort_group == &quot;HGDP&quot;)) 
+  
+# Similarly for 32488134, 
+# WTCCC is not a GWAS discovery cohort, it is a method of recruitment etc. 
+rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+   filter(!(pubmed_id == &quot;32488134&quot; &amp; cohort_group == &quot;WTCCC&quot;))
+
+# For pubmed 34662886
+# Only discovery cohort is UK Biobank, other cohorts are for imputation or replication
+rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+  filter(!(pubmed_id == &quot;34662886&quot; &amp; cohort_group != &quot;UK Biobank&quot;)) 
+
+# For pubmed id: 36716318
+# FinnGen is a replication cohort only
+rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+  filter(!(pubmed_id == &quot;36716318&quot; &amp; cohort_group == &quot;FinnGen&quot;))
+
+# for pubmed id: 23388002
+# discovery cohort is three CHARGE cohorts
+# AGES, Framingham, and MESA
+# drop all other cohorts 
+
+rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+      filter(
+        !(pubmed_id == &quot;23388002&quot; &amp; 
+              !(cohort_group %in% c(&quot;Age Gene/Environment Susceptibility Reykjavik Study (AGES)&quot;, 
+                                                           &quot;Framingham Heart Study&quot;, 
+                                                           &quot;Multi-Ethnic Study of Atherosclerosis (MESA)&quot;)
+      )))
+
+# for PUBMED ID, GCST9028115 is the only RHD relevant study
+# and only UK Biobank Data was used for discovery in this Study
+# drop all other cohorts
+gwas_study_info |&gt;
+  filter(PUBMED_ID == &quot;36716318&quot;)</code></pre>
+<pre><code>   PUBMED_ID STUDY_ACCESSION                   cause               cause_grp
+       &lt;int&gt;          &lt;char&gt;                  &lt;char&gt;                  &lt;char&gt;
+1:  36716318    GCST90281158 Rheumatic heart disease Rheumatic heart disease</code></pre>
+<pre class="r"><code>rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+      filter(
+        !(pubmed_id == &quot;36716318&quot; &amp; 
+              !(cohort_group %in% c(&quot;UK Biobank&quot;)
+      )))
+
+# for 32488134, UK Biobank is replication only
+# Type 1 Diabetes Genetics Consortium is HLA imputation / reference panel 
+rhd_cohort_norm &lt;-
+  rhd_cohort_norm |&gt;
+      filter(!(pubmed_id == &quot;32488134&quot; &amp; cohort_group == &quot;UK Biobank&quot;)) |&gt; 
+      filter(!(pubmed_id == &quot;32488134&quot; &amp; cohort_group == &quot;Type 1 Diabetes Genetics Consortium (T1DGC)&quot;))
+
+
+# 34594039, only  Biobank Japan (BBJ), FinnGen, UK Biobank are discovery cohorts
+# drop all other cohorts
+rhd_cohort_norm &lt;-
+    rhd_cohort_norm |&gt;
+      filter(
+        !(pubmed_id == &quot;34594039&quot; &amp; 
+              !(cohort_group %in% c(&quot;Biobank Japan (BBJ)&quot;,
+                                    &quot;FinnGen&quot;,
+                                    &quot;UK Biobank&quot;)
+      )))
+  
+rhd_cohort_norm  &lt;-
+  rhd_cohort_norm  |&gt;
+  distinct(pubmed_id, cohort_group)
+
+# manually add any missing cohorts
+add_manual_cohort_annot &lt;-
+  data.frame(pubmed_id = c(34106200, 
+                           40465716, 
+                           40770095, 
+                           32066683, 
+                           28492228, 
+                           32488134),
+             cohort_group = c(&quot;Genetics of Rheumatic Heart Disease (RHDGen)&quot;,
+                              &quot;HiGenome&quot;,
+                              &quot;UK Biobank&quot;,
+                              &quot;Unspecified Australian (Described in 21524186, 23010488, 20361910)&quot;,
+                              &quot;Pacific Islands Rheumatic Heart Disease Genetics Network&quot;,
+                              &quot;Pacific Islands Rheumatic Heart Disease Genetics Network; Unspecified Samples from Sanjay Gandhi Postgraduate Institute of Medical Sciences (SGPGIMS) (Described in 23749169, 24797343, 25273327)&quot;
+             )
+  )
+
+rhd_cohort_norm &lt;-
+  rows_append(rhd_cohort_norm,
+              add_manual_cohort_annot) |&gt;
+  tidyr::separate_longer_delim(cohort_group, &quot;;&quot;) |&gt;
+  distinct()
+
+
+# for 32488134 Fijian Indian Samples come from 28492228 (Pacific Islands Rheumatic Heart Disease Genetics Network)
+# so although cohort not specified, add cohort here to ensure overlap is accounted for 
+# gwas_ancest_info |&gt; filter(PUBMED_ID == &quot;28492228&quot;)  - 2017
+# 168 Fijian Indian cases, 151 Fijian Indian controls
+# the South Asian                   319   
+
+# gwas_ancest_info_orig |&gt; filter(PUBMED_ID == &quot;32488134&quot;) - 2020
+# 162 Fijian Indian cases, 147 Fijian Indian controls
+
+# number of cohorts per pubmed id
+rhd_cohort_norm  |&gt;
+  group_by(pubmed_id) |&gt;
+  summarise(n = n()) |&gt;
+  filter(n &gt; 1) |&gt;
+  arrange(desc(n)) |&gt;
+  head()</code></pre>
+<pre><code># A tibble: 3 × 2
+  pubmed_id     n
+      &lt;int&gt; &lt;int&gt;
+1  23388002     3
+2  32488134     3
+3  34594039     3</code></pre>
+<pre class="r"><code># number of pubmeds with only one cohort
+rhd_cohort_norm  |&gt;
+  group_by(pubmed_id) |&gt;
+  summarise(n = n())  |&gt;
+  filter(n == 1) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 11</code></pre>
+<pre class="r"><code>rhd_cohort_pmids &lt;-
+rhd_cohort_norm |&gt;
+  pull(pubmed_id) |&gt;
+  unique()
+
+# check that have cohort info for all relevant pmids:
+
+stopifnot(all(rhd_cohort_pmids %in% rhd_pmids))
+stopifnot(all(rhd_pmids %in% rhd_cohort_pmids))
+
+# use semicolon instead of comma, to prevent later unwanted splitting
+rhd_cohort_norm  &lt;-
+rhd_cohort_norm  |&gt;
+  group_by(pubmed_id) |&gt;
+  summarise(cohort = stringr::str_flatten(sort(cohort_group), 
+                                          collapse = &quot;; &quot;),
+            
+            ) |&gt;
+  mutate(cohort = stringr::str_squish(cohort))</code></pre>
+</div>
+<div id="match-cohorts-to-sample-sizes" class="section level3">
+<h3>Match cohorts to sample sizes</h3>
+<pre class="r"><code>rhd_cohort_correction &lt;-
+left_join(
+  rhd_cohort_norm |&gt; rename(PUBMED_ID = pubmed_id),
+  rhd_control_in_paper |&gt; 
+    select(-STUDY_ACCESSION, -ancest_cumsum),
+  by = &quot;PUBMED_ID&quot;
+) |&gt;
+  tidyr::separate_longer_delim(cohort, &quot;; &quot;) |&gt;
+  mutate(cohort = stringr::str_squish(cohort))
+
+
+# drop mismatching cohorts to ancestry groups 
+
+# all FinnGen Samples are European ancestry
+rhd_cohort_correction &lt;-
+  rhd_cohort_correction |&gt;
+  filter(!c(ancestry_group != &quot;European&quot; &amp; cohort == &quot;FinnGen&quot;)) 
+
+# no &quot;Pacific Islands Rheumatic Heart Disease Genetics Network&quot;,
+# Unspecified Samples from Sanjay Gandhi Postgraduate Institute of Medical Sciences (SGPGIMS) (Described in 23749169, 24797343, 25273327) are European
+rhd_cohort_correction &lt;-
+  rhd_cohort_correction |&gt;
+  filter(!c(ancestry_group == &quot;European&quot; &amp; grepl(&quot;SGPGIMS|Pacific Islands&quot;, cohort)))
+
+rhd_cohort_correction &lt;-
+  rhd_cohort_correction |&gt;
+  # 32488134 only uses European samples of 23&amp;Me and UK Biobank 
+  filter(!c(ancestry_group != &quot;European&quot; &amp; cohort == &quot;UK Biobank&quot; &amp; PUBMED_ID == &quot;32488134&quot;)) |&gt;
+  filter(!c(ancestry_group != &quot;European&quot; &amp; cohort == &quot;23&amp;Me&quot; &amp; PUBMED_ID == &quot;32488134&quot;)) 
+
+# 34594039o only uses European ancestry samples of UK Biobank
+# and no samples in Biobank Japan (BBJ) are European ancestry
+rhd_cohort_correction &lt;-
+  rhd_cohort_correction |&gt;
+   filter(!c(ancestry_group != &quot;European&quot; &amp; cohort == &quot;UK Biobank&quot; &amp; PUBMED_ID == &quot;34594039&quot;)) |&gt;
+  filter(!c(ancestry_group == &quot;European&quot; &amp; cohort %in% c(&quot;Biobank Japan (BBJ)&quot;, 
+                                                         &quot;Tohoku Medical Megabank&quot;) &amp; PUBMED_ID == &quot;34594039&quot;)
+         ) 
+
+
+# separate out Pacific Islands Rheumatic Heart Disease Genetics Network Samples 
+# and other samples for PUBMED_ID: 32488134
+rhd_cohort_correction &lt;- 
+  rhd_cohort_correction |&gt;
+  mutate(NUMBER_OF_INDIVIDUALS = 
+    case_when(
+    PUBMED_ID == 32488134 &amp; 
+      ancestry_group != &quot;European&quot; &amp;
+      cohort == &quot;Pacific Islands Rheumatic Heart Disease Genetics Network&quot; ~ 309,
+    PUBMED_ID == 32488134 &amp; 
+      ancestry_group != &quot;European&quot; &amp;
+      cohort != &quot;Pacific Islands Rheumatic Heart Disease Genetics Network&quot; ~ NUMBER_OF_INDIVIDUALS - 309,
+    TRUE ~ NUMBER_OF_INDIVIDUALS )
+  )
+
+rhd_cohort_correction &lt;- 
+rhd_cohort_correction |&gt;
+  group_by(PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS, DATE) |&gt;
+  summarise(cohort = stringr::str_flatten(sort(cohort), 
+                                          collapse = &quot;; &quot;),
+            .groups = &#39;drop&#39;) |&gt; 
+  # if only single cohort per PUBMED and ancestry_group then all samples come from this cohort
+  mutate(N_cohort = 
+           ifelse(!grepl(&quot;;&quot;, cohort),
+                           NUMBER_OF_INDIVIDUALS,
+                           NA)) 
+
+# multi-study cohorts:
+multi_study_cohorts &lt;-
+    rhd_cohort_norm  |&gt;
+    tidyr::separate_longer_delim(cohort, &quot;; &quot;) |&gt;
+    mutate(cohort = stringr::str_squish(cohort)) |&gt;
+    distinct(pubmed_id, cohort) |&gt;
+    group_by(cohort) |&gt;
+    summarise(n = n())  |&gt;
+    filter(n &gt; 1) |&gt;
+    pull(cohort)
+
+
+rhd_cohort_correction |&gt; filter(is.na(N_cohort))</code></pre>
+<pre><code># A tibble: 2 × 6
+  PUBMED_ID ancestry_group NUMBER_OF_INDIVIDUALS DATE       cohort      N_cohort
+      &lt;int&gt; &lt;fct&gt;                          &lt;dbl&gt; &lt;IDate&gt;    &lt;chr&gt;          &lt;dbl&gt;
+1  23388002 European                        3795 2013-02-17 Age Gene/E…       NA
+2  34594039 European                      477240 2021-09-30 FinnGen; U…       NA</code></pre>
+<pre class="r"><code>uses_shared &lt;- sapply(strsplit(rhd_cohort_correction$cohort, &quot;; &quot;),
+                      \(x) any(x %in% multi_study_cohorts))
+
+# if N cannot be assigned to any cohort, but none of the cohorts are used as discovery in other papers
+# no need to separate N_cohort out by cohort, so just assign N_cohort to NUMBER_OF_INDIVIDUALS
+rhd_cohort_correction &lt;-
+rhd_cohort_correction |&gt;
+  ungroup() |&gt;
+  mutate(N_cohort = 
+           ifelse(!uses_shared &amp; is.na(N_cohort),
+                  NUMBER_OF_INDIVIDUALS,
+                  N_cohort
+                  )
+         )
+
+# what N left to assign: 
+rhd_cohort_correction |&gt; filter(is.na(N_cohort))</code></pre>
+<pre><code># A tibble: 1 × 6
+  PUBMED_ID ancestry_group NUMBER_OF_INDIVIDUALS DATE       cohort      N_cohort
+      &lt;int&gt; &lt;fct&gt;                          &lt;dbl&gt; &lt;IDate&gt;    &lt;chr&gt;          &lt;dbl&gt;
+1  34594039 European                      477240 2021-09-30 FinnGen; U…       NA</code></pre>
+<pre class="r"><code># just need to disambiguate FinnGen from UK Biobank for 34594039
+# ? can&#39;t see in paper how to disambiguate .. 
+# so estimate from relative proportions of FinnGen to UK Biobank overall taken from Extended Data Fig. 1
+# (assuming approximately same level of missing phenotypes per biobank)
+
+ukbb_34594039_ratio = 358000 / (136000 + 358000)
+
+# double check that spliting on FinnGen; is not going to create problems
+stopifnot(
+nrow(
+rhd_cohort_correction |&gt; 
+  filter(grepl(&quot;FinnGen; &quot;, cohort)) 
+) == 1
+)
+
+stopifnot(
+nrow(
+rhd_cohort_correction |&gt; 
+  filter(grepl(&quot;FinnGen; &quot;, cohort))  |&gt;
+  filter(PUBMED_ID == &quot;34594039&quot;)
+) == 1
+)
+
+rhd_cohort_correction &lt;-
+rhd_cohort_correction |&gt;
+  ungroup() |&gt;
+  tidyr::separate_longer_delim(cohort, 
+                               delim = 
+                                 stringr::regex(&quot;FinnGen; &quot;)
+) |&gt;
+  mutate(cohort = ifelse(
+    cohort == &quot;&quot; &amp; PUBMED_ID == 34594039,
+    &quot;FinnGen&quot;,
+    cohort
+  )) |&gt;
+  mutate(N_cohort = 
+           case_when(PUBMED_ID == 34594039 &amp; cohort == &quot;UK Biobank&quot; &amp; is.na(N_cohort) ~ 
+                      round(ukbb_34594039_ratio  * NUMBER_OF_INDIVIDUALS, digits = 0),
+                     PUBMED_ID == 34594039 &amp; cohort == &quot;FinnGen&quot; &amp; is.na(N_cohort) ~ 
+                      round((1 - ukbb_34594039_ratio) * NUMBER_OF_INDIVIDUALS, digits = 0), 
+                     TRUE ~ N_cohort
+                     )
+         )
+
+
+# check no shared cohort is within a multi-cohort row
+uses_shared &lt;- sapply(strsplit(rhd_cohort_correction$cohort, &quot;; &quot;),
+                      \(x) any(x %in% multi_study_cohorts))
+
+stopifnot(
+nrow(
+rhd_cohort_correction  |&gt;
+  filter(grepl(&quot;;&quot;, cohort) &amp; uses_shared) 
+) == 0
+)
+  
+stopifnot(
+nrow(
+rhd_cohort_correction |&gt; 
+  filter(is.na(N_cohort)) 
+)== 0
+)
+
+
+rhd_cohort_correction |&gt;
+  select( -NUMBER_OF_INDIVIDUALS) |&gt; 
+  data.table::fwrite(here::here(&quot;rhd_paper_cohorts_sample_n.csv&quot;), 
+                     sep = &quot;,&quot;)</code></pre>
+</div>
+<div id="plot-cumulative-samples" class="section level3">
+<h3>Plot cumulative samples</h3>
+<pre class="r"><code>rhd_cohort_correction_final &lt;-
+  rhd_cohort_correction |&gt;
+  arrange(ancestry_group, cohort, DATE) |&gt;
+  group_by(ancestry_group, cohort) |&gt;
+  mutate(
+    previous_max = lag(cummax(N_cohort), default = 0),
+    N_new        = pmax(N_cohort - previous_max, 0),
+    N_cumsum     = cumsum(N_new)
+  ) |&gt;
+  ungroup() |&gt;
+  arrange(ancestry_group, DATE) |&gt;          # &lt;- add this
+  group_by(ancestry_group) |&gt;
+  mutate(ancest_cumsum = cumsum(as.numeric(N_new))) |&gt;
+  ungroup()
+
+# rhd_cohort_correction_final &lt;-
+# rhd_cohort_correction |&gt;
+#     arrange(ancestry_group, cohort, DATE) |&gt;
+#     group_by(ancestry_group, cohort) |&gt;
+#     mutate(
+#         previous_max = lag(cummax(N_cohort), default = 0),
+#         N_new = pmax(N_cohort - previous_max, 0),
+#         N_cumsum = cumsum(N_new)
+#     ) |&gt;
+#   ungroup() |&gt;
+#   group_by(ancestry_group) |&gt;
+#   arrange(ancestry_group, cohort, DATE) |&gt;
+#   mutate(ancest_cumsum = cumsum(as.numeric(N_new))) 
+
+rhd_cohort_correction_final_plot_df &lt;-
+rhd_cohort_correction_final  |&gt;
+  add_final_totals() |&gt;
+  ungroup()
+
+rhd_cohort_correction_smooth_final_plot_df &lt;- 
+  rhd_cohort_correction_final_plot_df |&gt;
+  arrange(ancestry_group, cohort, DATE) |&gt; 
+  group_by(ancestry_group) |&gt;
+  mutate(month = floor_date(DATE, &quot;month&quot;)) |&gt;
+  arrange(month) |&gt;
+  group_by(ancestry_group, month) |&gt;
+  summarise(ancest_cumsum = max(ancest_cumsum), 
+            .groups = &quot;drop&quot;) |&gt;
+  complete(ancestry_group,
+           month = seq(min(month), max(month), 
+                       by = &quot;month&quot;)) |&gt;   # same grid for all groups
+  group_by(ancestry_group) |&gt;
+  arrange(month, .by_group = TRUE) |&gt;
+  fill(ancest_cumsum, .direction = &quot;down&quot;) |&gt;                       # carry totals forward
+  replace_na(list(ancest_cumsum = 0)) |&gt;                            # 0 before first study
+  mutate(smooth = slide_dbl(ancest_cumsum, mean,
+                            .before = window_months, 
+                            .after = 0)) |&gt;  # trailing window
+  ungroup()
+
+
+# # check the first date that 
+# first_publication &lt;-
+# rhd_cohort_correction  |&gt;
+# arrange(DATE) |&gt;
+#   group_by(cohort, ancestry_group) |&gt; 
+#   summarise(first_publication = first(PUBMED_ID),
+#             first_n_cohort = first(N_cohort))
+
+
+# rhd_cohort_correction &lt;-
+#   left_join(
+#     rhd_cohort_correction,
+#     first_publication,
+#     by = c(&quot;cohort&quot;, &quot;ancestry_group&quot;)
+#   )
+
+# drop not European samples for 32488134, 34594039 &amp; UK Biobank
+# for FinnGen 
+
+# # for 36716318, N = 486,484 from the UK Biobank study.
+# # 32488134 23&amp;Me samples come from 28928442
+# rhd_cohort_correction &lt;-
+#   rhd_cohort_correction |&gt;
+#   mutate(N_cohort = case_when(
+#           PUBMED_ID == 32488134 &amp; cohort == &quot;UK Biobank&quot; &amp; BROAD_ANCESTRAL_CATEGORY == &quot;European&quot; ~ 1459,
+#           PUBMED_ID == &quot;36716318&quot; &amp; cohort == &quot;UK Biobank&quot; &amp; BROAD_ANCESTRAL_CATEGORY == &quot;European&quot; ~ 486484,
+#           PUBMED_ID == &quot;32488134&quot; &amp; cohort == &quot;23&amp;Me&quot; &amp; first_publication == &quot;28928442&quot; ~ first_n_cohort,
+#           PUBMED_ID == &quot;34594039&quot; &amp; cohort == &quot;UK Biobank&quot; &amp; BROAD_ANCESTRAL_CATEGORY == &quot;European&quot; ~ 361194,
+#           PUBMED_ID == &quot;34594039&quot; &amp; cohort == &quot;FinnGen&quot; &amp; BROAD_ANCESTRAL_CATEGORY == &quot;European&quot; ~ 135638,
+#           TRUE ~ N_cohort 
+#            )
+#   )
+
+
+
+# rhd_cohort_correction  &lt;-
+#   rhd_cohort_correction  |&gt;
+#   group_by(ancestry_group) |&gt;
+#   mutate(N_unique = case_when(
+#     !(cohort %in% multi_study_cohorts) ~ Inf, 
+#     # if it&#39;s the earliest appearance of the cohort, and N_cohort is not na
+#     # then N_unique = N_cohort
+#     first_publication == PUBMED_ID &amp; !is.na(N_cohort) ~ N_cohort,
+#     
+#     # if it&#39;s an additional appearance of the cohort, and N_cohort is not na
+#     # then N_unique = N_cohort - N_cohort (first appearance)
+#     first_publication != PUBMED_ID &amp; !is.na(first_n_cohort) &amp; !is.na(N_cohort) ~ pmax(N_cohort - first_n_cohort, 0),
+#       #N_cohort - first_n_cohort, #max(c(N_cohort - first_n_cohort, 0)),
+#     
+#     # specific examples
+#     #PUBMED_ID == &quot;32488134&quot; &amp; first_publication  == &quot;28928442&quot; &amp; cohort == &quot;23&amp;Me&quot; ~ 0,
+#     
+#     TRUE ~ NA
+#   ))
+# 
+# rhd_cohort_correction_final &lt;-
+# rhd_cohort_correction |&gt;
+#   group_by(PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS, N_unique, N_cohort) |&gt;
+#   summarise(
+#     cohort = stringr::str_flatten_comma(cohort)
+#   ) |&gt;
+#   group_by(PUBMED_ID, ancestry_group, NUMBER_OF_INDIVIDUALS) |&gt;
+#   mutate(N_unique = 
+#            ifelse(is.infinite(N_unique), 
+#                   unique(NUMBER_OF_INDIVIDUALS) - sum(unique(N_unique[is.finite(N_unique)]), na.rm = TRUE),
+#                   N_unique
+#                   )
+#   ) |&gt;
+#   mutate(N_unique = 
+#            ifelse(is.na(N_unique),
+#                   N_cohort,
+#                   N_unique)) |&gt;
+#   mutate(N_cohort = ifelse(
+#     is.na(N_cohort),
+#     N_unique,
+#     N_cohort
+#   ))
+
+# rhd_cohort_correction_final &lt;-
+# left_join(
+#     rhd_cohort_correction_final,
+#     gwas_date |&gt; distinct(PUBMED_ID, DATE) 
+# ) |&gt;
+#   ungroup()
+
+ggplot(rhd_cohort_correction_smooth_final_plot_df, 
+       aes(x = month, 
+           y = smooth / 1e6, 
+           fill = ancestry_group)) +
+  geom_area(position = &quot;stack&quot;) +
+  scale_x_date(date_labels = &quot;%Y&quot;, date_breaks = &quot;2 years&quot;) +
+  theme_classic() +
+  labs(x = &quot;Year&quot;,
+       y = &quot;Individuals in GWAS catalog (millions)&quot;,
+       title = &quot;Rheumatic heart disease papers (accounting for sample overlap)&quot;) +
+  scale_fill_manual(values = ancestry_colors, name = &quot;Ancestry group&quot;)</code></pre>
+<p><img src="figure/33_pilot_sample_reuse_ancestry_compositon.Rmd/unnamed-chunk-3-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># check all pubmeds included in both datasets
+uncorrected_df_pmids &lt;- rhd_no_correction  |&gt; 
+                        filter(!is.na(PUBMED_ID)) |&gt;
+                        pull(PUBMED_ID) |&gt; 
+                        unique() 
+
+corrected_df_pmids &lt;- rhd_cohort_correction_final_plot_df  |&gt; 
+                      filter(!is.na(PUBMED_ID)) |&gt;
+                      pull(PUBMED_ID) |&gt; 
+                      unique()
+
+all(
+uncorrected_df_pmids %in% corrected_df_pmids
+)</code></pre>
+<pre><code>[1] TRUE</code></pre>
+<pre class="r"><code>all(
+corrected_df_pmids %in% uncorrected_df_pmids
+)</code></pre>
+<pre><code>[1] TRUE</code></pre>
+<pre class="r"><code>after_correction_ps &lt;-
+rhd_cohort_correction_final_plot_df |&gt; 
+  group_by(ancestry_group) |&gt; 
+  slice_max(ancest_cumsum) |&gt;
+  distinct(ancest_cumsum, ancestry_group) |&gt;
+  ungroup() |&gt;
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+before_correction_ps &lt;-
+  rhd_no_correction |&gt;
+  group_by(ancestry_group) |&gt; 
+  slice_max(ancest_cumsum) |&gt;
+  distinct(ancest_cumsum, ancestry_group) |&gt;
+  ungroup() |&gt;
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+total_n_analysed &lt;-
+before_correction_ps |&gt;
+pull(ancest_cumsum) |&gt;
+sum()
+
+  
+rbinom(
+       n = 10,
+       size =  total_n_analysed,
+       prob = before_correction_ps |&gt;
+            filter(ancestry_group == &quot;European&quot;) |&gt;
+            pull(percentage)
+         )</code></pre>
+<pre><code> [1] 19834971 19836257 19838295 19836520 19836640 19833508 19833634 19837861
+ [9] 19835941 19833430</code></pre>
+<pre class="r"><code># assuming random sampling from collected samples 
+
+# probability of observing &gt;= number of European samples
+pbinom(
+  q = before_correction_ps |&gt;
+      filter(ancestry_group == &quot;European&quot;) |&gt;
+      pull(ancest_cumsum),
+  size =  total_n_analysed, #total number of analysed samples
+  prob =  after_correction_ps |&gt;
+          filter(ancestry_group == &quot;European&quot;) |&gt;
+           pull(percentage),
+  lower.tail = FALSE
+         )</code></pre>
+<pre><code>[1] 0</code></pre>
+<pre class="r"><code># 95% expected range of percentage 0.65
+qbinom(
+  p = c(0.025, 0.975),
+       size =  total_n_analysed,
+       prob = after_correction_ps |&gt;
+               filter(ancestry_group == &quot;European&quot;) |&gt;
+               pull(percentage),
+  lower.tail = TRUE
+         ) / total_n_analysed</code></pre>
+<pre><code>[1] 0.6547111 0.6551022</code></pre>
+<pre class="r"><code>qbinom(
+  p = c(0.025, 0.975),
+       size =  total_n_analysed,
+       prob = after_correction_ps |&gt;
+            filter(ancestry_group == &quot;Asian&quot;) |&gt;
+            pull(percentage),
+  lower.tail = TRUE
+         ) / total_n_analysed</code></pre>
+<pre><code>[1] 0.2390637 0.2394147</code></pre>
+<pre class="r"><code># 
+# data.frame(min = 0.6554224,
+#            max = 0.6558132,
+#            orig = 0.6556178,
+#            obs = 0.8734481,
+#            ancestry_group = &quot;European&quot;) |&gt;
+#   mutate(max = max/orig,
+#          obs = obs/orig,
+#          min = min/orig) |&gt;
+#   ggplot(aes(y = ancestry_group)) + 
+#   geom_errorbar(aes(xmin = min,
+#                     xmax = max)) + 
+#   geom_point(aes(x = obs)) + 
+#   theme_bw()
+  
+
+# prop.test(x = 
+#           n = total_n_analysed,
+#           p = c(before_correction_ps |&gt;
+#             filter(ancestry_group == &quot;European&quot;) |&gt;
+#             pull(percentage),
+#              1 - before_correction_ps |&gt;
+#             filter(ancestry_group == &quot;European&quot;) |&gt;
+#             pull(percentage))) </code></pre>
+</div>
+<div id="plot-ancestry-composition-change-driven-by-cohort-reuse-etc."
+class="section level3">
+<h3>Plot ancestry composition change driven by cohort reuse etc.</h3>
+<div id="line-plot" class="section level4">
+<h4>Line plot</h4>
+<pre class="r"><code>pdf(here::here(&quot;figures/rhd_ancestry_composition_change_lineplot.pdf&quot;),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp &lt;-
+rbind(
+  after_correction_ps |&gt;
+  ungroup() |&gt;
+  mutate(type = &quot;After_correction&quot;),
+  before_correction_ps |&gt;
+  mutate(type = &quot;Before_correction&quot;)
+)
+
+different_ancestry_comp  |&gt;
+  mutate(type = ifelse(type == &quot;After_correction&quot;,
+                       &quot;Collected/recruited Samples&quot;,
+                       &quot;All Analysed Samples&quot;)) |&gt;
+  mutate(type = forcats::fct(type,
+                                   levels = c(&quot;Collected/recruited Samples&quot;,
+                                              &quot;All Analysed Samples&quot;))) |&gt;
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group)) + 
+  geom_line() + 
+  geom_point() + 
+  scale_colour_manual(values = ancestry_colors, name = &quot;Ancestry group&quot;) +
+  theme_bw() + 
+  labs(y = &quot;% of samples&quot;) + 
+        theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5 
+        )
+        )
+
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+</div>
+<div id="scatterplot" class="section level4">
+<h4>Scatterplot</h4>
+<pre class="r"><code>pdf(here::here(&quot;figures/rhd_ancestry_composition_change_scatterplot.pdf&quot;),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp &lt;-
+rbind(
+  after_correction_ps |&gt;
+  ungroup() |&gt;
+  mutate(type = &quot;After_correction&quot;),
+  before_correction_ps |&gt;
+  mutate(type = &quot;Before_correction&quot;)
+)
+
+different_ancestry_comp &lt;-
+  different_ancestry_comp |&gt;
+  select(-ancest_cumsum) |&gt;
+  mutate(percentage = 100 * percentage) |&gt;
+  tidyr::pivot_wider(names_from = &quot;type&quot;,
+                     values_from = &quot;percentage&quot;) 
+
+
+different_ancestry_comp  |&gt;
+  ggplot(aes(y = Before_correction, 
+             x = After_correction,
+             colour = ancestry_group)) +
+  geom_point(size = 5) + 
+  scale_colour_manual(values = ancestry_colors, name = &quot;Ancestry group&quot;) +
+  theme_bw() +
+  geom_abline(slope = 1,
+              intercept = 0,
+              linetype = 2) + 
+  xlim(0, 100) + 
+  ylim(0, 100) + 
+  labs(y = &quot;Ancestry Composition (%) - Cohort Reuse&quot;,
+       x = &quot;Ancestry Composition (%) - No Cohort Reuse&quot;) + 
+      theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5, 
+                         l = 2)
+      )
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+</div>
+<div id="bargraph-delta-percentage" class="section level4">
+<h4>Bargraph (Delta percentage)</h4>
+<pre class="r"><code>pdf(here::here(&quot;figures/rhd_ancestry_composition_change_bar_graph.pdf&quot;),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp  |&gt;
+  mutate(Difference = Before_correction - After_correction) |&gt;
+  # mutate(ancestry_group  = ifelse(ancestry_group == &quot;Hispanic/Latin American&quot;,
+  #                                 &quot;Hispanic/\nLatin American&quot;,
+  #                                 ancestry_group)
+  #        )|&gt;
+  ggplot(aes(x = ancestry_group, 
+             y = Difference,
+             fill = ancestry_group)) + 
+  geom_col() + 
+  theme_bw() + 
+  labs(x = &quot;Ancestry group&quot;,
+       y = stringr::str_wrap(&quot;Over-representation due to sample overlap&quot;, 
+                             width = 50),
+       title = &quot;A. Rheumatic Heart Disease Papers&quot;) + 
+  scale_fill_manual(values = ancestry_colors, 
+                      name = &quot;Ancestry group&quot;) +
+  scale_y_continuous(labels = scales::label_percent(scale = 1)) +
+  scale_x_discrete(labels = scales::label_wrap(12)) + 
+  # scale_x_discrete(labels = \(x) stringr::str_wrap(gsub(&quot;/&quot;, &quot;/ &quot;, x), 
+  #                                                  width = 4)) + 
+    theme_minimal() +
+    theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    legend.position = &quot;none&quot;,
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5, 
+                         l = 2),
+    # legend.position = &quot;right&quot;,           # Bottom left corner
+    # legend.justification = &quot;left&quot;,
+    # #legend.justification = c(0, 0),      # Anchor at bottom left
+    # #legend.background = element_rect(fill = &quot;white&quot;, color = &quot;grey80&quot;),
+    # legend.margin = margin(l = -0.25, unit = &quot;npc&quot;),
+    #legend.margin = margin(5, 5, 5, 5),
+    
+    
+
+
+  )
+
+    dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+</div>
+<div id="bargraph-percentage-enrichment" class="section level4">
+<h4>Bargraph (Percentage Enrichment)</h4>
+<pre class="r"><code>pdf(here::here(&quot;figures/rhd_ancestry_composition_change_enrichment_bar_graph.pdf&quot;),
+    width = 18, 
+    height = 10
+)
+
+different_ancestry_comp  |&gt;
+  mutate(Difference = (Before_correction - After_correction)/After_correction) |&gt;
+  # mutate(ancestry_group  = ifelse(ancestry_group == &quot;Hispanic/Latin American&quot;,
+  #                                 &quot;Hispanic/\nLatin American&quot;,
+  #                                 ancestry_group)
+  #        )|&gt;
+  ggplot(aes(x = ancestry_group, 
+             y = Difference,
+             fill = ancestry_group)) + 
+  geom_col() + 
+  theme_bw() + 
+  labs(x = &quot;Ancestry group&quot;,
+       y = stringr::str_wrap(&quot;Relative representation due to cohort-reuse&quot;, 
+                             width = 50),
+       title = &quot;A. Rheumatic Heart Disease Papers&quot;) + 
+  scale_fill_manual(values = ancestry_colors, 
+                      name = &quot;Ancestry group&quot;) +
+  scale_y_continuous(labels = scales::label_percent(scale = 100)) +
+  scale_x_discrete(labels = scales::label_wrap(12)) + 
+  # scale_x_discrete(labels = \(x) stringr::str_wrap(gsub(&quot;/&quot;, &quot;/ &quot;, x), 
+  #                                                  width = 4)) + 
+    theme_minimal() +
+    theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 35,
+                              hjust = -0.1,
+                              margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25), 
+    legend.position = &quot;none&quot;,
+    plot.margin = margin(t = 20, 
+                         r = 2, 
+                         b = 5, 
+                         l = 2),
+    # legend.position = &quot;right&quot;,           # Bottom left corner
+    # legend.justification = &quot;left&quot;,
+    # #legend.justification = c(0, 0),      # Anchor at bottom left
+    # #legend.background = element_rect(fill = &quot;white&quot;, color = &quot;grey80&quot;),
+    # legend.margin = margin(l = -0.25, unit = &quot;npc&quot;),
+    #legend.margin = margin(5, 5, 5, 5),
+    
+
+  )
+
+    dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+</div>
+<div
+id="check-how-much-driven-by-cohort-reuse-vs-multiple-studies-per-pubmed_id"
+class="section level4">
+<h4>Check how much driven by cohort reuse vs multiple studies per
+PUBMED_ID</h4>
+<pre class="r"><code>cairo_pdf(here::here(&quot;figures/rhd_ancestry_composition_change_all_corrections.pdf&quot;),
+          width = 32.9,
+          height = 12.5,
+          family = &quot;Atkinson Hyperlegible Next&quot;)
+
+mid_correction  &lt;-
+  rhd_control_in_paper |&gt;
+  group_by(ancestry_group) |&gt; 
+  slice_max(ancest_cumsum) |&gt;
+  distinct(ancest_cumsum, ancestry_group) |&gt;
+  ungroup() |&gt;
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+different_ancestry_comp &lt;-
+rbind(
+  after_correction_ps |&gt;
+  ungroup() |&gt;
+  mutate(type = &quot;After_correction&quot;),
+  before_correction_ps |&gt;
+  mutate(type = &quot;Before_correction&quot;)
+)
+
+different_ancestry_comp &lt;-
+rbind(
+  different_ancestry_comp,
+  mid_correction  |&gt;
+  mutate(type = &quot;Mid_correction&quot;)
+)
+
+different_ancestry_comp  |&gt;
+  filter(ancestry_group != &quot;Not reported&quot;) |&gt;
+  # mutate(type = 
+  #       case_when(type == &quot;After_correction&quot; ~ &quot;Collection/recruitment&quot;,
+  #                 type == &quot;Mid_correction&quot; ~ &quot;Cohort Reuse Across Papers&quot;,
+  #                 TRUE ~  &quot;Cohort Reuse Within + Across Papers&quot;)) |&gt;
+  # mutate(type = forcats::fct(type,
+  #                                  levels = c(&quot;Collection/recruitment&quot;,
+  #                                             &quot;Cohort Reuse Across Papers&quot;,
+  #                                             &quot;Cohort Reuse Within + Across Papers&quot;))
+  #        ) |&gt;
+  # every participant is counted once
+  # every participant is counted once per paper
+  # every participant is counted once per GWAS
+    mutate(type = 
+        case_when(type == &quot;After_correction&quot; ~ &quot;Participants are counted once&quot;,
+                  type == &quot;Mid_correction&quot; ~ &quot;Participants are counted once per paper&quot;,
+                  TRUE ~   &quot;Participants are counted once per analysis&quot;)) |&gt;
+  mutate(type = forcats::fct(type,
+                            levels = c(&quot;Participants are counted once per analysis&quot;,
+                                        &quot;Participants are counted once per paper&quot;,
+                                        &quot;Participants are counted once&quot;
+                                       ))
+         ) |&gt;
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             # shape = ancestry_group
+             )
+         ) + 
+  geom_line(linewidth = 2,
+            linetype = 2,
+            alpha = 0.75,
+            show.legend = FALSE) + 
+  # geom_point(size = 10) + 
+  geom_star(aes(starshape = ancestry_group), 
+            size = 12) +  
+  scale_colour_manual(values = ancestry_colors, name = &quot;Ancestry group&quot;) +
+  scale_fill_manual(values = ancestry_colors,   name = &quot;Ancestry group&quot;) +
+  scale_starshape_manual(values = c(15, 
+                                    13,
+                                    11,
+                                    23,
+                                    28,
+                                    1,
+                                    29
+                                    ),
+                         name = &quot;Ancestry group&quot;) +
+  # scale_shape_manual(values = c(16, 
+  #                               17, 
+  #                               15, 
+  #                               18, 
+  #                               25, 
+  #                               8, 
+  #                               4, 
+  #                               3, 
+  #                               13),
+  #                    
+  #                    # c(21, 22, 23, 24, 25)
+                     # name = &quot;Ancestry group&quot;) +
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  coord_cartesian(clip = &quot;off&quot;) +
+  theme_bw() + 
+  labs(y = &quot;Proportion of counted participants&quot;,
+       title = &quot;A. Rheumatic Heart Disease Papers&quot;)+ 
+  scale_x_discrete(labels = scales::label_wrap(25)) +
+        theme(
+    axis.ticks.length.x = unit(20, &quot;pt&quot;),
+    #axis.ticks.x = element_line(linewidth = unit(0.2, &quot;in&quot;)),
+    axis.text.x  = element_text(size = 35,
+                                colour = &quot;black&quot;,
+                                margin = margin(t = 0.1,
+                                                unit = &quot;in&quot;)),  
+    axis.text.y  = element_text(size = 35,
+                                colour = &quot;black&quot;), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 40,
+                              # hjust = -0.025,
+                              margin = margin(b = 0.2,
+                                              unit = &quot;in&quot;)
+                              ),
+    plot.title.position = &quot;plot&quot;,
+    axis.title.y = element_text(size = 35,
+                                colour = &quot;black&quot;), 
+    # legend.title = element_text(size = 32), 
+    legend.text  = element_text(size = 35,
+                                colour = &quot;black&quot;), 
+    legend.justification = &quot;top&quot;,
+    legend.position = &quot;right&quot;,
+    legend.key.spacing.y = unit(10, &quot;pt&quot;),
+    legend.title = element_text(size = 35, 
+                               margin = margin(b = 20),
+                               colour = &quot;black&quot;),
+    legend.box.margin = margin(l = 0.2,
+                                 unit = &quot;in&quot;
+                                 ),
+    plot.margin = margin(t =  0.5,
+                         r =  1,
+                         l =  1,
+                         b = 0.5,
+                         unit = &quot;in&quot;
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(colour = &quot;grey60&quot;),
+    panel.grid.minor.y = element_line(colour = &quot;grey60&quot;)
+        )
+
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+<pre class="r"><code>mid_correction  &lt;-
+  rhd_control_in_paper |&gt;
+  group_by(ancestry_group) |&gt; 
+  slice_max(ancest_cumsum) |&gt;
+  distinct(ancest_cumsum, ancestry_group) |&gt;
+  ungroup() |&gt;
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+different_ancestry_comp &lt;-
+rbind(
+  after_correction_ps |&gt;
+  ungroup() |&gt;
+  mutate(type = &quot;After_correction&quot;),
+  before_correction_ps |&gt;
+  mutate(type = &quot;Before_correction&quot;)
+)
+
+different_ancestry_comp &lt;-
+rbind(
+  different_ancestry_comp,
+  mid_correction  |&gt;
+  mutate(type = &quot;Mid_correction&quot;)
+)
+
+
+plot &lt;-
+different_ancestry_comp  |&gt;
+  filter(ancestry_group != &quot;Not reported&quot;) |&gt;
+    mutate(type = 
+        case_when(type == &quot;After_correction&quot; ~ &quot;Participants are counted once&quot;,
+                  type == &quot;Mid_correction&quot; ~ &quot;Participants are counted once per paper&quot;,
+                  TRUE ~   &quot;Participants are counted once per analysis&quot;)) |&gt;
+  mutate(type = forcats::fct(type,
+                            levels = c(&quot;Participants are counted once&quot;,
+                                        &quot;Participants are counted once per paper&quot;,
+                                       &quot;Participants are counted once per analysis&quot;))
+         ) |&gt;
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             # shape = ancestry_group
+             )
+         ) + 
+  geom_line(linewidth = 2,
+            linetype = 2,
+            alpha = 0.75,
+            show.legend = FALSE) + 
+  # geom_point(size = 10) + 
+    scale_colour_manual(values = ancestry_colors, 
+                      name = &quot;Ancestry group&quot;,
+                      labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  scale_fill_manual(values = ancestry_colors,   
+                    name = &quot;Ancestry group&quot;,
+                    labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  scale_starshape_manual(values = c(15, 
+                                    13,
+                                    11,
+                                    23,
+                                    28,
+                                    1,
+                                    29
+                                    ),
+                         name = &quot;Ancestry group&quot;,
+                         labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  geom_star(aes(starshape = ancestry_group), 
+            size = 5) +  
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  coord_cartesian(clip = &quot;off&quot;) +
+  theme_bw() + 
+  labs(y = &quot;Proportion in GWAS catalog&quot;,
+       title = &quot;A. Rheumatic Heart Disease Papers&quot;)+ 
+  scale_x_discrete(labels = scales::label_wrap(22)) +
+        theme(
+    text = element_text(family = &quot;Atkinson Hyperlegible Next&quot;),
+    #axis.ticks.x = element_line(linewidth = unit(0.2, &quot;in&quot;)),
+    axis.text.x  = element_text(size = 20,
+                                colour = &quot;black&quot;),  
+    axis.text.y  = element_text(size = 20,
+                                colour = &quot;black&quot;), 
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 27,
+                              # hjust = -0.025,
+                              margin = margin(b = 0.4,
+                                              unit = &quot;in&quot;)
+                              ),
+    plot.title.position = &quot;plot&quot;,
+    axis.title.y = element_text(size = 20,
+                                colour = &quot;black&quot;,
+                                margin = margin(r = 0.2,
+                                                unit = &quot;in&quot;)
+                                ),
+    # legend.title = element_text(size = 32), 
+    legend.text  = element_text(size = 18,
+                                colour = &quot;black&quot;),
+    legend.justification = &quot;bottom&quot;,
+    legend.position = &quot;right&quot;,
+    legend.key.spacing.y = unit(2, &quot;pt&quot;),
+    legend.title = element_text(size = 18, 
+                                margin = margin(b = 0.1,
+                                               unit = &quot;in&quot;
+                                               ),
+                               colour = &quot;black&quot;),
+    legend.box.margin = margin(l = 0,
+                               unit = &quot;in&quot;
+                                 ),
+    plot.margin = margin(t =  0.1,
+                         r =  0,
+                         l =  0.1,
+                         b = 0.2,
+                         unit = &quot;in&quot;
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(colour = &quot;grey60&quot;),
+    panel.grid.minor.y = element_line(colour = &quot;grey60&quot;)
+        )
+
+# powerpoint slide minus title 12.3 × 5.8 in
+ggsave(plot,
+       filename =here::here(&quot;figures/rhd_ancestry_composition_change_all_corrections.png&quot;),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.8,
+       units = &quot;in&quot;
+)</code></pre>
+<div id="stacked-barplot" class="section level5">
+<h5>Stacked barplot</h5>
+<pre class="r"><code>mid_correction  &lt;-
+  rhd_control_in_paper |&gt;
+  group_by(ancestry_group) |&gt; 
+  slice_max(ancest_cumsum) |&gt;
+  distinct(ancest_cumsum, ancestry_group) |&gt;
+  ungroup() |&gt;
+  mutate(percentage = ancest_cumsum / sum(ancest_cumsum)) 
+
+different_ancestry_comp &lt;-
+rbind(
+  after_correction_ps |&gt;
+  ungroup() |&gt;
+  mutate(type = &quot;After_correction&quot;),
+  before_correction_ps |&gt;
+  mutate(type = &quot;Before_correction&quot;)
+)
+
+different_ancestry_comp &lt;-
+rbind(
+  different_ancestry_comp,
+  mid_correction  |&gt;
+  mutate(type = &quot;Mid_correction&quot;)
+)
+
+# https://www.worldometers.info/world-population/#region
+world_pop &lt;-
+data.frame(ancestry_group = c(&quot;European&quot;, 
+                            &quot;Asian&quot;,
+                            &quot;African&quot;, 
+                            &quot;Hispanic/Latin American&quot;, 
+                            &quot;Oceanic&quot;),
+           percentage = c(0.137,
+                                0.586,
+                                0.191,
+                                0.081,
+                                0.005)
+           ) |&gt;
+  mutate(type = &quot;World Population&quot;,
+         ancest_cumsum = NA) 
+
+
+different_ancestry_comp &lt;-
+  rbind(
+    different_ancestry_comp,
+    world_pop
+  )</code></pre>
+<pre class="r"><code>cairo_pdf(here::here(&quot;figures/rhd_ancestry_composition_change_all_corrections_stackedbar.pdf&quot;),
+          width = 33.9,
+          height = 12.5,
+          family = &quot;Atkinson Hyperlegible Next&quot;)
+
+different_ancestry_comp  |&gt;
+  filter(ancestry_group != &quot;Not reported&quot;) |&gt;
+  mutate(ancestry_group = forcats::fct_recode(ancestry_group, Other = &quot;Oceanic&quot;)) |&gt;
+    mutate(type = 
+        case_when(type == &quot;After_correction&quot; ~ &quot;Unique\nParticipants&quot;,
+                  type == &quot;Mid_correction&quot; ~ &quot;Participants\n(counted once per paper)&quot;,
+                  type == &quot;World Population&quot; ~ &quot;World Population&quot;,
+                  TRUE ~   &quot;Participants\n(counted once per analysis)&quot;)) |&gt;
+  mutate(type = forcats::fct(type,
+                            levels = c(&quot;Participants\n(counted once per analysis)&quot;,
+                                        &quot;Participants\n(counted once per paper)&quot;,
+                                        &quot;Unique\nParticipants&quot;,
+                                        &quot;World Population&quot;
+                                       ))
+         ) |&gt;
+    mutate(panel = if_else(type == &quot;World Population&quot;,
+                         &quot;&quot;,
+                         &quot;GWAS Participants&quot;) |&gt;
+           forcats::fct(levels = c(&quot;GWAS Participants&quot;, &quot;&quot;))) |&gt;
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             )
+         ) + 
+  geom_col(data = ~ dplyr::filter(.x, panel != &quot;&quot;),
+           width = 0.7,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  geom_col(data = ~ dplyr::filter(.x, panel == &quot;&quot;),
+           width = 0.25,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  # geom_col(width = 0.7, 
+  #          position = position_stack(reverse = TRUE),
+  #          linewidth = 0) +
+  scale_colour_manual(values = ancestry_colors, 
+                      name = &quot;Population&quot;,
+                      labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  scale_fill_manual(values = ancestry_colors,   
+                    name = &quot;Population&quot;,
+                    labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  guides(fill = guide_legend(reverse = TRUE),
+         colour = guide_legend(reverse = TRUE)) +
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  facet_grid(cols = vars(panel),
+             scales = &quot;free_x&quot;,
+             space = &quot;free_x&quot;) +
+  ggh4x::force_panelsizes(cols = c(3, 0.6)) +
+  theme_bw() + 
+  labs(y = &quot;Proportion of&quot;,
+       title = &quot;A. Rheumatic Heart Disease Papers (n = 14)&quot;)+ 
+  # scale_x_discrete(labels = scales::label_wrap(25)) +
+        theme(
+    text = element_text(family = &quot;Atkinson Hyperlegible Next&quot;),
+    ####### axis labels and ticks:  ##########
+    axis.ticks.length.x = unit(20, &quot;pt&quot;),
+    #axis.ticks.x = element_line(linewidth = unit(0.2, &quot;in&quot;)),
+    axis.text.x  = element_text(size = 35,
+                                colour = &quot;black&quot;,
+                                margin = margin(t = 0.1,
+                                                unit = &quot;in&quot;)),  
+    axis.text.y  = element_text(size = 35,
+                                colour = &quot;black&quot;), 
+    
+
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 35,
+                                colour = &quot;black&quot;), 
+    
+    ############## Plot title options ##############
+    plot.title.position = &quot;plot&quot;,
+    plot.title = element_text(size = 40,
+                              colour = &quot;black&quot;,
+                              margin = margin(b = 0.3,
+                                              l = 0.2,
+                                              unit = &quot;in&quot;)
+                              ),
+    
+    ############## Facet title options #############
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    # strip.text = element_text(size = 35,
+    #                           colour = &quot;black&quot;,
+    #                           margin = margin(b = 0.1, 
+    #                                           # t = 0.2,
+    #                                           unit = &quot;in&quot;)),
+    
+    ############ Legend text + options ##########
+    legend.text  = element_text(size = 35,
+                                colour = &quot;black&quot;), 
+    legend.justification = &quot;top&quot;,
+    legend.position = &quot;right&quot;,
+    legend.location = &quot;plot&quot;,
+    legend.key.spacing.y = unit(0.15, &quot;in&quot;),
+    legend.title = element_text(size = 35, 
+                               margin = margin(b = 0.2,
+                                               unit = &quot;in&quot;),
+                               colour = &quot;black&quot;),
+    legend.box.margin = margin(l = 0.5,
+                               # t = 0.2,
+                               unit = &quot;in&quot;
+                                 ),
+    
+    ###### Plot margins and panel options ##########
+    plot.margin = margin(t =  0.5,
+                         r =  1.2,
+                         l =  0.6,
+                         b = 0.5,
+                         unit = &quot;in&quot;
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;),
+    panel.grid.major.y = element_line(colour = &quot;grey50&quot;, 
+                                      linetype = &quot;dashed&quot;,
+                                      linewidth = unit(1, &quot;in&quot;)),
+    panel.grid.minor.y = element_line(colour = &quot;grey50&quot;, 
+                                      linetype = &quot;dashed&quot;,
+                                      linewidth = unit(0.5, &quot;in&quot;)),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank(),
+    # panel.grid.major.x = element_blank(),
+    # panel.grid.minor.x = element_blank(),
+    # panel.grid.major.y = element_line(colour = &quot;grey60&quot;),
+    # panel.grid.minor.y = element_line(colour = &quot;grey60&quot;),
+
+    panel.spacing.x = unit(1.25, &quot;in&quot;)
+        )
+
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+</div>
+<div id="stacked-barplot-powerpoint" class="section level5">
+<h5>Stacked barplot (powerpoint)</h5>
+<pre class="r"><code>plot &lt;-
+different_ancestry_comp  |&gt;
+  filter(ancestry_group != &quot;Not reported&quot;) |&gt;
+    mutate(ancestry_group = forcats::fct_recode(ancestry_group, Other = &quot;Oceanic&quot;)) |&gt;
+    mutate(type = 
+        case_when(type == &quot;After_correction&quot; ~ &quot;Unique\nParticipants&quot;,
+                  type == &quot;Mid_correction&quot; ~ &quot;Participants (counted once per paper)&quot;,
+                  type == &quot;World Population&quot; ~ &quot;World Population&quot;,
+                  TRUE ~   &quot;Participants\n(counted once per analysis)&quot;)) |&gt;
+  mutate(type = forcats::fct(type,
+                            levels = c(&quot;Participants\n(counted once per analysis)&quot;,
+                                        &quot;Participants (counted once per paper)&quot;,
+                                        &quot;Unique\nParticipants&quot;,
+                                        &quot;World Population&quot;
+                                       ))
+         ) |&gt;
+    mutate(panel = if_else(type == &quot;World Population&quot;,
+                         &quot;&quot;,
+                         &quot;GWAS Participants&quot;) |&gt;
+           forcats::fct(levels = c(&quot;GWAS Participants&quot;, &quot;&quot;))) |&gt;
+  filter(type != &quot;Participants (counted once per paper)&quot;) |&gt;
+  ggplot(aes(y = percentage,
+             x = type,
+             group = ancestry_group,
+             colour = ancestry_group,
+             fill = ancestry_group,
+             )
+         ) + 
+    geom_col(data = ~ dplyr::filter(.x, panel != &quot;&quot;),
+           width = 0.7,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  geom_col(data = ~ dplyr::filter(.x, panel == &quot;&quot;),
+           width = 0.25,
+           position = position_stack(reverse = TRUE),
+           linewidth = 0) +
+  # geom_col(width = 0.7, 
+  #          position = position_stack(reverse = TRUE),
+  #          linewidth = 0) +
+      scale_colour_manual(values = ancestry_colors, 
+                      name = &quot;Population&quot;,
+                      labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  scale_fill_manual(values = ancestry_colors,   
+                    name = &quot;Population&quot;,
+                    labels = \(x) gsub(&quot;/&quot;, &quot;/\n&quot;, x)) +
+  guides(fill = guide_legend(reverse = TRUE),
+         colour = guide_legend(reverse = TRUE)) +
+  scale_y_continuous(labels = scales::label_percent(scale = 100),
+                     limits = c(0, 1)
+                     #expand = c(0, 0)
+                     ) +
+  facet_grid(cols = vars(panel),
+             scales = &quot;free_x&quot;,
+             space = &quot;free_x&quot;) +
+  ggh4x::force_panelsizes(cols = c(3, 0.6)) +
+  theme_bw() + 
+  labs(y = &quot;Proportion of&quot;,
+       title = &quot;Rheumatic Heart Disease Papers (n = 14)&quot;)+ 
+  # scale_x_discrete(labels = scales::label_wrap(25)) +
+  # scale_x_discrete(labels = scales::label_wrap(25)) +
+    theme(
+    text = element_text(family = &quot;Atkinson Hyperlegible Next&quot;),
+    ####### axis labels and ticks:  ##########
+    axis.ticks.length.x = unit(0.1, 
+                               &quot;in&quot;),
+    axis.text.x  = element_text(size = 20,
+                                colour = &quot;black&quot;,
+                                margin = margin(t = 0.1,
+                                                unit = &quot;in&quot;)),  
+    axis.text.y  = element_text(size = 18,
+                                colour = &quot;black&quot;), 
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 20,
+                                colour = &quot;black&quot;), 
+    
+    ############## Plot title options ##############
+    plot.title.position = &quot;plot&quot;,
+    plot.title = element_text(size = 20,
+                              colour = &quot;black&quot;,
+                              margin = margin(b = 0.2,
+                                              t = 0,
+                                              unit = &quot;in&quot;)
+                              ),
+    
+    ############## Facet title options #############
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    # strip.text = element_text(size = 20,
+    #                           colour = &quot;black&quot;,
+    #                           margin = margin(b = 0, 
+    #                                           unit = &quot;in&quot;)),
+    
+    ############ Legend text + options ##########
+    legend.text  = element_text(size = 18,
+                                colour = &quot;black&quot;), 
+    legend.justification = &quot;top&quot;,
+    legend.position = &quot;right&quot;,
+    legend.location = &quot;plot&quot;,
+    legend.key.spacing.y = unit(0.05, &quot;in&quot;),
+    legend.title = element_text(size = 18, 
+                               margin = margin(b = 0.1,
+                                               unit = &quot;in&quot;),
+                               colour = &quot;black&quot;),
+    legend.box.margin = margin(l = 0,
+                               unit = &quot;in&quot;
+                                 ),
+    
+    ###### Plot margins and panel options ##########
+    plot.margin = margin(t =  0,
+                         r =  0,
+                         l =  0,
+                         b = 0,
+                         unit = &quot;in&quot;
+        ),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;),
+    panel.grid.major.y = element_line(colour = &quot;grey50&quot;, 
+                                      linetype = &quot;dashed&quot;,
+                                      linewidth = unit(0.2, &quot;in&quot;)),
+    panel.grid.minor.y = element_line(colour = &quot;grey50&quot;, 
+                                      linetype = &quot;dashed&quot;,
+                                      linewidth = unit(0.1, &quot;in&quot;)),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank(),
+    panel.spacing.x = unit(0.5, &quot;in&quot;)
+        )
+
+ggsave(plot,
+       filename =here::here(&quot;figures/rhd_ancestry_composition_change_all_corrections_stackedbar.png&quot;),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.5,
+       units = &quot;in&quot;
+)</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 26.7.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Toronto
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] slider_0.3.3    ggplot2_4.0.3   ggstar_1.0.6    lubridate_1.9.4
+[5] stringr_1.6.0   tidyr_1.3.2     dplyr_1.2.1     workflowr_1.7.2
+
+loaded via a namespace (and not attached):
+ [1] gtable_0.3.6            xfun_0.55               bslib_0.9.0            
+ [4] htmlwidgets_1.6.4       processx_3.8.6          callr_3.7.6            
+ [7] vctrs_0.7.3             tools_4.3.2             ps_1.9.1               
+[10] generics_0.1.4          tibble_3.3.1            pkgconfig_2.0.3        
+[13] data.table_1.17.8       RColorBrewer_1.1-3      S7_0.2.2               
+[16] readxl_1.4.5            lifecycle_1.0.5         compiler_4.3.2         
+[19] farver_2.1.2            git2r_0.36.2            textshaping_1.0.3      
+[22] getPass_0.2-4           httpuv_1.6.16           fontquiver_0.2.1       
+[25] fontLiberation_0.1.0    htmltools_0.5.8.1       sass_0.4.10            
+[28] yaml_2.3.10             later_1.4.4             pillar_1.11.1          
+[31] jquerylib_0.1.4         whisker_0.4.1           MASS_7.3-60            
+[34] cachem_1.1.0            fontBitstreamVera_0.1.1 ggh4x_0.3.1            
+[37] tidyselect_1.2.1        digest_0.6.37           stringi_1.8.9          
+[40] purrr_1.2.2             forcats_1.0.1           labeling_0.4.3         
+[43] rprojroot_2.1.0         fastmap_1.2.0           grid_4.3.2             
+[46] here_1.0.1              cli_3.6.6               magrittr_2.0.5         
+[49] utf8_1.2.6              withr_3.0.3             gdtools_0.5.1          
+[52] scales_1.4.0            promises_1.3.3          warp_0.2.3             
+[55] timechange_0.3.0        rmarkdown_2.30          httr_1.4.7             
+[58] gridExtra_2.3           cellranger_1.1.0        ragg_1.5.0             
+[61] evaluate_1.0.5          knitr_1.50              rlang_1.3.0            
+[64] ggiraph_0.9.6           Rcpp_1.1.0              glue_1.8.1             
+[67] BiocManager_1.30.26     renv_1.1.8              rstudioapi_0.17.1      
+[70] jsonlite_2.0.0          R6_2.6.1                systemfonts_1.3.2      
+[73] fs_1.6.6               </code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
