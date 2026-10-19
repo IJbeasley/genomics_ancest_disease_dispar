@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+
+<title>Normalise cohort names</title>
+
+<script src="site_libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Normalise cohort names</h1>
+<h4 class="author">Isobel Beasley</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2026-10-19
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.2). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9df1bf83b22bcc41245a3ff688884cce0d551233targetblank9df1bf8a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9df1bf83b22bcc41245a3ff688884cce0d551233" target="_blank">9df1bf8</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree9df1bf83b22bcc41245a3ff688884cce0d551233targetblank9df1bf8a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/9df1bf83b22bcc41245a3ff688884cce0d551233" target="_blank">9df1bf8</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    .venv/
+    Ignored:    BioC.dtd
+    Ignored:    Claude outputs/
+    Ignored:    FormatConverter.jar
+    Ignored:    FormatConverter.zip
+    Ignored:    analysis/.DS_Store
+    Ignored:    ancestry_dispar_env/
+    Ignored:    code/.DS_Store
+    Ignored:    code/extract_text/__pycache__/
+    Ignored:    code/full_text_conversion/.DS_Store
+    Ignored:    code/full_text_conversion/__pycache__/
+    Ignored:    code/pop_desc_processing/.DS_Store
+    Ignored:    code/text_embeddings/__pycache__/
+    Ignored:    code/text_mining_models/__pycache__/
+    Ignored:    data/.DS_Store
+    Ignored:    data/cdc/
+    Ignored:    data/cohort/
+    Ignored:    data/europe_pmc/
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/IHME-GBD_2023_DATA-73cc01fd-1.csv
+    Ignored:    data/gbd/gbd_2019_california_percent_deaths.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/2025AA/
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/archived_assorted_map_files/
+    Ignored:    data/icd/icd102019enMeta/
+    Ignored:    data/icd/lancet_conditions_icd10.xlsx
+    Ignored:    data/icd/manual_disease_map.xlsx
+    Ignored:    data/icd/oxo/
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/phecode_to_icd10_manual_map.xlsx
+    Ignored:    data/nih/
+    Ignored:    data/ontology/
+    Ignored:    doccano_venv/
+    Ignored:    figures/
+    Ignored:    output/.DS_Store
+    Ignored:    output/abbreviations/
+    Ignored:    output/abstracts/
+    Ignored:    output/archived_fulltexts/
+    Ignored:    output/clustering/
+    Ignored:    output/doccano/
+    Ignored:    output/fulltexts/
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_cohorts/
+    Ignored:    output/icd_map/
+    Ignored:    output/intros/
+    Ignored:    output/journal_meta/
+    Ignored:    output/methods/
+    Ignored:    output/results/
+    Ignored:    output/supplement/
+    Ignored:    output/text_mining_predictions/
+    Ignored:    output/trait_ontology/
+    Ignored:    pubmedbert-cohort-ner-model/
+    Ignored:    pubmedbert-cohort-ner/
+    Ignored:    pubmedbert-grid/
+    Ignored:    renv/
+    Ignored:    rhd_paper_cohorts_sample_n.csv
+    Ignored:    spacy_venv_requirements.txt
+    Ignored:    spacyr_venv/
+    Ignored:    testing_papers.csv
+    Ignored:    testing_papers_cohort_norm.csv
+    Ignored:    training_papers_test.csv
+    Ignored:    training_papers_test_cohort_norm.csv
+
+Untracked files:
+    Untracked:  analysis/41_correcting_gwas_meta_cohort_names.Rmd
+    Untracked:  analysis/compare_cohort_annot.Rmd
+    Untracked:  code/training_set/
+    Untracked:  plot_pubmedert_performance.R
+
+Unstaged changes:
+    Modified:   analysis/14_process_article_text.Rmd
+    Modified:   analysis/21_training_set_selection.Rmd
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/replication_ancestry_bias.Rmd
+    Modified:   analysis/specific_aims_stats.Rmd
+    Modified:   code/cohort_norm/normalize_cohort_names_fns.R
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/31_normalise_cohort_annot.Rmd</code>) and HTML
+(<code>docs/31_normalise_cohort_annot.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/9df1bf83b22bcc41245a3ff688884cce0d551233/analysis/31_normalise_cohort_annot.Rmd" target="_blank">9df1bf8</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Add cohort annotation normalisation page
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/b6d4b3d14b3166896a263256041ae51f56bee1b4/analysis/31_normalise_cohort_annot.Rmd" target="_blank">b6d4b3d</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Add cohort annotation normalisation page
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<p>Aims: Want to take NER cohort annotations, and make them consistent
+across all papers, such that we can identify what papers are studying
+the same cohorts.</p>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>
+Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>The following objects are masked from &#39;package:stats&#39;:
+
+    filter, lag</code></pre>
+<pre><code>The following objects are masked from &#39;package:base&#39;:
+
+    intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(stringr)
+library(tokenizers)
+library(ggplot2)
+library(ggsankey)
+library(ggalluvial)
+
+#source(here::here(&quot;code/cohort_norm/normalize_cohort_names.R&quot;))
+source(here::here(&quot;code/cohort_norm/normalize_cohort_names_fns.R&quot;))</code></pre>
+<pre class="r"><code>pubmedbert_abstract_cohort_annotations &lt;- data.table::fread(here::here(&quot;output/text_mining_predictions/test_abstracts_entity_predictions.csv&quot;))
+
+# pubmedbert_abstract_cohort_annotations &lt;-
+#   pubmedbert_abstract_cohort_annotations |&gt;
+#   distinct(pubmed_id, sentence,
+#            cohort_annot = predicted_cohorts)
+
+pubmedbert_abstract_cohort_annotations &lt;-
+  pubmedbert_abstract_cohort_annotations |&gt;
+  distinct(pubmed_id, 
+           sentence,
+           cohort_annot = true_cohorts) |&gt;
+  group_by(pubmed_id) |&gt; 
+  filter(any(cohort_annot != &quot;&quot;)) 
+
+pubmedbert_methods_cohort_annotations &lt;-
+  data.table::fread(here::here(&quot;output/text_mining_predictions/test_methods_entity_predictions.csv&quot;))
+
+# pubmedbert_methods_cohort_annotations &lt;-
+#   pubmedbert_methods_cohort_annotations |&gt;
+#   distinct(pubmed_id, sentence,
+#            cohort_annot = predicted_cohorts)
+
+pubmedbert_methods_cohort_annotations &lt;-
+  pubmedbert_methods_cohort_annotations |&gt;
+  distinct(pubmed_id, 
+           sentence,
+           cohort_annot = true_cohorts) |&gt;
+  group_by(pubmed_id) |&gt; 
+  filter(any(cohort_annot != &quot;&quot;)) 
+
+cohorts &lt;- rbind(pubmedbert_abstract_cohort_annotations,
+                 pubmedbert_methods_cohort_annotations)
+
+
+cohorts &lt;-
+  cohorts |&gt;
+  distinct()
+
+# unique row per sentence
+cohorts |&gt;
+  group_by(pubmed_id, sentence) |&gt;
+  summarise(n = n()) |&gt;
+  filter(n &gt; 1)</code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by pubmed_id and sentence.
+ℹ Output is grouped by pubmed_id.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(pubmed_id, sentence))` for per-operation grouping
+  (`?dplyr::dplyr_by`) instead.</code></pre>
+<pre><code># A tibble: 0 × 3
+# Groups:   pubmed_id [0]
+# ℹ 3 variables: pubmed_id &lt;int&gt;, sentence &lt;chr&gt;, n &lt;int&gt;</code></pre>
+<pre class="r"><code>testing_pmids &lt;- c(&quot;17903303&quot;,
+                   &quot;23388002&quot;,
+                   &quot;23982368&quot;,
+                   &quot;26516778&quot;,
+                   &quot;28492228&quot;,
+                   &quot;28928442&quot;,
+                   &quot;30104761&quot;,
+                   &quot;30251476&quot;,
+                   &quot;32066683&quot;,
+                   &quot;32488134&quot;,
+                   &quot;32915819&quot;,
+                   &quot;33350037&quot;,
+                   &quot;34106200&quot;,
+                   &quot;34594039&quot;,
+                   &quot;34662886&quot;,
+                   &quot;34737426&quot;,
+                   &quot;36716318&quot;,
+                   &quot;37033211&quot;,
+                   &quot;39024449&quot;,
+                   &quot;40164586&quot;
+)
+
+cohorts &lt;-
+  cohorts  |&gt;
+  filter(pubmed_id %in% testing_pmids)</code></pre>
+<pre class="r"><code>cohorts |&gt;
+  tidyr::separate_longer_delim(cohort_annot, delim = &quot;; &quot;) |&gt;
+  distinct(cohort_annot) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 172</code></pre>
+<div id="fixing-any-mistakes-in-labelling" class="section level1">
+<h1>Fixing any mistakes in labelling</h1>
+<pre class="r"><code>pad_to_words &lt;- function(annot, sentence) {
+    stringr::str_extract(
+      sentence,
+      paste0(&quot;[\\w&#39;’-]*&quot;, stringr::str_escape(annot), &quot;[\\w&#39;’-]*&quot;)
+    )
+}
+
+cohorts &lt;- cohorts |&gt;
+    filter(cohort_annot != &quot;&quot;) |&gt;
+    mutate(cohort_annot_full = pad_to_words(cohort_annot, sentence),
+           cohort_annot_update = dplyr::coalesce(cohort_annot_full, cohort_annot) |&gt;
+             stringr::str_remove_all(pattern = &quot;&#39;s$|’s$|-based$|’$|-individuals$&quot;)  |&gt;
+             stringr::str_remove_all(pattern = &quot;rapid-gwas-of-thousands-of-phenotypes-for-337000-samples-in-the-&quot;) |&gt;
+             stringr::str_remove_all(pattern = &quot;study--&quot;)
+
+    )
+
+cohorts |&gt;
+    filter(cohort_annot_update != cohort_annot) |&gt;
+    distinct(cohort_annot_update, cohort_annot) |&gt;
+    head()</code></pre>
+<pre><code># A tibble: 3 × 3
+# Groups:   pubmed_id [3]
+  pubmed_id cohort_annot_update   cohort_annot
+      &lt;int&gt; &lt;chr&gt;                 &lt;chr&gt;       
+1  28928442 CAP-accredited        CAP         
+2  36716318 MRC-IEU               MRC         
+3  40164586 HRC-1000Gcheck-bim-v4 HRC         </code></pre>
+<pre class="r"><code>cohorts &lt;-
+    cohorts |&gt;
+    rename(cohort_annot_orig = cohort_annot,
+           cohort_annot = cohort_annot_update
+    ) |&gt;
+    select(-cohort_annot_full) |&gt;
+    distinct()
+
+# drop weird annotations
+cohorts &lt;-
+  cohorts |&gt;
+  filter(stringr::str_length(cohort_annot) != 1)
+
+cohorts &lt;-
+  cohorts |&gt;
+  tidyr::separate_longer_delim(cohort_annot, delim = &quot;; &quot;) </code></pre>
+</div>
+<div id="extract-paper-specific-abbreviations" class="section level1">
+<h1>Extract paper-specific abbreviations</h1>
+<pre class="bash"><code>
+shopt -s nullglob
+mkdir -p output/abbreviations
+out=output/abbreviations/paper_ab3p_abbreviations.tsv
+log=output/abbreviations/ab3p_stderr.log
+
+printf &#39;pmid\tshort_form\tlong_form\tprecision\n&#39; &gt; &quot;$out&quot;
+: &gt; &quot;$log&quot;
+
+for txt_file in output/abstracts/*.txt output/results_copy/*.txt output/methods_copy/*.txt; do
+    filename=$(basename &quot;$txt_file&quot;)
+    if [[ &quot;$filename&quot; =~ ^([0-9]+) ]]; then
+        pmid=&quot;${BASH_REMATCH[1]}&quot;
+
+        clean=$(mktemp /tmp/ab3p.XXXXXX)
+        # iconv -f UTF-8 -t ASCII//TRANSLIT -c &lt; &quot;$txt_file&quot; \
+        #    | tr &#39;\n&#39; &#39; &#39; | sed &#39;s/  */ /g; s/ $//&#39; &gt; &quot;$clean&quot;
+        # echo &gt;&gt; &quot;$clean&quot;
+        
+        iconv -f UTF-8 -t ASCII//TRANSLIT -c &lt; &quot;$txt_file&quot; \
+            | tr &#39;_&#39; &#39;-&#39; \
+            | tr &#39;\n&#39; &#39; &#39; | sed &#39;s/  */ /g; s/ $//&#39; &gt; &quot;$clean&quot;
+            echo &gt;&gt; &quot;$clean&quot;
+
+        apptainer run -B /tmp ab3p.sif &quot;$clean&quot; 2&gt;&gt;&quot;$log&quot; |
+        awk -F&#39;|&#39; -v pmid=&quot;$pmid&quot; &#39;
+            /^  / &amp;&amp; NF == 3 {
+                sf = $1; gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, sf)
+                lf = $2; gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, lf)
+                if ($3 + 0 &gt; 0.9) print pmid &quot;\t&quot; sf &quot;\t&quot; lf &quot;\t&quot; $3 + 0
+            }&#39; &gt;&gt; &quot;$out&quot;
+
+        rm -f &quot;$clean&quot;
+    else
+        echo &quot;No leading PMID: $txt_file&quot; &gt;&amp;2
+    fi
+done
+
+wc -l &quot;$out&quot; # ~22,000 abbreviations
+
+grep -c &#39;Failed to find sentence&#39; &quot;$log&quot;  # ~16702
+</code></pre>
+<pre class="r"><code>ab3p_abbrev &lt;- data.table::fread(here::here(&quot;output/abbreviations/paper_ab3p_abbreviations.tsv&quot;),
+                                 sep = &quot;\t&quot;,
+                                 quote = &quot;&quot;)
+
+
+abbrev_map  &lt;-
+ab3p_abbrev |&gt;
+  rename(cohort_annot = short_form,
+         pubmed_id = pmid
+         )  |&gt;
+  select(-precision)
+
+cohorts &lt;-
+    cohorts |&gt;
+    tidyr::separate_longer_delim(cohort_annot, delim = &quot;;&quot;) |&gt;
+    mutate(cohort_annot = stringr::str_squish(cohort_annot))
+
+cohorts &lt;-
+left_join(
+  cohorts,
+  abbrev_map,
+by = c(&quot;pubmed_id&quot;, &quot;cohort_annot&quot;),
+relationship = &quot;many-to-many&quot;
+) |&gt;
+  mutate(long_form = ifelse(is.na(long_form),
+                       cohort_annot,
+                       long_form
+                       )
+  )
+
+cohorts  |&gt;
+  distinct(long_form) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 143</code></pre>
+<pre class="r"><code>data.table::fwrite(cohorts, 
+                   &quot;training_papers_test.csv&quot;,
+                   sep = &quot;,&quot;)
+
+# now check for cohorts in the same pubmed that are one word different, </code></pre>
+<pre class="r"><code>cohorts &lt;-
+  cohorts |&gt;
+  mutate(long_form_clean = clean_cohort_names(long_form))
+
+cohorts  |&gt;
+  distinct(long_form_clean) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 143</code></pre>
+<pre class="r"><code>match_names &lt;-
+  cohort_names |&gt;
+    distinct(full_name) |&gt;
+    rename(long_form = full_name) |&gt;
+    mutate(long_form_clean = clean_cohort_names(long_form))
+
+unique(cohorts$long_form_clean) %in% match_names$long_form_clean |&gt; sum()
+
+anti_join(
+  cohorts |&gt;
+    distinct(long_form_clean),
+  match_names,
+   by = &quot;long_form_clean&quot;)</code></pre>
+</div>
+<div id="plotting-normalised-cohorts" class="section level1">
+<h1>Plotting normalised cohorts</h1>
+<pre class="r"><code># normalised cohort names
+cohort_norm &lt;- data.table::fread(here::here(&quot;training_papers_test_cohort_norm.csv&quot;))
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  filter(not_cohort == FALSE) 
+
+# remove probable reference cohort mentions
+cohort_norm &lt;-
+cohort_norm  |&gt;
+filter(!grepl(&quot;imputation|imputed|panel|reference&quot;, sentence, ignore.case = T)) |&gt;
+filter(!grepl(&quot;\\bLD\\b&quot;, sentence)) |&gt;
+filter(!grepl(&quot;\\blinkage disequilbrium\\b&quot;, sentence)) 
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+filter(!grepl(&quot; HapMap3 (SNPs|variants)&quot;, sentence)) 
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+filter(
+  !(
+  grepl(&quot;gnomAD&quot;, sentence) &amp; 
+  grepl(&quot;minor allele|MAF| allele frequencies|AF|annotated|variant statistics&quot;, sentence)
+  )
+)
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  filter(!cohort_annot %in% c(&quot;ukbbs&quot;, &quot;gefos&quot;, &quot;ukbb&quot;, &quot;scapis&quot;))
+
+
+# drop software 
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  filter(
+    !(cohort_annot == &quot;GENESIS&quot; &amp; grepl(&quot;GENESIS package|GENESIS R package&quot;, sentence))
+  ) |&gt;
+  filter(
+    !(cohort_annot == &quot;GENESIS&quot; &amp; pubmed_id %in% c(&quot;31217584&quot;,
+                                                   &quot;37236969&quot;,
+                                                   &quot;40210677&quot;,
+                                                   &quot;35156446&quot;))
+  )
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  filter(
+    !(cohort_annot == &quot;ADC&quot; &amp; grepl(&quot;lung ADC&quot;, sentence))
+  )
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  filter(
+    !(cohort_annot == &quot;MACS&quot; &amp; grepl(&quot;MACS version|called peaks using MACS|MACS Miltenyl Biotec&quot;, sentence))
+  ) 
+
+cohort_norm &lt;-
+cohort_norm  |&gt;
+  mutate(cohort_norm = ifelse(cohort_norm == &quot;&quot;,
+                              long_form,
+                              cohort_norm))
+
+cohort_names &lt;- readxl::read_xlsx(here::here(&quot;data/cohort/cohort_desc_v3_sep17.xlsx&quot;),
+                                    sheet = 1) |&gt;
+                select(short_name, cohort_norm = full_name, cohort_group) |&gt;
+                distinct()</code></pre>
+<pre><code>New names:
+• `` -&gt; `...17`</code></pre>
+<pre class="r"><code>cohort_names &lt;- cohort_names |&gt;
+    dplyr::mutate(
+        cohort_norm = gsub(&quot;\u00A0&quot;, &quot; &quot;, cohort_norm)
+    )
+
+cohort_norm &lt;- 
+left_join(
+  cohort_norm,
+  cohort_names,
+  relationship = &quot;many-to-many&quot;) </code></pre>
+<pre><code>Joining with `by = join_by(cohort_norm)`</code></pre>
+<pre class="r"><code>cohort_norm &lt;-
+cohort_norm |&gt;
+  distinct(pubmed_id, 
+           cohort_norm,
+           cohort_group)
+
+
+cohort_norm |&gt;
+  distinct(cohort_group) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 247</code></pre>
+<pre class="r"><code>cohort_norm  &lt;-
+  cohort_norm  |&gt;
+  tidyr::separate_longer_delim(cohort_group, delim = &quot;Biobank, &quot;) |&gt;
+  tidyr::separate_longer_delim(cohort_norm, delim = &quot;/&quot;) |&gt;
+  mutate(cohort_group = ifelse(is.na(cohort_group),
+                               cohort_norm,
+                               cohort_group)
+  ) |&gt;
+  mutate(cohort_group = case_when(
+    cohort_group == &quot;Health, Aging and Body Composition Study&quot; ~ &quot;Health, Aging and Body Composition Study (HABC)&quot;,
+    cohort_group == &quot;PanUK Biobank&quot; ~ &quot;UK Biobank&quot;,
+    cohort_group == &quot;CHARGE&quot; ~ &quot;Cohorts for Heart and Aging Research in Genomic Epidemiology (CHARGE)&quot;,
+    cohort_group == &quot;DIAGRAMv3&quot; ~ &quot;Diabetes Genetics Replication and Meta-analysis Consortium&quot;,
+    cohort_group == &quot;deCODE&quot; ~ &quot;deCODE genetics&quot;,
+    cohort_group %in% c(&quot;National Blood Service&quot;, &quot;UK Blood Service&quot;) ~ &quot;UK National Blood Service&quot;,
+    cohort_group == &quot;Korean Cancer Prevention Study-II cohort&quot; ~ &quot;  Korean Cancer Prevention Study (KCPS)&quot;,
+    cohort_group %in% c(&quot;Multicenter AIDS Cohort Study&quot;, &quot;MACS&quot;) ~ &quot;Multicenter AIDS Cohort Study (MACS)&quot;,
+    cohort_group %in% c(&quot;AGEN&quot;, &quot;AGEN-T2D&quot;,
+                        &quot;Asian Genetic Epidemiology Network&quot;)
+                        ~ &quot;Asian Genetic Epidemiology Network (AGEN)&quot;,
+    cohort_group == &quot;BBJNCCH&quot; ~ &quot;Biobank Japan (BBJ)&quot;,
+    grepl(&quot;TWB-for-|Taiwan Biobank|TWB1\\b|TWB2\\b&quot;, cohort_group) ~ c(&quot;Taiwan Biobank (TWB)&quot;),
+    grepl(&quot;EPIC-&quot;, cohort_group) ~ &quot;European Prospective Investigation into Cancer&quot;,
+    cohort_group == &quot;AoURE&quot; ~ &quot;All of Us&quot;,
+    grepl(&quot;GoKinD&quot;, cohort_group) ~ &quot;Genetics of Kidneys in Diabetes (GoKinD)&quot;,
+    cohort_group == &quot;Wellcome Trust&quot; ~ &quot;WTCCC&quot;,
+    cohort_group == &quot;IARC-GWA&quot; ~ &quot;International Agency for Research on Cancer (IARC)&quot;,
+    TRUE ~ cohort_group
+  ))
+
+# exclude probable reference cohorts:
+cohort_norm  &lt;-
+cohort_norm  |&gt;
+  filter(!cohort_group %in% 
+           c(&quot;gnomAD&quot;,
+             &quot;GTEx&quot;,
+             &quot;1000 Genomes&quot;,
+             &quot;HapMap&quot;,
+             &quot;ENCODE&quot;,
+             &quot;Roadmap Epigenomics&quot;,
+             &quot;eQTLGen&quot;,
+             &quot;HGDP&quot;,
+             &quot;eQTLGen Consortium&quot;,
+             &quot;Simons Genome Diversity Project&quot;,
+             &quot;HRC&quot;))
+
+
+cohort_norm |&gt;
+  count(cohort_norm) |&gt;
+  arrange(desc(n)) |&gt;
+  head()</code></pre>
+<pre><code>                                                 cohort_norm   n
+1                                                 UK Biobank 146
+2                     Wellcome Trust Case Control Consortium  54
+3                                              Japan Biobank  44
+4 Diabetes Genetics Replication and Meta-analysis Consortium  40
+5                        Atherosclerosis Risk in Communities  35
+6                                     Framingham Heart Study  30</code></pre>
+<pre class="r"><code>cohort_norm |&gt;
+  count(cohort_group) |&gt;
+  arrange(desc(n)) |&gt;
+  head()</code></pre>
+<pre><code>                                  cohort_group   n
+1                                   UK Biobank 151
+2                                        WTCCC  82
+3 KoGES (Korean Genome and Epidemiology Study)  52
+4                          Biobank Japan (BBJ)  45
+5                            CARDIoGRAMplusC4D  44
+6                                      DIAGRAM  40</code></pre>
+<pre class="r"><code># reintroduce year into cohorts data frame
+gwas_paper_data &lt;- data.table::fread(here::here(&quot;output/gwas_cat/gwas_study_info_trait_cat.csv&quot;),
+                                     select = c(&quot;PUBMED_ID&quot;, &quot;YEAR&quot;)) |&gt;
+                   dplyr::rename_with(~tolower(.x)) |&gt;
+                   distinct()
+
+# count number of papers per year
+gwas_paper_data &lt;-
+  gwas_paper_data |&gt;
+  group_by(year) |&gt;
+  mutate(n_paper_year = n()) |&gt;
+  ungroup()
+
+cohort_norm &lt;-
+left_join(cohort_norm,
+          gwas_paper_data,
+          by = c(&quot;pubmed_id&quot;))
+
+
+# pick cohorts to highlight
+increasing_cohorts &lt;-
+cohort_norm |&gt;
+  filter(cohort_group != &quot;Other&quot;) |&gt;
+  distinct(year, cohort_group, n_paper_year, pubmed_id) |&gt;
+  group_by(year, cohort_group) |&gt;
+  summarise(prop_paper = n()/unique(n_paper_year),
+            .groups = &quot;drop&quot;
+            ) |&gt;
+  tidyr::complete(year, cohort_group, fill = list(prop_paper = 0)) |&gt;
+  arrange(cohort_group, year) |&gt;
+  group_by(cohort_group) |&gt;
+  summarise(non_decreasing_years = sum(diff(prop_paper) &gt;= 0)) |&gt;
+  filter(non_decreasing_years &gt; 14) |&gt;
+  pull(cohort_group)
+
+
+# pick cohorts to highlight
+decreasing_cohorts &lt;-
+cohort_norm |&gt;
+  filter(cohort_group != &quot;Other&quot;) |&gt;
+  distinct(year, cohort_group, n_paper_year, pubmed_id) |&gt;
+  group_by(year, cohort_group) |&gt;
+  summarise(prop_paper = n()/unique(n_paper_year),
+            .groups = &quot;drop&quot;
+            ) |&gt;
+  tidyr::complete(year, cohort_group, fill = list(prop_paper = 0)) |&gt;
+  arrange(cohort_group, year) |&gt;
+  group_by(cohort_group) |&gt;
+  summarise(decreasing_years = sum(diff(prop_paper) &lt;= 0)) |&gt;
+  filter(decreasing_years &gt; 14) |&gt;
+  pull(cohort_group)
+  
+
+# cohort that were top three in any year, and had more than one paper in that year
+top_cohorts &lt;-
+cohort_norm  |&gt;
+  filter(cohort_group != &quot;Other&quot;) |&gt;
+  distinct(year, cohort_group, pubmed_id) |&gt;
+  group_by(year, cohort_group) |&gt;
+  summarise(n_paper = n()) |&gt;
+  slice_max(n_paper,
+            n = 3,
+            with_ties = TRUE) |&gt;
+  filter(n_paper &gt; 1) |&gt;
+  ungroup() |&gt;
+  pull(cohort_group)  |&gt;
+  unique()</code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by year and cohort_group.
+ℹ Output is grouped by year.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(year, cohort_group))` for per-operation grouping
+  (`?dplyr::dplyr_by`) instead.</code></pre>
+<pre class="r"><code>multi_year_cohorts &lt;-
+cohort_norm  |&gt;
+  filter(cohort_group != &quot;Other&quot;) |&gt;
+  distinct(cohort_group, year) |&gt;
+  group_by(cohort_group) |&gt;
+  summarise(n = n()) |&gt;
+  filter(n &gt; 3) |&gt;
+  pull(cohort_group)
+
+cohort_norm  |&gt;
+  filter(year &lt; 2010) |&gt;
+  distinct(cohort_group, year, pubmed_id) |&gt;
+  count(cohort_group) |&gt; 
+  arrange(desc(n)) |&gt; slice_max(n = 5, order_by = n)</code></pre>
+<pre><code>                                        cohort_group  n
+1                                              WTCCC 14
+2                             Framingham Heart Study  7
+3           Genetics of Kidneys in Diabetes (GoKinD)  5
+4        Type 1 Diabetes Genetics Consortium (T1DGC)  5
+5                                          DCCT/EDIC  3
+6 International Agency for Research on Cancer (IARC)  3</code></pre>
+<pre class="r"><code>cohort_norm  |&gt;
+  filter(year &gt;= 2010 &amp; year &lt; 2015) |&gt;
+  distinct(cohort_group, year, pubmed_id) |&gt;
+  count(cohort_group) |&gt; 
+  arrange(desc(n)) |&gt; 
+  slice_max(n = 5, order_by = n)</code></pre>
+<pre><code>                                                                            cohort_group
+1                                                                                  WTCCC
+2                                                                        deCODE genetics
+3                                                                                DIAGRAM
+4                                             Atherosclerosis Risk in Communities (ARIC)
+5 Evaluation of COPD Longitudinally to Identify Predictive Surrogate Endpoints (ECLIPSE)
+   n
+1 26
+2 15
+3 13
+4 11
+5 11</code></pre>
+<pre class="r"><code>cohort_norm  |&gt;
+  filter(year &gt;= 2015 &amp; year &lt; 2020) |&gt;
+  distinct(cohort_group, year, pubmed_id) |&gt;
+  count(cohort_group) |&gt; 
+  arrange(desc(n)) |&gt; 
+  slice_max(n = 5, order_by = n)</code></pre>
+<pre><code>                                cohort_group  n
+1                                 UK Biobank 28
+2                                      WTCCC 24
+3                                    DIAGRAM 17
+4                          CARDIoGRAMplusC4D 16
+5 Atherosclerosis Risk in Communities (ARIC) 13</code></pre>
+<pre class="r"><code>cohort_norm  |&gt;
+  filter(year &gt; 2020) |&gt;
+  distinct(cohort_group, year, pubmed_id) |&gt;
+  count(cohort_group) |&gt; 
+  arrange(desc(n)) |&gt; slice_max(n = 4, order_by = n)</code></pre>
+<pre><code>                                  cohort_group   n
+1                                   UK Biobank 101
+2                                      FinnGen  27
+3                          Biobank Japan (BBJ)  25
+4 KoGES (Korean Genome and Epidemiology Study)  13</code></pre>
+<pre class="r"><code>intersect(top_cohorts, multi_year_cohorts)</code></pre>
+<pre><code> [1] &quot;WTCCC&quot;                                                                                 
+ [2] &quot;Framingham Heart Study&quot;                                                                
+ [3] &quot;Type 1 Diabetes Genetics Consortium (T1DGC)&quot;                                           
+ [4] &quot;European Prospective Investigation into Cancer (EPIC)&quot;                                 
+ [5] &quot;Genetics of Kidneys in Diabetes (GoKinD)&quot;                                              
+ [6] &quot;deCODE genetics&quot;                                                                       
+ [7] &quot;Evaluation of COPD Longitudinally to Identify Predictive Surrogate Endpoints (ECLIPSE)&quot;
+ [8] &quot;Kooperative Gesundheitsforschung in der Region Augsburg (KORA)&quot;                        
+ [9] &quot;National Emphysema Treatment Trial (NETT)&quot;                                             
+[10] &quot;Atherosclerosis Risk in Communities (ARIC)&quot;                                            
+[11] &quot;Cohorts for Heart and Aging Research in Genomic Epidemiology (CHARGE)&quot;                 
+[12] &quot;DIAGRAM&quot;                                                                               
+[13] &quot;UK National Blood Service&quot;                                                             
+[14] &quot;MD Anderson Cancer Center&quot;                                                             
+[15] &quot;Biobank Japan (BBJ)&quot;                                                                   
+[16] &quot;CARDIoGRAMplusC4D&quot;                                                                     
+[17] &quot;COPDGene&quot;                                                                              
+[18] &quot;Multi-Ethnic Study of Atherosclerosis (MESA)&quot;                                          
+[19] &quot;Cardiovascular Health Study (CHS)&quot;                                                     
+[20] &quot;China Medical University Hospital (CMUH)&quot;                                              
+[21] &quot;Health, Aging and Body Composition Study (HABC)&quot;                                       
+[22] &quot;International Lung Cancer Consortium (ILCCO)&quot;                                          
+[23] &quot;Ischemic Stroke Genetics Study (ISGS)&quot;                                                 
+[24] &quot;METASTROKE Consortium&quot;                                                                 
+[25] &quot;Rotterdam Study&quot;                                                                       
+[26] &quot;VISP&quot;                                                                                  
+[27] &quot;Kaiser Permanente Genetic Epidemiology Research on Adult Health and Aging (GERA)&quot;      
+[28] &quot;Multiethnic Cohort (MEC)&quot;                                                              
+[29] &quot;UK Biobank&quot;                                                                            
+[30] &quot;GIANT consortium&quot;                                                                      
+[31] &quot;OncoArray&quot;                                                                             
+[32] &quot;FinnGen&quot;                                                                               
+[33] &quot;KoGES (Korean Genome and Epidemiology Study)&quot;                                          
+[34] &quot;Tohoku Medical Megabank&quot;                                                               
+[35] &quot;Estonian Biobank&quot;                                                                      
+[36] &quot;Finland-United States Investigation of NIDDM Genetics (FUSION)&quot;                        
+[37] &quot;Million Veterans Program&quot;                                                              </code></pre>
+<pre class="r"><code>intersect(top_cohorts, increasing_cohorts)</code></pre>
+<pre><code>[1] &quot;Shanghai Women&#39;s Health Study&quot;                    
+[2] &quot;Myocardial Infarction Genetics Consortium (MIGen)&quot;
+[3] &quot;Singapore Prospective Study&quot;                      
+[4] &quot;Health, Aging and Body Composition Study (HABC)&quot;  
+[5] &quot;UK Biobank&quot;                                       
+[6] &quot;FinnGen&quot;                                          
+[7] &quot;Tohoku Medical Megabank&quot;                          
+[8] &quot;Million Veterans Program&quot;                         
+[9] &quot;Korea Biobank&quot;                                    </code></pre>
+<pre class="r"><code>intersect(top_cohorts, decreasing_cohorts)</code></pre>
+<pre><code>[1] &quot;Shanghai Women&#39;s Health Study&quot;                    
+[2] &quot;Myocardial Infarction Genetics Consortium (MIGen)&quot;
+[3] &quot;Singapore Prospective Study&quot;                      
+[4] &quot;Estonian Biobank&quot;                                 
+[5] &quot;Korea Biobank&quot;                                    </code></pre>
+<pre class="r"><code># highlighted_cohorts &lt;- highlighted_cohorts[highlighted_cohorts %in% multi_year_cohorts]
+#   </code></pre>
+<pre class="r"><code># selected_cohorts &lt;- sample(highlighted_cohorts, size = 6, replace = FALSE)
+
+selected_cohorts &lt;-
+  c(&quot;WTCCC&quot;,
+    # &quot;DIAGRAM&quot;,
+    &quot;UK Biobank&quot;, #&quot;UK Biobank&quot;,
+    &quot;FinnGen&quot;,
+    # &quot;KoGES (Korean Genome and Epidemiology Study)&quot;,
+    # &quot;CARDIoGRAMplusC4D&quot;,
+    # &quot;Framingham Heart Study&quot;,
+    # &quot;deCODE genetics&quot;, 
+    # &quot;TOPMed&quot;,
+    # &quot;All of Us&quot;,
+    &quot;Biobank Japan (BBJ)&quot;
+    # &quot;Multi-Ethnic Study of Atherosclerosis (MESA)&quot;
+    )
+
+
+mapped_cohort_colours &lt;-
+  c(
+    # very common european cohorts
+    &quot;WTCCC&quot; =  &quot;#A6CEE3&quot;,
+    # &quot;DIAGRAM&quot; = &quot;#B2DF8A&quot;,
+    # &quot;PanUK Biobank/UK Biobank&quot; = &quot;#FB9A99&quot;,
+    &quot;UK Biobank&quot; = &quot;#FB9A99&quot;,
+    &quot;FinnGen&quot; = &quot;#FDBF6F&quot;,  
+    
+    # common Asian biobanks
+    # &quot;KoGES (Korean Genome and Epidemiology Study)&quot; = &quot;#A6CEE3&quot;,
+    &quot;Biobank Japan (BBJ)&quot; =  &quot;#CAB2D6&quot;,
+    
+    # multi-ancestry / ethnic US-based cohorts
+    # &quot;TOPMed&quot; = &quot;#FDBF6F&quot;,
+    # &quot;All of Us&quot; = &quot;#FF7F00&quot; ,
+    # &quot;Multi-Ethnic Study of Atherosclerosis (MESA)&quot; =  &quot;#FFFF99&quot;,
+    &quot;Other&quot; = &quot;grey30&quot;
+  )
+
+
+# if small number of papers, use most common cohort names across all years
+# highlighted_cohorts &lt;-
+# cohort_norm |&gt;
+#   filter(cohort_group != &quot;&quot; &amp; cohort_group != &quot;Other&quot;) |&gt;
+#   count(cohort_group) |&gt;
+#   arrange(desc(n)) |&gt;
+#   slice_max(n,
+#             n = 6,
+#             with_ties = TRUE) |&gt;
+#   pull(cohort_norm)
+
+cohorts_plot_df  &lt;-
+  cohort_norm |&gt;
+  select(pubmed_id, 
+         year, 
+         n_paper_year,
+         cohort_group) |&gt;
+  mutate(cohort = ifelse(cohort_group %in% selected_cohorts,
+                         cohort_group,
+                         &quot;Other&quot;)) |&gt;
+  select(-cohort_group) |&gt;
+  distinct()
+
+cohorts_plot_df &lt;-
+  cohorts_plot_df  |&gt;
+  group_by(year, cohort) |&gt;
+  summarise(N_papers = n(),
+            n_paper_year = unique(n_paper_year)) |&gt;
+  dplyr::rename_with(~stringr::str_to_title(.x))</code></pre>
+<pre><code>`summarise()` has regrouped the output.
+ℹ Summaries were computed grouped by year and cohort.
+ℹ Output is grouped by year.
+ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+ℹ Use `summarise(.by = c(year, cohort))` for per-operation grouping
+  (`?dplyr::dplyr_by`) instead.</code></pre>
+<pre class="r"><code># pick factor ordering 
+cohort_order &lt;- 
+cohorts_plot_df |&gt;
+  group_by(Cohort) |&gt;
+  summarise(total = sum(N_papers)) |&gt;
+  arrange(desc(total)) |&gt;
+  pull(Cohort)
+
+# make sure other is last: 
+cohort_order &lt;- c(&quot;Other&quot;, cohort_order[cohort_order != &quot;Other&quot;])
+
+
+cohorts_plot_df &lt;-
+  cohorts_plot_df  |&gt;
+  mutate(Cohort = factor(Cohort, levels = cohort_order)) </code></pre>
+<pre class="r"><code># pdf(here::here(&quot;figures/cohort_mentions_overtime.pdf&quot;),
+#     width = 22.4, 
+#     height = 10
+# )
+
+cairo_pdf(here::here(&quot;figures/cohort_mentions_overtime.pdf&quot;),
+          width = 21.4,
+          height = 12,
+          family = &quot;Atkinson Hyperlegible Next&quot;)
+
+
+cohorts_plot_df |&gt;
+    mutate(Cohort = factor(Cohort, levels = c(&quot;WTCCC&quot;,
+                                              &quot;Biobank Japan (BBJ)&quot;,
+                                              &quot;UK Biobank&quot;,
+                                              &quot;FinnGen&quot;,
+                                              &quot;Other&quot;))) |&gt;
+ggplot(aes(x = Year,
+           y = N_papers
+           )) +
+  geom_alluvium(aes(fill = Cohort,
+                    colour = Cohort,
+                    alluvium = Cohort),
+                alpha = .75,
+                decreasing = FALSE,
+                outline.type = &quot;upper&quot;) +
+  # geom_col(aes(y= N_paper_year,
+  #               x = Year)) + 
+  # scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+  #                                 to = max(cohorts_plot_df$Year),
+  #                                 by = 2),
+  #                                 expand = c(0.02, 0)
+  #                    ) +
+    scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+                                  to = max(cohorts_plot_df$Year),
+                                  by = 1),
+                     labels = function(x) ifelse((x - min(cohorts_plot_df$Year)) %% 2 == 0, x, &quot;&quot;)
+                     # expand = c(0.02, 0)
+                     ) +
+  scale_y_continuous(breaks = seq(from = 0,
+                                  to = cohorts_plot_df |&gt;
+                                       group_by(Year) |&gt;
+                                       summarise(total = sum(N_papers)) |&gt;
+                                       slice_max(total, with_ties = FALSE) |&gt;
+                                       pull(total) + 10,
+                                  by = 10),
+                     limits = c(0,
+                                cohorts_plot_df |&gt;
+                                       group_by(Year) |&gt;
+                                       summarise(total = sum(N_papers)) |&gt;
+                                       slice_max(total, with_ties = FALSE) |&gt;
+                                       pull(total) + 10),
+                                  expand = c(0, 0)) +
+  coord_cartesian(clip = &quot;off&quot;) +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_colour_manual(values = mapped_cohort_colours ,
+                      name = &quot;Cohort&quot;,
+                      labels = scales::label_wrap(20)) +
+  scale_fill_manual(values = mapped_cohort_colours ,
+                      name = &quot;Cohort&quot;,
+                     labels = scales::label_wrap(20)) +
+  #   scale_fill_brewer(type = &quot;qual&quot;, palette = &quot;Set3&quot;,
+  #                   labels = scales::label_wrap(20)) +
+  # scale_color_brewer(type = &quot;qual&quot;, palette = &quot;Set3&quot;,
+  #                    labels = scales::label_wrap(20)) +
+  labs(y = &quot;Number of Papers&quot;,
+       x = &quot;Publication Year&quot;) + 
+  theme(
+    text = element_text(family = &quot;Atkinson Hyperlegible Next&quot;),
+    ####### axis labels and ticks:  ##########
+    axis.ticks.length = unit(0.1, &quot;in&quot;),
+    axis.text.x  = element_text(size = 30,
+                                colour = &quot;black&quot;
+                                # margin = margin(t = 0.1,
+                                #                 unit = &quot;in&quot;)
+                                ),
+    axis.text.y  = element_text(size = 30,
+                                colour = &quot;black&quot;), 
+    axis.title.x = element_text(size = 30,
+                                colour = &quot;black&quot;,
+                                margin = margin(t = 0.2,
+                                                unit = &quot;in&quot;)), 
+    axis.title.y = element_text(size = 30,
+                                colour = &quot;black&quot;), 
+    
+    
+    ############ Legend text + options ##########
+    legend.title = element_blank(),
+    legend.text  = element_text(size = 30,
+                                colour = &quot;black&quot;),
+    legend.position = &quot;top&quot;,
+    legend.box.margin = margin(t = 0.2, 
+                               unit = &quot;in&quot;),
+    legend.key.spacing.x = unit(30, &quot;pt&quot;),
+    
+    
+    ###### Plot margins and panel options ##########
+    plot.margin = margin(
+                         t = 0.2, # top
+                         r = 0.2,
+                         b = 1,  # bottom
+                         # l = 1, # left
+                         l = 0.6,
+                         unit = &quot;in&quot;),
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;),
+    panel.grid.major.y = element_line(colour = &quot;grey50&quot;, 
+                                      linetype = &quot;dashed&quot;,
+                                      linewidth = unit(1, &quot;in&quot;)),
+    panel.grid.minor.y = element_blank(),
+    # panel.grid.minor.y = element_line(colour = &quot;grey50&quot;, 
+    #                                   linetype = &quot;dashed&quot;),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank()
+    )
+
+dev.off()</code></pre>
+<pre><code>quartz_off_screen 
+                2 </code></pre>
+<div id="powerpoint-version" class="section level4">
+<h4>Powerpoint version</h4>
+<pre class="r"><code>plot &lt;- cohorts_plot_df |&gt;
+    mutate(Cohort = factor(Cohort, levels = c(&quot;WTCCC&quot;,
+                                              &quot;Biobank Japan (BBJ)&quot;,
+                                              &quot;UK Biobank&quot;,
+                                              &quot;FinnGen&quot;,
+                                              &quot;Other&quot;))) |&gt;
+ggplot(aes(x = Year,
+           y = N_papers
+           )) +
+  geom_alluvium(aes(fill = Cohort,
+                    colour = Cohort,
+                    alluvium = Cohort),
+                alpha = .75,
+                decreasing = FALSE,
+                outline.type = &quot;upper&quot;) +
+  # geom_col(aes(y= N_paper_year,
+  #               x = Year)) + 
+  # scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+  #                                 to = max(cohorts_plot_df$Year),
+  #                                 by = 2),
+  #                                 expand = c(0.02, 0)
+  #                    ) +
+    scale_x_continuous(breaks = seq(from = min(cohorts_plot_df$Year),
+                                  to = max(cohorts_plot_df$Year),
+                                  by = 1),
+                     labels = function(x) ifelse((x - min(cohorts_plot_df$Year)) %% 2 == 0, x, &quot;&quot;)
+                     # expand = c(0.02, 0)
+                     ) +
+  scale_y_continuous(breaks = seq(from = 0,
+                                  to = cohorts_plot_df |&gt;
+                                       group_by(Year) |&gt;
+                                       summarise(total = sum(N_papers)) |&gt;
+                                       slice_max(total, with_ties = FALSE) |&gt;
+                                       pull(total) + 10,
+                                  by = 20),
+                     limits = c(0,
+                                cohorts_plot_df |&gt;
+                                       group_by(Year) |&gt;
+                                       summarise(total = sum(N_papers)) |&gt;
+                                       slice_max(total, with_ties = FALSE) |&gt;
+                                       pull(total) + 10),
+                                  expand = c(0, 0)) +
+  coord_cartesian(clip = &quot;off&quot;) +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_colour_manual(values = mapped_cohort_colours ,
+                      name = &quot;Cohort&quot;,
+                      labels = scales::label_wrap(20)) +
+  scale_fill_manual(values = mapped_cohort_colours ,
+                      name = &quot;Cohort&quot;,
+                     labels = scales::label_wrap(20)) +
+  #   scale_fill_brewer(type = &quot;qual&quot;, palette = &quot;Set3&quot;,
+  #                   labels = scales::label_wrap(20)) +
+  # scale_color_brewer(type = &quot;qual&quot;, palette = &quot;Set3&quot;,
+  #                    labels = scales::label_wrap(20)) +
+  labs(y = &quot;Number of Papers&quot;,
+       x = &quot;Publication Year&quot;) + 
+  theme(
+    text = element_text(family = &quot;Atkinson Hyperlegible Next&quot;),
+    
+     ####### axis labels and ticks:  ##########
+    axis.ticks.length = unit(0.1, &quot;in&quot;),
+    axis.text.x  = element_text(size = 25,
+                                colour = &quot;black&quot;
+                                # margin = margin(t = 0.1,
+                                #                 unit = &quot;in&quot;)
+                                ),
+    axis.text.y  = element_text(size = 25,
+                                colour = &quot;black&quot;), 
+    axis.title.x = element_text(size = 25,
+                                colour = &quot;black&quot;,
+                                margin = margin(t = 0.2,
+                                                unit = &quot;in&quot;)), 
+    axis.title.y = element_text(size = 25,
+                                colour = &quot;black&quot;), 
+    
+    
+     ############ Legend text + options ##########
+    legend.title = element_blank(),
+    legend.text  = element_text(size = 25,
+                                colour = &quot;black&quot;),
+    legend.box.margin = margin(t = 0, 
+                               unit = &quot;in&quot;),
+    legend.key.spacing.x = unit(10, &quot;pt&quot;),
+    
+    
+    
+    legend.position = &quot;top&quot;,
+    plot.margin = margin(
+                         t = 0, # top
+                         r = 0,
+                         b = 0,  # bottom
+                         l = 0, # left
+                         unit = &quot;in&quot;),
+
+    panel.border = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;),
+    panel.grid.major.y = element_line(colour = &quot;grey60&quot;, linetype = &quot;dashed&quot;),
+    panel.grid.minor.y = element_line(colour = &quot;grey60&quot;, linetype = &quot;dashed&quot;),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x =  element_blank()
+    )
+
+ggsave(plot,
+       filename =here::here(&quot;figures/cohort_mentions_overtime.png&quot;),
+       device = ragg::agg_png,
+       dpi = 440,
+       width = 12.3,
+       height = 5.8,
+       units = &quot;in&quot;
+)
+
+
+
+&lt;br&gt;
+&lt;p&gt;
+&lt;button type=&quot;button&quot; class=&quot;btn btn-default btn-workflowr btn-workflowr-sessioninfo&quot;
+  data-toggle=&quot;collapse&quot; data-target=&quot;#workflowr-sessioninfo&quot;
+  style = &quot;display: block;&quot;&gt;
+  &lt;span class=&quot;glyphicon glyphicon-wrench&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+  Session information
+&lt;/button&gt;
+&lt;/p&gt;
+
+&lt;div id=&quot;workflowr-sessioninfo&quot; class=&quot;collapse&quot;&gt;</code></pre>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 26.7.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Toronto
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] ggalluvial_0.12.6  ggsankey_0.0.99999 ggplot2_4.0.3      tokenizers_0.3.0  
+[5] stringr_1.6.0      tidyr_1.3.2        dplyr_1.2.1        workflowr_1.7.2   
+
+loaded via a namespace (and not attached):
+ [1] utf8_1.2.6          sass_0.4.10         generics_0.1.4     
+ [4] renv_1.1.8          stringi_1.8.9       digest_0.6.37      
+ [7] magrittr_2.0.5      evaluate_1.0.5      grid_4.3.2         
+[10] RColorBrewer_1.1-3  fastmap_1.2.0       cellranger_1.1.0   
+[13] rprojroot_2.1.0     jsonlite_2.0.0      processx_3.8.6     
+[16] whisker_0.4.1       ps_1.9.1            promises_1.3.3     
+[19] BiocManager_1.30.26 httr_1.4.7          purrr_1.2.2        
+[22] scales_1.4.0        jquerylib_0.1.4     cli_3.6.6          
+[25] rlang_1.3.0         withr_3.0.3         cachem_1.1.0       
+[28] yaml_2.3.10         tools_4.3.2         httpuv_1.6.16      
+[31] here_1.0.1          vctrs_0.7.3         R6_2.6.1           
+[34] lifecycle_1.0.5     git2r_0.36.2        fs_1.6.6           
+[37] pkgconfig_2.0.3     callr_3.7.6         pillar_1.11.1      
+[40] bslib_0.9.0         later_1.4.4         gtable_0.3.6       
+[43] data.table_1.17.8   glue_1.8.1          Rcpp_1.1.0         
+[46] xfun_0.55           tibble_3.3.1        tidyselect_1.2.1   
+[49] rstudioapi_0.17.1   knitr_1.50          farver_2.1.2       
+[52] htmltools_0.5.8.1   SnowballC_0.7.1     rmarkdown_2.30     
+[55] compiler_4.3.2      getPass_0.2-4       S7_0.2.2           
+[58] readxl_1.4.5       </code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
