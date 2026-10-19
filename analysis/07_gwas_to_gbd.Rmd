@@ -784,6 +784,86 @@ ggsave(here::here("figures/number_of_gwas_catalog_papers_per_cause.png"),
 
 ```
 
+# Plot: proportion of GWAS Catalog these papers represent over time
+
+```{r}
+
+
+cairo_pdf(here::here("figures/priority_diseases_prop_gwas_cat_overtime.pdf"),
+          width = 7.7,
+          height = 5,
+          family = "Atkinson Hyperlegible Next")
+
+
+all_gwas_cat_papers <-  data.table::fread(here::here("output/gwas_cat/gwas_study_info_trait_cat.csv"),
+                                    select  = c("PUBMED_ID",
+                                                "YEAR",
+                                                "DISEASE_STUDY")) |>
+  dplyr::rename_with(~ gsub(" ", "_", .x)) |>
+  distinct()
+
+all_gwas_cat_papers <-
+  all_gwas_cat_papers |>
+  group_by(PUBMED_ID, YEAR) |>
+  summarise(DISEASE_STUDY = any(DISEASE_STUDY == T),
+            .groups = "drop") 
+
+all_gwas_cat_papers  |>
+  group_by(YEAR) |>
+  summarise(n = n())
+
+selected_gwas_cat_papers <-
+disease_mapping_with_cause |>
+  dplyr::filter(include == TRUE) |>
+  filter(cause != "") |>
+  filter(cause !=  "Stroke") |>
+  group_by(PUBMED_ID, YEAR) |>
+  summarise(cause = paste(unique(cause), collapse = "; "))
+
+gwas_cat_papers <-
+left_join(all_gwas_cat_papers,
+          selected_gwas_cat_papers,
+          by = c("PUBMED_ID", "YEAR")) |>
+  mutate(priority_condition = ifelse(is.na(cause), "No", "Yes"))
+
+gwas_cat_papers |>  
+  summarise(n_disease_studies = sum(DISEASE_STUDY == T),
+            n_priority_condition_studies = sum(priority_condition == "Yes"),
+            n_total_studies = n()
+            ) |>
+  mutate(percentage_disease_studies = 100 * n_disease_studies / n_total_studies,
+         percentage_priority_condition_studies = 100 * n_priority_condition_studies / n_total_studies) |>
+  mutate(across(contains("percentage"), ~ round(.x, 2))) |>
+  select(-n_disease_studies, -n_priority_condition_studies)
+  
+
+gwas_cat_papers |>
+  group_by(YEAR) |>
+  summarise(n_disease_studies = sum(DISEASE_STUDY == T),
+            n_priority_condition_studies = sum(priority_condition == "Yes"),
+            n_total_studies = n()) |>
+  mutate(percentage_disease_studies = 100 * n_disease_studies / n_total_studies,
+         percentage_priority_condition_studies = 100 * n_priority_condition_studies / n_total_studies) |>
+  ggplot(aes(x= YEAR)) +
+  geom_line(aes(y= percentage_disease_studies)) +
+  geom_point(aes(y= percentage_disease_studies)) +
+  geom_text(x = 2012, 
+            y = 75, 
+            label = "Studying any disease?",
+            color = "black") +
+  geom_line(aes(y= percentage_priority_condition_studies)) +
+  geom_point(aes(y= percentage_priority_condition_studies)) +
+  geom_text(x = 2012, 
+            y = 20, label = "Studying any priority condition?", color = "black") +
+  labs(y = "Percentage of GWAS Catalog Papers",
+       x = "Year") +
+  theme_bw() +
+  lims(y = c(0,100))
+
+dev.off()
+
+```
+
 # Check overlap (upset plot) of studies mapped to different causes
 
 ## Between type 1 diabetes, type 2 diabetes, and diabetes mellitus
