@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Isobel Beasley" />
+
+
+<title>Harmonizing Cohort Labels</title>
+
+<script src="site_libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">genomics_ancest_disease_dispar</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Harmonizing Cohort Labels</h1>
+<h4 class="author">Isobel Beasley</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2026-10-19
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong>
+<code>genomics_ancest_disease_dispar/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.2). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220216code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220216)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220216code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220216)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree07408903598d76039b31e5a485dba407f2bf4adetargetblank0740890a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/07408903598d76039b31e5a485dba407f2bf4ade" target="_blank">0740890</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomIJbeasleygenomicsancestdiseasedispartree07408903598d76039b31e5a485dba407f2bf4adetargetblank0740890a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/tree/07408903598d76039b31e5a485dba407f2bf4ade" target="_blank">0740890</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    .venv/
+    Ignored:    BioC.dtd
+    Ignored:    Claude outputs/
+    Ignored:    FormatConverter.jar
+    Ignored:    FormatConverter.zip
+    Ignored:    analysis/.DS_Store
+    Ignored:    analysis/21_training_set_selection_cache/
+    Ignored:    ancestry_dispar_env/
+    Ignored:    code/.DS_Store
+    Ignored:    code/extract_text/__pycache__/
+    Ignored:    code/full_text_conversion/.DS_Store
+    Ignored:    code/full_text_conversion/__pycache__/
+    Ignored:    code/pop_desc_processing/.DS_Store
+    Ignored:    code/text_embeddings/__pycache__/
+    Ignored:    code/text_mining_models/__pycache__/
+    Ignored:    data/.DS_Store
+    Ignored:    data/cdc/
+    Ignored:    data/cohort/
+    Ignored:    data/europe_pmc/
+    Ignored:    data/gbd/.DS_Store
+    Ignored:    data/gbd/IHME-GBD_2021_DATA-d8cf695e-1.csv
+    Ignored:    data/gbd/IHME-GBD_2023_DATA-73cc01fd-1.csv
+    Ignored:    data/gbd/gbd_2019_california_percent_deaths.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2019_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_disease_burden_rate_all_ages.csv
+    Ignored:    data/gbd/ihme_gbd_2021_global_paf_rate_percent_all_ages.csv
+    Ignored:    data/gwas_catalog/
+    Ignored:    data/icd/.DS_Store
+    Ignored:    data/icd/2025AA/
+    Ignored:    data/icd/IHME_GBD_2019_COD_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/IHME_GBD_2019_NONFATAL_CAUSE_ICD_CODE_MAP_Y2020M10D15.XLSX
+    Ignored:    data/icd/archived_assorted_map_files/
+    Ignored:    data/icd/icd102019enMeta/
+    Ignored:    data/icd/lancet_conditions_icd10.xlsx
+    Ignored:    data/icd/manual_disease_map.xlsx
+    Ignored:    data/icd/oxo/
+    Ignored:    data/icd/phecode_international_version_unrolled.csv
+    Ignored:    data/icd/phecode_to_icd10_manual_map.xlsx
+    Ignored:    data/nih/
+    Ignored:    data/ontology/
+    Ignored:    doccano_venv/
+    Ignored:    figures/
+    Ignored:    output/.DS_Store
+    Ignored:    output/abbreviations/
+    Ignored:    output/abstracts/
+    Ignored:    output/archived_fulltexts/
+    Ignored:    output/clustering/
+    Ignored:    output/doccano/
+    Ignored:    output/fulltexts/
+    Ignored:    output/gwas_cat/
+    Ignored:    output/gwas_cohorts/
+    Ignored:    output/icd_map/
+    Ignored:    output/intros/
+    Ignored:    output/journal_meta/
+    Ignored:    output/methods/
+    Ignored:    output/results/
+    Ignored:    output/supplement/
+    Ignored:    output/text_mining_predictions/
+    Ignored:    output/trait_ontology/
+    Ignored:    pubmedbert-cohort-ner-model/
+    Ignored:    pubmedbert-cohort-ner/
+    Ignored:    pubmedbert-grid/
+    Ignored:    renv/
+    Ignored:    rhd_paper_cohorts_sample_n.csv
+    Ignored:    spacy_venv_requirements.txt
+    Ignored:    spacyr_venv/
+    Ignored:    testing_papers.csv
+    Ignored:    testing_papers_cohort_norm.csv
+    Ignored:    training_papers_test.csv
+    Ignored:    training_papers_test_cohort_norm.csv
+
+Untracked files:
+    Untracked:  analysis/43_gwas_meta_cohort_dist.Rmd
+    Untracked:  analysis/compare_cohort_annot.Rmd
+    Untracked:  code/training_set/
+
+Unstaged changes:
+    Modified:   analysis/14_process_article_text.Rmd
+    Deleted:    analysis/32_gwas_meta_missing_cohort_info.Rmd
+    Deleted:    analysis/33_gwas_meta_cohort_dist.Rmd
+    Modified:   analysis/disease_inves_by_ancest.Rmd
+    Modified:   analysis/extract_gwas_cat_sample_sizes.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/replication_ancestry_bias.Rmd
+    Modified:   analysis/specific_aims_stats.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/41_correcting_gwas_meta_cohort_names.Rmd</code>) and
+HTML (<code>docs/41_correcting_gwas_meta_cohort_names.html</code>)
+files. If you’ve configured a remote Git repository (see
+<code>?wflow_git_remote</code>), click on the hyperlinks in the table
+below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/IJbeasley/genomics_ancest_disease_dispar/blob/07408903598d76039b31e5a485dba407f2bf4ade/analysis/41_correcting_gwas_meta_cohort_names.Rmd" target="_blank">0740890</a>
+</td>
+<td>
+IJbeasley
+</td>
+<td>
+2026-10-19
+</td>
+<td>
+Update workflowr page names
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)</code></pre>
+<div id="load-pre-process-gwas-catalog-data" class="section level1"
+number="1">
+<h1><span class="header-section-number">1</span> Load / pre-process GWAS
+Catalog data</h1>
+<pre class="r"><code># Load GWAS Catalog studies
+# gwas_study_info &lt;- fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv&quot;),
+#                          sep = &quot;\t&quot;, quote = &quot;&quot;)
+
+gwas_study_info &lt;- fread(here::here(&quot;data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2026-09-13.tsv&quot;),
+                         sep = &quot;\t&quot;, 
+                         quote = &quot;&quot;)
+
+# Standardize column names (remove spaces)
+gwas_study_info &lt;- gwas_study_info |&gt;
+  rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))
+
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot; \\| &quot;, &quot;|&quot;)) |&gt;
+mutate(COHORT = str_replace_all(COHORT, &quot;\\| &quot;, &quot;|&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot; \\|&quot;, &quot;|&quot;))
+
+# some use commas instead of | to designate multiple cohorts
+gwas_study_info &lt;- gwas_study_info |&gt;
+    mutate(COHORT = str_replace_all(COHORT, &quot;, &quot;, &quot;|&quot;))
+
+# choose only selected disease papers
+selected_papers &lt;-
+  data.table::fread(here::here(&quot;output/icd_map/gwas_study_gbd_causes.csv&quot;)) |&gt;
+  filter(include == TRUE) |&gt;
+  pull(PUBMED_ID) |&gt;
+  unique()
+
+length(selected_papers)</code></pre>
+<pre><code>[1] 1001</code></pre>
+<pre class="r"><code>gwas_study_info &lt;- 
+  gwas_study_info |&gt;
+  filter(PUBMED_ID %in% selected_papers) |&gt;
+  distinct()
+
+gwas_study_info &lt;-
+  gwas_study_info |&gt;
+  distinct(PUBMED_ID, COHORT, DATE, STUDY)</code></pre>
+<div id="remove-uninformative-labels" class="section level3"
+number="1.0.1">
+<h3><span class="header-section-number">1.0.1</span> Remove
+uninformative labels</h3>
+<pre class="r"><code># making &quot;multiple&quot; designation to be the same
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, 
+                                   &quot;(\\(Multiple cohorts\\))|(\\(multiple\\))|Multiple&quot;,
+                                  &quot;multiple&quot;)) 
+
+
+# number of cohorts listed as &#39;multiple&#39;
+gwas_study_info |&gt; 
+  filter(grepl(&quot;multiple&quot;, COHORT, ignore.case = T)) |&gt; 
+  group_by(COHORT) |&gt; 
+  summarise(n = n())</code></pre>
+<pre><code># A tibble: 1 × 2
+  COHORT       n
+  &lt;chr&gt;    &lt;int&gt;
+1 multiple     4</code></pre>
+<pre class="r"><code># remove cohorts listed as multiple
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(COHORT = stringr::str_remove_all(pattern = &quot;multiple&quot;,
+                                          string = COHORT)
+         )
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(COHORT = stringr::str_remove_all(pattern = &quot;multiple&quot;,
+                                          string = COHORT)
+         )
+
+
+# making others be the same  
+gwas_study_info &lt;- gwas_study_info |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;Other&quot;, &quot;other&quot;)) |&gt; 
+  mutate(COHORT = str_replace_all(COHORT, &quot;OTHER&quot;, &quot;other&quot;)) |&gt;
+  mutate(COHORT = str_replace_all(COHORT, &quot;others&quot;, &quot;other&quot;)) 
+
+# number of cohorts listed as other
+gwas_study_info |&gt; 
+  filter(grepl(&quot;other&quot;, COHORT)) |&gt; 
+  group_by(COHORT) |&gt; 
+  summarise(n = n()) |&gt;
+  arrange(desc(n)) |&gt;
+  head()</code></pre>
+<pre><code># A tibble: 6 × 2
+  COHORT                                                                       n
+  &lt;chr&gt;                                                                    &lt;int&gt;
+1 other                                                                       26
+2 UKB|other                                                                    2
+3 3C|AGES|ARIC|ASPREE|CHS|FVG|FHS|GR@CE|Apulia|HKOS|HUNT|MEMENTO|MYHAT|RO…     1
+4 AASC|BBJ|BES|CAGE|CHNS|CKB|CLHNS|DC|SP2|HKDR|KARE|other|MESA|Nagahama S…     1
+5 ARIC|BIOME|CARDIA|CFS|CHS|other|EMERGE|FAMHS|GENESTAR|GENOA|GERA|Health…     1
+6 ARIC|CHS|MESA|INTERSTROKE|SIGN|COMPASS|other                                 1</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;other&quot;, COHORT)) |&gt; 
+  nrow()</code></pre>
+<pre><code>[1] 74</code></pre>
+<pre class="r"><code>gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(COHORT = stringr::str_remove_all(pattern = &quot;(^other$)|(^other\\|)|(\\|other$)&quot;,
+                                          string = COHORT)
+         ) |&gt;
+  mutate(COHORT = stringr::str_replace_all(pattern = &quot;\\|other\\|&quot;,
+                                          string = COHORT,
+                                          replacement = &quot;|&quot;)
+         )
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(COHORT = stringr::str_remove_all(pattern = &quot;other&quot;,
+                                          string = COHORT)
+         )
+
+# not reported: 
+gwas_study_info |&gt; 
+  filter(grepl(&quot;NR&quot;, COHORT)) |&gt; 
+  group_by(COHORT) |&gt; 
+  summarise(n = n()) |&gt;
+  arrange(desc(n)) |&gt;
+  head()</code></pre>
+<pre><code># A tibble: 6 × 2
+  COHORT                                                 n
+  &lt;chr&gt;                                              &lt;int&gt;
+1 NR                                                    61
+2 UKB|NR                                                 2
+3 BBJ|NR                                                 1
+4 CHB|DBDS|FinnGen|EB|DeCODE|AoU|NR|UKB|PLCO             1
+5 CHB|DBDS|FinnGen|EB|DeCODE|AoU|NR|UKB|PLCO|CKB|BBJ     1
+6 DIAGRAM|NR                                             1</code></pre>
+<pre class="r"><code>gwas_study_info |&gt; 
+  filter(grepl(&quot;NR&quot;, COHORT)) |&gt;
+  nrow()</code></pre>
+<pre><code>[1] 76</code></pre>
+<pre class="r"><code>gwas_study_info = 
+gwas_study_info |&gt;
+  dplyr::mutate(COHORT = stringr::str_remove_all(pattern =&quot;(^NR$)|(^NR\\|)|(\\|NR$)&quot;, 
+                                                 string = COHORT)) |&gt;
+    mutate(COHORT = stringr::str_replace_all(pattern = &quot;(\\|NR\\|)&quot;,
+                                          string = COHORT,
+                                          replacement = &quot;|&quot;)
+         )
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  mutate(COHORT = str_remove_all(pattern = &quot;\\|$&quot;,
+                                 string = COHORT))</code></pre>
+</div>
+<div id="fixing-some-discrepancies-with-multiple-cohorts"
+class="section level3" number="1.0.2">
+<h3><span class="header-section-number">1.0.2</span> Fixing some
+discrepancies with multiple cohorts</h3>
+<pre class="r"><code>gwas_study_info |&gt;
+    filter(grepl(&quot;\\band\\b&quot;, COHORT)) |&gt;
+    distinct(COHORT)</code></pre>
+<pre><code>                           COHORT
+                           &lt;char&gt;
+1: CanSCAD cases and MGI controls</code></pre>
+<pre class="r"><code>gwas_study_info &lt;- 
+        gwas_study_info |&gt;
+        mutate(COHORT = ifelse(COHORT == &quot;CanSCAD cases and MGI controls&quot;,
+                               &quot;CanSCAD|MGI&quot;, 
+                               COHORT)) 
+
+gwas_study_info &lt;- 
+        gwas_study_info |&gt;
+        mutate(COHORT = stringr::str_replace_all(
+                                string = COHORT,
+                                pattern = &quot;(?:(?&lt;=^)|(?&lt;=\\|))ROS(?=$|\\|)|(?:(?&lt;=^)|(?&lt;=\\|))MAP(?=$|\\|)&quot;,
+                               replacement = &quot;ROSMAP&quot;
+                               )
+        )</code></pre>
+</div>
+<div id="separate-cohort-names-into-new-rows" class="section level3"
+number="1.0.3">
+<h3><span class="header-section-number">1.0.3</span> Separate cohort
+names into new rows</h3>
+<pre class="r"><code>gwas_study_info  &lt;-
+  gwas_study_info  |&gt;
+  tidyr::separate_longer_delim(COHORT, 
+                          delim = &quot;|&quot;) |&gt;
+  mutate(COHORT = stringr::str_squish(COHORT)) |&gt;
+  distinct()</code></pre>
+</div>
+<div id="fixing-some-specific-cohort-names" class="section level3"
+number="1.0.4">
+<h3><span class="header-section-number">1.0.4</span> Fixing some
+specific cohort names</h3>
+<pre class="r"><code>gwas_study_info &lt;- 
+        gwas_study_info |&gt;
+        mutate(COHORT = ifelse(COHORT == &quot;Oxford Regional Prospective Study of Childhood Diabetes (ORPS)&quot;,
+                               &quot;ORPS&quot;,
+                               COHORT))
+
+# 34522458
+# 34934334
+# 36329257
+gwas_study_info  &lt;-
+  gwas_study_info |&gt;
+  mutate(
+    COHORT = ifelse(PUBMED_ID %in% c(34522458, 34934334, 36329257) &amp; COHORT == &quot;Taiwan&quot;, 
+                    &quot;TWB&quot;,
+                    COHORT))
+
+# 34604815
+gwas_study_info  &lt;-
+  gwas_study_info |&gt;
+  mutate(
+    COHORT = ifelse(PUBMED_ID == 34604815 &amp; COHORT == &quot;Mount Sinai&quot;,
+                    &quot;BioMe&quot;,
+                    COHORT))
+
+
+# 29531354
+# ?Finland | FINLAND appear to be FINRISK
+gwas_study_info  &lt;-
+  gwas_study_info |&gt;
+  mutate(
+    COHORT = ifelse(PUBMED_ID == 29531354 &amp; (COHORT == &quot;Finland&quot;| COHORT == &quot;FINLAND&quot;),
+                    &quot;FINRISK&quot;,
+                    COHORT))</code></pre>
+</div>
+</div>
+<div id="load-prepare-list-of-gwas-cohort-names" class="section level1"
+number="2">
+<h1><span class="header-section-number">2</span> Load / prepare list of
+GWAS Cohort Names</h1>
+<p>Full list of abbreviations downloaded from: <a
+href="https://www.ebi.ac.uk/gwas/docs/fileheaders#_file_headers_for_unpublished_studies"
+class="uri">https://www.ebi.ac.uk/gwas/docs/fileheaders#_file_headers_for_unpublished_studies</a>
+(<a
+href="https://ftp.ebi.ac.uk/pub/databases/spot/pgs/metadata/pgs_all_metadata_cohorts.csv"
+class="uri">https://ftp.ebi.ac.uk/pub/databases/spot/pgs/metadata/pgs_all_metadata_cohorts.csv</a>).</p>
+<pre class="r"><code># listing cohort names
+gwas_cohort_names &lt;- data.table::fread(&quot;data/gwas_catalog/pgs_all_metadata_cohorts.csv&quot;)
+
+gwas_cohort_names &lt;- 
+  gwas_cohort_names |&gt; 
+  rename_all(~gsub(&quot; &quot;, &quot;_&quot;, .x))</code></pre>
+<div id="making-cohort-names-unique" class="section level2"
+number="2.1">
+<h2><span class="header-section-number">2.1</span> Making cohort names
+unique</h2>
+<p>And multiple rows per alternative name or synonym or abbreviation for
+a cohort.</p>
+<pre class="r"><code>gwas_cohort_names &lt;- 
+  gwas_cohort_names |&gt; 
+  mutate(`Previous/other/additional_names` = 
+           stringr::str_replace_all(`Previous/other/additional_names`, 
+                                    &quot;chances of preventing, recognizing early and optimally treating&quot;,
+                                    &quot;chances of preventing* recognizing early and optimally treating&quot;
+           )
+  ) |&gt;
+    mutate(`Previous/other/additional_names` = 
+           stringr::str_replace_all(`Previous/other/additional_names`, 
+                                    &quot;on Nephropathy, of relevance to public health, which is Chronic, possibly in its Initial stages, and&quot;,
+                                    &quot;on Nephropathy* of relevance to public health* which is Chronic* possibly in its Initial stages* and&quot;
+           )
+  ) |&gt;
+  mutate(`Previous/other/additional_names` = 
+           stringr::str_replace_all(`Previous/other/additional_names`, 
+                                    &quot;;&quot;,
+                                    &quot;,&quot;)
+  )
+
+gwas_cohort_names &lt;-
+gwas_cohort_names |&gt;
+  group_by(Cohort_Name) |&gt;
+  mutate(`Previous/other/additional_names` = ifelse(`Previous/other/additional_names` == &quot;&quot;,
+                                                    NA_character_,
+                                                    `Previous/other/additional_names`)) |&gt;
+  tidyr::unite(&quot;other_names&quot;, 
+               c(Cohort_ID, `Previous/other/additional_names`), 
+               sep = &quot;, &quot;, 
+               na.rm = TRUE) |&gt;
+  tidyr::separate_longer_delim(other_names, 
+                          delim = &quot;, &quot;) 
+
+
+gwas_cohort_names |&gt; 
+  filter(grepl(&quot;GENESTAR&quot;, 
+               other_names, 
+               ignore.case = T))</code></pre>
+<pre><code># A tibble: 2 × 2
+# Groups:   Cohort_Name [2]
+  other_names Cohort_Name                                          
+  &lt;chr&gt;       &lt;chr&gt;                                                
+1 GeneSTAR    Genetic STudy of Aspirin Responsiveness              
+2 GeneSTAR_b  Johns Hopkins - Genetic STudy of Atherosclerosis Risk</code></pre>
+<pre class="r"><code>gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  mutate(other_names = ifelse(other_names == &quot;GeneSTAR_b&quot;,
+                            &quot;GeneSTAR&quot;,
+                            other_names))
+
+gwas_cohort_names |&gt; 
+  filter(grepl(&quot;AtheroRemo&quot;, Cohort_Name))</code></pre>
+<pre><code># A tibble: 5 × 2
+# Groups:   Cohort_Name [3]
+  other_names  Cohort_Name 
+  &lt;chr&gt;        &lt;chr&gt;       
+1 AtheroRemo   AtheroRemo  
+2 AtheroRemo 1 AtheroRemo  
+3 AtheroRemo 2 AtheroRemo  
+4 AtheroRemo 1 AtheroRemo 1
+5 AtheroRemo 2 AtheroRemo 2</code></pre>
+<pre class="r"><code>gwas_cohort_names |&gt; 
+  filter(grepl(&quot;Cooperative Health Research in the Region of Augsburg&quot;, Cohort_Name))</code></pre>
+<pre><code># A tibble: 9 × 2
+# Groups:   Cohort_Name [5]
+  other_names Cohort_Name                                             
+  &lt;chr&gt;       &lt;chr&gt;                                                   
+1 KORA        Cooperative Health Research in the Region of Augsburg   
+2 KORA F3     Cooperative Health Research in the Region of Augsburg   
+3 KORA F4     Cooperative Health Research in the Region of Augsburg   
+4 KORA S3     Cooperative Health Research in the Region of Augsburg   
+5 KORA S4     Cooperative Health Research in the Region of Augsburg   
+6 KORA F3     Cooperative Health Research in the Region of Augsburg F3
+7 KORA F4     Cooperative Health Research in the Region of Augsburg F4
+8 KORA S3     Cooperative Health Research in the Region of Augsburg S3
+9 KORA S4     Cooperative Health Research in the Region of Augsburg S4</code></pre>
+<pre class="r"><code>gwas_cohort_names |&gt; 
+  filter(other_names == &quot;HCHS&quot; | other_names == &quot;SOL&quot;)</code></pre>
+<pre><code># A tibble: 4 × 2
+# Groups:   Cohort_Name [3]
+  other_names Cohort_Name                                       
+  &lt;chr&gt;       &lt;chr&gt;                                             
+1 HCHS        Hispanic Community Health Study                   
+2 HCHS        Hispanic Community Health Study / Study of Latinos
+3 SOL         Hispanic Community Health Study / Study of Latinos
+4 SOL         Study of Latinos                                  </code></pre>
+<pre class="r"><code>gwas_cohort_names |&gt;
+  filter(other_names == &quot;CCGB_2&quot;)</code></pre>
+<pre><code># A tibble: 2 × 2
+# Groups:   Cohort_Name [2]
+  other_names Cohort_Name                    
+  &lt;chr&gt;       &lt;chr&gt;                          
+1 CCGB_2      Cleveland Clinic GeneBank Study
+2 CCGB_2      Cleveland Clinic Gene Bank 2   </code></pre>
+<pre class="r"><code>gwas_cohort_names &lt;-
+gwas_cohort_names |&gt;
+  mutate(Cohort_Name = case_when(
+    grepl(&quot;AtheroRemo&quot;, Cohort_Name) ~ &quot;AtheroRemo&quot;,
+    grepl(&quot;Cooperative Health Research in the Region of Augsburg&quot;, Cohort_Name) ~ &quot;Cooperative Health Research in the Region of Augsburg&quot;,
+    other_names == &quot;HCHS&quot; | other_names == &quot;SOL&quot; ~ &quot;Hispanic Community Health Study / Study of Latinos&quot;,
+    other_names == &quot;CCGB_2&quot; ~ &quot;Cleveland Clinic GeneBank Study&quot;,
+    TRUE ~ Cohort_Name
+  )) |&gt;
+  distinct()
+
+gwas_cohort_names  |&gt;
+  group_by(other_names) |&gt;
+  summarise(n = n()) |&gt;
+  filter(n &gt; 1)</code></pre>
+<pre><code># A tibble: 11 × 2
+   other_names     n
+   &lt;chr&gt;       &lt;int&gt;
+ 1 ABCD            2
+ 2 BHS             2
+ 3 CURES           2
+ 4 DHS             2
+ 5 GeneSTAR        2
+ 6 HOPE            2
+ 7 MARS            2
+ 8 MCS             2
+ 9 MTR             2
+10 QTR             2
+11 SMC             2</code></pre>
+<pre class="r"><code>non_unique_cohort_names = 
+gwas_cohort_names  |&gt;
+  group_by(other_names) |&gt;
+  summarise(n = n())  |&gt;
+  filter(n &gt; 1) |&gt;
+  pull(other_names) 
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  mutate(non_unique_id = ifelse(other_names %in% non_unique_cohort_names, 
+                                TRUE,
+                                FALSE)
+         ) |&gt;
+  rename(Cohort_ID = other_names)</code></pre>
+<div id="add-extra-stage-based-synonyms-for-some-cohorts"
+class="section level3" number="2.1.1">
+<h3><span class="header-section-number">2.1.1</span> Add extra stage
+based synonyms for some cohorts</h3>
+<pre class="r"><code># add cohort stages 
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt; 
+  mutate(Cohort_ID = case_when(
+    Cohort_ID == &quot;ROSMAP&quot; ~ &quot;ROSMAP, ROSMAP 1, ROSMAP 2&quot;,
+    Cohort_ID == &quot;LASA&quot; ~ &quot;LASA, LASA I, LASA II&quot;,
+    Cohort_ID == &quot;COHRA&quot; ~ &quot;COHRA, COHRA1, COHRA2&quot;,
+    TRUE ~ Cohort_ID
+  )) |&gt;
+  tidyr::separate_longer_delim(Cohort_ID, 
+                          delim = &quot;, &quot;)</code></pre>
+</div>
+<div id="add-some-capitalisation-and-other-synonyms-for-some-cohorts"
+class="section level3" number="2.1.2">
+<h3><span class="header-section-number">2.1.2</span> Add some
+capitalisation and other synonyms for some cohorts</h3>
+<pre class="r"><code># add cohort synonyms to gwas_cohort_names 
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt; 
+  mutate(Cohort_ID = case_when(
+    Cohort_ID == &quot;UKB&quot; ~ &quot;UKB, UKBB&quot;,
+    Cohort_ID == &quot;BioMe&quot; ~ &quot;BioMe, BioME, BIOME&quot;,
+    Cohort_ID == &quot;BioVU&quot; ~ &quot;BioVU, BioVu, BIOVU&quot;,
+    Cohort_ID == &quot;deCODE&quot; ~ &quot;deCODE, DeCODE, DECODE&quot;,
+    Cohort_ID == &quot;AllofUs&quot; ~ &quot;AllofUs, All of Us, AllOfUs, AoU&quot;,
+    Cohort_ID == &quot;EB&quot; ~ &quot;EB, Estonian Biobank, EstBB, EBB&quot;,
+    Cohort_ID == &quot;FinnGen&quot; ~ &quot;FinnGen, FINNGEN, Finngen&quot;,
+    Cohort_ID == &quot;SiGN&quot; ~ &quot;SiGN, SIGN, Sign&quot;,
+    Cohort_ID == &quot;B58C&quot; ~ &quot;B58C, British 1958 birth cohort, BC58&quot;,
+    Cohort_ID == &quot;eMERGE&quot; ~ &quot;eMERGE, EMERGE, Emerge&quot;,
+    Cohort_ID == &quot;FamHS&quot; ~ &quot;FamHS, FAMHS&quot;,
+    Cohort_ID == &quot;Nugene&quot; ~ &quot;Nugene, NuGene, NUGENE&quot;,
+    Cohort_ID == &quot;LifeLines&quot; ~ &quot;Lifelines, LifeLines&quot;,
+    Cohort_ID == &quot;GoDARTS&quot; ~ &quot;GoDARTS, GODARTS, GoDarts&quot;,
+    Cohort_ID == &quot;GeneSTAR&quot; ~ &quot;GeneSTAR, GeneStar, GENESTAR&quot;,
+    Cohort_ID == &quot;genomicc&quot; ~ &quot;genomicc, GenOMICC, Genomicc&quot;,
+    Cohort_ID == &quot;BioResource&quot; ~ &quot;BioResource, NIHR BioResource, NIHR Cambridge BioResource, NIHR BIORESOURCE&quot;,
+    Cohort_ID == &quot;MCH_montreal&quot; ~ &quot;MCH_montreal, MCH-Montreal, MCH Montreal, Montreal Children&#39;s Hospital&quot;,
+    Cohort_ID == &quot;YH&quot; ~ &quot;YH, Young Hearts-NI&quot;,
+    Cohort_ID == &quot;SDCC&quot; ~ &quot;SDCC, Steno Diabetes Center&quot;,
+    Cohort_ID == &quot;TaiChi&quot; ~ &quot;TaiChi, TAICHI&quot;,
+    Cohort_ID == &quot;GEL&quot; ~ &quot;GEL, GeL&quot;,
+    Cohort_ID == &quot;canSCAD&quot; ~ &quot;canSCAD, CanSCAD&quot;,
+    TRUE ~ Cohort_ID
+    
+  )) |&gt;
+  tidyr::separate_longer_delim(Cohort_ID, 
+                          delim = &quot;, &quot;)</code></pre>
+</div>
+<div
+id="add-some-additional-cohort-names-not-in-the-gwas-catalog-cohort-list"
+class="section level3" number="2.1.3">
+<h3><span class="header-section-number">2.1.3</span> Add some additional
+cohort names not in the GWAS Catalog cohort list</h3>
+<pre class="r"><code># add other cohort names 
+# HapMap
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = &quot;HapMap&quot;,
+  Cohort_Name = &quot;International HapMap Consortium&quot;,
+  non_unique_id = FALSE
+)
+)
+
+# Korea4K
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = &quot;Korea4K&quot;,
+  Cohort_Name = &quot;Korean Genome Project Phase 1&quot;,
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;WTCCC-BD&quot;, &quot;WTCCC - Bipolar disease cases&quot;),
+  Cohort_Name = c(&quot;WTCCC case-control study for Bipolar Disorder&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;GRID-NI&quot;),
+  Cohort_Name = c(&quot;Genetic Resource Investigating Diabetes (GRID) - Northern Ireland Collection&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;DCCT-EDIC&quot;),
+  Cohort_Name = c(&quot;Diabetes Control and Complications Trial/Epidemiology of Diabetes Interventions and Complications Study&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;ORPS&quot;),
+  Cohort_Name = c(&quot;Oxford Regional Prospective Study of Childhood Diabetes&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;MAP&quot;),
+  Cohort_Name = c(&quot;Rush Memory and Aging Project&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;VHSMC&quot;),
+  Cohort_Name = c(&quot;Veterans Health Service Medical Center&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;SALSA&quot;),
+  Cohort_Name = c(&quot;San Antonio Longitudinal Study of Aging&quot;),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names &lt;-
+  gwas_cohort_names |&gt;
+  rows_append(
+data.frame(
+  Cohort_ID = c(&quot;CALGB 40502&quot;,
+                &quot;CALGB 40503&quot;,
+                &quot;CALGB 80303&quot;,
+                &quot;CALGB 90401&quot;),
+  Cohort_Name = c(&quot;Cancer and Leukemia Group B 40502&quot;,
+                 &quot;Cancer and Leukemia Group B 40503&quot;,
+                 &quot;Cancer and Leukemia Group B 80303&quot;,
+                 &quot;Cancer and Leukemia Group B 90401&quot;
+                 )
+  )
+)</code></pre>
+</div>
+</div>
+</div>
+<div
+id="accounting-for-some-discrepancies-in-cohort-names-across-studies"
+class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Accounting for some
+discrepancies in cohort names across studies</h1>
+<div id="check-in-how-many-unique-cohorts-at-the-start"
+class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Check in: how many
+unique cohorts (at the start)?</h2>
+<pre class="r"><code>all_cohorts = gwas_study_info$COHORT
+#all_cohorts = unlist(strsplit(all_cohorts, &quot;\\|&quot;))
+#all_cohorts  = stringr::str_squish(all_cohorts)
+all_cohorts = all_cohorts[all_cohorts != &quot;&quot;]
+unique(all_cohorts) |&gt; length()</code></pre>
+<pre><code>[1] 339</code></pre>
+<pre class="r"><code># cohorts not in gwas_cohort_names
+all_cohorts[!all_cohorts %in% gwas_cohort_names$Cohort_ID] |&gt; unique() |&gt; length()</code></pre>
+<pre><code>[1] 5</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(!COHORT %in% gwas_cohort_names$Cohort_ID &amp; COHORT != &quot;&quot;) |&gt;
+  select(PUBMED_ID, COHORT) |&gt;
+  distinct() |&gt;
+  View()</code></pre>
+</div>
+<div id="checking-any-fuzzy-names-to-check" class="section level2"
+number="3.2">
+<h2><span class="header-section-number">3.2</span> Checking: Any fuzzy
+names to check?</h2>
+<pre class="r"><code>library(stringdist)
+library(dplyr)
+
+# Identify pairs with small distance (e.g., &lt;=2 edits)
+small_dist_pairs &lt;- function(threshold, 
+                             dist_matrix_method,
+                             all_cohorts) {
+  
+  # Create a vector of unique cohort names
+  cohorts &lt;- unique(all_cohorts)
+  
+  single_use_cohorts  =   data.frame(cohort = all_cohorts) |&gt;
+                          group_by(cohort) |&gt;
+                          summarise(n_studies = n()) |&gt;
+                          filter(n_studies == 1) |&gt;
+                          pull(cohort)
+  
+  # Compute pairwise string distances (Levenshtein distance)
+  dist_matrix &lt;- stringdistmatrix(single_use_cohorts, 
+                                  cohorts, 
+                                  method = dist_matrix_method)
+  
+  matches &lt;- which(dist_matrix &gt; 0 &amp; dist_matrix &lt;= threshold, 
+                   arr.ind = TRUE)
+  
+  matches &lt;- data.frame(
+    cohort1 = single_use_cohorts[matches[,1]],
+    cohort2 = cohorts[matches[,2]],
+    distance = dist_matrix[matches]
+  )
+  
+  matches &lt;- matches[matches$cohort1 != matches$cohort2, ]
+  matches &lt;- unique(matches)
+  
+  return(matches)
+  
+}
+
+small_dist_pairs(threshold = 2, 
+                 dist_matrix_method = &quot;lv&quot;,
+                 all_cohorts = all_cohorts) |&gt;
+  arrange(distance) |&gt;
+  head()</code></pre>
+<pre><code>  cohort1 cohort2 distance
+1     UAB     UKB        1
+2    UKBB     UKB        1
+3    UKBS     UKB        1
+4 canSCAD CanSCAD        1
+5     DGI     MGI        1
+6  DeCODE  deCODE        1</code></pre>
+<pre class="r"><code>small_dist_pairs(threshold = 2,
+                 dist_matrix_method = &quot;lcs&quot;,
+                 all_cohorts = all_cohorts) |&gt;
+  arrange(distance) |&gt;
+  head()</code></pre>
+<pre><code>  cohort1 cohort2 distance
+1    UKBB     UKB        1
+2    UKBS     UKB        1
+3     EDC    EDIC        1
+4    HPFS     HPS        1
+5    CHNS     CHS        1
+6    SCHS     CHS        1</code></pre>
+<pre class="r"><code># COHRA1 vs COHRA
+# COHRA2 vs COHRA
+
+# EGLE vs EAGLE
+# GHS-II GHS-I
+
+# B-PROOF BPROOF
+gwas_study_info |&gt;
+  filter(grepl(&quot;\\bB-PROOF\\b&quot;, COHORT))</code></pre>
+<pre><code>[1] PUBMED_ID COHORT    DATE      STUDY    
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<pre class="r"><code>gwas_study_info |&gt;
+  filter(grepl(&quot;\\bBPROOF\\b&quot;, COHORT))</code></pre>
+<pre><code>[1] PUBMED_ID COHORT    DATE      STUDY    
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<pre class="r"><code># WAMHS WASHS
+
+# CALGB 40502 CALGB 40503
+
+# matches &lt;- which(dist_matrix &gt; 0 &amp; dist_matrix &lt;= threshold, arr.ind = TRUE)
+# matches &lt;- data.frame(
+#   cohort1 = single_use_cohorts[matches[,1]],
+#   cohort2 = cohorts[matches[,2]],
+#   distance = dist_matrix[matches]
+# )
+# 
+# 
+# matches |&gt;
+#   arrange(distance) |&gt;
+#   head()</code></pre>
+</div>
+</div>
+<div id="any-cohorts-missing-from-data-dictionary"
+class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Any cohorts missing
+from data-dictionary?</h1>
+<pre class="r"><code>gwas_study_info &lt;-
+left_join(
+gwas_study_info |&gt;
+rename(Cohort_ID = COHORT),
+gwas_cohort_names,
+by = &quot;Cohort_ID&quot;)
+
+gwas_study_info  &lt;-
+  gwas_study_info  |&gt;
+  mutate(Cohort_ID = ifelse(Cohort_ID == &quot;&quot;,
+                            NA_character_,
+                            Cohort_ID))
+
+
+normalise_cohort_names &lt;- function(Cohort_Name_Col){
+  
+  normalised_names &lt;-
+  stringr::str_squish(Cohort_Name_Col) |&gt;
+  stringr::str_to_title() |&gt; 
+                       stringr::str_replace_all(pattern = &quot;\u00A0&quot;, 
+                                                replacement = &quot; &quot;) |&gt;
+                       stringr::str_remove_all(&quot;[®™]&quot;) |&gt;
+                       stringr::str_remove_all(&quot;^The\\s+&quot;) |&gt;
+                       stringr::str_remove_all(&quot;\\s+Study(?=(\\s+|$))&quot;)
+  
+  return(normalised_names)
+
+}
+
+gwas_study_info  &lt;-
+  gwas_study_info  |&gt;
+  mutate(Cohort = normalise_cohort_names(Cohort_Name))
+                       
+
+cohort_names_df &lt;- readxl::read_xlsx(here::here(&quot;data/cohort/cohort_desc_v3_sep17.xlsx&quot;)) |&gt;
+  mutate(across(everything(), 
+                ~stringr::str_replace_all(.x,
+                                          pattern = &quot;\u00A0&quot;,
+                                          replacement = &quot; &quot;))) 
+
+cohort_names_df  &lt;-
+  cohort_names_df  |&gt;
+  mutate(full_name = ifelse(full_name == &quot;&quot; | is.na(full_name),
+                            short_name,
+                            full_name)) |&gt;
+  mutate(full_name = stringr::str_squish(full_name)) |&gt;
+  filter(full_name != &quot;&quot;)
+
+  
+cohort_names_df &lt;-
+  cohort_names_df |&gt;
+  group_by(full_name) |&gt;
+  mutate(synonyms = stringr::str_flatten(
+                        unique(c(synonyms, short_name, full_name)), 
+                         collapse = &quot;; &quot;,
+                        na.rm = T)) |&gt;
+  ungroup()
+
+cohort_names_df  &lt;-
+cohort_names_df |&gt;
+  distinct(full_name, cohort_group, synonyms) |&gt;
+  tidyr::separate_longer_delim(synonyms, 
+                          delim = &quot;; &quot;) |&gt;
+    mutate(synonyms = normalise_cohort_names(synonyms)) |&gt;
+  rename(Cohort = synonyms)
+
+anti_join(
+  gwas_study_info |&gt;
+    distinct(Cohort_ID, Cohort_Name, Cohort),
+  cohort_names_df
+)</code></pre>
+<pre><code>                                   Cohort_ID
+1                                       &lt;NA&gt;
+2   The &quot;European NAFLD Registry&quot; Metacohort
+3                                       GERA
+4                                    CanSCAD
+5                                       SIGN
+6                                      SIFAP
+7                                     CADISP
+8                                        MDC
+9                                        ICH
+10                                      HCHS
+11                                       SOL
+12                                  HISAYAMA
+13                                      RACE
+14                                     SLESS
+15                                     BioVU
+16                                       MEC
+17                                       HPS
+18                                      MAYO
+19                                       SDR
+20                                    MyCode
+21                                     ILCCO
+22                                    CHANCE
+23                                    ARCAGE
+24                                   IARCCES
+25                                   Toronto
+26                                    HN5000
+27                                       COG
+28                                  EPIC_CAD
+29                                    FISSIC
+30                                    GenHAT
+31                                   PREVEND
+32                                     MAGIC
+33                                      SiGN
+34                                        KP
+35                                   Man_LHC
+36                                     MCRCB
+37                                      HEXA
+38                                    INVENT
+39                                     TRICL
+40                                      AASK
+41                                      UMCG
+42                                   DAHANCA
+43                                  RADIOGEN
+44                                    SIGNET
+45                                  GenOMICC
+46                                     GIANT
+47                                  Michigan
+48                                     Steno
+49                                      PLCO
+50                                       PGC
+51                                  DIAMANTE
+52                                       DGI
+53                                    FUSION
+54                                      CAGE
+55                            Nagahama Study
+56                                      SWHS
+57                                    TAICHI
+58                                   LOLIPOP
+59                                  GENESTAR
+60                                  GENESTAR
+61                                      WFSM
+62                                       GMC
+63                                   GENESIS
+64                                     CAVAS
+65                                  NCI_Lung
+66                                      SLRI
+67                                   MedSTAR
+68                                      GLGC
+69                    National blood service
+70                     Sardinia case-control
+71                                       BDA
+72                NIHR Cambridge BioResource
+73                                      UKBS
+74                                       BRI
+75                                    GoKinD
+76                                      NYCP
+77                                      NIMH
+78                                    SEARCH
+79                                  TrialNet
+80                                       UAB
+81                                        UC
+82                                      UCSF
+83                                   IDDMGEN
+84                                    T1DGEN
+85                                       MCW
+86                                   GRID-NI
+87                           Young Hearts-NI
+88                     Steno Diabetes Center
+89                                       HSG
+90                                  PCL WP4b
+91              Montreal Children&#39;s Hospital
+92                                 Korea-NCC
+93                                 PRACTICAL
+94                                   GoSHARE
+95                                   DIAMOND
+96                                       CGC
+97                                       HGF
+98                                     ICR_b
+99                                  REDS-III
+100                                    CACTI
+101                                      EDC
+102                                       DN
+103                                  SMART2D
+104                               ASSESS-AKI
+105                                  canSCAD
+106                                     LORD
+107                                CARTaGENE
+108                                    RUNMC
+109                                      NKI
+110                               EuroTARGET
+111                       NFS-ORPS/Cambridge
+112                                   ASPREE
+113                                      FVG
+114                                    GR@CE
+115                                   Apulia
+116                                     HKOS
+117                                    MYHAT
+118                                    SALSA
+119                                   SCAPIS
+120                                   INHALE
+121                                     IGAP
+122                                     ICBP
+123                       VHIR-FMT-Barcelona
+124                                     TPMI
+125                                    VHSMC
+126                                      RGC
+127                                     IRAS
+128                                     ASPS
+129                                 GenomALC
+130                                    NIAAA
+131                                   SJLIFE
+132                                  SANFORD
+133                                     WGHS
+134                                     ASGC
+135                                      ESS
+136                                     GRAZ
+137                                   KRAKOW
+138                                   MUNICH
+139                                    SGSSL
+140                                      TOB
+141                                      NCI
+142                                     SCCS
+                                                                                                                            Cohort_Name
+1                                                                                                                                  &lt;NA&gt;
+2                                                                                                                                  &lt;NA&gt;
+3                                                                               Genetic Epidemiology Research in Adult Health and Aging
+4                                                                                 Canadian spontaneous coronary artery dissection study
+5                                    The National Institute of Neurological Disorders and Stroke (NINDS) Stroke Genetics Network (SiGN)
+6                                                                                                        Stroke In Young Fabry Patients
+7                                                                               Cervical Artery Dissection and Ischemic Stroke Patients
+8                                                                                                           Malmö Diet and Cancer Study
+9                                                                                                                                   ICH
+10                                                                                   Hispanic Community Health Study / Study of Latinos
+11                                                                                   Hispanic Community Health Study / Study of Latinos
+12                                                                                                                   The Hisayama study
+13                                                                            Risk Assessment of Cerebrovascular Events Study, Pakistan
+14                                                                                                                                SLESS
+15                                                                                           BioVU, the Vanderbilt DNA Databank project
+16                                                                                          Multiethnic Cohort Study of Diet and Health
+17                                                                                                               Heart Protection Study
+18                                                                                                                The Mayo Clinic study
+19                                                                                                             Scania Diabetes Registry
+20                                        MyCode Community Health Initiative (Geisinger Health System): includes DiscovEHR participants
+21                                                                 International Lung Cancer Consortium (Lung cancer OncoArray project)
+22                                                                                           Carolina Head and Neck Cancer Epidemiology
+23                                                                                                                               ARCAGE
+24                                                                     International Agency for Research on Cancer Central Europe Study
+25                                                                                                                              Toronto
+26                                                                                                           United Kingdom case-series
+27                                                                                                  Childrens Oncology Group 9906 study
+28                                                                                                                             EPIC CAD
+29                                                                                 Fangshan Family-Based Ischemic Stroke Study in China
+30                                                                                        Genetics of Hypertension Associated Treatment
+31                                                                              Prevention of Renal and Vascular Endstage Disease study
+32                                                                       Meta-Analyses of Glucose and Insulin-related Traits Consortium
+33                                   The National Institute of Neurological Disorders and Stroke (NINDS) Stroke Genetics Network (SiGN)
+34                                                                                                                    Kaiser Permanente
+35                                                                                                         Manchester Lung Health Check
+36                                                                                            Manchester Cancer Research Centre Biobank
+37                                                                                                 Health Examinee Shared Control Study
+38                                                                           International Network Against Venous Thrombosis Consortium
+39                                                               Transdisciplinary Research In Cancer of the Lung (TRICL) Research Team
+40                                                                            African American Study of Kidney disease and hypertension
+41                                                                                                  University Medical Center Groningen
+42                                                                                              Danish Head and Neck cancer Study Group
+43                                                                                                                      RADIOGEN cohort
+44                                                                                                         Sea Islands Genetics Network
+45                                                                                    GenOMICC (Genetics Of Mortality in Critical Care)
+46                                                                    Genetic Investigation of ANthropometric Traits (GIANT) consortium
+47                                                                                                         University of Michigan study
+48                                                                                                          Steno Diabetes Center Study
+49                                                                       Prostate, Lung, Colorectal, and Ovarian Cancer Screening Trial
+50                                                                                                          Psychiatric GWAS Consortium
+51                                                                              DIAbetes Meta-ANalysis Trans-Ethnic association studies
+52  Diabetes Genetics Initiative of Broad Institute of Harvard and MIT, Lund University, and Novartis Institutes of BioMedical Research
+53                                              Finland-United States Investigation of Non-Insulin-Dependent Diabetes Mellitus Genetics
+54                                                                                           Cardio-metabolic Genome Epidemiology Study
+55                                                            Nagahama Prospective Genome Cohort for the Comprehensive Human Bioscience
+56                                                                                                         Shanghai Womens Health Study
+57                                                                                                                    TaiChi consortium
+58                                                                                                London Life Sciences Population Study
+59                                                                                              Genetic STudy of Aspirin Responsiveness
+60                                                                                Johns Hopkins - Genetic STudy of Atherosclerosis Risk
+61                                                                                      Wake Forest University School of Medicine Study
+62                                                                                                             Geisinger Medical Center
+63                                                                                                                              GENESIS
+64                                                                                             Cardiovascular Disease Association Study
+65                                                                                 NCI Lung Cancer in African Americans GWAS Consortium
+66                                                                                                  Samuel Lunenfeld Research Institute
+67                                                                                                MedSTAR cardiac catheterization study
+68                                                                                                     Global Lipid Genetics Consortium
+69                                                                                                                                 &lt;NA&gt;
+70                                                                                                                                 &lt;NA&gt;
+71                                                                                                         British Diabetes Association
+72                                                                                                           NIHR Cambridge BioResource
+73                                                                                                      UK National Blood Donor Service
+74                                                                                     Benaroya Research Institute, Seattle, Washington
+75                                                                                                Genetics of Kidneys in Diabetes Study
+76                                                                                                              New York Cancer Project
+77                                                                                                  National Institute of Mental Health
+78                                                                            Study of Epidemiology and Risk Factors in Cancer Heredity
+79                                                                                          Type 1 Diabetes TrialNet (www.trialnet.org)
+80                                                                                                  University of Alabama at Birmingham
+81                                                                                                                University of Chicago
+82                                                                                              University of California, San Francisco
+83                                                                                Tyypin 1 Diabetekseen Sairastuneita Perheenjäsenineen
+84                                                                                                      Tyypin 1 Diabeteksen Genetiikka
+85                                                                                                         Medical College of Wisconsin
+86                                                         Genetic Resource Investigating Diabetes (GRID) - Northern Ireland Collection
+87                                                                                                Northern Ireland Young Hearts Project
+88                                                                                                                Steno Diabetes Center
+89                                                                                           Hvidoere Study Group on Childhood Diabetes
+90                                                                                                                                 &lt;NA&gt;
+91                                                                                                         Montreal Children&#39;s Hospital
+92                                                                                                  Korean-National Cancer Center Study
+93                                                       Prostate Cancer Association Group to Investigate Cancer-Associated Alterations
+94                                                                                    Genetics of the Scottish Health Research Register
+95                                                                                   Diabetes Multi-omic Investigation of Drug Response
+96                                                                                                         Cardiovascular Genome Centre
+97                                                                               The Helmholtz-Gemeinschaft Deutscher Forschungszentren
+98                                                                                                         Institute of Cancer Research
+99                                                                                  NHLBI Recipient Epidemiology Donor Evaluation Study
+100                                                                                The Coronary Artery Calcification in Type 1 Diabetes
+101                                                                             Pittsburgh Epidemiology of Diabetes Complications Study
+102                                                                                             Singapore Study of Diabetic Nephropathy
+103                                                Singapore Study of Macro-angiopathy and Micro-vascular Reactivity in Type 2 Diabetes
+104                                                                 Assessment, Serial Evaluation, and Subsequent Sequelae of AKI Study
+105                                                                               Canadian spontaneous coronary artery dissection study
+106                                                                                                Lung Oncology Research and Discovery
+107                                                                               CARTaGENE cohort (CHU Sainte-Justine, Quebec, Canada)
+108                                                                                          Radboud University Nijmegen Medical Centre
+109                                                                                                        Netherlands Cancer Institute
+110                                                                                                                  EuroTARGET project
+111                                                                   UK Nephropathy Family Study and Oxford Regional Prospective Study
+112                                                                                 The ASPirin in Reducing Events in the Elderly trial
+113                                                                                                               Friuli-Venezia Giulia
+114                                                                                                                                &lt;NA&gt;
+115                                                                                                               Salus in Apulia study
+116                                                                                                        Hong Kong Osteoporosis Study
+117                                                                                     The Monongahela-Youghiogheny Healthy Aging Team
+118                                                                                             San Antonio Longitudinal Study of Aging
+119                                                                                              Swedish CArdioPulmonary bioImage Study
+120                                                                                                                              INHALE
+121                                                                                       International Genomics of Alzheimer&#39;s Project
+122                                                         International Consortium for Blood Pressure Genome-wide Association Studies
+123                                                                                                                  VHIR-FMT-Barcelona
+124                                                                                                Taiwan Precision Medicine Initiative
+125                                                                                              Veterans Health Service Medical Center
+126                                                                                                            Radiogenomics Consortium
+127                                                                                        The Insulin Resistance Atherosclerosis Study
+128                                                                                                    Austrian Stroke Prevention Study
+129                                                                                    Genetics of alcoholic liver cirrhosis consortium
+130                                                                                  National Institute on Alcohol Abuse and Alcoholism
+131                                                                                                       St Jude Lifetime Cohort Study
+132                                                                                                                      Sanford Health
+133                                                                                                          Womens Genome Health Study
+134                                                                                            Australian Stroke Genetics Collaborative
+135                                                                                                              Edinburgh Stroke Study
+136                                                                                                                                GRAZ
+137                                                                                                        Krakow stroke genetics study
+138                                                                                                                 MUNICH stroke study
+139                                                                                          St GeorgeÌ\u008ds Stroke Study, London, UK
+140                                                                                                        Tasmanian Ophthalmic Biobank
+141                                                                                                           National Cancer Institute
+142                                                                                                      NBHS/Southern Community Cohort
+                                                                                                                                 Cohort
+1                                                                                                                                  &lt;NA&gt;
+2                                                                                                                                  &lt;NA&gt;
+3                                                                               Genetic Epidemiology Research In Adult Health And Aging
+4                                                                                       Canadian Spontaneous Coronary Artery Dissection
+5                                        National Institute Of Neurological Disorders And Stroke (Ninds) Stroke Genetics Network (Sign)
+6                                                                                                        Stroke In Young Fabry Patients
+7                                                                               Cervical Artery Dissection And Ischemic Stroke Patients
+8                                                                                                                 Malmö Diet And Cancer
+9                                                                                                                                   Ich
+10                                                                                               Hispanic Community Health / Of Latinos
+11                                                                                               Hispanic Community Health / Of Latinos
+12                                                                                                                             Hisayama
+13                                                                            Risk Assessment Of Cerebrovascular Events Study, Pakistan
+14                                                                                                                                Sless
+15                                                                                           Biovu, The Vanderbilt Dna Databank Project
+16                                                                                                Multiethnic Cohort Of Diet And Health
+17                                                                                                                     Heart Protection
+18                                                                                                                          Mayo Clinic
+19                                                                                                             Scania Diabetes Registry
+20                                        Mycode Community Health Initiative (Geisinger Health System): Includes Discovehr Participants
+21                                                                 International Lung Cancer Consortium (Lung Cancer Oncoarray Project)
+22                                                                                           Carolina Head And Neck Cancer Epidemiology
+23                                                                                                                               Arcage
+24                                                                           International Agency For Research On Cancer Central Europe
+25                                                                                                                              Toronto
+26                                                                                                           United Kingdom Case-Series
+27                                                                                                        Childrens Oncology Group 9906
+28                                                                                                                             Epic Cad
+29                                                                                       Fangshan Family-Based Ischemic Stroke In China
+30                                                                                        Genetics Of Hypertension Associated Treatment
+31                                                                                    Prevention Of Renal And Vascular Endstage Disease
+32                                                                       Meta-Analyses Of Glucose And Insulin-Related Traits Consortium
+33                                       National Institute Of Neurological Disorders And Stroke (Ninds) Stroke Genetics Network (Sign)
+34                                                                                                                    Kaiser Permanente
+35                                                                                                         Manchester Lung Health Check
+36                                                                                            Manchester Cancer Research Centre Biobank
+37                                                                                                       Health Examinee Shared Control
+38                                                                           International Network Against Venous Thrombosis Consortium
+39                                                               Transdisciplinary Research In Cancer Of The Lung (Tricl) Research Team
+40                                                                                  African American Of Kidney Disease And Hypertension
+41                                                                                                  University Medical Center Groningen
+42                                                                                                    Danish Head And Neck Cancer Group
+43                                                                                                                      Radiogen Cohort
+44                                                                                                         Sea Islands Genetics Network
+45                                                                                    Genomicc (Genetics Of Mortality In Critical Care)
+46                                                                    Genetic Investigation Of Anthropometric Traits (Giant) Consortium
+47                                                                                                               University Of Michigan
+48                                                                                                                Steno Diabetes Center
+49                                                                       Prostate, Lung, Colorectal, And Ovarian Cancer Screening Trial
+50                                                                                                          Psychiatric Gwas Consortium
+51                                                                              Diabetes Meta-Analysis Trans-Ethnic Association Studies
+52  Diabetes Genetics Initiative Of Broad Institute Of Harvard And Mit, Lund University, And Novartis Institutes Of Biomedical Research
+53                                              Finland-United States Investigation Of Non-Insulin-Dependent Diabetes Mellitus Genetics
+54                                                                                                 Cardio-Metabolic Genome Epidemiology
+55                                                            Nagahama Prospective Genome Cohort For The Comprehensive Human Bioscience
+56                                                                                                               Shanghai Womens Health
+57                                                                                                                    Taichi Consortium
+58                                                                                                      London Life Sciences Population
+59                                                                                                    Genetic Of Aspirin Responsiveness
+60                                                                                      Johns Hopkins - Genetic Of Atherosclerosis Risk
+61                                                                                            Wake Forest University School Of Medicine
+62                                                                                                             Geisinger Medical Center
+63                                                                                                                              Genesis
+64                                                                                                   Cardiovascular Disease Association
+65                                                                                 Nci Lung Cancer In African Americans Gwas Consortium
+66                                                                                                  Samuel Lunenfeld Research Institute
+67                                                                                                      Medstar Cardiac Catheterization
+68                                                                                                     Global Lipid Genetics Consortium
+69                                                                                                                                 &lt;NA&gt;
+70                                                                                                                                 &lt;NA&gt;
+71                                                                                                         British Diabetes Association
+72                                                                                                           Nihr Cambridge Bioresource
+73                                                                                                      Uk National Blood Donor Service
+74                                                                                     Benaroya Research Institute, Seattle, Washington
+75                                                                                                      Genetics Of Kidneys In Diabetes
+76                                                                                                              New York Cancer Project
+77                                                                                                  National Institute Of Mental Health
+78                                                                            Study Of Epidemiology And Risk Factors In Cancer Heredity
+79                                                                                          Type 1 Diabetes Trialnet (Www.trialnet.org)
+80                                                                                                  University Of Alabama At Birmingham
+81                                                                                                                University Of Chicago
+82                                                                                              University Of California, San Francisco
+83                                                                                Tyypin 1 Diabetekseen Sairastuneita Perheenjäsenineen
+84                                                                                                      Tyypin 1 Diabeteksen Genetiikka
+85                                                                                                         Medical College Of Wisconsin
+86                                                         Genetic Resource Investigating Diabetes (Grid) - Northern Ireland Collection
+87                                                                                                Northern Ireland Young Hearts Project
+88                                                                                                                Steno Diabetes Center
+89                                                                                                 Hvidoere Group On Childhood Diabetes
+90                                                                                                                                 &lt;NA&gt;
+91                                                                                                         Montreal Children&#39;s Hospital
+92                                                                                                        Korean-National Cancer Center
+93                                                       Prostate Cancer Association Group To Investigate Cancer-Associated Alterations
+94                                                                                    Genetics Of The Scottish Health Research Register
+95                                                                                   Diabetes Multi-Omic Investigation Of Drug Response
+96                                                                                                         Cardiovascular Genome Centre
+97                                                                                   Helmholtz-Gemeinschaft Deutscher Forschungszentren
+98                                                                                                         Institute Of Cancer Research
+99                                                                                        Nhlbi Recipient Epidemiology Donor Evaluation
+100                                                                                    Coronary Artery Calcification In Type 1 Diabetes
+101                                                                                   Pittsburgh Epidemiology Of Diabetes Complications
+102                                                                                                   Singapore Of Diabetic Nephropathy
+103                                                      Singapore Of Macro-Angiopathy And Micro-Vascular Reactivity In Type 2 Diabetes
+104                                                                       Assessment, Serial Evaluation, And Subsequent Sequelae Of Aki
+105                                                                                     Canadian Spontaneous Coronary Artery Dissection
+106                                                                                                Lung Oncology Research And Discovery
+107                                                                               Cartagene Cohort (Chu Sainte-Justine, Quebec, Canada)
+108                                                                                          Radboud University Nijmegen Medical Centre
+109                                                                                                        Netherlands Cancer Institute
+110                                                                                                                  Eurotarget Project
+111                                                                               Uk Nephropathy Family And Oxford Regional Prospective
+112                                                                                     Aspirin In Reducing Events In The Elderly Trial
+113                                                                                                               Friuli-Venezia Giulia
+114                                                                                                                                &lt;NA&gt;
+115                                                                                                                     Salus In Apulia
+116                                                                                                              Hong Kong Osteoporosis
+117                                                                                         Monongahela-Youghiogheny Healthy Aging Team
+118                                                                                                   San Antonio Longitudinal Of Aging
+119                                                                                                    Swedish Cardiopulmonary Bioimage
+120                                                                                                                              Inhale
+121                                                                                       International Genomics Of Alzheimer&#39;s Project
+122                                                         International Consortium For Blood Pressure Genome-Wide Association Studies
+123                                                                                                                  Vhir-Fmt-Barcelona
+124                                                                                                Taiwan Precision Medicine Initiative
+125                                                                                              Veterans Health Service Medical Center
+126                                                                                                            Radiogenomics Consortium
+127                                                                                                  Insulin Resistance Atherosclerosis
+128                                                                                                          Austrian Stroke Prevention
+129                                                                                    Genetics Of Alcoholic Liver Cirrhosis Consortium
+130                                                                                  National Institute On Alcohol Abuse And Alcoholism
+131                                                                                                             St Jude Lifetime Cohort
+132                                                                                                                      Sanford Health
+133                                                                                                                Womens Genome Health
+134                                                                                            Australian Stroke Genetics Collaborative
+135                                                                                                                    Edinburgh Stroke
+136                                                                                                                                Graz
+137                                                                                                              Krakow Stroke Genetics
+138                                                                                                                       Munich Stroke
+139                                                                                          St Georgeì\u008dS Stroke Study, London, Uk
+140                                                                                                        Tasmanian Ophthalmic Biobank
+141                                                                                                           National Cancer Institute
+142                                                                                                      Nbhs/Southern Community Cohort</code></pre>
+<pre class="r"><code># all cohort names:
+all_cohort_names &lt;- 
+  c(cohort_names_df$cohort,
+    cohort_names_df$full_name,
+    cohort_names_df$synyoms)
+
+all_cohort_names &lt;- unique(all_cohort_names)
+
+length(all_cohort_names)</code></pre>
+<pre><code>[1] 1077</code></pre>
+<pre class="r"><code>gwas_cat_names &lt;- unique(all_cohorts)
+
+not_found_names &lt;-gwas_cat_names[!(gwas_cat_names %in% all_cohort_names)]
+
+checked_all_cohort_names &lt;- tolower(stringr::str_trim(all_cohort_names))
+
+found_with_edits &lt;- gwas_cat_names[(tolower(gwas_cat_names) %in% checked_all_cohort_names)]
+
+# names that match when case is ignored: 
+not_found_names[not_found_names %in% found_with_edits] </code></pre>
+<pre><code>[1] &quot;CROATIA-KORCULA&quot;        &quot;MedSTAR&quot;                &quot;PennCATH&quot;              
+[4] &quot;National blood service&quot; &quot;Finngen&quot;               </code></pre>
+<pre class="r"><code>print(&quot;Number of cohorts not (yet) included in data-dictionary&quot;)</code></pre>
+<pre><code>[1] &quot;Number of cohorts not (yet) included in data-dictionary&quot;</code></pre>
+<pre class="r"><code>length(not_found_names)</code></pre>
+<pre><code>[1] 328</code></pre>
+<pre class="r"><code>print(&quot;Most used cohorts that are not included in the data-dictionary&quot;)</code></pre>
+<pre><code>[1] &quot;Most used cohorts that are not included in the data-dictionary&quot;</code></pre>
+<pre class="r"><code>data.frame(
+  cohort_name = 
+all_cohorts[all_cohorts %in% not_found_names]) |&gt;
+  group_by(cohort_name) |&gt;
+  summarise(n = n()) |&gt;
+  arrange(desc(n)) |&gt;
+  head()</code></pre>
+<pre><code># A tibble: 6 × 2
+  cohort_name           n
+  &lt;chr&gt;             &lt;int&gt;
+1 UKB                  95
+2 BBJ                  23
+3 KoGES                16
+4 ARIC                 10
+5 MGBB                  9
+6 CARDIoGRAMplusC4D     8</code></pre>
+</div>
+<div id="saving" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Saving:</h1>
+<pre class="r"><code># cohorts used per paper:
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  select(PUBMED_ID,
+         DATE,
+         COHORT = Cohort_ID) |&gt;
+  distinct()
+
+gwas_study_info =
+  gwas_study_info |&gt;
+  tidyr::separate_rows(COHORT, sep = &quot;\\|&quot;) |&gt;
+  # mutate(COHORT = ifelse(COHORT != &quot;&quot;,
+  #                        tidyr::separate_rows(COHORT, sep = &quot;\\|&quot;),
+  #                        # unlist(str_split(string = COHORT,
+  #                        #                  pattern = &quot;\\|&quot;)
+  #                               # ),
+  #                        &quot;&quot;)
+  #        ) |&gt;
+  group_by(PUBMED_ID) |&gt;
+  summarise(COHORT = str_flatten(unique(COHORT), 
+                                 collapse = &quot;|&quot;,
+                                 na.rm = T),
+            DATE = unique(DATE))
+  
+data.table::fwrite(gwas_study_info,
+                  here::here(&quot;output/gwas_cohorts/gwas_cohort_name_corrected.csv&quot;), 
+                  sep = &quot;,&quot;)</code></pre>
+</div>
+<div id="others-to-look-into" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Others to look
+into:</h1>
+<pre class="r"><code># in below study, unlisted cohort is combination of two cohorts
+gwas_study_info |&gt;
+  filter(PUBMED_ID  == 32605384) |&gt;
+  select(PUBMED_ID, 
+         COHORT, 
+         STUDY_ACCESSION, 
+         &quot;DISEASE/TRAIT&quot;, 
+         &quot;INITIAL_SAMPLE_SIZE&quot;, 
+         &quot;REPLICATION_SAMPLE_SIZE&quot;)
+
+
+gwas_study_info |&gt;
+  filter(PUBMED_ID == 30510241) |&gt;
+    select(PUBMED_ID, 
+           COHORT, 
+           STUDY_ACCESSION, 
+           &quot;DISEASE/TRAIT&quot;, 
+           &quot;INITIAL_SAMPLE_SIZE&quot;, 
+           &quot;REPLICATION_SAMPLE_SIZE&quot;
+           )
+# if go to supplement, can see made up of many many many studies - I believe includes other all other subsamples
+
+
+gwas_study_info |&gt;
+  filter(PUBMED_ID == 33307546) |&gt;
+    select(PUBMED_ID, 
+           COHORT, 
+           STUDY_ACCESSION, 
+           &quot;DISEASE/TRAIT&quot;, 
+           &quot;INITIAL_SAMPLE_SIZE&quot;, 
+           &quot;REPLICATION_SAMPLE_SIZE&quot;)
+
+# COVID-19 Host Genetics Initiative (HGI) is this hispanic individuals I believe
+#  European ancestry from the ‘broad respiratory phenotype’ study of 23andMe
+# See replication section of https://www.nature.com/articles/s41586-020-03065-y#Sec4
+gwas_study_info |&gt;
+  filter(PUBMED_ID == 38184787) |&gt; 
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, 
+         &quot;DISEASE/TRAIT&quot;, 
+         &quot;INITIAL_SAMPLE_SIZE&quot;, 
+         &quot;REPLICATION_SAMPLE_SIZE&quot;)
+
+# cohorts listed are for</code></pre>
+<div id="mayo" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> MAYO</h2>
+<p>Mayo Clinic Bipolar Biobank (STUDY_ACCESSION: GCST90554822)</p>
+<p>MAYO-Clinic RGC Project Generation. (PUBMED_ID: 37949852)</p>
+<p>Mayo Clinic (PUBMED_ID: 40050615)</p>
+<p>Mayo-VDB|</p>
+<pre class="r"><code># Stanford_ADRC
+
+# CROATIA
+
+# Raine Study -- ? Raine
+
+# Penn - UPenn etc.
+
+# ?CALGB  
+# &quot;SIGNET-REGARDS&quot;  &gt;? &quot;SIGNET&quot;  
+
+
+
+# &quot;RISC&quot; &amp; &quot;RISK&quot; appear to be different
+# Relationship Between Insulin Sensitivity and Cardiovascular Disease Risk (RISC)
+
+# Risk Stratification and Identification of Immunogenetic and Microbial Markers of Rapid Disease Progression in Children with Crohn’s Disease (RISK) 
+
+
+
+ &quot;CKB&quot; 
+
+ [231] &quot;COHRA&quot;                                                                                                                                                    
+ [232] &quot;COHRA1&quot;                                                                                                                                                   
+ [233] &quot;COHRA2&quot;  
+
+# UK Blood Service (UKBS)
+
+ [294] &quot;DiscovEHR&quot;                                                                                                                                                
+ [295] &quot;DISCOVeRY-BMT&quot;   
+
+ [330] &quot;ELSA&quot;                                                                                                                                                     
+ [331] &quot;ELSA-Brasil&quot;   
+
+ [340] &quot;EPIC&quot;                                                                                                                                                     
+ [341] &quot;EPIC_CAD&quot;                                                                                                                                                 
+ [342] &quot;EPIC_Obs&quot;                                                                                                                                                 
+ [343] &quot;EPIC-Norfolk&quot;                                                                                                                                             
+ [344] &quot;EPICURE&quot;        
+
+ [372] &quot;FinnTwin&quot;                                                                                                                                                 
+ [373] &quot;FinnTwin12&quot;  
+
+ [463] &quot;GOCS&quot;                                                                                                                                                     
+ [464] &quot;GOCS_Chilean&quot; 
+
+ [480] &quot;GRAAD&quot;                                                                                                                                                    
+ [481] &quot;GRaD&quot; 
+
+# Colo2&amp;3
+
+ [513] &quot;HELIC&quot;                                                                                                                                                    
+ [514] &quot;HELIC-MANOLIS&quot;                                                                                                                                            
+ [515] &quot;HELIC-Pomak&quot;   
+
+# ? QTR == QTR_Qindao
+
+# ? is &quot;other|UKB&quot; == &quot;UKB|other&quot;
+
+# ? is UK|NR == UKB|NR
+
+# ? CF_TSS == TSS
+
+gwas_study_info |&gt;
+  filter(grepl(&quot;ORPS&quot;, COHORT))
+
+gwas_study_info |&gt;
+  filter(PUBMED_ID == 39749473) |&gt;
+  select(COHORT)
+
+# PAGE vs PAGES
+
+# PUBMED ID: 35754128 - should be PAGES
+# see sup table 1. https://pmc.ncbi.nlm.nih.gov/articles/PMC9671132/
+
+# COGEND COGENT</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 26.7.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Toronto
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] stringdist_0.9.15 stringr_1.6.0     ggplot2_4.0.3     dplyr_1.2.1      
+[5] data.table_1.17.8 workflowr_1.7.2  
+
+loaded via a namespace (and not attached):
+ [1] sass_0.4.10         utf8_1.2.6          generics_0.1.4     
+ [4] tidyr_1.3.2         renv_1.1.8          stringi_1.8.9      
+ [7] digest_0.6.37       magrittr_2.0.5      evaluate_1.0.5     
+[10] grid_4.3.2          RColorBrewer_1.1-3  fastmap_1.2.0      
+[13] cellranger_1.1.0    rprojroot_2.1.0     jsonlite_2.0.0     
+[16] processx_3.8.6      whisker_0.4.1       ps_1.9.1           
+[19] promises_1.3.3      BiocManager_1.30.26 httr_1.4.7         
+[22] purrr_1.2.2         scales_1.4.0        jquerylib_0.1.4    
+[25] cli_3.6.6           rlang_1.3.0         withr_3.0.3        
+[28] cachem_1.1.0        yaml_2.3.10         parallel_4.3.2     
+[31] tools_4.3.2         httpuv_1.6.16       here_1.0.1         
+[34] vctrs_0.7.3         R6_2.6.1            lifecycle_1.0.5    
+[37] git2r_0.36.2        fs_1.6.6            pkgconfig_2.0.3    
+[40] callr_3.7.6         pillar_1.11.1       bslib_0.9.0        
+[43] later_1.4.4         gtable_0.3.6        glue_1.8.1         
+[46] Rcpp_1.1.0          xfun_0.55           tibble_3.3.1       
+[49] tidyselect_1.2.1    rstudioapi_0.17.1   knitr_1.50         
+[52] farver_2.1.2        htmltools_0.5.8.1   rmarkdown_2.30     
+[55] compiler_4.3.2      getPass_0.2-4       S7_0.2.2           
+[58] readxl_1.4.5       </code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
