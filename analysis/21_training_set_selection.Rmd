@@ -5,8 +5,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
-                      eval = F)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, include = FALSE}
@@ -19,29 +18,327 @@ library(stringr)
 library(readxl)
 library(dplyr)
 library(ggplot2)
+library(plotly)
 
 ```
 
-### Get text embeddings 
+# Text embeddings 
 
-```{bash get_embeddings}
+## Get article level text embeddings for extracted text sections 
+
+Abstracts, methods, results
+
+```{bash get_embeddings, eval = F}
 
 source spacyr_venv/bin/activate
 
 python3 code/text_embeddings/get_text_embeddings.py \
         -m ncbi/MedCPT-Article-Encoder \
         -t output/abstracts \
-        -o output/clustering/abstracts_ \
-        --gwas-csv output/icd_map/gwas_study_gbd_causes.csv 
+        -o output/clustering/abstracts_
         
-
 python3 code/text_embeddings/get_text_embeddings.py \
         -m ncbi/MedCPT-Article-Encoder \
-        -t output/methods_sentences \
-        -o output/clustering/methods_ \
-        --gwas-csv output/icd_map/gwas_study_gbd_causes.csv 
+        -t output/methods \
+        -o output/clustering/methods_ 
+        
+python3 code/text_embeddings/get_text_embeddings.py \
+        -m ncbi/MedCPT-Article-Encoder \
+        -t output/results \
+        -o output/clustering/results_ 
 
 ```
+
+## Abstract embeddings
+
+```{r load_abstracts_emeddings}
+
+# get medcpt article embeddings for all disease studies
+abstract_embeddings <- data.table::fread(here::here("output/clustering/abstracts_medcpt_embeddings.csv"))
+
+abstract_embeddings <-
+  abstract_embeddings |>
+  dplyr::filter(!grepl("PMC", PUBMED_ID))
+
+abstract_embeddings <-
+  tibble::column_to_rownames(abstract_embeddings, var = "PUBMED_ID")
+
+PCA_abstracts <- prcomp(abstract_embeddings,
+                   center = TRUE, 
+                   scale. = FALSE) 
+
+abstracts_pca_table <-
+data.frame(PC1 = PCA_abstracts$x[,1], 
+           PC2 = PCA_abstracts$x[,2], 
+           PC3 = PCA_abstracts$x[,3], 
+           PC4 = PCA_abstracts$x[,4], 
+           PC5 = PCA_abstracts$x[,5], 
+           PC6 = PCA_abstracts$x[,6], 
+           PC7 = PCA_abstracts$x[,7], 
+           PC8 = PCA_abstracts$x[,8], 
+           PC9 = PCA_abstracts$x[,9], 
+           PC10 = PCA_abstracts$x[,10],
+           PUBMED_ID = as.integer(rownames(abstract_embeddings)))
+
+
+abstracts_var_exp <- PCA_abstracts$sdev^2 / sum(PCA_abstracts$sdev^2)
+
+data.frame(PC = paste0("PC", 1:length(abstracts_var_exp)),
+           PC_n = 1:length(abstracts_var_exp),
+           Variance_Explained = abstracts_var_exp) |>
+  filter(PC_n <= 10) |>
+  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  geom_col() +
+  labs(x = "Principal Component", 
+       y = "Proportion of Variance Explained", 
+       title = "Variance explained by each principal component (Abstract embeddings)") + 
+  theme_bw()
+
+```
+
+## Methods embeddings
+
+```{r load_methods_emeddings}
+
+# get medcpt article embeddings for all disease studies
+methods_embeddings <- data.table::fread(here::here("output/clustering/methods_medcpt_embeddings.csv"))
+
+methods_embeddings <-
+  methods_embeddings |>
+  dplyr::filter(!grepl("PMC", PUBMED_ID))
+
+methods_embeddings <- methods_embeddings  |>
+  mutate(PUBMED_ID = str_remove_all(PUBMED_ID, 
+                                    "_methods|_methods_main|_bioc|_pdf_tei|_main")) |>
+  filter(!PUBMED_ID %in% c("main_fallback_files", 
+                           "failed_files", 
+                           "no_files",
+                           "online_only_files")) |>
+  distinct()
+  
+# check no duplicates
+methods_embeddings |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
+
+methods_embeddings <-
+  tibble::column_to_rownames(methods_embeddings, 
+                             var = "PUBMED_ID")
+
+PCA_methods <- prcomp(methods_embeddings, 
+                   center = TRUE, 
+                   scale. = FALSE) 
+
+methods_pca_table <-
+data.frame(PC1 = PCA_methods$x[,1], 
+           PC2 = PCA_methods$x[,2], 
+           PC3 = PCA_methods$x[,3], 
+           PC4 = PCA_methods$x[,4], 
+           PC5 = PCA_methods$x[,5], 
+           PC6 = PCA_methods$x[,6], 
+           PC7 = PCA_methods$x[,7], 
+           PC8 = PCA_methods$x[,8], 
+           PC9 = PCA_methods$x[,9], 
+           PC10 = PCA_methods$x[,10],
+           PUBMED_ID = as.integer(rownames(methods_embeddings)))
+
+methods_var_exp <- PCA_methods$sdev^2 / sum(PCA_methods$sdev^2)
+
+data.frame(PC = paste0("PC", 1:length(methods_var_exp)),
+           PC_n = 1:length(methods_var_exp),
+           Variance_Explained = methods_var_exp) |>
+  filter(PC_n <= 10) |>
+  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  geom_col() +
+  labs(x = "Principal Component", 
+       y = "Proportion of Variance Explained", 
+       title = "Variance explained by each principal component (Methods)") + 
+  theme_bw()
+
+```
+
+## Results embeddings
+
+```{r load_results_emeddings}
+
+results_embeddings <- data.table::fread(here::here("output/clustering/results_medcpt_embeddings.csv"))
+
+results_embeddings <-
+  results_embeddings |>
+  dplyr::filter(!grepl("PMC", PUBMED_ID)) |>
+  mutate(PUBMED_ID = str_remove_all(PUBMED_ID, 
+                                    "_results|_results_main|_bioc_results_main|_pdf_tei|_main|_bioc")) |>
+  filter(!PUBMED_ID %in% c("main_fallback_files", 
+                           "failed_files", 
+                           "no_files",
+                           "online_only_files")) |>
+  distinct()
+
+
+results_embeddings |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
+
+
+results_embeddings <-
+  results_embeddings |>
+  tibble::column_to_rownames(var = "PUBMED_ID")
+
+PCA_results  <- prcomp(results_embeddings, 
+                   center = TRUE, 
+                   scale. = FALSE)
+
+results_pca_table <- 
+  data.frame(PC1 = PCA_results$x[,1], 
+           PC2 = PCA_results$x[,2], 
+           PC3 = PCA_results$x[,3], 
+           PC4 = PCA_results$x[,4], 
+           PC5 = PCA_results$x[,5], 
+           PC6 = PCA_results$x[,6], 
+           PC7 = PCA_results$x[,7], 
+           PC8 = PCA_results$x[,8], 
+           PC9 = PCA_results$x[,9], 
+           PC10 = PCA_results$x[,10],
+           PUBMED_ID = as.integer(rownames(results_embeddings)))
+
+
+results_var_exp <- PCA_results$sdev^2 / sum(PCA_results$sdev^2)
+
+data.frame(PC = paste0("PC", 1:length(results_var_exp)),
+           PC_n = 1:length(results_var_exp),
+           Variance_Explained = results_var_exp) |>
+  filter(PC_n <= 10) |>
+  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  geom_col() +
+  labs(x = "Principal Component", 
+       y = "Proportion of Variance Explained", 
+       title = "Variance explained by each principal component (Results)") + 
+  theme_bw()
+
+
+```
+
+## Relationship between results and methods embeddings
+
+```{r cor_results_methods_pca}
+
+full_pca_table <-
+  inner_join(
+    results_pca_table |> 
+      dplyr::rename_with(~paste0("results_", .x), contains("PC")),
+    methods_pca_table |>
+      dplyr::rename_with(~paste0("methods_", .x), contains("PC")),
+    by = "PUBMED_ID"
+  )
+
+# the results and methods embeddings are correlated, but not perfectly. This suggests that the embeddings capture some of the same information, but also some different information.
+full_pca_table$PUBMED_ID |> unique() -> matched_pmids
+
+cor(methods_embeddings[as.character(matched_pmids),],
+    results_embeddings[as.character(matched_pmids),],
+    method = "spearman"
+) |>
+  diag() |>
+  summary()
+
+
+cor(full_pca_table$results_PC1,
+    full_pca_table$methods_PC1,
+    method = "spearman")
+
+cor(full_pca_table$results_PC2,
+    full_pca_table$methods_PC2,
+    method = "spearman")
+
+cor(full_pca_table$results_PC3,
+    full_pca_table$methods_PC3,
+    method = "spearman")
+
+full_pca_table |>
+  ggplot(aes(x = results_PC1, y = methods_PC1)) +
+  geom_point() +
+  labs(x = "Results PC1", 
+       y = "Methods PC1") +
+  theme_bw()
+
+full_pca_table |>
+  ggplot(aes(x = results_PC2, y = methods_PC2)) +
+  geom_point() +
+  labs(x = "Results PC2", 
+       y = "Methods PC2") +
+  theme_bw()
+
+
+full_pca_table |>
+  ggplot(aes(x = results_PC3, y = methods_PC3)) +
+  geom_point() +
+  labs(x = "Results PC3", 
+       y = "Methods PC3") +
+  theme_bw()
+
+```
+
+## Relationship between abstract and methods embeddings 
+
+Methods and abstract embeddings show similar pattern of the proportion variation explained by top PCs. Top PCs for abstracts and methods are correlated, but not perfectly. This suggests that the embeddings capture some of the same information, but also some different information.
+
+```{r cor_abstract_methods_pca}
+
+full_pca_table <-
+inner_join(
+  abstracts_pca_table |> 
+    dplyr::rename_with(~paste0("abstract_", .x), contains("PC")),
+  methods_pca_table |>
+    dplyr::rename_with(~paste0("methods_", .x), contains("PC")),
+  by = "PUBMED_ID"
+)
+
+full_pca_table$PUBMED_ID |> unique() -> matched_pmids
+
+cor(methods_embeddings[as.character(matched_pmids),],
+    abstract_embeddings[as.character(matched_pmids),],
+    method = "spearman"
+) |>
+  diag() |>
+  summary()
+# abstracts and methods are less correlated than methods and results -
+# which makes sense given different sources
+
+cor(full_pca_table$abstract_PC1,
+    full_pca_table$methods_PC1,
+    method = "spearman")
+
+cor(full_pca_table$abstract_PC2,
+    full_pca_table$methods_PC2,
+    method = "spearman")
+
+cor(full_pca_table$abstract_PC3,
+    full_pca_table$methods_PC3,
+    method = "spearman")
+
+full_pca_table |>
+  ggplot(aes(x = abstract_PC1, y = methods_PC1)) +
+  geom_point() +
+  labs(x = "Abstract PC1", 
+       y = "Methods PC1") +
+  theme_bw()
+
+full_pca_table |>
+  ggplot(aes(x = abstract_PC2, y = methods_PC2)) +
+  geom_point() +
+  labs(x = "Abstract PC2", 
+       y = "Methods PC2") +
+  theme_bw()
+
+full_pca_table |>
+  ggplot(aes(x = abstract_PC3, y = methods_PC3)) +
+  geom_point() +
+  labs(x = "Abstract PC3", 
+       y = "Methods PC3") +
+  theme_bw()
+
+```
+
+
 
 
 # What are the major axes of variation in embeddings for these papers?
@@ -54,214 +351,234 @@ gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_c
 gwas_study_info = gwas_study_info |>
   dplyr::rename_with(~ gsub(" ", "_", .x))
 
-# filter out infectious diseases
-gwas_study_info <- gwas_study_info |>
-    dplyr::filter(!cause %in% c("HIV/AIDS",
-                             "Tuberculosis",
-                             "Malaria",
-                             "Lower respiratory infections",
-                             "Diarrhoeal diseases",
-                             "Neonatal disorders",
-                             "Tetanus",
-                             "Diphtheria",
-                             "Pertussis" ,
-                             "Measles",
-                             "Maternal disorders"))
+gwas_study_info = 
+  gwas_study_info |>
+  filter(include == T)
 
 gwas_study_info <-
   gwas_study_info |>
   filter(cause != "")
 
-```
-
-
-
-```{r get_lancet_conditions}
-
-# group conditions into broader categories to ensure we have enough papers in each category for sampling
-# lancet_cause_mapping <- readxl::read_xlsx(here::here("data/icd/lancet_conditions_icd10.xlsx"),
-#                                      sheet = 1) |>
-#   dplyr::rename_with(~ gsub(" ", "_", .x))
-# 
-# gwas_study_info <- gwas_study_info |>
-#   left_join(lancet_cause_mapping |> select(cause = mapped_gbd_term,
-#                                            lancet_condition), 
-#             by = "cause",
-#             relationship = "many-to-many") 
-
-gwas_study_info <-
-gwas_study_info |>
-  select(PUBMED_ID, YEAR, lancet_condition) |>
-  distinct() 
-
-gwas_study_info_grouped <- gwas_study_info |>
-  group_by(PUBMED_ID) |>
-  summarise(
-    YEAR = paste(unique(YEAR), collapse = "|"),
-    lancet_condition = paste(sort(unique(lancet_condition)), collapse = " & ")
-  ) |>
-  mutate(lancet_condition_group = case_when(
-    str_detect(pattern = "&", lancet_condition) ~ "Multiple",
-    TRUE ~ lancet_condition
-  ))
-
-gwas_study_info_grouped |>
-  group_by(lancet_condition) |>
-  summarise(n = n()) |>
-  arrange(desc(n))
-
-# most papers study one lancet_condition 
+gwas_study_info  <-
+  gwas_study_info |>
+  filter(cause !=  "Stroke") |>
+  mutate(lancet_condition = ifelse(lancet_condition == "" & 
+                                     grepl("Chronic kidney disease", cause, ignore.case = T),
+                                     "Diabetes",
+                                   lancet_condition)) |> 
+  distinct(PUBMED_ID, 
+           YEAR, 
+           cause, 
+           lancet_condition,  
+           cause_category)
 
 ```
 
-## Abstract embeddings
 
-```{r training_set_features}
+## Possible sources of variation in embeddings
 
-# get medcpt article embeddings for all disease studies
-abstract_embeddings <- data.table::fread(here::here("output/clustering/abstracts_medcpt_embeddings.csv"))
+- Year (Publication Date)
+- Condition/s studied
+- Journal 
+- Ancestry of study sample
+- Text source 
 
-PCA_test <- prcomp(abstract_embeddings, 
-                   center = TRUE, 
-                   scale. = TRUE) 
+### Year
 
-pca_table <-
-data.frame(PC1 = PCA_test$x[,1], 
-           PC2 = PCA_test$x[,2], 
-           PC3 = PCA_test$x[,3], 
-           PC4 = PCA_test$x[,4], 
-           PC5 = PCA_test$x[,5], 
-           PC6 = PCA_test$x[,6], 
-           PC7 = PCA_test$x[,7], 
-           PC8 = PCA_test$x[,8], 
-           PC9 = PCA_test$x[,9], 
-           PC10 = PCA_test$x[,10],
-           PUBMED_ID = abstract_embeddings$PUBMED_ID) 
+#### Distribution of GWAS Catalog Text Abstract Embeddings
 
+PC1 clearly separates / clusters GWAS Catalog abstract embeddings by year (higher PC1 score for more recent years).
 
-var_exp <- PCA_test$sdev^2 / sum(PCA_test$sdev^2)
+```{r plot_abstract_pca_year}
 
-data.frame(PC = paste0("PC", 1:length(var_exp)),
-           PC_n = 1:length(var_exp),
-           Variance_Explained = var_exp) |>
-  filter(PC_n <= 10) |>
-  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
-  ggplot(aes(x = PC_n, y = Variance_Explained)) +
-  geom_col() +
-  labs(x = "Principal Component", 
-       y = "Proportion of Variance Explained", 
-       title = "Variance explained by each principal component") + 
+abstracts_pca_plot_table <- 
+  abstracts_pca_table |>
+  inner_join(gwas_study_info |> 
+  select(PUBMED_ID, 
+         YEAR), 
+  by = "PUBMED_ID")  |>
+  mutate(YEAR = as.numeric(YEAR)) |>
+  distinct()
+
+cor(as.numeric(abstracts_pca_plot_table$YEAR), 
+    abstracts_pca_plot_table$PC1,
+    method = "spearman")
+
+cor(as.numeric(abstracts_pca_plot_table$YEAR), 
+    abstracts_pca_plot_table$PC2,
+    method = "spearman")
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+    x = PC1, 
+    y = PC2, 
+    color = YEAR
+  )) +
+  geom_point() +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(
+    x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1), "%)"),
+    y = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1), "%)"),
+    colour = "Publication Year",
+    title = "GWAS Catalog abstract embeddings"
+  ) + 
+  theme_bw()
+
+abstracts_pca_plot_table  |>
+    ggplot(aes(x = PC2, 
+               y = PC3, 
+               color = YEAR)) +
+    geom_point() +
+    scale_color_viridis_c(
+    option = "plasma"
+  ) + 
+    labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Publication Year"
+  ) + 
+  labs(title = "GWAS Catalog abstract embeddings") + 
   theme_bw()
 
 ```
 
-### Distribution of GWAS Catalog Text Embeddings By Year (Abstracts)
+#### Distribution of GWAS Catalog Text Methods Embeddings
 
-PC1 clearly separates / cluster GWAS Catalog abstract embeddings by year (higher PC1 score for more recent years).
+```{r plot_methods_pca_year}
 
-```{r plot_abstract_pca_year}
-
-pca_plot_table <- 
-  pca_table |>
-  left_join(gwas_study_info_grouped |> 
+methods_pca_plot_table <- 
+  methods_pca_table |>
+  mutate(PUBMED_ID = as.integer(PUBMED_ID)) |>
+  inner_join(gwas_study_info |> 
   select(PUBMED_ID, 
-         YEAR,
-         lancet_condition,
-         lancet_condition_group), 
-  by = "PUBMED_ID") |>
-  mutate(YEAR = as.factor(YEAR)) 
+         YEAR),
+  by = "PUBMED_ID")|>
+  mutate(YEAR = as.numeric(YEAR)) |>
+  distinct()
 
-n_years <- pca_plot_table$YEAR |> unique() |> length()
+cor(as.numeric(methods_pca_plot_table$YEAR), 
+    methods_pca_plot_table$PC1,
+    method = "spearman")
 
-pca_plot_table |>
+cor(as.numeric(methods_pca_plot_table$YEAR), 
+    methods_pca_plot_table$PC2,
+    method = "spearman")
+
+methods_pca_plot_table |>
   ggplot(aes(
   x = PC1, 
   y = PC2, 
   color = YEAR)) +
   geom_point() +
-  scale_color_manual(values = viridisLite::plasma(n = n_years)) +
-  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+    scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * methods_var_exp[1], digits = 1),
                   "%)"),
        y = paste0("PC2 (", 
-                  round(100 * var_exp[2], digits = 1),
+                  round(100 * methods_var_exp[2], digits = 1),
                   "%)"),
        colour = "Publication Year"
   ) +
-       #title = "PCA of GWAS Catalog abstract embeddings, colored by publication year") + 
+  labs(title = "GWAS Catalog Methods Embeddings") + 
   theme_bw()
 
-
-pca_plot_table |>
+methods_pca_plot_table |>
     ggplot(aes(x = PC2, 
                y = PC3, 
                color = YEAR)) +
     geom_point() +
-    scale_color_manual(values = viridisLite::plasma(n = n_years)) +
-    labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+    scale_color_viridis_c(
+    option = "plasma"
+  ) +
+    labs(x = paste0("PC2 (", round(100 * methods_var_exp[2], digits = 1),
                   "%)"),
        y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
+                  round(100 * methods_var_exp[3], digits = 1),
                   "%)"),
        colour = "Publication Year"
   ) + 
+  labs(title = "GWAS Catalog Methods Embeddings") + 
   theme_bw()
-  
-  
 
 ```
 
-### Distribution of GWAS Catalog Text Embeddings By Lancet Condition Category (Abstracts)
+#### Distribution of GWAS Catalog Text Results Embeddings
 
-PC's 2 & 3 clearly separate / cluster GWAS Catalog abstract embeddings by Lancet Condition Category. 
+```{r plot_results_pca_year}
 
-```{r plot_abstract_pca_lancent_condition_category}
+results_pca_plot_table <- 
+  results_pca_table |>
+  mutate(PUBMED_ID = as.integer(PUBMED_ID)) |>
+  inner_join(gwas_study_info |> 
+  select(PUBMED_ID, 
+         YEAR),
+  by = "PUBMED_ID")|>
+  mutate(YEAR = as.numeric(YEAR)) |>
+  distinct()
 
-  pca_plot_table |>
+cor(as.numeric(results_pca_plot_table$YEAR), 
+    results_pca_plot_table$PC1,
+    method = "spearman")
+
+cor(as.numeric(results_pca_plot_table$YEAR), 
+    results_pca_plot_table$PC2,
+    method = "spearman")
+
+results_pca_plot_table |>
   ggplot(aes(
   x = PC1, 
   y = PC2, 
-  color = lancet_condition_group)) +
-  geom_point(size = 0.8) +
-  scale_color_brewer(palette = "Dark2") + 
-  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+  color = YEAR)) +
+  geom_point() +
+    scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * results_var_exp[1], digits = 1),
                   "%)"),
        y = paste0("PC2 (", 
-                  round(100 * var_exp[2], digits = 1),
+                  round(100 * results_var_exp[2], digits = 1),
                   "%)"),
-       colour = "Lancet Condition Category"
-  )  + 
+       colour = "Publication Year"
+  ) +
+  labs(title = "GWAS Catalog Results Embeddings") + 
   theme_bw()
 
-
-  pca_plot_table |>
-  ggplot(aes(
-  x = PC2, 
-  y = PC3, 
-  color = lancet_condition_group)) +
-  geom_point(size = 0.8) +
-  scale_color_brewer(palette = "Set2") + 
-  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
-                  "%)"),
-       y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
-                  "%)"),
-       colour = "Lancet Condition Category"
-  )  + 
-  theme_bw()
 
 ```
 
-```{r}
+### Condition/s studied
+
+Need to first choose how to group conditions to ensure we have enough papers in each category for sampling.
+And, that where possible, papers fall into studying one condition category, rather than multiple.
+
+```{r get_lancet_conditions}
+
+# group conditions into broader categories to ensure we have enough papers in each category for sampling
+gwas_study_info <-
+gwas_study_info  |>
+  mutate(cause_group = case_when(
+    grepl("cancer", cause, ignore.case = T) ~ "Cancer",
+    grepl("diabetes|chronic kidney disease", cause, ignore.case = T) ~ "Diabetes/CKD",
+    grepl("chronic obstructive pulmonary disease", cause, ignore.case = T) ~ "COPD",
+    grepl("heart|stroke|hemorrhage", cause, ignore.case = T) ~ "Stroke",
+    grepl("cirrhosis", cause, ignore.case = T) ~ "Liver Cirrhosis",
+TRUE ~ cause
+  ))
 
 library(ComplexHeatmap)
 
 gwas_cond_comb_mat = gwas_study_info |>
   mutate(study = 1) |>
-  
-  tidyr::pivot_wider(names_from = lancet_condition, 
+  distinct(PUBMED_ID, study, cause_group) |>
+  tidyr::pivot_wider(names_from = cause_group, 
                      values_from = study, 
-                     values_fill = 0) |>
-  select(-PUBMED_ID, -YEAR) 
+                     values_fill = 0)
+  
 
 gwas_cond_comb_mat <- make_comb_mat(gwas_cond_comb_mat)
 
@@ -271,39 +588,29 @@ UpSet(gwas_cond_comb_mat,
                          decreasing = TRUE)
       )
 
-papers_with_multiple_cond <- pca_plot_table |>
-  filter(lancet_condition_group == "Multiple") |> 
-  pull(PUBMED_ID)
 
-pca_plot_table_ungrouped <- 
-  pca_table |>
-  left_join(gwas_study_info,
-            by = "PUBMED_ID") |>
-  mutate(YEAR = as.factor(YEAR)) 
-
-pca_plot_table_ungrouped <-
-  pca_plot_table_ungrouped |>
-  mutate(N_conditions = ifelse(PUBMED_ID %in% papers_with_multiple_cond, 
-                                         "Multiple",
-                                         "Single")) 
+gwas_study_info <-
+  gwas_study_info |>
+  mutate(lancet_condition = case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
+                                      lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
+                                      lancet_condition == ""  & grepl("Cirrhosis", cause, ignore.case = T) ~ "NCDs strongly linked to infections",
+                                      TRUE ~ lancet_condition))
 
 
-pca_plot_table_ungrouped |>
-    ggplot(aes(
-  x = PC2, 
-  y = PC3, 
-  color = N_conditions)) +
-  geom_point(size = 0.8) +
-  scale_color_brewer(palette = "Set2") + 
-  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
-                  "%)"),
-       y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
-                  "%)"),
-       colour = "Number of Lancent Categories"
-  )  + 
-  facet_wrap(~lancet_condition) + 
-  theme_bw()
+gwas_cond_comb_mat = gwas_study_info |>
+  mutate(study = 1) |>
+  distinct(PUBMED_ID, study, lancet_condition) |>
+  tidyr::pivot_wider(names_from = lancet_condition, 
+                     values_from = study, 
+                     values_fill = 0)
+
+gwas_cond_comb_mat <- make_comb_mat(gwas_cond_comb_mat)
+
+# create an upset plot
+UpSet(gwas_cond_comb_mat,
+      comb_order = order(comb_size(gwas_cond_comb_mat), 
+                         decreasing = TRUE)
+      )
 
 
 ```
@@ -311,17 +618,80 @@ pca_plot_table_ungrouped |>
 
 ```{r}
 
-  pca_plot_table |>
+gwas_study_info_grouped <- gwas_study_info |>
+  group_by(PUBMED_ID) |>
+  summarise(
+    YEAR = paste(unique(YEAR), collapse = "|"),
+    cause_group = paste(sort(unique(cause_group)), collapse = " & ")
+  ) |>
+  mutate(lancet_condition_group = case_when(
+    str_detect(pattern = "&", cause_group) ~ "Multiple",
+    TRUE ~ cause_group
+  ))
+
+gwas_study_info_grouped |>
+  group_by(lancet_condition_group) |>
+  summarise(n = n()) |>
+  arrange(desc(n))
+
+gwas_study_info_grouped |> 
+  filter(lancet_condition_group == "Multiple") |> 
+  group_by(cause_group) |> 
+  summarise(n = n()) |> 
+  arrange(desc(n))
+
+# most papers study one lancet_condition 
+```
+
+
+#### Distribution of GWAS Catalog Text Abstract Embeddings
+
+PC's 2 & 3 clearly separate / cluster GWAS Catalog abstract embeddings by Lancet Condition Category. 
+
+```{r plot_abstract_pca_lancent_condition_category}
+
+abstracts_pca_plot_table <-
+    abstracts_pca_table |>
+  inner_join(gwas_study_info_grouped |> 
+  select(PUBMED_ID, 
+         lancet_condition_group,
+         cause_group), 
+  by = "PUBMED_ID")  |>
+  distinct()
+
+
+  abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = lancet_condition_group,
+  cause_group = cause_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
+
+
+  abstracts_pca_plot_table |>
   ggplot(aes(
   x = PC2, 
   y = PC3, 
-  color = lancet_condition_group)) +
+  color = lancet_condition_group,
+  cause_group = cause_group,
+  pmid = PUBMED_ID,
+  )) +
   geom_point(size = 0.8) +
   scale_color_brewer(palette = "Set2") + 
-  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
                   "%)"),
        y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
+                  round(100 * abstracts_var_exp[3], digits = 1),
                   "%)"),
        colour = "Lancet Condition Category"
   )  + 
@@ -331,24 +701,20 @@ pca_plot_table_ungrouped |>
 
 ```{r}
 
-# if PC2 > 0, PC3 > 
-
-pca_plot_table |>
-# mutate(lancet_cat = case_when(
-#   grepl("^Diabetes", lancet_condition) ~ "Diabetes",
-# )
+ abstracts_pca_plot_table  |>
 mutate(multiple = ifelse(lancet_condition_group == "Multiple",
                          "Multiple",
                          "Single Category")) |>
     ggplot(aes(x = PC2, 
                y = PC3, 
-               color = lancet_condition)) +
+               color = lancet_condition_group,
+               cause_group = cause_group)) +
     geom_point() +
-    scale_color_manual(values = viridisLite::plasma(n = 19)) +
-  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+  scale_color_brewer(palette = "Set2") + 
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
                   "%)"),
        y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
+                  round(100 * abstracts_var_exp[3], digits = 1),
                   "%)"),
        colour = "Lancet Condition Category"
   )  + 
@@ -359,132 +725,46 @@ mutate(multiple = ifelse(lancet_condition_group == "Multiple",
 
 This analysis suggests YEAR and lancet_condition are important axes of variation in text, and therefore important axes to sample across to create a representative training sample. 
 
-## Methods embeddings
-
-```{r}
-
-# get medcpt article embeddings for all disease studies
-methods_embeddings <- data.table::fread(here::here("output/clustering/methods_medcpt_embeddings.csv"))
-
-PCA_test <- prcomp(methods_embeddings, 
-                   center = TRUE, 
-                   scale = TRUE) 
-
-pca_table <-
-data.frame(PC1 = PCA_test$x[,1], 
-           PC2 = PCA_test$x[,2], 
-           PC3 = PCA_test$x[,3], 
-           PC4 = PCA_test$x[,4], 
-           PC5 = PCA_test$x[,5], 
-           PC6 = PCA_test$x[,6], 
-           PC7 = PCA_test$x[,7], 
-           PC8 = PCA_test$x[,8], 
-           PC9 = PCA_test$x[,9], 
-           PC10 = PCA_test$x[,10],
-           PUBMED_ID = methods_embeddings$PUBMED_ID) 
-
-
-var_exp <- PCA_test$sdev^2 / sum(PCA_test$sdev^2)
-
-data.frame(PC = paste0("PC", 1:length(var_exp)),
-           PC_n = 1:length(var_exp),
-           Variance_Explained = var_exp) |>
-  filter(PC_n <= 10) |>
-  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
-  ggplot(aes(x = PC_n, y = Variance_Explained)) +
-  geom_col() +
-  labs(x = "Principal Component", 
-       y = "Proportion of Variance Explained", 
-       title = "Variance explained by each principal component") + 
-  theme_bw()
-
-```
-
-### Distribution of GWAS Catalog Text Embeddings By Year (Methods)
-
-```{r plot_methods_pca_year}
-
-pca_plot_table <- 
-  pca_table |>
-  left_join(gwas_study_info_grouped |> 
-  select(PUBMED_ID, 
-         YEAR,
-         lancet_condition,
-         lancet_condition_group), 
-  by = "PUBMED_ID") |>
-  mutate(YEAR = as.factor(YEAR)) 
-
-n_years <- pca_plot_table$YEAR |> unique() |> length()
-
-pca_plot_table |>
-  ggplot(aes(
-  x = PC1, 
-  y = PC2, 
-  color = YEAR)) +
-  geom_point() +
-  scale_color_manual(values = viridisLite::plasma(n = n_years)) +
-  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
-                  "%)"),
-       y = paste0("PC2 (", 
-                  round(100 * var_exp[2], digits = 1),
-                  "%)"),
-       colour = "Publication Year"
-  ) +
-       #title = "PCA of GWAS Catalog abstract embeddings, colored by publication year") + 
-  theme_bw()
-
-pca_plot_table |>
-    ggplot(aes(x = PC2, 
-               y = PC3, 
-               color = YEAR)) +
-    geom_point() +
-    scale_color_manual(values = viridisLite::plasma(n = n_years)) +
-    labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
-                  "%)"),
-       y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
-                  "%)"),
-       colour = "Publication Year"
-  ) + 
-  theme_bw()
-  
-
-
-
-```
-
-### Distribution of GWAS Catalog Text Embeddings By Lancet Condition Category (Methods)
+#### Distribution of GWAS Catalog Methods Text Embeddings
 
 ```{r plot_methods_pca_lancent_condition_category}
 
-  pca_plot_table |>
+methods_pca_plot_table <-
+    methods_pca_table |>
+  left_join(gwas_study_info_grouped |> 
+  select(PUBMED_ID, 
+         lancet_condition_group), 
+  by = "PUBMED_ID")  |>
+  distinct()
+
+
+  methods_pca_plot_table |>
   ggplot(aes(
   x = PC1, 
   y = PC2, 
   color = lancet_condition_group)) +
   geom_point(size = 0.8) +
   scale_color_brewer(palette = "Dark2") + 
-  labs(x = paste0("PC1 (", round(100 * var_exp[1], digits = 1),
+  labs(x = paste0("PC1 (", round(100 * methods_var_exp[1], digits = 1),
                   "%)"),
        y = paste0("PC2 (", 
-                  round(100 * var_exp[2], digits = 1),
+                  round(100 * methods_var_exp[2], digits = 1),
                   "%)"),
        colour = "Lancet Condition Category"
   )  + 
   theme_bw()
 
-
-  pca_plot_table |>
-  ggplot(aes(
+  methods_pca_plot_table |>
+  ggplot(aes( 
   x = PC2, 
   y = PC3, 
   color = lancet_condition_group)) +
   geom_point(size = 0.8) +
   scale_color_brewer(palette = "Set2") + 
-  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+  labs(x = paste0("PC2 (", round(100 * methods_var_exp[2], digits = 1),
                   "%)"),
        y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
+                  round(100 * methods_var_exp[3], digits = 1),
                   "%)"),
        colour = "Lancet Condition Category"
   )  + 
@@ -492,63 +772,1493 @@ pca_plot_table |>
 
 ```
 
-```{r}
+#### Distribution of GWAS Catalog Results Text Embeddings
 
-papers_with_multiple_cond <- pca_plot_table |>
-  filter(lancet_condition_group == "Multiple") |> 
-  pull(PUBMED_ID)
+```{r plot_results_pca_lancent_condition_category}
 
-pca_plot_table_ungrouped <- 
-  pca_table |>
-  left_join(gwas_study_info,
-            by = "PUBMED_ID") |>
-  mutate(YEAR = as.factor(YEAR)) 
+results_pca_plot_table <-
+    results_pca_table |>
+  left_join(gwas_study_info_grouped |> 
+  select(PUBMED_ID, 
+         lancet_condition_group), 
+  by = "PUBMED_ID")  |>
+  distinct()
 
-pca_plot_table_ungrouped <-
-  pca_plot_table_ungrouped |>
-  mutate(N_conditions = ifelse(PUBMED_ID %in% papers_with_multiple_cond, 
-                                         "Multiple",
-                                         "Single")) 
+results_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = lancet_condition_group)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC1 (", round(100 * results_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * results_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Lancet Condition Category"
+  )  + 
+  theme_bw()
 
 
-pca_plot_table_ungrouped |>
-    ggplot(aes(
+results_pca_plot_table |>
+  ggplot(aes( 
   x = PC2, 
   y = PC3, 
-  color = N_conditions)) +
+  color = lancet_condition_group)) +
   geom_point(size = 0.8) +
   scale_color_brewer(palette = "Set2") + 
-  labs(x = paste0("PC2 (", round(100 * var_exp[2], digits = 1),
+  labs(x = paste0("PC2 (", round(100 * results_var_exp[2], digits = 1),
                   "%)"),
        y = paste0("PC3 (", 
-                  round(100 * var_exp[3], digits = 1),
+                  round(100 * results_var_exp[3], digits = 1),
                   "%)"),
-       colour = "Number of Lancent Categories"
+       colour = "Lancet Condition Category"
   )  + 
-  facet_wrap(~lancet_condition) + 
+  theme_bw()
+
+```
+
+
+### Journal 
+
+```{r}
+
+journal_names <-  data.table::fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2026-09-13.tsv"),
+               quote = "",
+               select  = c("PUBMED ID", "JOURNAL")) 
+
+journal_names  = journal_names |>
+  dplyr::rename_with(~ gsub(" ", "_", .x)) |>
+  distinct()
+
+journal_names <-
+  journal_names |>
+  filter(PUBMED_ID %in% unique(gwas_study_info$PUBMED_ID))
+
+
+journal_names |> 
+  group_by(JOURNAL) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |> 
+  head()
+
+journal_names <-
+inner_join(
+gwas_study_info_grouped,
+journal_names,
+by = "PUBMED_ID")
+
+
+journal_names <-
+journal_names |>
+  mutate(journal_grp = 
+           case_when(
+             grepl("Nephrol|Endocrinol|Diabet|Kidney", JOURNAL, ignore.case = T) ~ "Diabetes/Nephrology",
+             grepl("Cancer|Onco|Carcino", JOURNAL, ignore.case = T) ~ "Cancer",
+             grepl("Respir|Pulmon|Lung|Chron Obstruct|COPD|Thorax|Thorac", JOURNAL, ignore.case = T) ~ "Respiratory",
+             grepl("Cardio|Heart|Stroke|Circ|Hypertens|Atherosc|Vasc|Arterio", JOURNAL, ignore.case = T) ~ "Cardiovascular",
+             grepl("Hepatol|Liver|Gastro|Gastroenterol|Gastrointest|Gut|JHEP", JOURNAL, ignore.case = T) ~ "Gastrointestinal",
+             grepl("Genetics|Genom|Genome", JOURNAL, ignore.case = T) ~ "Genetics/Genomics",
+             JOURNAL %in% c("PLoS Genet", 
+                            "J Hum Genet", "Nat Genet", "Hum Mol Genet", "Am J Hum Genet",
+                            "Front Genet", "HGG Adv", "Balkan J Med Genet", "Ann Hum Genet",
+                            "Clin Genet", "Nucleic Acids Res", "J Genet",
+                            "Eur J Hum Genet", "Genet Med", "J Med Genet",
+                            "J Gene Med", "Gene",
+                            "BMC Genet",  "BMC Med Genet", "Genes (Basel)",  "Genet Epidemiol",
+                            "Hum Genet") ~ "Genetics/Genomics",
+             JOURNAL %in% c("Nat Commun", 
+                            "Nature",
+                            "Elife",
+                            "Sci Rep",
+                            "Commun Biol", 
+                            "Lancet",
+                            "Science",
+                            "N Engl J Med",
+                            "PloS One",
+                            "Nat Med", 
+                            "JAMA",
+                            "JAMA Netw Open",
+                            "Nat Commun Biol") ~ "General Science/Medicine",
+             TRUE ~ "Other")
+           )
+
+
+# journal_names <-
+# journal_names |>
+#   mutate(publisher_grp  = 
+#            case_when(
+#              grepl("Nature|Nat", JOURNAL, ignore.case = T) ~ "Nature",
+#              grepl("Science|Sci", JOURNAL, ignore.case = T) ~ "Science",
+#              grepl("Lancet", JOURNAL, ignore.case = T) ~ "Lancet",
+#              grepl("JAMA", JOURNAL, ignore.case = T) ~ "JAMA",
+#              grepl("Front", JOURNAL, ignore.case = T) ~ "Frontiers",
+#              grepl("PLoS|PLOS", JOURNAL, ignore.case = T) ~ "PLOS",
+#              grepl("BMC", JOURNAL, ignore.case = T) ~ "BMC",
+#              TRUE ~ "Other")
+#            )
+
+
+```
+
+```{r}
+# Get journal metadata from OpenAlex (ISSN, publisher, etc.) for all journals in the GWAS Catalog
+source(here::here("code/journal_meta/get_openalex_journal_info.R"))
+
+# all 295 of your journals, cached to output/journal_meta/openalex_journals.csv
+journal_meta <- get_journals_info(unique(journal_names$JOURNAL))
+
+journal_names <-
+left_join(journal_names,
+          journal_meta |> rename(JOURNAL = journal),
+          by = "JOURNAL")
+
+journal_names <-
+  journal_names |>
+  mutate(publisher = case_when(
+    publisher == "" & JOURNAL == "BMC Genet" ~ "BioMed Central",
+    publisher == "" & JOURNAL == "World J Diabetes" ~ "Baishideng Publishing Group Inc",
+    publisher == "" & JOURNAL == "AMIA Annu Symp Proc" ~ " American Medical Informatics Association",
+    publisher == "" & JOURNAL == "Korean Circ J" ~ "Korean Society of Cardiology",
+    publisher == "" & JOURNAL == "Kidney Int Suppl" ~ "Blackwell Publishing",
+    TRUE ~ publisher
+  ))
+
+
+journal_names <-
+  journal_names |>
+    mutate(publisher_grp = case_when(
+      grepl("Springer", publisher) ~ "Springer Nature",
+      publisher == "University of Oxford" & JOURNAL == "Gigascience" ~ "Oxford University Press",
+      # grepl("Society|Association|Korea", publisher) ~ "Society Pulisher",
+      TRUE ~ publisher
+    )) |>
+    mutate(publisher_grp = forcats::fct_lump_min(publisher_grp, 
+                                                 min = 10, 
+                                                 other_level = "Other"))
+
+
+
+# country code 
+
+journal_names <-
+  journal_names |> 
+  mutate(country_code = case_when(
+    country_code == "" & publisher == "BioMed Central" ~ "GB",
+    country_code == "" & publisher == "American Medical Informatics Association" ~ "US",
+    country_code == "" & publisher == "American Society of Nephrology" ~ "US",
+    country_code == "" & JOURNAL == "Kidney Int Suppl" ~ "US",
+    country_code == "" & JOURNAL == "Eur Respir J" ~ "GB",
+    country_code == "" & JOURNAL == "AMIA Annu Symp Proc" ~ "US",
+    TRUE ~ country_code
+  ))
+
+journal_names <-
+  journal_names |> 
+  mutate(country_code_grp = case_when(
+    country_code %in% c("US", "CA") ~ "North America",
+    country_code %in% c("AU", "NZ", "GB") ~ "GB/Aus/NZ",
+    country_code %in% c("PL", "BG", "GR", "IT", "DK") ~ "Other Europe",
+    TRUE ~ country_code
+  )) |>
+    mutate(publisher_grp = forcats::fct_lump_min(publisher_grp, 
+                                                 min = 5, 
+                                                 other_level = "Other"))
+
+```
+
+
+#### Distribution of GWAS Catalog Text Abstract Embeddings by Journal
+
+```{r}
+
+abstracts_pca_plot_table <-
+    abstracts_pca_table |>
+  inner_join(
+  journal_names,
+  by = "PUBMED_ID")  |>
+  distinct()
+
+```
+
+
+###### By h index: 
+
+
+```{r}
+
+cor(as.numeric(abstracts_pca_plot_table$PC1), 
+    as.numeric(abstracts_pca_plot_table$h_index),
+    method = "spearman")
+
+cor(as.numeric(abstracts_pca_plot_table$PC2), 
+    as.numeric(abstracts_pca_plot_table$h_index),
+    method = "spearman")
+
+cor(as.numeric(abstracts_pca_plot_table$PC3), 
+    as.numeric(abstracts_pca_plot_table$h_index),
+    method = "spearman")
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = h_index,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Journal h-index"
+  )  + 
+  theme_bw()
+
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = h_index,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Journal h-index"
+  )  + 
   theme_bw()
 
 
 ```
 
 
+##### APC Cost
+
+```{r}
+
+cor(as.numeric(abstracts_pca_plot_table$PC1), 
+    as.numeric(abstracts_pca_plot_table$apc_usd),
+    method = "spearman", 
+    "complete.obs")
+
+cor(as.numeric(abstracts_pca_plot_table$PC2), 
+    as.numeric(abstracts_pca_plot_table$apc_usd),
+    method = "spearman",
+    "complete.obs")
+
+cor(as.numeric(abstracts_pca_plot_table$PC3), 
+    as.numeric(abstracts_pca_plot_table$apc_usd),
+    method = "spearman",
+    "complete.obs")
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = apc_usd,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "viridis"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Journal APC Cost (USD)"
+  )  + 
+  theme_bw()
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = apc_usd,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "viridis"
+  ) +
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Journal APC Cost (USD)"
+  )  + 
+  theme_bw()
+
+
+
+```
+
+
+##### Two year citedness 
+
+```{r}
+
+cor(as.numeric(abstracts_pca_plot_table$PC1), 
+    as.numeric(abstracts_pca_plot_table$two_yr_citedness),
+    method = "spearman")
+
+cor(as.numeric(abstracts_pca_plot_table$PC2), 
+    as.numeric(abstracts_pca_plot_table$two_yr_citedness),
+    method = "spearman")
+
+cor(as.numeric(abstracts_pca_plot_table$PC3), 
+    as.numeric(abstracts_pca_plot_table$two_yr_citedness),
+    method = "spearman")
+
+abstracts_pca_plot_table |>
+  mutate(two_yr_citedness = log10(as.numeric(two_yr_citedness + 1))) |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = two_yr_citedness,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "log10(Journal Two-Year Citedness+1)"
+  )  + 
+  theme_bw()
+
+abstracts_pca_plot_table |>
+  mutate(two_yr_citedness = log10(as.numeric(two_yr_citedness + 1))) |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = two_yr_citedness,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+      colour = "log10(Journal Two-Year Citedness+1)"
+  )  + 
+  theme_bw()
+
+```
+
+##### Publisher group 
+
+```{r}
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  journal = JOURNAL,
+  color = publisher_grp)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Paired") + 
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Publisher"
+  )  + 
+  theme_bw()
+
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = publisher_grp)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Set3") + 
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Publisher"
+  )  + 
+  theme_bw()
+
+```
+
+
+##### Open Access 
+
+```{r}
+
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = is_oa)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Is OA?"
+  )  + 
+  theme_bw()
+
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = is_oa)) +
+  geom_point(size = 0.8) +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Is OA?"
+  )  + 
+  theme_bw()
+
+
+
+```
+
+##### Journal group (lumping journals with <20 papers into "Other")
+
+```{r}
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = journal_grp)) +
+  geom_point(size = 0.8) +
+  #scale_color_brewer(palette = "Dark2") + 
+  labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Journal"
+  )  + 
+  theme_bw()
+
+
+abstracts_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  JOURNAL = JOURNAL,
+  color = journal_grp)) +
+  geom_point(size = 0.8) +
+  labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * abstracts_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Journal"
+  )  + 
+  theme_bw()
+
+
+```
+
+
+#### Distribution of GWAS Catalog Text Methods Embeddings by Journal
+
+##### By h index: 
+
+```{r plot_methods_pca_h_index}
+
+methods_pca_plot_table <-
+    methods_pca_table |>
+  inner_join(
+  journal_names,
+  by = "PUBMED_ID")  |>
+  distinct()
+
+cor(as.numeric(methods_pca_plot_table$PC1), 
+    as.numeric(methods_pca_plot_table$h_index),
+    method = "spearman")
+
+cor(as.numeric(methods_pca_plot_table$PC2), 
+    as.numeric(methods_pca_plot_table$h_index),
+    method = "spearman")
+
+cor(as.numeric(methods_pca_plot_table$PC3), 
+    as.numeric(methods_pca_plot_table$h_index),
+    method = "spearman")
+
+methods_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = h_index,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * methods_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * methods_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Journal h-index"
+  )  + 
+  theme_bw()
+
+
+methods_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = h_index,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC2 (", round(100 * methods_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * methods_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Journal h-index"
+  )  + 
+  theme_bw()
+
+```
+
+
+##### APC Cost
+
+```{r plot_methods_pca_apc_cos}
+
+cor(as.numeric(methods_pca_plot_table$PC1), 
+    as.numeric(methods_pca_plot_table$apc_usd),
+    method = "spearman", 
+    "complete.obs")
+
+cor(as.numeric(methods_pca_plot_table$PC2), 
+    as.numeric(methods_pca_plot_table$apc_usd),
+    method = "spearman",
+    "complete.obs")
+
+
+cor(as.numeric(methods_pca_plot_table$PC3), 
+    as.numeric(methods_pca_plot_table$apc_usd),
+    method = "spearman",
+    "complete.obs")
+
+
+methods_pca_plot_table |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = apc_usd,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "viridis"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * methods_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * methods_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "Journal APC Cost (USD)"
+  )  + 
+  theme_bw()
+
+
+methods_pca_plot_table |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = apc_usd,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "viridis"
+  ) +
+  labs(x = paste0("PC2 (", round(100 * methods_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * methods_var_exp[3], digits = 1),
+                  "%)"),
+       colour = "Journal APC Cost (USD)"
+  )  + 
+  theme_bw()
+
+
+```
+
+
+##### Two year citedness
+
+```{r plot_methods_pca_two_year_citedness}
+
+cor(as.numeric(methods_pca_plot_table$PC1), 
+    as.numeric(methods_pca_plot_table$two_yr_citedness),
+    method = "spearman")
+
+cor(as.numeric(methods_pca_plot_table$PC2), 
+    as.numeric(methods_pca_plot_table$two_yr_citedness),
+    method = "spearman")
+
+cor(as.numeric(methods_pca_plot_table$PC3), 
+    as.numeric(methods_pca_plot_table$two_yr_citedness),
+    method = "spearman")
+
+
+methods_pca_plot_table |>
+  dplyr::mutate(two_yr_citedness = log10(as.numeric(two_yr_citedness + 1))) |>
+  ggplot(aes(
+  x = PC1, 
+  y = PC2, 
+  color = two_yr_citedness,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC1 (", round(100 * methods_var_exp[1], digits = 1),
+                  "%)"),
+       y = paste0("PC2 (", 
+                  round(100 * methods_var_exp[2], digits = 1),
+                  "%)"),
+       colour = "log10(Journal Two-Year Citedness+1)"
+  )  + 
+  theme_bw()
+
+methods_pca_plot_table |>
+  mutate(two_yr_citedness = log10(as.numeric(two_yr_citedness + 1))) |>
+  ggplot(aes(
+  x = PC2, 
+  y = PC3, 
+  color = two_yr_citedness,
+  journal = JOURNAL)) +
+  geom_point(size = 0.8) +
+  scale_color_viridis_c(
+    option = "plasma"
+  ) +
+  labs(x = paste0("PC2 (", round(100 * methods_var_exp[2], digits = 1),
+                  "%)"),
+       y = paste0("PC3 (", 
+                  round(100 * methods_var_exp[3], digits = 1),
+                  "%)"),
+      colour = "log10(Journal Two-Year Citedness+1)"
+  )  + 
+  theme_bw()
+
+```
+
+## Quantifying what drives variation in the embeddings
+
+The PCA plots above suggest year and condition are the main axes of variation.
+Here we put numbers on this, and check other factors that could matter for
+training-set selection: the ancestry of the study sample, the source of the
+full text, and whether the paper is a meta-analysis. In particular, we ask
+whether the year effect is still there once text source is accounted for
+(older papers are more likely to only be available as PDFs).
+
+Two complementary approaches:
+
+1. **Regression on the top 10 PCs.** For each PC, the R² of each factor on its
+   own (*marginal*), and the R² it adds on top of all the other factors
+   (*unique*). Summed across PCs, weighted by variance explained.
+2. **PERMANOVA** (`vegan::adonis2`) on the full embeddings (cosine distance),
+   with `by = "margin"` giving each factor's unique contribution.
+
+Marginal R² much bigger than unique R² means a factor overlaps with others
+(e.g. year and text source).
+
+### Setting up covariates data.frame 
+
+```{r embedding_covariates}
+
+library(vegan)
+
+paper_covariates <- 
+  full_join(
+  journal_names |>
+  distinct(PUBMED_ID, 
+           YEAR,
+           is_oa,
+           publisher,
+           publisher_grp,
+           journal_grp,
+           h_index,
+           two_yr_citedness,
+           apc_usd),
+  gwas_study_info_grouped |>
+  distinct(PUBMED_ID, lancet_condition_group),
+  by = "PUBMED_ID")
+
+paper_covariates <- paper_covariates |>
+  mutate(is_oa = factor(is_oa, levels = c(FALSE, TRUE), 
+                        labels = c("Not OA", "OA")),
+         lancet_condition_group = factor(lancet_condition_group),
+         journal_grp = factor(journal_grp),
+         publisher = factor(publisher),
+         publisher_grp = factor(publisher_grp)
+)
+
+
+```
+
+#### Add ancestry information to covariates
+
+```{r}
+
+# ---- Ancestry of the discovery (initial-stage) sample ----
+gwas_ancest_info <- data.table::fread(
+  here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-ancestries-r2026-09-13.tsv"),
+  sep = "\t",
+  quote = "") |>
+  dplyr::rename_with(~ gsub(" ", "_", .x)) |>
+  mutate(YEAR = lubridate::year(lubridate::ymd(DATE))) |>
+  filter(YEAR < 2026)
+
+gwas_ancest_info <- gwas_ancest_info |>
+  filter(PUBMED_ID %in% unique(paper_covariates$PUBMED_ID))
+
+gwas_ancest_info <- gwas_ancest_info |> 
+  filter(!is.na(NUMBER_OF_INDIVIDUALS))
+
+gwas_ancest_info <-
+  gwas_ancest_info |>
+  mutate(STAGE = "initial")
+
+source(here::here("code/pop_desc_processing/plot_gwas_ancest_comp.R"))
+
+
+grouped_ancest = vector()
+broad_ancest_cat = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
+
+for(study_ancest in broad_ancest_cat){
+  
+grouped_ancest[study_ancest] = group_ancestry_fn(study_ancest)
+
+}
+
+grouped_ancest_map = data.frame(ancestry_group = grouped_ancest,
+                                BROAD_ANCESTRAL_CATEGORY = broad_ancest_cat
+                                )
+
+paper_ancestry <- 
+  left_join(
+  gwas_ancest_info,
+  grouped_ancest_map,
+  by = "BROAD_ANCESTRAL_CATEGORY")
+
+paper_ancestry <-
+  paper_ancestry |>
+  distinct(PUBMED_ID,
+           STUDY_ACCESSION,
+           ancestry_group,
+           NUMBER_OF_INDIVIDUALS)
+
+paper_ancestry <- 
+paper_ancestry |>
+  group_by(PUBMED_ID, STUDY_ACCESSION, ancestry_group) |>
+  summarise(NUMBER_OF_INDIVIDUALS = sum(NUMBER_OF_INDIVIDUALS), .groups = "drop")
+
+
+paper_ancestry <- 
+paper_ancestry |>
+  group_by(PUBMED_ID, ancestry_group) |>
+  slice_max(NUMBER_OF_INDIVIDUALS, n = 1, with_ties = FALSE)  |>
+  select(-STUDY_ACCESSION) |>
+  distinct()
+
+paper_ancestry <-
+  paper_ancestry |>
+  group_by(PUBMED_ID) |>
+  mutate(Ancestry_group = case_when(
+    all(ancestry_group == "European") ~ "European",
+    all(ancestry_group == "Not reported") ~ "Not reported",
+    TRUE ~ str_flatten_comma(sort(unique(ancestry_group)))
+  ))
+
+
+paper_ancestry <- 
+paper_ancestry |>
+  group_by(PUBMED_ID) |>
+  summarise(total_n = sum(NUMBER_OF_INDIVIDUALS),
+            european_n = sum(NUMBER_OF_INDIVIDUALS[ancestry_group == "European"], na.rm = TRUE),
+            ancestry_group = unique(Ancestry_group)
+) |>
+  mutate(percent_euro = european_n / total_n * 100)
+
+paper_ancestry <-
+paper_ancestry |>
+  mutate(ancestry_group = 
+           case_when(
+             grepl(",", ancestry_group) & percent_euro > 50 ~ "Multiple (Majority European)",
+             grepl(",", ancestry_group) & percent_euro <= 50 ~ "Multiple (Majority Non-European)",
+             TRUE ~ ancestry_group)
+  )
+
+paper_covariates <-
+left_join(
+  paper_covariates,
+  paper_ancestry,
+  by = "PUBMED_ID"
+)
+
+```
+
+
+#### Add text source information to covariates 
+
+```{r extract_text_source_info}
+
+fulltext_files <-
+list.files(here::here("output/fulltexts"),
+           recursive = TRUE,
+                    pattern = "\\.xml$")
+
+# exclude archived files: 
+fulltext_files <- fulltext_files[!grepl("archived", fulltext_files)]
+
+fulltext_files  <-
+  data.frame(path = fulltext_files) |>
+  mutate(
+    id = str_extract(path, "(?<=/)[^/]+(?=\\.xml$)"),
+    source =  str_extract(path, "^[^/]+")
+  )
+
+fulltext_files <-
+  fulltext_files |>
+  mutate(file_type = case_when(
+    grepl("bioc", path) ~ "BioC",
+    grepl("pdf", path) ~ "PDF (TEI)",
+    TRUE ~ "XML"
+  ))
+
+converted_ids <- data.table::fread(here::here("output/fulltexts/pmid_to_pmcid_mapping.csv"))
+
+fulltext_source <-
+  fulltext_files |>
+  mutate(PUBMED_ID = ifelse(str_detect(id, "^PMC"),
+                            converted_ids$PMID[match(id, converted_ids$PMCID)],
+                            id)
+  ) |>
+  mutate(PUBMED_ID = stringr::str_remove_all(pattern = "_bioc|.pdf.tei",
+                                             PUBMED_ID)) |> 
+  filter(!is.na(PUBMED_ID))
+
+fulltext_source <-
+  fulltext_source |>
+  distinct(PUBMED_ID, source, file_type) |>
+  rename(fulltext_source = source,
+         fulltext_file_type = file_type)
+
+# check no two sources: 
+fulltext_source |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
+
+fulltext_source <-
+  fulltext_source |>
+  mutate(PUBMED_ID = as.integer(PUBMED_ID))
+
+paper_covariates <-
+left_join(
+  paper_covariates,
+  fulltext_source,
+  by = "PUBMED_ID"
+)
+
+paper_covariates <-
+  paper_covariates |>
+  tidyr::replace_na(list(fulltext_source = "No full text",
+                         fulltext_file_type = "No full text")
+                    )
+
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(fulltext_source_grp = 
+           case_when(fulltext_file_type == "PDF (TEI)" ~ "Other Publisher (PDF)",
+                     grepl("oxford", fulltext_source) ~ "Oxford (HTML)",
+                     fulltext_file_type == "BioC" ~ "Other Publisher (HTML)",
+                     TRUE ~ 
+                       stringr::str_to_title(
+                         stringr::str_replace_all(fulltext_source,
+                                                 pattern = "_",
+                                                 replacement = " ")
+                     )
+         )
+  )
+
+paper_covariates <- 
+  paper_covariates |>
+  mutate(fulltext_source_grp = factor(fulltext_source_grp,
+                                      levels = c("Europe Pmc",
+                                                 "Ncbi Cloud",
+                                                 "Elsevier",
+                                                 "Wiley",
+                                                 "Sage",
+                                                 "Oxford (HTML)",
+                                                 "Other Publisher (HTML)",
+                                                 "Other Publisher (PDF)",
+                                                 "No Full Text")
+  )
+  )
+
+
+# ---- Full-text source (from the methods file names) ----
+# If a paper has several methods files, keep the best source:
+#   XML methods > BioC methods > PDF (GROBID TEI) > XML main text fallback
+text_source_levels <- c("XML methods",
+                        "BioC methods",
+                        "PDF (TEI)",
+                        "Main text fallback",
+                        "No full text")
+
+
+
+results_files <- tibble::tibble(
+  file = list.files(here::here("output/results"),
+                    pattern = "^[0-9]+_.*\\.txt$")) |>
+  mutate(
+    PUBMED_ID = as.integer(str_extract(file, "^[0-9]+")),
+    text_source = case_when(
+      str_detect(file, "_pdf_tei_results\\.txt$") ~ "PDF (TEI)",
+      str_detect(file, "_bioc_results\\.txt$")    ~ "BioC results",
+      str_detect(file, "_results_main\\.txt$")    ~ "Main text fallback",
+      str_detect(file, "_results\\.txt$")         ~ "XML results"
+    ),
+    text_source = factor(text_source, levels = text_source_levels),
+    # embedding ID used in results_medcpt_embeddings.csv
+    embedding_id = str_remove(file, "\\.txt$")
+  ) |>
+  filter(!is.na(text_source))
+
+results_text_source <-
+  results_files |>
+  distinct(PUBMED_ID, text_source) |>
+  rename(results_text_source = text_source)
+                                      
+``` 
+
+#### Add meta-analysis flag to covariates
+
+```{r}
+
+# ---- Meta-analysis status (grep abstract + methods text) ----
+# Same terms as code/testing_sampling_papers.R, but "METAL" (the software) is
+# matched case-sensitively so it doesn't hit e.g. "metalloproteinase".
+meta_pattern <- regex(paste("meta-?analy[sz](?:is|es|ed|ing)",
+                            "meta analy[sz](?:is|es|ed|ing)",
+                            sep = "|"),
+                      ignore_case = TRUE)
+
+read_text_file <- function(f) paste(readLines(f, warn = FALSE), collapse = " ")
+
+is_meta_text <- function(files) {
+  purrr::map_lgl(files, function(f) {
+    txt <- read_text_file(f)
+    str_detect(txt, meta_pattern) || str_detect(txt, "\\bMETAL\\b")
+  })
+}
+
+abstract_files <- list.files(here::here("output/abstracts"),
+                             pattern = "^[0-9]+\\.txt$", full.names = TRUE)
+
+methods_files <-  list.files(here::here("output/methods"),
+                    pattern = "^[0-9]+_.*\\.txt$",
+                    full.names = TRUE)
+
+meta_flags <- bind_rows(
+  tibble::tibble(file = abstract_files),
+  tibble::tibble(file = methods_files)
+) |>
+  mutate(PUBMED_ID = as.integer(str_extract(basename(file), "^[0-9]+")),
+         is_meta   = is_meta_text(file)) |>
+  group_by(PUBMED_ID) |>
+  summarise(is_meta = any(is_meta), .groups = "drop")
+
+meta_flags |> group_by(is_meta) |> summarise(n = n())
+
+paper_covariates <-
+left_join(
+  paper_covariates,
+  meta_flags,
+  by = "PUBMED_ID"
+)
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(meta_analysis = ifelse(is_meta %in% TRUE, "Meta-analysis", "Not meta-analysis"),
+         meta_analysis = factor(meta_analysis)) |>
+  select(-is_meta)
+
+```
+
+```{r}
+
+pdf(here::here("figures/paper_fulltext_source_over_time.pdf"),
+    width = 14, 
+    height = 9
+)
+
+# how correlated are year and text source?
+paper_covariates |>
+  mutate(fulltext_source_grp = forcats::fct_recode(
+    fulltext_source_grp,
+    "Europe PMC" = "Europe Pmc",
+    "NCBI AWS Cloud" = "Ncbi Cloud",
+  )) |>
+  mutate(YEAR = lubridate::ymd(YEAR, truncated = 2)) |>
+  ggplot(aes(x = YEAR, fill = fulltext_source_grp)) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Paired") +
+  labs(x = "Publication year", 
+       y = "Number of Papers", 
+       fill = "Full-text source") +
+  scale_x_date(date_labels = "%Y", date_breaks = "4 years") + 
+  theme_bw() + 
+      theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_text(size = 25), 
+    # plot.title = element_text(size = 35,
+    #                           hjust = -0.1,
+    #                           margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25),
+    legend.box.margin = margin(r = -5),
+    legend.justification = "bottom",
+    legend.location = "plot", 
+    legend.position = "left"
+    )
+
+dev.off()
+
+```
+
+```{r embedding_variation_functions}
+
+# Line up an embedding matrix (rownames = PUBMED_ID) with the covariates,
+# keeping only papers with every covariate and dropping unused factor levels
+align_embeddings <- function(emb, 
+                             covars_df,
+                             covariate_terms) {
+  
+  # check number of covariaties is >= 2
+  if (length(covariate_terms) < 2) {
+    stop("At least two covariates are required for R² calculations.")
+  }
+  
+  to_keep_cols = c("PUBMED_ID", covariate_terms)
+  
+  covars_df <- covars_df |>
+    filter(PUBMED_ID %in% as.integer(rownames(emb))) |>
+    select(dplyr::all_of(to_keep_cols)) |>
+    tidyr::drop_na() |>
+    droplevels() |> 
+    distinct()
+  
+  emb <- as.matrix(emb[as.character(covars_df$PUBMED_ID), , drop = FALSE])
+  list(emb = emb, covars = covars_df)
+}
+
+# R² of each factor on each of the top PCs:
+#   marginal = factor alone; unique = drop in R² when removed from the full model
+pc_r2_table <- function(emb, 
+                        covars, 
+                        n_pcs = 10,
+                        covariate_terms) {
+  
+  pca <- prcomp(emb, 
+                center = TRUE, 
+                scale. = TRUE)
+  
+  var_exp <- pca$sdev^2 / sum(pca$sdev^2)
+  
+  r2 <- function(y, terms) {
+    summary(lm(reformulate(terms, response = "y"),
+               data = mutate(covars,
+                             y = y)))$r.squared
+  }
+  
+  purrr::map_dfr(seq_len(n_pcs), function(k) {
+    
+    y <- pca$x[, k]
+    full_r2 <- r2(y, covariate_terms)
+    
+    purrr::map_dfr(covariate_terms, function(term) {
+      tibble::tibble(
+        PC          = k,
+        PC_var_exp  = var_exp[k],
+        factor      = term,
+        marginal_R2 = r2(y, term),
+        unique_R2   = full_r2 - r2(y, setdiff(covariate_terms, term)),
+        full_R2     = full_r2
+      )
+    })
+  })
+}
+
+plot_pc_r2 <- function(pc_r2, title) {
+  pc_r2 |>
+    tidyr::pivot_longer(c(marginal_R2, unique_R2),
+                        names_to = "type", values_to = "R2") |>
+    mutate(type = recode(type,
+                         marginal_R2 = "Marginal (factor alone)",
+                         unique_R2   = "Unique (given other factors)"),
+           PC = factor(paste0("PC", PC, " (", round(100 * PC_var_exp, 1), "%)"),
+                       levels = unique(paste0("PC", PC, " (",
+                                              round(100 * PC_var_exp, 1), "%)")))) |>
+    ggplot(aes(x = PC, y = factor, fill = R2)) +
+    geom_tile() +
+    geom_text(aes(label = sprintf("%.2f", R2)), size = 2.5) +
+    scale_fill_viridis_c(limits = c(0, NA)) +
+    facet_wrap(~type, ncol = 1) +
+    labs(x = NULL, y = NULL, fill = "R²", title = title) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Variance-weighted summary across the top PCs
+summarise_pc_r2 <- function(pc_r2) {
+  pc_r2 |>
+    group_by(factor) |>
+    summarise(
+      marginal_R2 = sum(marginal_R2 * PC_var_exp) / sum(PC_var_exp),
+      unique_R2   = sum(unique_R2   * PC_var_exp) / sum(PC_var_exp),
+      .groups = "drop"
+    ) |>
+    arrange(desc(marginal_R2))
+}
+
+# PERMANOVA on cosine distance between papers
+# (rows scaled to unit length, so Euclidean distance is monotone in cosine distance)
+run_permanova <- function(emb, 
+                          covars, 
+                          permutations = 100) {
+  
+  emb_unit <- emb / sqrt(rowSums(emb^2))
+  d <- dist(emb_unit)
+
+  full_formula <- reformulate(unname(covariate_terms), response = "d")
+
+  # each factor on its own
+  marginal <- purrr::map_dfr(covariate_terms, function(term) {
+    fit <- adonis2(reformulate(term,
+                               response = "d"),
+                   data = covars, 
+                   parallel = 16,
+                   permutations = permutations)
+    tibble::tibble(factor = term, 
+                   marginal_R2 = fit$R2[1], 
+                   marginal_p = fit$`Pr(>F)`[1])
+  })
+
+  # each factor given all the others
+  unique_fit <- adonis2(full_formula, data = covars,
+                        permutations = permutations, 
+                        parallel = 16,
+                        by = "margin")
+  
+  unique <- tibble::tibble(
+    factor    = covariate_terms,
+    unique_R2 = unique_fit$R2[seq_along(covariate_terms)],
+    unique_p  = unique_fit$`Pr(>F)`[seq_along(covariate_terms)]
+  )
+
+  # year: alone vs after text source vs after everything
+  # year_after_source <- adonis2(
+  #   d ~ text_source + splines::ns(YEAR, df = 3),
+  #   data = covars, permutations = permutations, by = "terms")
+  
+  list(
+    table = left_join(marginal, 
+                      unique, 
+                      by = "factor") |>
+      arrange(desc(marginal_R2)),
+    full_R2  = adonis2(full_formula, 
+                       data = covars,
+                       permutations = 0, by = NULL)$R2[1],
+    # year_check = tibble::tibble(
+    #   model = c("Year alone",
+    #             "Year after text source",
+    #             "Year after all other factors"),
+    #   R2 = c(marginal$marginal_R2[marginal$factor == "Year"],
+    #          year_after_source$R2[2],
+    #          unique$unique_R2[unique$factor == "Year"]),
+    #   p  = c(marginal$marginal_p[marginal$factor == "Year"],
+    #          year_after_source$`Pr(>F)`[2],
+    #          unique$unique_p[unique$factor == "Year"])
+    # ),
+    dist = d
+  )
+}
+
+# PERMANOVA can flag a factor because groups differ in spread rather than in
+# location; check that for the categorical factors
+check_dispersion <- function(d, 
+                             covars, 
+                             permutations = 50,
+                             min_n = 3) {
+  
+  # get classes of covariates 
+  covar_class <- lapply(abs_data$covars, 
+                        class) 
+  
+  covar_class <- purrr::keep(covar_class, 
+                             ~.x == "factor") 
+  
+  purrr::map_dfr(names(covar_class), 
+                 function(v) {
+                   
+    g <- forcats::fct_recode(as.factor(covars[[v]]), NULL = "")  # "" -> NA
+    g[g %in% names(which(table(g) < min_n))] <- NA               # drop tiny groups
+    g <- droplevels(g)
+
+    if (nlevels(g) < 2) {
+      return(tibble::tibble(factor = v, n_groups = nlevels(g),
+                            n_used = sum(!is.na(g)), dispersion_p = NA_real_))
+    }
+    keep_i <- !is.na(g)
+    bd <- betadisper(as.dist(as.matrix(d)[keep_i, keep_i]), 
+                     droplevels(g[keep_i]))               
+    tibble::tibble(factor = v,
+                   dispersion_p = permutest(bd, 
+                                            permutations = permutations)$tab$`Pr(>F)`[1])
+  })
+}
+
+```
+
+### Abstracts
+
+```{r abstract_embedding_variation, cache = TRUE}
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(YEAR = as.numeric(YEAR)) |>
+  mutate(ancestry_group = factor(ancestry_group)) |>
+  mutate(pub_year_group = 
+           case_when(
+             YEAR < 2010 ~ "-2010",
+             YEAR < 2015 ~ "2010-2015",
+             YEAR < 2020 ~ "2015-2020",
+             YEAR >= 2020 ~ "2020+"
+           )
+  ) 
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(publisher_grp_2 = forcats::fct_lump_min(publisher_grp, 
+                                                 min = 20,
+                                                 other_level = "Other"))
+         
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(sample_ancestry_group = 
+           case_when(
+             ancestry_group == "Other admixed ancestry" ~ "Other",
+             ancestry_group == "Oceanic" ~ "Other",
+             ancestry_group == "Middle Eastern" ~ "Other",
+             grepl("Multiple", ancestry_group) ~ "Multiple",
+             TRUE ~ ancestry_group
+           ))
+
+covariate_terms <- c(
+#  "DECADE",
+  "pub_year_group",
+  "lancet_condition_group",
+
+  # "h_index",
+  # "two_yr_citedness",
+  # "apc_usd",
+  # "is_oa",
+  "ancestry_group",
+  "sample_ancestry_group",
+  # "publisher"
+   "publisher_grp",
+  "publisher_grp_2"
+  
+  # "journal_grp",
+  # "fulltext_source_grp",
+  # "total_n",
+  # "percent_euro"
+  # "meta_analysis"
+)
+
+
+set.seed(21)
+
+abs_data <- align_embeddings(abstract_embeddings, 
+                             paper_covariates,
+                             covariate_terms)
+
+print(paste("Abstracts with all covariates:", nrow(abs_data$emb)))
+
+abs_pc_r2 <- pc_r2_table(abs_data$emb, 
+                         abs_data$covars,
+                         covariate_terms = covariate_terms,
+                         n_pcs = 10)
+
+plot_pc_r2(abs_pc_r2, "Abstract embeddings: R² of each factor on the top 10 PCs")
+summarise_pc_r2(abs_pc_r2)
+
+abs_permanova <- run_permanova(abs_data$emb, abs_data$covars)
+abs_permanova$table
+print(paste("PERMANOVA R², all factors together:", 
+            round(abs_permanova$full_R2, 3))
+      )
+check_dispersion(abs_permanova$dist, abs_data$covars)
+
+```
+
+For abstracts, "text source" describes the paper's full text (the abstract
+itself always comes from PubMed), so it mostly tracks open-access status and
+publication era rather than text formatting.
+
+### Methods
+
+```{r methods_embedding_variation, cache = TRUE}
+
+
+methods_data <- align_embeddings(methods_embeddings, 
+                                 paper_covariates,
+                                 covariate_terms)
+
+print(paste("Methods sections with all covariates:", nrow(methods_data$emb)))
+
+methods_pc_r2 <- pc_r2_table(methods_data$emb,
+                             methods_data$covars,
+                             covariate_terms = covariate_terms)
+
+plot_pc_r2(methods_pc_r2, "Methods embeddings: R² of each factor on the top 10 PCs")
+summarise_pc_r2(methods_pc_r2)
+
+methods_permanova <- run_permanova(methods_data$emb, methods_data$covars)
+methods_permanova$table
+print(paste("PERMANOVA R², all factors together:", 
+            round(methods_permanova$full_R2, 3))
+      )
+
+methods_permanova$year_check
+check_dispersion(methods_permanova$dist, 
+                 methods_data$covars)
+
+```
+
+### Results 
+
+```{r}
+
+results_data <- align_embeddings(results_embeddings, 
+                                 paper_covariates,
+                                 covariate_terms)
+
+print(paste("Results sections with all covariates:", nrow(results_data$emb)))
+
+
+results_pc_r2 <- pc_r2_table(results_data$emb,
+                             results_data$covars,
+                             covariate_terms = covariate_terms)
+
+
+plot_pc_r2(results_pc_r2, "Results embeddings: R² of each factor on the top 10 PCs")
+summarise_pc_r2(results_pc_r2)
+
+results_permanova <- run_permanova(results_data$emb, 
+                                   results_data$covars)
+results_permanova$table
+
+print(paste("PERMANOVA R², all factors together:", 
+            round(results_permanova$full_R2, 3))
+      )
+
+```
+## Summary
+
+```{r embedding_variation_summary}
+
+bind_rows(
+  abs_permanova$table  |> mutate(text = "Abstracts"),
+  methods_permanova$table |> mutate(text = "Methods"),
+  results_permanova$table |> mutate(text = "Results")
+) |>
+  tidyr::pivot_longer(c(marginal_R2, unique_R2),
+                      names_to = "type", values_to = "R2") |>
+  mutate(type = recode(type,
+                       marginal_R2 = "Marginal (factor alone)",
+                       unique_R2   = "Unique (given other factors)")) |>
+  ggplot(aes(x = R2, y = reorder(factor, R2), fill = type)) +
+  geom_col(position = "dodge") +
+  scale_fill_brewer(palette = "Paired") +
+  facet_wrap(~text) +
+  labs(x = "PERMANOVA R² (share of embedding variation)", y = NULL, fill = NULL) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+```
 
 
 # Create the training set
 
-```{r get_training_sample}
+```{r get_training_sample, eval = F}
 
 set.seed(500)
 
-training_sample = gwas_study_info |>
-  select(YEAR, 
-         PUBMED_ID,
-         lancet_condition) |>
-  # tidyr::separate_longer_delim(lancet_condition, 
-  #                              delim = " & ") |>
-  distinct() |>
-  dplyr::group_by(YEAR,lancet_condition) |>
-  dplyr::slice_sample(prop = 0.25) |>
+paper_covariates |>
+  ggplot(aes(x = percent_euro)) + 
+  geom_histogram()
+
+training_sample =  paper_covariates |>
+  distinct(PUBMED_ID,
+           YEAR, 
+           publisher,
+           ancestry_group,
+           lancet_condition_group,
+         )
+
+cov <- coarsen_covariates(training_sample, publisher_min = 25)
+
+source(here::here("code/training_set/sample_training_set.R"))
+
+sample_stratified(training_sample |> select(-PUBMED_ID),
+                  c("YEAR", 
+                    "ancestry_group", "publisher", "lancet_condition_group"),
+                  target_n = 250, method = "proportional", floor_n = 1, seed = 1)  |>
+  dplyr::group_by(YEAR,
+                  lancet_condition_group,
+                  ancestry_group,
+                  publisher) |>
+  dplyr::slice_sample(n = 1) |>
   pull(PUBMED_ID) |>
   unique()
 
@@ -567,7 +2277,7 @@ training_sample |>
 
 # Create the validation set
 
-```{r}
+```{r, eval = F}
 
 # now let's select 44 papers for the validation set, 
 # this is ~ 20% of the training set
