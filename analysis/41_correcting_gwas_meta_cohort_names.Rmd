@@ -1,0 +1,937 @@
+---
+title: "Harmonizing Cohort Labels"
+author: "Isobel Beasley"
+output:
+  workflowr::wflow_html:
+    toc: true
+    toc_float: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+# Load / pre-process GWAS Catalog data
+
+```{r load_gwas}
+# Load GWAS Catalog studies
+# gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2025-07-21.tsv"),
+#                          sep = "\t", quote = "")
+
+gwas_study_info <- fread(here::here("data/gwas_catalog/gwas-catalog-v1.0.3.1-studies-r2026-09-13.tsv"),
+                         sep = "\t", 
+                         quote = "")
+
+# Standardize column names (remove spaces)
+gwas_study_info <- gwas_study_info |>
+  rename_all(~gsub(" ", "_", .x))
+
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, " \\| ", "|")) |>
+mutate(COHORT = str_replace_all(COHORT, "\\| ", "|")) |>
+  mutate(COHORT = str_replace_all(COHORT, " \\|", "|"))
+
+# some use commas instead of | to designate multiple cohorts
+gwas_study_info <- gwas_study_info |>
+    mutate(COHORT = str_replace_all(COHORT, ", ", "|"))
+
+# choose only selected disease papers
+selected_papers <-
+  data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv")) |>
+  filter(include == TRUE) |>
+  pull(PUBMED_ID) |>
+  unique()
+
+length(selected_papers)
+
+gwas_study_info <- 
+  gwas_study_info |>
+  filter(PUBMED_ID %in% selected_papers) |>
+  distinct()
+
+gwas_study_info <-
+  gwas_study_info |>
+  distinct(PUBMED_ID, COHORT, DATE, STUDY)
+
+```
+
+### Remove uninformative labels
+
+```{r remove_uninformative_cohort_names}
+
+# making "multiple" designation to be the same
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, 
+                                   "(\\(Multiple cohorts\\))|(\\(multiple\\))|Multiple",
+                                  "multiple")) 
+
+
+# number of cohorts listed as 'multiple'
+gwas_study_info |> 
+  filter(grepl("multiple", COHORT, ignore.case = T)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n())
+
+# remove cohorts listed as multiple
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "multiple",
+                                          string = COHORT)
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "multiple",
+                                          string = COHORT)
+         )
+
+
+# making others be the same  
+gwas_study_info <- gwas_study_info |>
+  mutate(COHORT = str_replace_all(COHORT, "Other", "other")) |> 
+  mutate(COHORT = str_replace_all(COHORT, "OTHER", "other")) |>
+  mutate(COHORT = str_replace_all(COHORT, "others", "other")) 
+
+# number of cohorts listed as other
+gwas_study_info |> 
+  filter(grepl("other", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+gwas_study_info |>
+  filter(grepl("other", COHORT)) |> 
+  nrow()
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "(^other$)|(^other\\|)|(\\|other$)",
+                                          string = COHORT)
+         ) |>
+  mutate(COHORT = stringr::str_replace_all(pattern = "\\|other\\|",
+                                          string = COHORT,
+                                          replacement = "|")
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = stringr::str_remove_all(pattern = "other",
+                                          string = COHORT)
+         )
+
+# not reported: 
+gwas_study_info |> 
+  filter(grepl("NR", COHORT)) |> 
+  group_by(COHORT) |> 
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+
+gwas_study_info |> 
+  filter(grepl("NR", COHORT)) |>
+  nrow()
+
+gwas_study_info = 
+gwas_study_info |>
+  dplyr::mutate(COHORT = stringr::str_remove_all(pattern ="(^NR$)|(^NR\\|)|(\\|NR$)", 
+                                                 string = COHORT)) |>
+    mutate(COHORT = stringr::str_replace_all(pattern = "(\\|NR\\|)",
+                                          string = COHORT,
+                                          replacement = "|")
+         )
+
+gwas_study_info =
+  gwas_study_info |>
+  mutate(COHORT = str_remove_all(pattern = "\\|$",
+                                 string = COHORT))
+
+
+
+```
+
+
+### Fixing some discrepancies with multiple cohorts 
+
+```{r fix_multiple_cohorts}
+
+gwas_study_info |>
+    filter(grepl("\\band\\b", COHORT)) |>
+    distinct(COHORT)
+  
+  
+gwas_study_info <- 
+        gwas_study_info |>
+        mutate(COHORT = ifelse(COHORT == "CanSCAD cases and MGI controls",
+                               "CanSCAD|MGI", 
+                               COHORT)) 
+
+gwas_study_info <- 
+        gwas_study_info |>
+        mutate(COHORT = stringr::str_replace_all(
+                                string = COHORT,
+                                pattern = "(?:(?<=^)|(?<=\\|))ROS(?=$|\\|)|(?:(?<=^)|(?<=\\|))MAP(?=$|\\|)",
+                               replacement = "ROSMAP"
+                               )
+        )
+
+```
+
+### Separate cohort names into new rows
+
+```{r separate_cohort_names}
+
+gwas_study_info  <-
+  gwas_study_info  |>
+  tidyr::separate_longer_delim(COHORT, 
+                          delim = "|") |>
+  mutate(COHORT = stringr::str_squish(COHORT)) |>
+  distinct()
+
+```
+
+
+### Fixing some specific cohort names
+
+
+```{r fixing_some_gwas_cat_cohort_names}
+
+gwas_study_info <- 
+        gwas_study_info |>
+        mutate(COHORT = ifelse(COHORT == "Oxford Regional Prospective Study of Childhood Diabetes (ORPS)",
+                               "ORPS",
+                               COHORT))
+
+# 34522458
+# 34934334
+# 36329257
+gwas_study_info  <-
+  gwas_study_info |>
+  mutate(
+    COHORT = ifelse(PUBMED_ID %in% c(34522458, 34934334, 36329257) & COHORT == "Taiwan", 
+                    "TWB",
+                    COHORT))
+
+# 34604815
+gwas_study_info  <-
+  gwas_study_info |>
+  mutate(
+    COHORT = ifelse(PUBMED_ID == 34604815 & COHORT == "Mount Sinai",
+                    "BioMe",
+                    COHORT))
+
+
+# 29531354
+# ?Finland | FINLAND appear to be FINRISK
+gwas_study_info  <-
+  gwas_study_info |>
+  mutate(
+    COHORT = ifelse(PUBMED_ID == 29531354 & (COHORT == "Finland"| COHORT == "FINLAND"),
+                    "FINRISK",
+                    COHORT))
+
+
+
+```
+
+
+
+# Load / prepare list of GWAS Cohort Names 
+
+Full list of abbreviations downloaded from: https://www.ebi.ac.uk/gwas/docs/fileheaders#_file_headers_for_unpublished_studies (https://ftp.ebi.ac.uk/pub/databases/spot/pgs/metadata/pgs_all_metadata_cohorts.csv).
+
+```{r load_gwas_cohort_names}
+
+# listing cohort names
+gwas_cohort_names <- data.table::fread("data/gwas_catalog/pgs_all_metadata_cohorts.csv")
+
+gwas_cohort_names <- 
+  gwas_cohort_names |> 
+  rename_all(~gsub(" ", "_", .x))
+
+```
+
+## Making cohort names unique
+
+And multiple rows per alternative name or synonym or abbreviation for a cohort.
+
+```{r make_cohort_names_unique}
+
+gwas_cohort_names <- 
+  gwas_cohort_names |> 
+  mutate(`Previous/other/additional_names` = 
+           stringr::str_replace_all(`Previous/other/additional_names`, 
+                                    "chances of preventing, recognizing early and optimally treating",
+                                    "chances of preventing* recognizing early and optimally treating"
+           )
+  ) |>
+    mutate(`Previous/other/additional_names` = 
+           stringr::str_replace_all(`Previous/other/additional_names`, 
+                                    "on Nephropathy, of relevance to public health, which is Chronic, possibly in its Initial stages, and",
+                                    "on Nephropathy* of relevance to public health* which is Chronic* possibly in its Initial stages* and"
+           )
+  ) |>
+  mutate(`Previous/other/additional_names` = 
+           stringr::str_replace_all(`Previous/other/additional_names`, 
+                                    ";",
+                                    ",")
+  )
+
+gwas_cohort_names <-
+gwas_cohort_names |>
+  group_by(Cohort_Name) |>
+  mutate(`Previous/other/additional_names` = ifelse(`Previous/other/additional_names` == "",
+                                                    NA_character_,
+                                                    `Previous/other/additional_names`)) |>
+  tidyr::unite("other_names", 
+               c(Cohort_ID, `Previous/other/additional_names`), 
+               sep = ", ", 
+               na.rm = TRUE) |>
+  tidyr::separate_longer_delim(other_names, 
+                          delim = ", ") 
+
+
+gwas_cohort_names |> 
+  filter(grepl("GENESTAR", 
+               other_names, 
+               ignore.case = T))
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  mutate(other_names = ifelse(other_names == "GeneSTAR_b",
+                            "GeneSTAR",
+                            other_names))
+
+gwas_cohort_names |> 
+  filter(grepl("AtheroRemo", Cohort_Name))
+
+gwas_cohort_names |> 
+  filter(grepl("Cooperative Health Research in the Region of Augsburg", Cohort_Name))
+
+gwas_cohort_names |> 
+  filter(other_names == "HCHS" | other_names == "SOL")
+
+gwas_cohort_names |>
+  filter(other_names == "CCGB_2")
+
+gwas_cohort_names <-
+gwas_cohort_names |>
+  mutate(Cohort_Name = case_when(
+    grepl("AtheroRemo", Cohort_Name) ~ "AtheroRemo",
+    grepl("Cooperative Health Research in the Region of Augsburg", Cohort_Name) ~ "Cooperative Health Research in the Region of Augsburg",
+    other_names == "HCHS" | other_names == "SOL" ~ "Hispanic Community Health Study / Study of Latinos",
+    other_names == "CCGB_2" ~ "Cleveland Clinic GeneBank Study",
+    TRUE ~ Cohort_Name
+  )) |>
+  distinct()
+
+gwas_cohort_names  |>
+  group_by(other_names) |>
+  summarise(n = n()) |>
+  filter(n > 1)
+
+
+non_unique_cohort_names = 
+gwas_cohort_names  |>
+  group_by(other_names) |>
+  summarise(n = n())  |>
+  filter(n > 1) |>
+  pull(other_names) 
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  mutate(non_unique_id = ifelse(other_names %in% non_unique_cohort_names, 
+                                TRUE,
+                                FALSE)
+         ) |>
+  rename(Cohort_ID = other_names)
+
+```
+
+### Add extra stage based synonyms for some cohorts
+
+```{r}
+
+# add cohort stages 
+gwas_cohort_names <-
+  gwas_cohort_names |> 
+  mutate(Cohort_ID = case_when(
+    Cohort_ID == "ROSMAP" ~ "ROSMAP, ROSMAP 1, ROSMAP 2",
+    Cohort_ID == "LASA" ~ "LASA, LASA I, LASA II",
+    Cohort_ID == "COHRA" ~ "COHRA, COHRA1, COHRA2",
+    TRUE ~ Cohort_ID
+  )) |>
+  tidyr::separate_longer_delim(Cohort_ID, 
+                          delim = ", ")
+
+
+```
+
+### Add some capitalisation and other synonyms for some cohorts
+
+```{r}
+
+# add cohort synonyms to gwas_cohort_names 
+gwas_cohort_names <-
+  gwas_cohort_names |> 
+  mutate(Cohort_ID = case_when(
+    Cohort_ID == "UKB" ~ "UKB, UKBB",
+    Cohort_ID == "BioMe" ~ "BioMe, BioME, BIOME",
+    Cohort_ID == "BioVU" ~ "BioVU, BioVu, BIOVU",
+    Cohort_ID == "deCODE" ~ "deCODE, DeCODE, DECODE",
+    Cohort_ID == "AllofUs" ~ "AllofUs, All of Us, AllOfUs, AoU",
+    Cohort_ID == "EB" ~ "EB, Estonian Biobank, EstBB, EBB",
+    Cohort_ID == "FinnGen" ~ "FinnGen, FINNGEN, Finngen",
+    Cohort_ID == "SiGN" ~ "SiGN, SIGN, Sign",
+    Cohort_ID == "B58C" ~ "B58C, British 1958 birth cohort, BC58",
+    Cohort_ID == "eMERGE" ~ "eMERGE, EMERGE, Emerge",
+    Cohort_ID == "FamHS" ~ "FamHS, FAMHS",
+    Cohort_ID == "Nugene" ~ "Nugene, NuGene, NUGENE",
+    Cohort_ID == "LifeLines" ~ "Lifelines, LifeLines",
+    Cohort_ID == "GoDARTS" ~ "GoDARTS, GODARTS, GoDarts",
+    Cohort_ID == "GeneSTAR" ~ "GeneSTAR, GeneStar, GENESTAR",
+    Cohort_ID == "genomicc" ~ "genomicc, GenOMICC, Genomicc",
+    Cohort_ID == "BioResource" ~ "BioResource, NIHR BioResource, NIHR Cambridge BioResource, NIHR BIORESOURCE",
+    Cohort_ID == "MCH_montreal" ~ "MCH_montreal, MCH-Montreal, MCH Montreal, Montreal Children's Hospital",
+    Cohort_ID == "YH" ~ "YH, Young Hearts-NI",
+    Cohort_ID == "SDCC" ~ "SDCC, Steno Diabetes Center",
+    Cohort_ID == "TaiChi" ~ "TaiChi, TAICHI",
+    Cohort_ID == "GEL" ~ "GEL, GeL",
+    Cohort_ID == "canSCAD" ~ "canSCAD, CanSCAD",
+    TRUE ~ Cohort_ID
+    
+  )) |>
+  tidyr::separate_longer_delim(Cohort_ID, 
+                          delim = ", ")
+
+
+```
+
+### Add some additional cohort names not in the GWAS Catalog cohort list
+
+```{r add_cohort_names}
+# add other cohort names 
+# HapMap
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = "HapMap",
+  Cohort_Name = "International HapMap Consortium",
+  non_unique_id = FALSE
+)
+)
+
+# Korea4K
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = "Korea4K",
+  Cohort_Name = "Korean Genome Project Phase 1",
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("WTCCC-BD", "WTCCC - Bipolar disease cases"),
+  Cohort_Name = c("WTCCC case-control study for Bipolar Disorder"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("GRID-NI"),
+  Cohort_Name = c("Genetic Resource Investigating Diabetes (GRID) - Northern Ireland Collection"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("DCCT-EDIC"),
+  Cohort_Name = c("Diabetes Control and Complications Trial/Epidemiology of Diabetes Interventions and Complications Study"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("ORPS"),
+  Cohort_Name = c("Oxford Regional Prospective Study of Childhood Diabetes"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("MAP"),
+  Cohort_Name = c("Rush Memory and Aging Project"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("VHSMC"),
+  Cohort_Name = c("Veterans Health Service Medical Center"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("SALSA"),
+  Cohort_Name = c("San Antonio Longitudinal Study of Aging"),
+  non_unique_id = FALSE
+)
+)
+
+gwas_cohort_names <-
+  gwas_cohort_names |>
+  rows_append(
+data.frame(
+  Cohort_ID = c("CALGB 40502",
+                "CALGB 40503",
+                "CALGB 80303",
+                "CALGB 90401"),
+  Cohort_Name = c("Cancer and Leukemia Group B 40502",
+                 "Cancer and Leukemia Group B 40503",
+                 "Cancer and Leukemia Group B 80303",
+                 "Cancer and Leukemia Group B 90401"
+                 )
+  )
+)
+
+```
+
+# Accounting for some discrepancies in cohort names across studies 
+
+## Check in: how many unique cohorts (at the start)? 
+
+```{r}
+
+all_cohorts = gwas_study_info$COHORT
+#all_cohorts = unlist(strsplit(all_cohorts, "\\|"))
+#all_cohorts  = stringr::str_squish(all_cohorts)
+all_cohorts = all_cohorts[all_cohorts != ""]
+unique(all_cohorts) |> length()
+
+# cohorts not in gwas_cohort_names
+all_cohorts[!all_cohorts %in% gwas_cohort_names$Cohort_ID] |> unique() |> length()
+
+
+gwas_study_info |>
+  filter(!COHORT %in% gwas_cohort_names$Cohort_ID & COHORT != "") |>
+  select(PUBMED_ID, COHORT) |>
+  distinct() |>
+  View()
+
+```
+
+
+
+## Checking: Any fuzzy names to check? 
+
+```{r fuzzy_names_check}
+
+library(stringdist)
+library(dplyr)
+
+# Identify pairs with small distance (e.g., <=2 edits)
+small_dist_pairs <- function(threshold, 
+                             dist_matrix_method,
+                             all_cohorts) {
+  
+  # Create a vector of unique cohort names
+  cohorts <- unique(all_cohorts)
+  
+  single_use_cohorts  =   data.frame(cohort = all_cohorts) |>
+                          group_by(cohort) |>
+                          summarise(n_studies = n()) |>
+                          filter(n_studies == 1) |>
+                          pull(cohort)
+  
+  # Compute pairwise string distances (Levenshtein distance)
+  dist_matrix <- stringdistmatrix(single_use_cohorts, 
+                                  cohorts, 
+                                  method = dist_matrix_method)
+  
+  matches <- which(dist_matrix > 0 & dist_matrix <= threshold, 
+                   arr.ind = TRUE)
+  
+  matches <- data.frame(
+    cohort1 = single_use_cohorts[matches[,1]],
+    cohort2 = cohorts[matches[,2]],
+    distance = dist_matrix[matches]
+  )
+  
+  matches <- matches[matches$cohort1 != matches$cohort2, ]
+  matches <- unique(matches)
+  
+  return(matches)
+  
+}
+
+small_dist_pairs(threshold = 2, 
+                 dist_matrix_method = "lv",
+                 all_cohorts = all_cohorts) |>
+  arrange(distance) |>
+  head()
+
+small_dist_pairs(threshold = 2,
+                 dist_matrix_method = "lcs",
+                 all_cohorts = all_cohorts) |>
+  arrange(distance) |>
+  head()
+
+# COHRA1 vs COHRA
+# COHRA2 vs COHRA
+
+# EGLE vs EAGLE
+# GHS-II GHS-I
+
+# B-PROOF BPROOF
+gwas_study_info |>
+  filter(grepl("\\bB-PROOF\\b", COHORT))
+
+gwas_study_info |>
+  filter(grepl("\\bBPROOF\\b", COHORT))
+
+# WAMHS WASHS
+
+# CALGB 40502 CALGB 40503
+
+# matches <- which(dist_matrix > 0 & dist_matrix <= threshold, arr.ind = TRUE)
+# matches <- data.frame(
+#   cohort1 = single_use_cohorts[matches[,1]],
+#   cohort2 = cohorts[matches[,2]],
+#   distance = dist_matrix[matches]
+# )
+# 
+# 
+# matches |>
+#   arrange(distance) |>
+#   head()
+
+```
+
+# Any cohorts missing from data-dictionary?
+
+```{r any_cohorts_missing_from_dict}
+
+gwas_study_info <-
+left_join(
+gwas_study_info |>
+rename(Cohort_ID = COHORT),
+gwas_cohort_names,
+by = "Cohort_ID")
+
+gwas_study_info  <-
+  gwas_study_info  |>
+  mutate(Cohort_ID = ifelse(Cohort_ID == "",
+                            NA_character_,
+                            Cohort_ID))
+
+
+normalise_cohort_names <- function(Cohort_Name_Col){
+  
+  normalised_names <-
+  stringr::str_squish(Cohort_Name_Col) |>
+  stringr::str_to_title() |> 
+                       stringr::str_replace_all(pattern = "\u00A0", 
+                                                replacement = " ") |>
+                       stringr::str_remove_all("[®™]") |>
+                       stringr::str_remove_all("^The\\s+") |>
+                       stringr::str_remove_all("\\s+Study(?=(\\s+|$))")
+  
+  return(normalised_names)
+
+}
+
+gwas_study_info  <-
+  gwas_study_info  |>
+  mutate(Cohort = normalise_cohort_names(Cohort_Name))
+                       
+
+cohort_names_df <- readxl::read_xlsx(here::here("data/cohort/cohort_desc_v3_sep17.xlsx")) |>
+  mutate(across(everything(), 
+                ~stringr::str_replace_all(.x,
+                                          pattern = "\u00A0",
+                                          replacement = " "))) 
+
+cohort_names_df  <-
+  cohort_names_df  |>
+  mutate(full_name = ifelse(full_name == "" | is.na(full_name),
+                            short_name,
+                            full_name)) |>
+  mutate(full_name = stringr::str_squish(full_name)) |>
+  filter(full_name != "")
+
+  
+cohort_names_df <-
+  cohort_names_df |>
+  group_by(full_name) |>
+  mutate(synonyms = stringr::str_flatten(
+                        unique(c(synonyms, short_name, full_name)), 
+                         collapse = "; ",
+                        na.rm = T)) |>
+  ungroup()
+
+cohort_names_df  <-
+cohort_names_df |>
+  distinct(full_name, cohort_group, synonyms) |>
+  tidyr::separate_longer_delim(synonyms, 
+                          delim = "; ") |>
+    mutate(synonyms = normalise_cohort_names(synonyms)) |>
+  rename(Cohort = synonyms)
+
+anti_join(
+  gwas_study_info |>
+    distinct(Cohort_ID, Cohort_Name, Cohort),
+  cohort_names_df
+)
+
+# all cohort names:
+all_cohort_names <- 
+  c(cohort_names_df$cohort,
+    cohort_names_df$full_name,
+    cohort_names_df$synyoms)
+
+all_cohort_names <- unique(all_cohort_names)
+
+length(all_cohort_names)
+
+gwas_cat_names <- unique(all_cohorts)
+
+not_found_names <-gwas_cat_names[!(gwas_cat_names %in% all_cohort_names)]
+
+checked_all_cohort_names <- tolower(stringr::str_trim(all_cohort_names))
+
+found_with_edits <- gwas_cat_names[(tolower(gwas_cat_names) %in% checked_all_cohort_names)]
+
+# names that match when case is ignored: 
+not_found_names[not_found_names %in% found_with_edits] 
+
+print("Number of cohorts not (yet) included in data-dictionary")
+length(not_found_names)
+
+print("Most used cohorts that are not included in the data-dictionary")
+data.frame(
+  cohort_name = 
+all_cohorts[all_cohorts %in% not_found_names]) |>
+  group_by(cohort_name) |>
+  summarise(n = n()) |>
+  arrange(desc(n)) |>
+  head()
+
+```
+
+# Saving: 
+
+```{r saving}
+
+# cohorts used per paper:
+
+gwas_study_info =
+  gwas_study_info |>
+  select(PUBMED_ID,
+         DATE,
+         COHORT = Cohort_ID) |>
+  distinct()
+
+gwas_study_info =
+  gwas_study_info |>
+  tidyr::separate_rows(COHORT, sep = "\\|") |>
+  # mutate(COHORT = ifelse(COHORT != "",
+  #                        tidyr::separate_rows(COHORT, sep = "\\|"),
+  #                        # unlist(str_split(string = COHORT,
+  #                        #                  pattern = "\\|")
+  #                               # ),
+  #                        "")
+  #        ) |>
+  group_by(PUBMED_ID) |>
+  summarise(COHORT = str_flatten(unique(COHORT), 
+                                 collapse = "|",
+                                 na.rm = T),
+            DATE = unique(DATE))
+  
+data.table::fwrite(gwas_study_info,
+                  here::here("output/gwas_cohorts/gwas_cohort_name_corrected.csv"), 
+                  sep = ",")
+
+```
+
+# Others to look into: 
+
+```{r, eval = F}
+# in below study, unlisted cohort is combination of two cohorts
+gwas_study_info |>
+  filter(PUBMED_ID  == 32605384) |>
+  select(PUBMED_ID, 
+         COHORT, 
+         STUDY_ACCESSION, 
+         "DISEASE/TRAIT", 
+         "INITIAL_SAMPLE_SIZE", 
+         "REPLICATION_SAMPLE_SIZE")
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 30510241) |>
+    select(PUBMED_ID, 
+           COHORT, 
+           STUDY_ACCESSION, 
+           "DISEASE/TRAIT", 
+           "INITIAL_SAMPLE_SIZE", 
+           "REPLICATION_SAMPLE_SIZE"
+           )
+# if go to supplement, can see made up of many many many studies - I believe includes other all other subsamples
+
+
+gwas_study_info |>
+  filter(PUBMED_ID == 33307546) |>
+    select(PUBMED_ID, 
+           COHORT, 
+           STUDY_ACCESSION, 
+           "DISEASE/TRAIT", 
+           "INITIAL_SAMPLE_SIZE", 
+           "REPLICATION_SAMPLE_SIZE")
+
+# COVID-19 Host Genetics Initiative (HGI) is this hispanic individuals I believe
+#  European ancestry from the ‘broad respiratory phenotype’ study of 23andMe
+# See replication section of https://www.nature.com/articles/s41586-020-03065-y#Sec4
+gwas_study_info |>
+  filter(PUBMED_ID == 38184787) |> 
+  select(PUBMED_ID, COHORT, STUDY_ACCESSION, 
+         "DISEASE/TRAIT", 
+         "INITIAL_SAMPLE_SIZE", 
+         "REPLICATION_SAMPLE_SIZE")
+
+# cohorts listed are for
+
+
+```
+
+## MAYO
+
+Mayo Clinic Bipolar Biobank (STUDY_ACCESSION: GCST90554822)
+
+MAYO-Clinic RGC Project Generation. (PUBMED_ID: 37949852)
+
+Mayo Clinic (PUBMED_ID: 40050615)
+
+Mayo-VDB|
+
+
+
+
+
+
+
+
+```{r, eval = F}
+
+# Stanford_ADRC
+
+# CROATIA
+
+# Raine Study -- ? Raine
+
+# Penn - UPenn etc.
+
+# ?CALGB  
+# "SIGNET-REGARDS"  >? "SIGNET"  
+
+
+
+# "RISC" & "RISK" appear to be different
+# Relationship Between Insulin Sensitivity and Cardiovascular Disease Risk (RISC)
+
+# Risk Stratification and Identification of Immunogenetic and Microbial Markers of Rapid Disease Progression in Children with Crohn’s Disease (RISK) 
+
+
+
+ "CKB" 
+
+ [231] "COHRA"                                                                                                                                                    
+ [232] "COHRA1"                                                                                                                                                   
+ [233] "COHRA2"  
+
+# UK Blood Service (UKBS)
+
+ [294] "DiscovEHR"                                                                                                                                                
+ [295] "DISCOVeRY-BMT"   
+
+ [330] "ELSA"                                                                                                                                                     
+ [331] "ELSA-Brasil"   
+
+ [340] "EPIC"                                                                                                                                                     
+ [341] "EPIC_CAD"                                                                                                                                                 
+ [342] "EPIC_Obs"                                                                                                                                                 
+ [343] "EPIC-Norfolk"                                                                                                                                             
+ [344] "EPICURE"        
+
+ [372] "FinnTwin"                                                                                                                                                 
+ [373] "FinnTwin12"  
+
+ [463] "GOCS"                                                                                                                                                     
+ [464] "GOCS_Chilean" 
+
+ [480] "GRAAD"                                                                                                                                                    
+ [481] "GRaD" 
+
+# Colo2&3
+
+ [513] "HELIC"                                                                                                                                                    
+ [514] "HELIC-MANOLIS"                                                                                                                                            
+ [515] "HELIC-Pomak"   
+
+# ? QTR == QTR_Qindao
+
+# ? is "other|UKB" == "UKB|other"
+
+# ? is UK|NR == UKB|NR
+
+# ? CF_TSS == TSS
+
+gwas_study_info |>
+  filter(grepl("ORPS", COHORT))
+
+gwas_study_info |>
+  filter(PUBMED_ID == 39749473) |>
+  select(COHORT)
+
+# PAGE vs PAGES
+
+# PUBMED ID: 35754128 - should be PAGES
+# see sup table 1. https://pmc.ncbi.nlm.nih.gov/articles/PMC9671132/
+
+# COGEND COGENT
+
+```
