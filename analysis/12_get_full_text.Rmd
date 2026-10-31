@@ -19,6 +19,7 @@ library(stringr)
 library(here)
 library(dplyr)
 library(data.table)
+library(ggplot2)
 
 ```
 
@@ -216,6 +217,51 @@ round(100 * n_euro_pmc / length(all_pmids), digits = 2)
 
 ```
 
+```{r}
+
+euro_retrieved_stats <-
+left_join(
+gwas_study_info |>
+  select(PUBMED_ID, YEAR) |>
+  filter(PUBMED_ID %in% all_pmids) |>
+  distinct(), 
+converted_ids |>
+  select(PUBMED_ID = PMID, PMCID)
+) |>
+  mutate(empc_retrieved = ifelse(PMCID %in% euro_pmcids,
+                                 T,
+                                 F)) |>
+  group_by(YEAR) |>
+  summarise(n = n(),
+            n_empc_retrieved = sum(empc_retrieved, na.rm = TRUE),
+            perc_empc_retrieved = round(100 * n_empc_retrieved / n, digits = 2)
+            ) 
+
+euro_retrieved_stats
+
+euro_retrieved_stats |>
+  mutate(not_ret = n - n_empc_retrieved) |>
+  select(-perc_empc_retrieved, -n) |>
+  tidyr::pivot_longer(cols = c(n_empc_retrieved, not_ret),
+               names_to = "retrieved",
+               values_to = "n"
+               ) |>
+  mutate(retrieved = factor(retrieved,
+                                 levels = c("not_ret", "n_empc_retrieved"),
+                                 labels = c("Not Retrieved", "Retrieved (EPMC)")
+                                 )
+         ) |>
+  ggplot(aes(x = YEAR, y = n, fill = retrieved)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_date(date_labels = "%Y", date_breaks = "2 years") + 
+  labs(x = "Year of Publication", 
+       y = "Number of Papers") +
+  theme_bw() + 
+  theme(legend.title = element_blank())
+
+```
+
 # Download full texts from NCBI Cloud Service
 
 For remaining PMCIDs without full text downloaded from European PMC, try downloading using NCBI Cloud Service. 
@@ -298,6 +344,56 @@ print("Percentage of pmids with full text from NCBI Cloud Service:")
 
 print("Percentage of pmids without full text from either European PMC or NCBI Cloud Service:")
 100 * length(not_available) / length(all_pmids)
+
+```
+
+```{r}
+
+
+ncbi_retrieved_stats <-
+left_join(
+gwas_study_info |>
+  select(PUBMED_ID, YEAR) |>
+  filter(PUBMED_ID %in% all_pmids) |>
+  distinct(), 
+converted_ids |>
+  select(PUBMED_ID = PMID, PMCID)
+) |>
+  mutate(ncbi_retrieved = ifelse(PMCID %in% ncbi_pmcids_retrieved,
+                                 T,
+                                 F)) |>
+    mutate(empc_retrieved = ifelse(PMCID %in% euro_pmcids,
+                                 T,
+                                 F)) |>
+  group_by(YEAR) |>
+  summarise(n = n(),
+            n_ncbi_retrieved = sum(ncbi_retrieved, na.rm = TRUE),
+            n_empc_retrieved = sum(empc_retrieved, na.rm = TRUE),
+            perc_ncbi_retrieved = round(100 * n_ncbi_retrieved / n, digits = 2),
+            perc_empc_retrieved = round(100 * n_empc_retrieved / n, digits = 2)
+            ) 
+
+ncbi_retrieved_stats |>
+  mutate(not_ret = n - n_empc_retrieved - n_ncbi_retrieved) |>
+  select(-perc_empc_retrieved, -perc_ncbi_retrieved, -n) |>
+  tidyr::pivot_longer(cols = c(n_empc_retrieved, n_ncbi_retrieved, not_ret),
+               names_to = "retrieved",
+               values_to = "n"
+               ) |>
+  mutate(retrieved = factor(retrieved,
+                                 levels = c("not_ret", "n_empc_retrieved", "n_ncbi_retrieved"),
+                                 labels = c("Not Retrieved", "EPMC Retrieved", "NCBI Retrieved")
+                                 )
+         ) |>
+  mutate(YEAR = as.Date(paste0(YEAR, "-01-01"))) |>
+  ggplot(aes(x = YEAR, y = n, fill = retrieved)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_date(date_labels = "%Y", date_breaks = "2 years") + 
+  labs(x = "Year of Publication", 
+       y = "Number of Papers") +
+  theme_bw() +
+  theme(legend.title = element_blank())
 
 ```
 
@@ -731,7 +827,10 @@ purrr::map2(springer_nature_links,
 
 source spacyr_venv/bin/activate
 
-auto-corpus -b NATURE_GENETICS -t "output/fulltexts/springer_nature" -f "output/fulltexts/springer_nature/html" -o XML
+auto-corpus -b NATURE_GENETICS \
+-t "output/fulltexts/springer_nature" \
+-f "output/fulltexts/springer_nature/html" \
+-o XML
 
 ```
 
@@ -755,10 +854,10 @@ length(list.files(here::here("output/fulltexts/springer_nature"),
 # drop PMIDs with that have been downloaded from springer nature, so we don't try to download them again from other publishers
 pmids_to_drop <- list.files(here::here("output/fulltexts/springer_nature"),
                   recursive = TRUE,
-             pattern = "\\.html$"
+             pattern = "\\.xml$"
 ) |> 
   basename() |>
-  stringr::str_remove_all("\\.html$")
+  stringr::str_remove_all("_bioc\\.xml$")
 
 doi_information <-
   doi_information |>
@@ -874,6 +973,72 @@ doi_information <-
 
 ## Download html full texts from publisher links
 
+### American Association for Cancer Research (doi: 10.1158)
+
+UCSF Library - "Other Use Restrictions (Public Note): TDM: Permitted (interpreted)"
+
+```{r aacr_full_texts}
+
+aacr_doi_patterns <- "10.1158"
+
+aacr_links <-
+  grep(aacr_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from AACR:")
+length(aacr_links)
+
+```
+
+```{bash convert_aacr_full_texts, results = 'hide'}
+
+source spacyr_venv/bin/activate
+
+python code/full_text_conversion/preprocess_aacr_html.py \
+--input output/fulltexts/aacr/html \
+--output output/fulltexts/aacr/html_ac_ready
+
+auto-corpus -b AACR \
+-t "output/fulltexts/aacr" \
+-f "output/fulltexts/aacr/html" -o XML
+
+```
+
+
+```{r aacr_full_texts_check}
+
+print("Number of downloaded full text files (html) from AACR")
+length(list.files(here::here("output/fulltexts/aacr"),
+                  recursive = TRUE,
+             pattern = "\\.html$"
+)
+)
+
+print("Number of converted full text files (xml) from AACR:")
+length(list.files(here::here("output/fulltexts/aacr"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+# drop PMIDs with that have been downloaded from AACR so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/aacr"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all("_bioc\\.xml$") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
+
+```
+
+
 ### Download full text American Journal of Cancer Research
 
 Published by e-Century, under policy: https://e-century.us/web/journal_author_info.php?journal=ajcr
@@ -882,21 +1047,37 @@ Published by e-Century, under policy: https://e-century.us/web/journal_author_in
 
 ```{r ajcr_full_texts}
 
-# pubmed ids: 34522458
-# download pdf
+print("Number of downloaded full text files (html) from AJCR")
+length(list.files(here::here("output/fulltexts/ajcr"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
 
 ``` 
+
+Convert PDF to xml using Grobid (https://grobid.readthedocs.io/en/latest/)
+
+```{bash convert_ajcr_pdf_to_xml, results = 'hide', eval = FALSE}
+
+# converted to xml using Grobid, saved to output/fulltexts/ajcr
+# grobid retrieved via docker image:
+
+docker run --rm --init --ulimit core=0 -p 8080:8070 grobid/grobid:0.9.1-crf
+
+# default options used
+
+```
 
 ```{r ajcr_full_texts_check}
 
 print("Number of downloaded full text files (pdf) from American Journal of Cancer Research:")
 length(list.files(here::here("output/fulltexts/ajcr"),
-                  pattern = "\\.pdf$"
+                  pattern = "\\.pdf$",
+                  recursive = TRUE
 )
 )
 
-# converted to xml using Grobid, saved to output/fulltexts/ajcr
-# grobid retrieved via: https://grobidorg-grobid.hf.space/
 print("Number of converted full text files (xml) from American Journal of Cancer Research:")
 
 length(list.files(here::here("output/fulltexts/ajcr"),
@@ -908,7 +1089,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/ajcr"),
                   pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
   unique()
 
 doi_information <-
@@ -966,7 +1147,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/asm"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
   unique()
 
 doi_information <-
@@ -1031,7 +1212,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/bmj"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all("_bioc\\.xml$") |>
   unique()
 
 doi_information <-
@@ -1097,7 +1278,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/cambridge"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all("_bioc\\.xml$") |>
   unique()
 
 doi_information <-
@@ -1150,52 +1331,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/ers"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
-  unique()
-
-doi_information <-
-  doi_information |>
-  filter(!PMID %in% pmids_to_drop)
-
-```
-
-### Download full text from eScholarship repository
-
-```{r escholarship_full_texts}
-
-# 39024449
-# https://doi.org/10.1126/science.adj1182  https://escholarship.org/content/qt53c9n629/qt53c9n629.pdf
-
-
-print("Number of papers potentially can get from eScholarship:")
-list.files(here::here("output/fulltexts/escholarship"),
-             pattern = "\\.pdf$"
-) |>
-  length()
-
-```
-
-```{r escholarship_full_texts_check}
-
-print("Number of downloaded full text files (pdf) from eScholarship:")
-length(list.files(here::here("output/fulltexts/escholarship"),
-                  pattern = "\\.pdf$"
-)
-)
-
-# converted to xml using Grobid, saved to output/fulltexts/escholarship
-print("Number of converted full text files (xml) from eScholarship:")
-length(list.files(here::here("output/fulltexts/escholarship"),
-                  pattern = "\\.xml$"
-)
-)
-
-# drop PMIDs with that have been downloaded from eScholarship, so we don't try to download them again from other publishers
-pmids_to_drop <- list.files(here::here("output/fulltexts/escholarship"),
-                  pattern = "\\.xml$"
-) |>
-  basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |> 
   unique()
 
 doi_information <-
@@ -1253,7 +1389,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/jama"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all("_bioc\\.xml$") |>
   unique()
 
 doi_information <-
@@ -1261,6 +1397,104 @@ doi_information <-
   filter(!PMID %in% pmids_to_drop)
 
 ```
+
+### J-STAGE: doi: 10.1248
+
+```{r jstage_full_texts}
+
+jstage_doi_patterns <- "10.1248|10.5551"
+
+jstage_links <-
+  grep(jstage_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from J-STAGE:")
+length(jstage_links)
+
+```
+
+```{r jstage_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from J-STAGE:")
+length(list.files(here::here("output/fulltexts/jstage"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+))
+
+print("Number of converted full text files (xml) from J-STAGE:")
+length(list.files(here::here("output/fulltexts/jstage"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+# drop PMIDs with that have been downloaded from J-STAGE, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/jstage"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
+
+
+
+```
+
+### Download HSF
+
+```{r hsf_full_texts}
+
+hsf_doi_patterns <- "10.1532/hsf"
+
+hsf_links <-
+  grep(hsf_doi_patterns,
+       doi_information$DOI,
+       value = TRUE)
+
+print("Number of papers potentially can get from HSF:")
+length(hsf_links)
+```
+
+```{r hsf_full_texts_check}
+
+print("Number of downloaded full text files (pdf) from HSF:")
+length(list.files(here::here("output/fulltexts/hsf"),
+                  recursive = TRUE,
+             pattern = "\\.pdf$"
+)
+)
+
+# converted to xml using Grobid, saved to output/fulltexts/hsf
+print("Number of converted full text files (xml) from HSF:")
+length(list.files(here::here("output/fulltexts/hsf"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+)
+)
+
+# drop PMIDs with that have been downloaded from hsf, so we don't try to download them again from other publishers
+pmids_to_drop <- list.files(here::here("output/fulltexts/hsf"),
+                  recursive = TRUE,
+             pattern = "\\.xml$"
+) |>
+  basename() |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
+  unique()
+
+doi_information <-
+  doi_information |>
+  filter(!PMID %in% pmids_to_drop)
+
+```
+
+
 
 ### Download full text from 'In vivo'
 
@@ -1276,6 +1510,7 @@ invivo_links <-
 
 print("Number of papers potentially can get from In vivo:")
 length(invivo_links)
+
 ```
 
 ```{r invivo_full_texts_check}
@@ -1301,7 +1536,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/in_vivo"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
   unique()
 
 doi_information <-
@@ -1360,7 +1595,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/karger"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
   unique()
 
 doi_information <-
@@ -1373,7 +1608,7 @@ doi_information <-
 
 ```{r medica_full_texts}
 
-medica_doi_patterns <- "10.1159|10.5603"
+medica_doi_patterns <- "10.5603"
 
 medica_links <-
   grep(medica_doi_patterns,
@@ -1410,7 +1645,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/medica"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
   unique()
 
 doi_information <- 
@@ -1428,15 +1663,7 @@ From UCSF Library, license allows text-mining (for Ovid Lippincott Williams & Wi
 
 ```{r ovid_full_texts}
 
-ovid_doi_patterns <- "10.1097/fpc|10.1212|10.1681|10.1161/circgen|10.1161/strokeaha"
-
-# 24001895
-# https://doi.org/10.1161/circgen.119.002670
-
-# 29748315 
-# https://doi.org/10.1161/circgen.117.001992
-
-# https://doi.org/10.1227/neu.0000000000002082 ... should work but error atm
+ovid_doi_patterns <- "10.1097/fpc|10.1097/hep|10.1212|10.1681|10.1161/circgen|10.1161/strokeaha"
 
 
 ovid_links <-
@@ -1458,12 +1685,20 @@ length(list.files(here::here("output/fulltexts/ovid"),
 )
 )
 
-# converted to xml using Grobid, saved to output/fulltexts/ovid
+# ? others that maybe should be downloadable and text minable PDFs - but aren't findable on UCSF Library
+# 25583994
+# https://doi.org/10.1161/circgenetics.114.000663
+
+# 32469254
+# https://doi.org/10.1161/circgen.119.002670
+
 print("Number of converted full text files (xml) from Ovid Lippincott Williams & Wilkins Total Access Collection:")
 length(list.files(here::here("output/fulltexts/ovid"),
                   recursive = TRUE,
              pattern = "\\.xml$"
-))
+)
+)
+
 
 # drop PMIDs with that have been downloaded from Ovid Lippincott Williams & Wilkins Total Access Collection, so we don't try to download them again from other publishers
 pmids_to_drop <- list.files(here::here("output/fulltexts/ovid"),
@@ -1471,7 +1706,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/ovid"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all(".pdf.tei.xml") |>
   unique()
 
 doi_information <- 
@@ -1489,8 +1724,10 @@ Oxford Academic TDM policy: https://academic.oup.com/pages/purchasing/rights-and
 
 ```{r oxford_full_texts_potential}
 
+oxford_doi_patterns <- "10.1093|10.1136/amiajnl|10.1210|10.1513|10.1164|10.1165"
+
 # go doi pages, and download html manually 
-oxford_dois <- grep("10.1093|10.1136/amiajnl|10.1210|10.1513|10.1164|10.1165", 
+oxford_dois <- grep(oxford_doi_patterns,
                    doi_information$DOI, 
                    value = TRUE)
 
@@ -1563,7 +1800,7 @@ TDM policy / information: https://taylorandfrancis.com/our-policies/textanddatam
 
 - " If you or your institution subscribes to content from Taylor & Francis you can carry out TDM activities on this content, as well as open access content, without any additional charge, provided this is on a non-commercial basis. "
 
-```{r download_taylor_francis_full_texts, eval = F}
+```{r download_taylor_francis_full_texts}
 
 taylor_francis_dois <- grep("10.1080|10.2217|10.3109", 
                    doi_information$DOI,
@@ -1608,7 +1845,7 @@ pmids_to_drop <- list.files(here::here("output/fulltexts/taylor_and_francis"),
              pattern = "\\.xml$"
 ) |>
   basename() |>
-  stringr::str_remove_all("\\.xml$") |>
+  stringr::str_remove_all("_bioc\\.xml$") |>
   unique()
 
 doi_information <-
@@ -1617,33 +1854,7 @@ doi_information <-
 
 ```
 
-
 # To get/check text-mining license info for:
-
-### American Association for Cancer Research, doi: 10.1158
-
-? UCSF Library - "Other Use Restrictions (Public Note): TDM: Permitted (interpreted)"
-
-```{r aacr_full_texts}
-
-aacr_doi_patterns <- "10.1158"
-
-aacr_links <-
-  grep(aacr_doi_patterns,
-       doi_information$DOI,
-       value = TRUE)
-
-print("Number of papers potentially can get from AACR:")
-length(aacr_links)
-
-```
-
-10.1158/0008-5472.can-10-1493
-10.1158/1078-0432.ccr-10-2394
-10.1158/1078-0432.ccr-13-2835
-10.1158/1078-0432.ccr-17-2537
-
-
 
 ### American Physiological Society, doi: 10.1152
 
@@ -1711,27 +1922,11 @@ length(asco_links)
 
 ```
 
-### J-STAGE: doi: 10.1248
-
-```{r jstage_full_texts}
-
-jstage_doi_patterns <- "10.1248"
-
-jstage_links <-
-  grep(jstage_doi_patterns,
-       doi_information$DOI,
-       value = TRUE)
-
-print("Number of papers potentially can get from J-STAGE:")
-length(jstage_links)
-
-```
-
 ### (ADA) Diabetes, doi: 10.2337
 
 - https://diabetesjournals.org/journals/pages/ada-journal-policies
-- ? Seems likely text-mining may be allowed, 
-https://diabetesjournals.org/journals/pages/license
+- ? Seems likely our text-mining approach will be allowed: https://diabetesjournals.org/journals/pages/license
+- https://diabetesjournals.org/journals/pages/ai_content_licensing_policy_and_terms
 
 License for Non-Commercial Reuse, Version 1.0
 Unless otherwise indicated, the American Diabetes Association (ADA) holds copyright on all content published in ADA journals, unless otherwise noted. Individual readers may use the content as long as the work is properly cited and linked to the version of record, the use is educational and not for profit, and the work is not altered. ADA permission is required to post articles on third-party websites (unless otherwise specified below under “Article sharing and access”) or to include articles in educational materials that are sold to students or used in courses for which tuition or other fees are charged.
@@ -1758,16 +1953,22 @@ length(diabetes_links)
 
 ```
 
-## Internal non-commerical research purposes
+### Permission only for internal non-commercial research purposes (not useful for this project)
 
-### PNAS:
+i. PNAS:
 - https://www.pnas.org/author-center/publication-charges
-Text and data mining are permitted for noncommercial institutions with an active institutional site license to PNAS for internal noncommercial research purposes.
+Text and data mining are permitted for non-commercial institutions with an active institutional site license to PNAS for internal noncommercial research purposes.
 
-### AAAS / Science: 
+ii. AAAS / Science: 
 - https://www.science.org/content/page/institutional-license-agreement
 "Non-commercial Licensees' Authorized Users may use the Licensed Materials (excluding any Complimentary Resources) for text and data mining, for purely internal non-commercial research purposes, for as long as the Licensee maintains a subscription to the Licensed Materials, subject to the terms and conditions in ANNEX A"
 
+```{r}
+
+doi_information |> 
+  filter(grepl("science|pnas", DOI))
+
+```
 
 # Total number of downloaded full texts
 
