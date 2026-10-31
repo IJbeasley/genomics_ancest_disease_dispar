@@ -29,6 +29,7 @@ source spacyr_venv/bin/activate
 
 # use bash script to extract methods sections from all full text xmls, and save to output/fulltexts/methods
 # don't apply to archived directory
+
 for dir in output/fulltexts/*/; do
   [[ "$dir" == "output/fulltexts/archived/" ]] && continue
   
@@ -54,30 +55,31 @@ awk -F',' 'NR > 1 && $2 ~ /^PMC/ {
 
 head /tmp/pmc_to_pmid.txt
 
+
 for f in output/methods/PMC*_methods*.txt; do
     filename=$(basename "$f")
 
-    pmcid="${filename%_methods.txt}"
-    pmcid="${pmcid%_methods_main.txt}"
-    pmid=$(awk -v p="$pmcid" '$1 == p {print $2}' /tmp/pmc_to_pmid.txt)
-
-    if [[ -n "$pmid" ]]; then
-        # Preserve which suffix the original file had
-        if [[ "$filename" == *_methods_main.txt ]]; then
-            new_file="output/methods/${pmid}_methods_main.txt"
-        else
-            new_file="output/methods/${pmid}_methods.txt"
-        fi
-        
-        # don't rename the file if a file with the same name already exists
-        if [[ -e "$new_file" ]]; then
-            echo "SKIPPING — destination exists: $new_file"
-        else
-            mv -v "$f" "$new_file"
-        fi
-            
+    if [[ "$filename" == *_methods_main.txt ]]; then
+        pmcid="${filename%_methods_main.txt}"
+        suffix="_methods_main.txt"
     else
+        pmcid="${filename%_methods.txt}"
+        suffix="_methods.txt"
+    fi
+
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' /tmp/pmc_to_pmid.txt)
+
+    if [[ -z "$pmid" ]]; then
         echo "No PMID mapping: $f"
+        continue
+    fi
+
+    new_file="output/methods/${pmid}${suffix}"
+
+    if [[ -e "$new_file" ]]; then
+        echo "SKIPPING — destination exists: $new_file"
+    else
+        mv -- "$f" "$new_file" || echo "FAILED: $f -> $new_file"
     fi
 done
 
@@ -152,29 +154,30 @@ shopt -s nullglob
 for f in output/results/PMC*_results*.txt; do
     filename=$(basename "$f")
 
-    pmcid="${filename%_results.txt}"
-    pmcid="${pmcid%_results_main.txt}"
-    pmid=$(awk -v p="$pmcid" '$1 == p {print $2}' /tmp/pmc_to_pmid.txt)
-
-    if [[ -n "$pmid" ]]; then
-        # Preserve which suffix the original file had
-        if [[ "$filename" == *_results_main.txt ]]; then
-            new_file="output/results/${pmid}_results_main.txt"
-        else
-            new_file="output/results/${pmid}_results.txt"
-        fi
-        
-        # don't rename the file if a file with the same name already exists
-        if [[ -e "$new_file" ]]; then
-            echo "SKIPPING — destination exists: $new_file"
-        else
-            mv -v "$f" "$new_file"
-        fi 
-        
+    if [[ "$filename" == *_results_main.txt ]]; then
+        pmcid="${filename%_results_main.txt}"
+        suffix="_results_main.txt"
     else
+        pmcid="${filename%_results.txt}"
+        suffix="_results.txt"
+    fi
+
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' /tmp/pmc_to_pmid.txt)
+
+    if [[ -z "$pmid" ]]; then
         echo "No PMID mapping: $f"
+        continue
+    fi
+
+    new_file="output/results/${pmid}${suffix}"
+
+    if [[ -e "$new_file" ]]; then
+        echo "SKIPPING — destination exists: $new_file"
+    else
+        mv -- "$f" "$new_file" || echo "FAILED: $f -> $new_file"
     fi
 done
+
 
 ```
 
@@ -233,31 +236,32 @@ shopt -s nullglob
 for f in output/intros/PMC*_intro*.txt; do
     filename=$(basename "$f")
 
-    pmcid="${filename%_intro.txt}"
-    pmcid="${pmcid%_intro_main.txt}"
-    pmcid="${pmcid%_intro_lead.txt}"
-    pmid=$(awk -v p="$pmcid" '$1 == p {print $2}' /tmp/pmc_to_pmid.txt)
-
-    if [[ -n "$pmid" ]]; then
-        # Preserve which suffix the original file had
-        if [[ "$filename" == *_intro_main.txt ]]; then
-            new_file="output/intros/${pmid}_intro_main.txt"
-        elif [[ "$filename" == *_intro_lead.txt ]]; then
-            new_file="output/intros/${pmid}_intro_lead.txt"
-        else
-            new_file="output/intros/${pmid}_intro.txt"
-        fi
-
-        # don't rename the file if a file with the same name already exists
-        if [[ -e "$new_file" ]]; then
-            echo "SKIPPING — destination exists: $new_file"
-        else
-            mv -v "$f" "$new_file"
+    if [[ "$filename" == *_intro_main.txt ]]; then
+        pmcid="${filename%_intro_main.txt}"
+        suffix="_intro_main.txt"
         
-        fi
-            
+    elif [[ "$filename" == *_intro_lead.txt ]]; then
+        pmcid="${filename%_intro_lead.txt}"
+        suffix="_intro_lead.txt"
+        
     else
+        pmcid="${filename%_intro.txt}"
+        suffix="_intro.txt"
+    fi
+
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' /tmp/pmc_to_pmid.txt)
+
+    if [[ -z "$pmid" ]]; then
         echo "No PMID mapping: $f"
+        continue
+    fi
+
+    new_file="output/intros/${pmid}${suffix}"
+
+    if [[ -e "$new_file" ]]; then
+        echo "SKIPPING — destination exists: $new_file"
+    else
+        mv -- "$f" "$new_file" || echo "FAILED: $f -> $new_file"
     fi
 done
 
