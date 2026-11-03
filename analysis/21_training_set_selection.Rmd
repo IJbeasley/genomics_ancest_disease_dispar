@@ -359,18 +359,41 @@ gwas_study_info <-
   gwas_study_info |>
   filter(cause != "")
 
+unspecified_stroke_papers <-
+gwas_study_info |>
+  filter(cause == "Stroke") |>
+  pull(PUBMED_ID) |>
+  unique()
+
+specified_stroke_papers <-
+gwas_study_info |>
+  filter(PUBMED_ID %in% unspecified_stroke_papers) |>
+  filter(cause != "Stroke") |>
+  filter(grepl("stroke|hemorrhage", cause, ignore.case = T)) |>
+  pull(PUBMED_ID)
+
+unspecified_stroke_papers[!unspecified_stroke_papers %in% specified_stroke_papers]
+
+gwas_study_info  <-
+gwas_study_info |>
+  filter(cause != "Stroke") 
+
+gwas_study_info |> filter(lancet_condition == "") |> distinct(cause)
+
 gwas_study_info  <-
   gwas_study_info |>
-  filter(cause !=  "Stroke") |>
-  mutate(lancet_condition = ifelse(lancet_condition == "" & 
-                                     grepl("Chronic kidney disease", cause, ignore.case = T),
-                                     "Diabetes",
-                                   lancet_condition)) |> 
+  mutate(lancet_condition = 
+          case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
+                    lancet_condition == "" & grepl("Cirrhosis", cause, ignore.case = T) ~  "NCDs strongly linked to infections",
+                    lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
+                    TRUE ~ lancet_condition)) |> 
   distinct(PUBMED_ID, 
            YEAR, 
            cause, 
            lancet_condition,  
            cause_category)
+
+gwas_study_info  |> pull(PUBMED_ID) |> unique() |> length()
 
 ```
 
@@ -565,7 +588,7 @@ gwas_study_info  |>
     grepl("cancer", cause, ignore.case = T) ~ "Cancer",
     grepl("diabetes|chronic kidney disease", cause, ignore.case = T) ~ "Diabetes/CKD",
     grepl("chronic obstructive pulmonary disease", cause, ignore.case = T) ~ "COPD",
-    grepl("heart|stroke|hemorrhage", cause, ignore.case = T) ~ "Stroke",
+    grepl("heart|stroke|hemorrhage", cause, ignore.case = T) ~ "Cardiovascular/Cerebrovascular",
     grepl("cirrhosis", cause, ignore.case = T) ~ "Liver Cirrhosis",
 TRUE ~ cause
   ))
@@ -589,12 +612,14 @@ UpSet(gwas_cond_comb_mat,
       )
 
 
-gwas_study_info <-
-  gwas_study_info |>
-  mutate(lancet_condition = case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
-                                      lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
-                                      lancet_condition == ""  & grepl("Cirrhosis", cause, ignore.case = T) ~ "NCDs strongly linked to infections",
-                                      TRUE ~ lancet_condition))
+# gwas_study_info <-
+#   gwas_study_info |>
+#   mutate(lancet_condition = case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
+#                                       lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
+#                                       lancet_condition == ""  & grepl("Cirrhosis", cause, ignore.case = T) ~ "NCDs strongly linked to infections",
+#                                       lancet_condition == "" & grepl("Stoke", cause, ignore.case = T) ~ "Stoker",
+#                                       TRUE ~ lancet_condition))
+
 
 
 gwas_cond_comb_mat = gwas_study_info |>
@@ -612,6 +637,30 @@ UpSet(gwas_cond_comb_mat,
                          decreasing = TRUE)
       )
 
+gwas_study_info <-
+  gwas_study_info |>
+  mutate(lancet_condition_group = ifelse(grepl("stroke|cardiovascular|haem", lancet_condition, ignore.case = T), 
+                                       "Cardiovascular/Cerebrovascular", 
+                                       lancet_condition))
+
+
+gwas_cond_comb_mat = gwas_study_info |>
+  mutate(study = 1) |>
+  distinct(PUBMED_ID, study, lancet_condition_group) |>
+  tidyr::pivot_wider(names_from = lancet_condition_group, 
+                     values_from = study, 
+                     values_fill = 0)
+
+gwas_cond_comb_mat <- make_comb_mat(gwas_cond_comb_mat)
+
+# create an upset plot
+UpSet(gwas_cond_comb_mat,
+      comb_order = order(comb_size(gwas_cond_comb_mat), 
+                         decreasing = TRUE)
+      )
+
+
+
 
 ```
 
@@ -622,9 +671,14 @@ gwas_study_info_grouped <- gwas_study_info |>
   group_by(PUBMED_ID) |>
   summarise(
     YEAR = paste(unique(YEAR), collapse = "|"),
-    cause_group = paste(sort(unique(cause_group)), collapse = " & ")
+    cause_group = paste(sort(unique(cause_group)), collapse = " & "),
+    lancet_condition_group = paste(sort(unique(lancet_condition_group)), collapse = " & ")
   ) |>
   mutate(lancet_condition_group = case_when(
+    str_detect(pattern = "&", lancet_condition_group) ~ "Multiple",
+    TRUE ~ lancet_condition_group
+  )) |>
+  mutate(cause_group = case_when(
     str_detect(pattern = "&", cause_group) ~ "Multiple",
     TRUE ~ cause_group
   ))
@@ -852,7 +906,7 @@ by = "PUBMED_ID")
 
 journal_names <-
 journal_names |>
-  mutate(journal_grp = 
+  mutate(journal_group = 
            case_when(
              grepl("Nephrol|Endocrinol|Diabet|Kidney", JOURNAL, ignore.case = T) ~ "Diabetes/Nephrology",
              grepl("Cancer|Onco|Carcino", JOURNAL, ignore.case = T) ~ "Cancer",
@@ -887,7 +941,7 @@ journal_names |>
 
 # journal_names <-
 # journal_names |>
-#   mutate(publisher_grp  = 
+#   mutate(publisher_group  = 
 #            case_when(
 #              grepl("Nature|Nat", JOURNAL, ignore.case = T) ~ "Nature",
 #              grepl("Science|Sci", JOURNAL, ignore.case = T) ~ "Science",
@@ -928,20 +982,20 @@ journal_names <-
 
 journal_names <-
   journal_names |>
-    mutate(publisher_grp = case_when(
+    mutate(publisher_group = case_when(
       grepl("Springer", publisher) ~ "Springer Nature",
+      grepl("Nature Portfolio", publisher) ~ "Springer Nature",
       publisher == "University of Oxford" & JOURNAL == "Gigascience" ~ "Oxford University Press",
       # grepl("Society|Association|Korea", publisher) ~ "Society Pulisher",
       TRUE ~ publisher
     )) |>
-    mutate(publisher_grp = forcats::fct_lump_min(publisher_grp, 
+    mutate(publisher_group = forcats::fct_lump_min(publisher_group, 
                                                  min = 10, 
                                                  other_level = "Other"))
 
 
 
 # country code 
-
 journal_names <-
   journal_names |> 
   mutate(country_code = case_when(
@@ -956,13 +1010,13 @@ journal_names <-
 
 journal_names <-
   journal_names |> 
-  mutate(country_code_grp = case_when(
+  mutate(country_code_group = case_when(
     country_code %in% c("US", "CA") ~ "North America",
     country_code %in% c("AU", "NZ", "GB") ~ "GB/Aus/NZ",
     country_code %in% c("PL", "BG", "GR", "IT", "DK") ~ "Other Europe",
     TRUE ~ country_code
   )) |>
-    mutate(publisher_grp = forcats::fct_lump_min(publisher_grp, 
+    mutate(publisher_group = forcats::fct_lump_min(publisher_group, 
                                                  min = 5, 
                                                  other_level = "Other"))
 
@@ -1172,7 +1226,7 @@ abstracts_pca_plot_table |>
   x = PC1, 
   y = PC2, 
   journal = JOURNAL,
-  color = publisher_grp)) +
+  color = publisher_group)) +
   geom_point(size = 0.8) +
   scale_color_brewer(palette = "Paired") + 
   labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
@@ -1189,7 +1243,7 @@ abstracts_pca_plot_table |>
   ggplot(aes(
   x = PC2, 
   y = PC3, 
-  color = publisher_grp)) +
+  color = publisher_group)) +
   geom_point(size = 0.8) +
   scale_color_brewer(palette = "Set3") + 
   labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
@@ -1254,7 +1308,7 @@ abstracts_pca_plot_table |>
   ggplot(aes(
   x = PC1, 
   y = PC2, 
-  color = journal_grp)) +
+  color = journal_group)) +
   geom_point(size = 0.8) +
   #scale_color_brewer(palette = "Dark2") + 
   labs(x = paste0("PC1 (", round(100 * abstracts_var_exp[1], digits = 1),
@@ -1272,7 +1326,7 @@ abstracts_pca_plot_table |>
   x = PC2, 
   y = PC3, 
   JOURNAL = JOURNAL,
-  color = journal_grp)) +
+  color = journal_group)) +
   geom_point(size = 0.8) +
   labs(x = paste0("PC2 (", round(100 * abstracts_var_exp[2], digits = 1),
                   "%)"),
@@ -1501,8 +1555,6 @@ Marginal R² much bigger than unique R² means a factor overlaps with others
 
 ```{r embedding_covariates}
 
-library(vegan)
-
 paper_covariates <- 
   full_join(
   journal_names |>
@@ -1510,24 +1562,26 @@ paper_covariates <-
            YEAR,
            is_oa,
            publisher,
-           publisher_grp,
-           journal_grp,
+           publisher_group,
+           journal = JOURNAL,
+           journal_group,
            h_index,
            two_yr_citedness,
            apc_usd),
   gwas_study_info_grouped |>
-  distinct(PUBMED_ID, lancet_condition_group),
+  distinct(PUBMED_ID, 
+           lancet_condition_group,
+           cause_group),
   by = "PUBMED_ID")
 
 paper_covariates <- paper_covariates |>
   mutate(is_oa = factor(is_oa, levels = c(FALSE, TRUE), 
                         labels = c("Not OA", "OA")),
          lancet_condition_group = factor(lancet_condition_group),
-         journal_grp = factor(journal_grp),
+         journal_group = factor(journal_group),
          publisher = factor(publisher),
-         publisher_grp = factor(publisher_grp)
+         publisher_group = factor(publisher_group)
 )
-
 
 ```
 
@@ -1555,7 +1609,6 @@ gwas_ancest_info <-
   mutate(STAGE = "initial")
 
 source(here::here("code/pop_desc_processing/plot_gwas_ancest_comp.R"))
-
 
 grouped_ancest = vector()
 broad_ancest_cat = unique(gwas_ancest_info$BROAD_ANCESTRAL_CATEGORY)
@@ -1624,6 +1677,29 @@ paper_ancestry |>
              TRUE ~ ancestry_group)
   )
 
+paper_ancestry <-
+paper_ancestry |>
+  mutate(percent_euro_group = 
+           case_when(
+             grepl("Multiple", ancestry_group) ~ ancestry_group,
+             ancestry_group == "European" ~ "Exclusively European",
+             ancestry_group == "Not reported" ~ "Not reported",
+             TRUE ~ "Exclusively Non-European"
+           ))
+
+
+paper_ancestry <-
+paper_ancestry |>
+  mutate(ancestry_group = 
+           case_when(
+             ancestry_group == "Other admixed ancestry" ~ "Other",
+             ancestry_group == "Oceanic" ~ "Other",
+             ancestry_group == "Middle Eastern" ~ "Other",
+             grepl("Multiple", ancestry_group) ~ "Multiple",
+             TRUE ~ ancestry_group
+           ))
+
+
 paper_covariates <-
 left_join(
   paper_covariates,
@@ -1631,8 +1707,8 @@ left_join(
   by = "PUBMED_ID"
 )
 
-```
 
+```
 
 #### Add text source information to covariates 
 
@@ -1702,7 +1778,7 @@ paper_covariates <-
 
 paper_covariates <-
   paper_covariates |>
-  mutate(fulltext_source_grp = 
+  mutate(fulltext_source_group = 
            case_when(fulltext_file_type == "PDF (TEI)" ~ "Other Publisher (PDF)",
                      grepl("oxford", fulltext_source) ~ "Oxford (HTML)",
                      fulltext_file_type == "BioC" ~ "Other Publisher (HTML)",
@@ -1717,7 +1793,7 @@ paper_covariates <-
 
 paper_covariates <- 
   paper_covariates |>
-  mutate(fulltext_source_grp = factor(fulltext_source_grp,
+  mutate(fulltext_source_group = factor(fulltext_source_group,
                                       levels = c("Europe Pmc",
                                                  "Ncbi Cloud",
                                                  "Elsevier",
@@ -1766,9 +1842,56 @@ results_text_source <-
                                       
 ``` 
 
-#### Add meta-analysis flag to covariates
+
+##### Plot: Text source over time
 
 ```{r}
+
+pdf(here::here("figures/paper_fulltext_source_over_time.pdf"),
+    width = 14, 
+    height = 9
+)
+
+# how correlated are year and text source?
+paper_covariates |>
+  mutate(fulltext_source_group = forcats::fct_recode(
+    fulltext_source_group,
+    "Europe PMC" = "Europe Pmc",
+    "NCBI AWS Cloud" = "Ncbi Cloud",
+  )) |>
+  mutate(YEAR = lubridate::ymd(YEAR, truncated = 2)) |>
+  ggplot(aes(x = YEAR, fill = fulltext_source_group)) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Paired") +
+  labs(x = "Publication year", 
+       y = "Number of Papers", 
+       fill = "Full-text source") +
+  scale_x_date(date_labels = "%Y", date_breaks = "4 years") + 
+  theme_bw() + 
+      theme(
+    axis.text.x  = element_text(size = 25),  
+    axis.text.y  = element_text(size = 25), 
+    axis.title.x = element_text(size = 25), 
+    # plot.title = element_text(size = 35,
+    #                           hjust = -0.1,
+    #                           margin = margin(b = 20)),
+    axis.title.y = element_text(size = 25), 
+    strip.text   = element_text(size = 25),  
+    legend.title = element_text(size = 25), 
+    legend.text  = element_text(size = 25),
+    legend.box.margin = margin(r = -5),
+    legend.justification = "bottom",
+    legend.location = "plot", 
+    legend.position = "left"
+    )
+
+dev.off()
+
+```
+
+#### Add meta-analysis flag to covariates
+
+```{r add_meta_analysis_flag}
 
 # ---- Meta-analysis status (grep abstract + methods text) ----
 # Same terms as code/testing_sampling_papers.R, but "METAL" (the software) is
@@ -1820,51 +1943,12 @@ paper_covariates <-
 
 ```
 
-```{r}
 
-pdf(here::here("figures/paper_fulltext_source_over_time.pdf"),
-    width = 14, 
-    height = 9
-)
-
-# how correlated are year and text source?
-paper_covariates |>
-  mutate(fulltext_source_grp = forcats::fct_recode(
-    fulltext_source_grp,
-    "Europe PMC" = "Europe Pmc",
-    "NCBI AWS Cloud" = "Ncbi Cloud",
-  )) |>
-  mutate(YEAR = lubridate::ymd(YEAR, truncated = 2)) |>
-  ggplot(aes(x = YEAR, fill = fulltext_source_grp)) +
-  geom_bar() +
-  scale_fill_brewer(palette = "Paired") +
-  labs(x = "Publication year", 
-       y = "Number of Papers", 
-       fill = "Full-text source") +
-  scale_x_date(date_labels = "%Y", date_breaks = "4 years") + 
-  theme_bw() + 
-      theme(
-    axis.text.x  = element_text(size = 25),  
-    axis.text.y  = element_text(size = 25), 
-    axis.title.x = element_text(size = 25), 
-    # plot.title = element_text(size = 35,
-    #                           hjust = -0.1,
-    #                           margin = margin(b = 20)),
-    axis.title.y = element_text(size = 25), 
-    strip.text   = element_text(size = 25),  
-    legend.title = element_text(size = 25), 
-    legend.text  = element_text(size = 25),
-    legend.box.margin = margin(r = -5),
-    legend.justification = "bottom",
-    legend.location = "plot", 
-    legend.position = "left"
-    )
-
-dev.off()
-
-```
+### Functions to investigate what drives variation in the embeddings
 
 ```{r embedding_variation_functions}
+
+library(vegan)
 
 # Line up an embedding matrix (rownames = PUBMED_ID) with the covariates,
 # keeping only papers with every covariate and dropping unused factor levels
@@ -1906,7 +1990,7 @@ pc_r2_table <- function(emb,
   r2 <- function(y, terms) {
     summary(lm(reformulate(terms, response = "y"),
                data = mutate(covars,
-                             y = y)))$r.squared
+                             y = y)))$adj.r.squared
   }
   
   purrr::map_dfr(seq_len(n_pcs), function(k) {
@@ -1928,9 +2012,17 @@ pc_r2_table <- function(emb,
 }
 
 plot_pc_r2 <- function(pc_r2, title) {
+  
+  shared_fill <- scale_fill_viridis_c(
+  limits = c(0, 0.5),
+  breaks = c(0, 0.1, 0.15, 0.25, 0.5),
+  oob = scales::squish
+)
+  
   pc_r2 |>
     tidyr::pivot_longer(c(marginal_R2, unique_R2),
-                        names_to = "type", values_to = "R2") |>
+                        names_to = "type", 
+                        values_to = "R2") |>
     mutate(type = recode(type,
                          marginal_R2 = "Marginal (factor alone)",
                          unique_R2   = "Unique (given other factors)"),
@@ -1939,8 +2031,18 @@ plot_pc_r2 <- function(pc_r2, title) {
                                               round(100 * PC_var_exp, 1), "%)")))) |>
     ggplot(aes(x = PC, y = factor, fill = R2)) +
     geom_tile() +
-    geom_text(aes(label = sprintf("%.2f", R2)), size = 2.5) +
-    scale_fill_viridis_c(limits = c(0, NA)) +
+    geom_text(
+  aes(label = sprintf("%.2f", R2), colour = R2 > 0.25),
+  size = 2.5,
+  show.legend = FALSE
+) +
+scale_colour_manual(
+  values = c("TRUE" = "black", "FALSE" = "white"),
+  guide = "none"
+) +
+    # geom_text(aes(label = sprintf("%.2f", R2)), size = 2.5) +
+    # scale_fill_viridis_c(limits = c(0, NA)) +
+    shared_fill + 
     facet_wrap(~type, ncol = 1) +
     labs(x = NULL, y = NULL, fill = "R²", title = title) +
     theme_bw() +
@@ -1962,12 +2064,13 @@ summarise_pc_r2 <- function(pc_r2) {
 # PERMANOVA on cosine distance between papers
 # (rows scaled to unit length, so Euclidean distance is monotone in cosine distance)
 run_permanova <- function(emb, 
-                          covars, 
-                          permutations = 100) {
+                          covars,
+                          permutations = 1000) {
   
   emb_unit <- emb / sqrt(rowSums(emb^2))
   d <- dist(emb_unit)
-
+  
+  covariate_terms <- colnames(covars)[colnames(covars) != "PUBMED_ID"]
   full_formula <- reformulate(unname(covariate_terms), response = "d")
 
   # each factor on its own
@@ -2022,6 +2125,124 @@ run_permanova <- function(emb,
   )
 }
 
+run_compare_plot_r2 <- function(abstract_embeddings,
+                           methods_embeddings,
+                           results_embeddings,
+                           paper_covariates,
+                           covariate_terms,
+                           n_pcs = 10) {
+  
+  abstract_data <- align_embeddings(abstract_embeddings, 
+                                   paper_covariates,
+                                   covariate_terms = covariate_terms)
+  
+  abstract_pc_r2 <- pc_r2_table(abstract_data$emb, 
+                                abstract_data$covars,
+                                n_pcs = n_pcs,
+                                covariate_terms = covariate_terms)
+  
+  print(
+  plot_pc_r2(abstract_pc_r2, 
+             paste0("Abstract embeddings: R² of each factor on the top ",
+                    n_pcs,
+                    " PCs"))
+  )
+  
+  print(summarise_pc_r2(abstract_pc_r2))
+  
+  methods_data <- align_embeddings(methods_embeddings, 
+                                   paper_covariates,
+                                   covariate_terms = covariate_terms)
+  
+  methods_pc_r2 <- pc_r2_table(methods_data$emb, 
+                                methods_data$covars,
+                                n_pcs = n_pcs,
+                                covariate_terms = covariate_terms)
+  
+  print(
+  plot_pc_r2(methods_pc_r2, 
+             paste0("Methods embeddings: R² of each factor on the top 1",
+                    n_pcs,
+                    " PCs")
+             )
+  )
+  
+  print(summarise_pc_r2(methods_pc_r2))
+  
+  results_data <- align_embeddings(results_embeddings, 
+                                   paper_covariates,
+                                   covariate_terms = covariate_terms)
+  
+  results_pc_r2 <- pc_r2_table(results_data$emb, 
+                                results_data$covars,
+                                n_pcs = n_pcs,
+                                covariate_terms = covariate_terms)
+  
+  print(
+  plot_pc_r2(results_pc_r2,
+             paste0("Results embeddings: R² of each factor on the top 1",
+                    n_pcs,
+                    " PCs")
+             )
+  )
+  
+  print(summarise_pc_r2(results_pc_r2))
+  
+}
+
+run_compare_permanova <- function(abstract_embeddings,
+                                 methods_embeddings,
+                                 results_embeddings,
+                                 paper_covariates,
+                                 covariate_terms,
+                                 permutations = 200,
+                                 return_tables = FALSE) {
+  
+  
+abstract_data <- align_embeddings(abstract_embeddings, 
+                                 paper_covariates,
+                                 covariate_terms = covariate_terms)
+
+abs_permanova <- run_permanova(abstract_data$emb, 
+                               abstract_data$covars,
+                               permutations = permutations)
+
+print("Abstracts PERMANOVA results:")
+print(abs_permanova$table)
+
+
+methods_data <- align_embeddings(methods_embeddings, 
+                                 paper_covariates,
+                                 covariate_terms = covariate_terms)
+
+methods_permanova <- run_permanova(methods_data$emb, 
+                                   methods_data$covars,
+                                   permutations = permutations)
+
+print("Methods PERMANOVA results:")
+print(methods_permanova$table)
+
+results_data <- align_embeddings(results_embeddings, 
+                                 paper_covariates,
+                                 covariate_terms = covariate_terms)
+
+results_permanova <- run_permanova(results_data$emb, 
+                                   results_data$covars,
+                                   permutations = permutations)
+
+print("Results PERMANOVA results:")
+print(results_permanova$table)
+
+if(return_tables) {
+  return(list(abstract = abs_permanova$table,
+              methods = methods_permanova$table,
+              results = results_permanova$table))
+
+}
+}
+
+
+
 # PERMANOVA can flag a factor because groups differ in spread rather than in
 # location; check that for the categorical factors
 check_dispersion <- function(d, 
@@ -2058,9 +2279,11 @@ check_dispersion <- function(d,
 
 ```
 
-### Abstracts
+### Selecting single, representative covariate among group
 
-```{r abstract_embedding_variation, cache = TRUE}
+#### Year vs grouped year
+
+```{r select_rep_year}
 
 paper_covariates <-
   paper_covariates |>
@@ -2075,148 +2298,362 @@ paper_covariates <-
            )
   ) 
 
-paper_covariates <-
-  paper_covariates |>
-  mutate(publisher_grp_2 = forcats::fct_lump_min(publisher_grp, 
-                                                 min = 20,
-                                                 other_level = "Other"))
-         
+# the full year covariate has 19 groups
+paper_covariates |> pull(YEAR) |> unique() |> length()
+
+# the grouped year covariate has 4 groups
+paper_covariates |> pull(pub_year_group) |> unique() |> length()
+
+# would be nicer to sample from the grouped year covariate,
+# but need to check that it still explains a similar amount of variation in the embeddings
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms = c("YEAR",
+                                        "pub_year_group"
+                                        )
+)
+
+# pub_year_group explains a similar amount of variation in the embeddings as YEAR, so we can use it for downstream analyses
+# drop the full YEAR covariate from the covariates data.frame to avoid collinearity in downstream analyses
+
+```
+
+#### Ancestry group vs percent European 
+
+```{r select_rep_ancestry}
+
+paper_covariates |> pull(ancestry_group) |> unique() |> length()
+
+paper_covariates |> pull(ancestry_group) |> unique()
+
+
+paper_covariates |> pull(percent_euro_group) |> unique() |> length()
+
+paper_covariates |> pull(percent_euro_group) |> unique()
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("ancestry_group",
+                                        "percent_euro_group",
+                                        "percent_euro"
+                                        )
+)
+
+# ancestry_group explains more variation, so we can use it for downstream analyses
+
+```
+
+#### Publisher group 
+
+```{r select_rep_publisher}
 
 paper_covariates <-
   paper_covariates |>
-  mutate(sample_ancestry_group = 
+  mutate(publisher_supergroup = forcats::fct_lump_min(publisher_group, 
+                                                      min = 20,
+                                                      other_level = "Other")
+         )
+
+
+paper_covariates |> pull(publisher) |> unique() |> length()
+paper_covariates |> pull(publisher) |> unique()
+
+paper_covariates |> pull(publisher_group) |> unique() |> length()
+paper_covariates |> pull(publisher_group) |> unique() 
+
+paper_covariates |> pull(publisher_supergroup) |> unique() |> length()
+paper_covariates |> pull(publisher_supergroup) |> unique() 
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("publisher",
+                                        "publisher_group",
+                                        "publisher_supergroup"
+                                        )
+)
+
+# publisher supergroup explains ~1/4 of the variation of publisher ... 
+# but publisher is way too granular to be useful for sampling training set
+# at this stage, keep publisher_supergroup - but let's consider if a different grouping 
+# would more accurately capture the variation in the embeddings (e.g. publisher group, or publisher supergroup)
+
+
+# ? possible part of reason publisher explains more variation is because it captures
+# some of the disease grouping (e.g. disease specific society publishers)
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("publisher",
+                                        "lancet_condition_group"
+                                        )
+)
+
+# do they independently explain variation in the embeddings?
+# yes, they appear to
+
+```
+
+#### Journal and Condition Information
+
+```{r select_rep_journal}
+
+paper_covariates |> pull(journal) |> unique() |> length()
+
+paper_covariates |> pull(journal_group) |> unique()
+paper_covariates |> pull(journal_group) |> unique() |> length()
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("journal",
+                                        "journal_group",
+                                        "h_index",
+                                        "two_yr_citedness",
+                                        "apc_usd",
+                                        "is_oa"
+                                        )
+)
+# similarly, journal explains much more variation than journal group,
+# but is too granular to be useful for sampling training set
+# at this stage, keep journal_group over journal
+# but possible future improvement:  consider if a different grouping 
+# would more accurately capture the variation 
+
+
+# journal group is correlated with PC2, PC3 and similar PCs to lancet_condition_group, 
+# do they independently explain variation in the embeddings?
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("journal_group",
+                                        "lancet_condition_group"
+                                        )
+)
+
+# most variation explained by journal group is also explained by lancet_condition_group, 
+# but lancet_condition_group explains more than journal group, so we can use lancet_condition_group for downstream analyses
+
+
+# two year citness is highly skewed, can we get the same information by grouping into quartiles?
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(log_two_year_citedness = log(two_yr_citedness + 1)) |>
+  mutate(two_yr_citedness_quartile = 
            case_when(
-             ancestry_group == "Other admixed ancestry" ~ "Other",
-             ancestry_group == "Oceanic" ~ "Other",
-             ancestry_group == "Middle Eastern" ~ "Other",
-             grepl("Multiple", ancestry_group) ~ "Multiple",
-             TRUE ~ ancestry_group
+             log_two_year_citedness < quantile(log_two_year_citedness, 0.25) ~ "Q1",
+             log_two_year_citedness < quantile(log_two_year_citedness, 0.5) ~ "Q2",
+             log_two_year_citedness < quantile(log_two_year_citedness, 0.75) ~ "Q3",
+             TRUE ~ "Q4"
            ))
 
-covariate_terms <- c(
-#  "DECADE",
-  "pub_year_group",
-  "lancet_condition_group",
 
-  # "h_index",
-  # "two_yr_citedness",
-  # "apc_usd",
-  # "is_oa",
-  "ancestry_group",
-  "sample_ancestry_group",
-  # "publisher"
-   "publisher_grp",
-  "publisher_grp_2"
-  
-  # "journal_grp",
-  # "fulltext_source_grp",
-  # "total_n",
-  # "percent_euro"
-  # "meta_analysis"
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("two_yr_citedness",
+                                        "two_yr_citedness_quartile"
+                                        )
 )
 
 
-set.seed(21)
+# two year citedness is correlated with PC1, similar to Year. 
+# do they independently explain variation in the embeddings?
 
-abs_data <- align_embeddings(abstract_embeddings, 
-                             paper_covariates,
-                             covariate_terms)
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("pub_year_group",
+                                        "two_yr_citedness_quartile"
+                                        )
+)
 
-print(paste("Abstracts with all covariates:", nrow(abs_data$emb)))
+# yes, they appear to be relatively independent, so we can keep both for downstream analyses
 
-abs_pc_r2 <- pc_r2_table(abs_data$emb, 
-                         abs_data$covars,
-                         covariate_terms = covariate_terms,
-                         n_pcs = 10)
-
-plot_pc_r2(abs_pc_r2, "Abstract embeddings: R² of each factor on the top 10 PCs")
-summarise_pc_r2(abs_pc_r2)
-
-abs_permanova <- run_permanova(abs_data$emb, abs_data$covars)
-abs_permanova$table
-print(paste("PERMANOVA R², all factors together:", 
-            round(abs_permanova$full_R2, 3))
-      )
-check_dispersion(abs_permanova$dist, abs_data$covars)
 
 ```
 
-For abstracts, "text source" describes the paper's full text (the abstract
-itself always comes from PubMed), so it mostly tracks open-access status and
-publication era rather than text formatting.
+#### Full text source
 
-### Methods
-
-```{r methods_embedding_variation, cache = TRUE}
+```{r select_rep_fulltext_source}
 
 
-methods_data <- align_embeddings(methods_embeddings, 
-                                 paper_covariates,
-                                 covariate_terms)
+paper_covariates |> pull(fulltext_source) |> unique() |> length()
 
-print(paste("Methods sections with all covariates:", nrow(methods_data$emb)))
+paper_covariates |> pull(fulltext_source_group) |> unique() |> length()
+paper_covariates |> pull(fulltext_source_group) |> unique() 
 
-methods_pc_r2 <- pc_r2_table(methods_data$emb,
-                             methods_data$covars,
-                             covariate_terms = covariate_terms)
+paper_covariates |> pull(fulltext_file_type) |> unique() |> length()
+paper_covariates |> pull(fulltext_file_type) |> unique()
 
-plot_pc_r2(methods_pc_r2, "Methods embeddings: R² of each factor on the top 10 PCs")
-summarise_pc_r2(methods_pc_r2)
+paper_covariates <-
+paper_covariates |>
+ mutate(test_fulltext_source_group = 
+          case_when(grepl("HTML", fulltext_source_group) ~ "HTML",
+                    TRUE ~ fulltext_file_type))
 
-methods_permanova <- run_permanova(methods_data$emb, methods_data$covars)
-methods_permanova$table
-print(paste("PERMANOVA R², all factors together:", 
-            round(methods_permanova$full_R2, 3))
-      )
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("fulltext_source",
+                                        "fulltext_source_group",
+                                        "fulltext_file_type"
+                                        )
+)
 
-methods_permanova$year_check
-check_dispersion(methods_permanova$dist, 
-                 methods_data$covars)
+
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =c("fulltext_source_group",
+                                        "fulltext_file_type"
+                                        )
+)
+
+# these factors don't seem have independent explanatory power, 
+# fulltext_source_group explains slightly more than fulltext_file_type,
+# but has many more levels than fulltext_file_type, so we can use fulltext_file_type for downstream analyses
+
 
 ```
 
-### Results 
 
-```{r}
-
-results_data <- align_embeddings(results_embeddings, 
-                                 paper_covariates,
-                                 covariate_terms)
-
-print(paste("Results sections with all covariates:", nrow(results_data$emb)))
+### Reducing the covariates to a representative set (from different groups)
 
 
-results_pc_r2 <- pc_r2_table(results_data$emb,
-                             results_data$covars,
-                             covariate_terms = covariate_terms)
+```{r reduce_covariates}
 
 
-plot_pc_r2(results_pc_r2, "Results embeddings: R² of each factor on the top 10 PCs")
-summarise_pc_r2(results_pc_r2)
+covariate_terms <- c(
+  "pub_year_group",
+  "ancestry_group",
+  "publisher_supergroup",
+  "two_yr_citedness_quartile",
+  "lancet_condition_group",
+  "fulltext_file_type",
+  "meta_analysis"
+)
 
-results_permanova <- run_permanova(results_data$emb, 
-                                   results_data$covars)
-results_permanova$table
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms = covariate_terms 
+)
 
-print(paste("PERMANOVA R², all factors together:", 
-            round(results_permanova$full_R2, 3))
-      )
+# fulltext_file_type explains no more than 1% of independent variance per PC, 
+# so exclude. 
+
+# similarly, publisher_supergroup explains no more than 2% of independent variance per PC (usually less than 1%), so exclude.
+
+covariate_terms <- c(
+  "pub_year_group",
+  "ancestry_group",
+  "two_yr_citedness_quartile",
+  "lancet_condition_group",
+  "meta_analysis"
+)
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms = covariate_terms 
+)
+
+
+# focusing on the major trends: top 5 PCs 
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms = covariate_terms,
+                     n_pcs = 5
+)
+
+# top 2 covariates: (unique_R2)
+# abstracts: lancet_condition_group, pub_year_group
+# methods: lancet_condition_group, ancestry_group 
+# results:  lancet_condition_group, ancestry_group
+
+covariate_terms <- c(
+  "pub_year_group",
+  "ancestry_group",
+  "two_yr_citedness_quartile",
+  "lancet_condition_group"
+)
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms = covariate_terms,
+                     n_pcs = 5
+)
+
+# two year citedness independently explains essentially zero variation in methods, but ~5% in abstracts (~3% in results)
+# it is the least independently explainatory of the remaining factors, so let's drop it
 
 ```
-## Summary
+
+## Summary - what covariates selected? 
 
 ```{r embedding_variation_summary}
 
+covariate_terms <- c(
+  "pub_year_group",
+  "ancestry_group",
+  "lancet_condition_group"
+)
+
+run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms = covariate_terms,
+                     n_pcs = 5
+)
+
+
+full_permanova_results <-
+run_compare_permanova(abstract_embeddings = abstract_embeddings,
+                     methods_embeddings = methods_embeddings,
+                     results_embeddings = results_embeddings,
+                     paper_covariates = paper_covariates,
+                     covariate_terms =covariate_terms,
+                     return_tables = TRUE,
+                     permutations = 300
+)
+
 bind_rows(
-  abs_permanova$table  |> mutate(text = "Abstracts"),
-  methods_permanova$table |> mutate(text = "Methods"),
-  results_permanova$table |> mutate(text = "Results")
+  full_permanova_results$abstract  |> mutate(text = "Abstracts"),
+  full_permanova_results$methods |> mutate(text = "Methods"),
+  full_permanova_results$results |> mutate(text = "Results")
 ) |>
   tidyr::pivot_longer(c(marginal_R2, unique_R2),
                       names_to = "type", values_to = "R2") |>
   mutate(type = recode(type,
                        marginal_R2 = "Marginal (factor alone)",
                        unique_R2   = "Unique (given other factors)")) |>
+  mutate(factor = recode(factor,
+                       pub_year_group = "Publication year (grouped)",
+                       ancestry_group = "Sample ancestry group",
+                       lancet_condition_group = "Disease category")) |>
   ggplot(aes(x = R2, y = reorder(factor, R2), fill = type)) +
   geom_col(position = "dodge") +
   scale_fill_brewer(palette = "Paired") +
@@ -2228,68 +2665,64 @@ bind_rows(
 ```
 
 
-# Create the training set
+# Create the training and validation sets
 
-```{r get_training_sample, eval = F}
+### Training set
+
+```{r get_training_sample}
 
 set.seed(500)
 
-paper_covariates |>
-  ggplot(aes(x = percent_euro)) + 
-  geom_histogram()
+paper_covariates  |>
+  select(PUBMED_ID,
+           all_of(covariate_terms)
+         ) |>
+  distinct() |>
+  group_by(lancet_condition_group,
+           ancestry_group,
+           pub_year_group) |>
+  summarise(n = n()) |>
+  nrow()
 
 training_sample =  paper_covariates |>
-  distinct(PUBMED_ID,
-           YEAR, 
-           publisher,
+  select(PUBMED_ID,
+           all_of(covariate_terms)
+         ) |>
+  distinct() 
+
+training_sample <-
+training_sample |>
+  group_by(lancet_condition_group,
            ancestry_group,
-           lancet_condition_group,
-         )
-
-cov <- coarsen_covariates(training_sample, publisher_min = 25)
-
-source(here::here("code/training_set/sample_training_set.R"))
-
-sample_stratified(training_sample |> select(-PUBMED_ID),
-                  c("YEAR", 
-                    "ancestry_group", "publisher", "lancet_condition_group"),
-                  target_n = 250, method = "proportional", floor_n = 1, seed = 1)  |>
-  dplyr::group_by(YEAR,
-                  lancet_condition_group,
-                  ancestry_group,
-                  publisher) |>
-  dplyr::slice_sample(n = 1) |>
-  pull(PUBMED_ID) |>
-  unique()
-
-# writeLines(
-#   as.character(training_sample),
-#   here::here("output/gwas_cat/training_sample_pmids.txt"))
-# 
-# training_sample <- readLines(here::here("output/gwas_cat/training_sample_pmids.txt"))
+           pub_year_group) |>
+  slice_sample(n = 1,
+               replace = FALSE) |>
+  pull(PUBMED_ID)
 
 print("Number of selected training pubmed ids for disease studies:")
 training_sample |> 
   unique() |> 
   length()
 
+writeLines(
+  as.character(training_sample), 
+  here::here("output/gwas_cat/training_set_pmids_v2.txt"))
+
 ```
 
-# Create the validation set
+## Validation set
 
-```{r, eval = F}
+```{r create_validation_set}
 
-# now let's select 44 papers for the validation set, 
-# this is ~ 20% of the training set
-# also stratified by 
+# now let's select a random ~ 20% of the training set to be the validation set
 
-set.seed(892)
+0.2 * length(training_sample)
 
 validation_set <- sample(as.character(training_sample), 
-                         size = 44)
+                         size = 19)
 
 writeLines(
-  validation_set,
+  as.character(validation_set),
   here::here("output/gwas_cat/validation_set_pmids.txt"))
 
 ```
