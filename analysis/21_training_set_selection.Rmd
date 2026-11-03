@@ -24,6 +24,65 @@ library(plotly)
 
 # Text embeddings 
 
+## Get full set of articles 
+
+```{r gwas_cat_load_preprocess, message=FALSE}
+
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = 
+  gwas_study_info |>
+  filter(include == T)
+
+gwas_study_info <-
+  gwas_study_info |>
+  filter(cause != "")
+
+unspecified_stroke_papers <-
+gwas_study_info |>
+  filter(cause == "Stroke") |>
+  pull(PUBMED_ID) |>
+  unique()
+
+specified_stroke_papers <-
+gwas_study_info |>
+  filter(PUBMED_ID %in% unspecified_stroke_papers) |>
+  filter(cause != "Stroke") |>
+  filter(grepl("stroke|hemorrhage", cause, ignore.case = T)) |>
+  pull(PUBMED_ID)
+
+unspecified_stroke_papers[!unspecified_stroke_papers %in% specified_stroke_papers]
+
+gwas_study_info  <-
+gwas_study_info |>
+  filter(cause != "Stroke") 
+
+gwas_study_info |> filter(lancet_condition == "") |> distinct(cause)
+
+gwas_study_info  <-
+  gwas_study_info |>
+  mutate(lancet_condition = 
+          case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
+                    lancet_condition == "" & grepl("Cirrhosis", cause, ignore.case = T) ~  "NCDs strongly linked to infections",
+                    lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
+                    TRUE ~ lancet_condition)) |> 
+  distinct(PUBMED_ID, 
+           YEAR, 
+           cause, 
+           lancet_condition,  
+           cause_category)
+
+all_pmids <- gwas_study_info  |> pull(PUBMED_ID) |> unique() 
+
+all_pmids |> length()
+
+```
+
+
 ## Get article level text embeddings for extracted text sections 
 
 Abstracts, methods, results
@@ -61,7 +120,13 @@ abstract_embeddings <-
   dplyr::filter(!grepl("PMC", PUBMED_ID))
 
 abstract_embeddings <-
+  abstract_embeddings |>
+  filter(PUBMED_ID %in% all_pmids)
+
+abstract_embeddings <-
   tibble::column_to_rownames(abstract_embeddings, var = "PUBMED_ID")
+
+abstract_embeddings |> dim() # three articles do not have abstracts 
 
 PCA_abstracts <- prcomp(abstract_embeddings,
                    center = TRUE, 
@@ -86,10 +151,11 @@ abstracts_var_exp <- PCA_abstracts$sdev^2 / sum(PCA_abstracts$sdev^2)
 data.frame(PC = paste0("PC", 1:length(abstracts_var_exp)),
            PC_n = 1:length(abstracts_var_exp),
            Variance_Explained = abstracts_var_exp) |>
-  filter(PC_n <= 10) |>
-  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  filter(PC_n <= 30) |>
+  mutate(PC_n = factor(PC_n, levels = 1:30)) |>
   ggplot(aes(x = PC_n, y = Variance_Explained)) +
   geom_col() +
+  ylim(0, 0.1) + 
   labs(x = "Principal Component", 
        y = "Proportion of Variance Explained", 
        title = "Variance explained by each principal component (Abstract embeddings)") + 
@@ -116,6 +182,10 @@ methods_embeddings <- methods_embeddings  |>
                            "no_files",
                            "online_only_files")) |>
   distinct()
+
+methods_embeddings <-
+  methods_embeddings |>
+  filter(PUBMED_ID %in% all_pmids)
   
 # check no duplicates
 methods_embeddings |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
@@ -123,6 +193,8 @@ methods_embeddings |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
 methods_embeddings <-
   tibble::column_to_rownames(methods_embeddings, 
                              var = "PUBMED_ID")
+
+methods_embeddings |> dim()
 
 PCA_methods <- prcomp(methods_embeddings, 
                    center = TRUE, 
@@ -146,10 +218,11 @@ methods_var_exp <- PCA_methods$sdev^2 / sum(PCA_methods$sdev^2)
 data.frame(PC = paste0("PC", 1:length(methods_var_exp)),
            PC_n = 1:length(methods_var_exp),
            Variance_Explained = methods_var_exp) |>
-  filter(PC_n <= 10) |>
-  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  filter(PC_n <= 30) |>
+  mutate(PC_n = factor(PC_n, levels = 1:30)) |>
   ggplot(aes(x = PC_n, y = Variance_Explained)) +
   geom_col() +
+  ylim(0, 0.1) + 
   labs(x = "Principal Component", 
        y = "Proportion of Variance Explained", 
        title = "Variance explained by each principal component (Methods)") + 
@@ -174,6 +247,9 @@ results_embeddings <-
                            "online_only_files")) |>
   distinct()
 
+results_embeddings <-
+  results_embeddings |>
+  filter(PUBMED_ID %in% all_pmids)
 
 results_embeddings |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
 
@@ -181,6 +257,8 @@ results_embeddings |> group_by(PUBMED_ID) |> summarise(n = n()) |> filter(n > 1)
 results_embeddings <-
   results_embeddings |>
   tibble::column_to_rownames(var = "PUBMED_ID")
+
+results_embeddings |> dim()
 
 PCA_results  <- prcomp(results_embeddings, 
                    center = TRUE, 
@@ -205,9 +283,10 @@ results_var_exp <- PCA_results$sdev^2 / sum(PCA_results$sdev^2)
 data.frame(PC = paste0("PC", 1:length(results_var_exp)),
            PC_n = 1:length(results_var_exp),
            Variance_Explained = results_var_exp) |>
-  filter(PC_n <= 10) |>
-  mutate(PC_n = factor(PC_n, levels = 1:10)) |>
+  filter(PC_n <= 30) |>
+  mutate(PC_n = factor(PC_n, levels = 1:30)) |>
   ggplot(aes(x = PC_n, y = Variance_Explained)) +
+  ylim(0, 0.1) + 
   geom_col() +
   labs(x = "Principal Component", 
        y = "Proportion of Variance Explained", 
@@ -343,59 +422,6 @@ full_pca_table |>
 
 # What are the major axes of variation in embeddings for these papers?
 
-```{r gwas_cat_load_preprocess, message=FALSE}
-
-# get only relevant disease studies
-gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
-
-gwas_study_info = gwas_study_info |>
-  dplyr::rename_with(~ gsub(" ", "_", .x))
-
-gwas_study_info = 
-  gwas_study_info |>
-  filter(include == T)
-
-gwas_study_info <-
-  gwas_study_info |>
-  filter(cause != "")
-
-unspecified_stroke_papers <-
-gwas_study_info |>
-  filter(cause == "Stroke") |>
-  pull(PUBMED_ID) |>
-  unique()
-
-specified_stroke_papers <-
-gwas_study_info |>
-  filter(PUBMED_ID %in% unspecified_stroke_papers) |>
-  filter(cause != "Stroke") |>
-  filter(grepl("stroke|hemorrhage", cause, ignore.case = T)) |>
-  pull(PUBMED_ID)
-
-unspecified_stroke_papers[!unspecified_stroke_papers %in% specified_stroke_papers]
-
-gwas_study_info  <-
-gwas_study_info |>
-  filter(cause != "Stroke") 
-
-gwas_study_info |> filter(lancet_condition == "") |> distinct(cause)
-
-gwas_study_info  <-
-  gwas_study_info |>
-  mutate(lancet_condition = 
-          case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
-                    lancet_condition == "" & grepl("Cirrhosis", cause, ignore.case = T) ~  "NCDs strongly linked to infections",
-                    lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
-                    TRUE ~ lancet_condition)) |> 
-  distinct(PUBMED_ID, 
-           YEAR, 
-           cause, 
-           lancet_condition,  
-           cause_category)
-
-gwas_study_info  |> pull(PUBMED_ID) |> unique() |> length()
-
-```
 
 
 ## Possible sources of variation in embeddings
@@ -611,14 +637,6 @@ UpSet(gwas_cond_comb_mat,
                          decreasing = TRUE)
       )
 
-
-# gwas_study_info <-
-#   gwas_study_info |>
-#   mutate(lancet_condition = case_when(lancet_condition == "" & cause == "Liver cancer" ~ "NCDs strongly linked to infections",
-#                                       lancet_condition == "" & grepl("Chronic kidney disease", cause, ignore.case = T) ~ "Diabetes",
-#                                       lancet_condition == ""  & grepl("Cirrhosis", cause, ignore.case = T) ~ "NCDs strongly linked to infections",
-#                                       lancet_condition == "" & grepl("Stoke", cause, ignore.case = T) ~ "Stoker",
-#                                       TRUE ~ lancet_condition))
 
 
 
@@ -931,6 +949,7 @@ journal_names |>
                             "Science",
                             "N Engl J Med",
                             "PloS One",
+                            "PLoS One",
                             "Nat Med", 
                             "JAMA",
                             "JAMA Netw Open",
@@ -973,7 +992,7 @@ journal_names <-
   mutate(publisher = case_when(
     publisher == "" & JOURNAL == "BMC Genet" ~ "BioMed Central",
     publisher == "" & JOURNAL == "World J Diabetes" ~ "Baishideng Publishing Group Inc",
-    publisher == "" & JOURNAL == "AMIA Annu Symp Proc" ~ " American Medical Informatics Association",
+    publisher == "" & JOURNAL == "AMIA Annu Symp Proc" ~ "American Medical Informatics Association",
     publisher == "" & JOURNAL == "Korean Circ J" ~ "Korean Society of Cardiology",
     publisher == "" & JOURNAL == "Kidney Int Suppl" ~ "Blackwell Publishing",
     TRUE ~ publisher
@@ -1531,7 +1550,7 @@ methods_pca_plot_table |>
 
 ```
 
-## Quantifying what drives variation in the embeddings
+# Quantifying what drives variation in the embeddings
 
 The PCA plots above suggest year and condition are the main axes of variation.
 Here we put numbers on this, and check other factors that could matter for
@@ -1551,7 +1570,7 @@ Two complementary approaches:
 Marginal R² much bigger than unique R² means a factor overlaps with others
 (e.g. year and text source).
 
-### Setting up covariates data.frame 
+## Setting up covariates data.frame 
 
 ```{r embedding_covariates}
 
@@ -1587,7 +1606,7 @@ paper_covariates <- paper_covariates |>
 
 #### Add ancestry information to covariates
 
-```{r}
+```{r add_ancestry_to_paper_covar}
 
 # ---- Ancestry of the discovery (initial-stage) sample ----
 gwas_ancest_info <- data.table::fread(
@@ -1606,7 +1625,7 @@ gwas_ancest_info <- gwas_ancest_info |>
 
 gwas_ancest_info <-
   gwas_ancest_info |>
-  mutate(STAGE = "initial")
+  filter(STAGE == "initial") 
 
 source(here::here("code/pop_desc_processing/plot_gwas_ancest_comp.R"))
 
@@ -1806,40 +1825,6 @@ paper_covariates <-
   )
   )
 
-
-# ---- Full-text source (from the methods file names) ----
-# If a paper has several methods files, keep the best source:
-#   XML methods > BioC methods > PDF (GROBID TEI) > XML main text fallback
-text_source_levels <- c("XML methods",
-                        "BioC methods",
-                        "PDF (TEI)",
-                        "Main text fallback",
-                        "No full text")
-
-
-
-results_files <- tibble::tibble(
-  file = list.files(here::here("output/results"),
-                    pattern = "^[0-9]+_.*\\.txt$")) |>
-  mutate(
-    PUBMED_ID = as.integer(str_extract(file, "^[0-9]+")),
-    text_source = case_when(
-      str_detect(file, "_pdf_tei_results\\.txt$") ~ "PDF (TEI)",
-      str_detect(file, "_bioc_results\\.txt$")    ~ "BioC results",
-      str_detect(file, "_results_main\\.txt$")    ~ "Main text fallback",
-      str_detect(file, "_results\\.txt$")         ~ "XML results"
-    ),
-    text_source = factor(text_source, levels = text_source_levels),
-    # embedding ID used in results_medcpt_embeddings.csv
-    embedding_id = str_remove(file, "\\.txt$")
-  ) |>
-  filter(!is.na(text_source))
-
-results_text_source <-
-  results_files |>
-  distinct(PUBMED_ID, text_source) |>
-  rename(results_text_source = text_source)
-                                      
 ``` 
 
 
@@ -1944,7 +1929,7 @@ paper_covariates <-
 ```
 
 
-### Functions to investigate what drives variation in the embeddings
+## Functions to investigate what drives variation in the embeddings
 
 ```{r embedding_variation_functions}
 
@@ -1983,7 +1968,7 @@ pc_r2_table <- function(emb,
   
   pca <- prcomp(emb, 
                 center = TRUE, 
-                scale. = TRUE)
+                scale. = FALSE)
   
   var_exp <- pca$sdev^2 / sum(pca$sdev^2)
   
@@ -2143,7 +2128,7 @@ run_compare_plot_r2 <- function(abstract_embeddings,
   
   print(
   plot_pc_r2(abstract_pc_r2, 
-             paste0("Abstract embeddings: R² of each factor on the top ",
+             paste0("Abstract embeddings: R² of each factor on the top",
                     n_pcs,
                     " PCs"))
   )
@@ -2161,7 +2146,7 @@ run_compare_plot_r2 <- function(abstract_embeddings,
   
   print(
   plot_pc_r2(methods_pc_r2, 
-             paste0("Methods embeddings: R² of each factor on the top 1",
+             paste0("Methods embeddings: R² of each factor on the top",
                     n_pcs,
                     " PCs")
              )
@@ -2180,7 +2165,7 @@ run_compare_plot_r2 <- function(abstract_embeddings,
   
   print(
   plot_pc_r2(results_pc_r2,
-             paste0("Results embeddings: R² of each factor on the top 1",
+             paste0("Results embeddings: R² of each factor on the top",
                     n_pcs,
                     " PCs")
              )
@@ -2279,9 +2264,9 @@ check_dispersion <- function(d,
 
 ```
 
-### Selecting single, representative covariate among group
+## Selecting single, representative covariate among group
 
-#### Year vs grouped year
+### Year vs grouped year
 
 ```{r select_rep_year}
 
@@ -2296,7 +2281,8 @@ paper_covariates <-
              YEAR < 2020 ~ "2015-2020",
              YEAR >= 2020 ~ "2020+"
            )
-  ) 
+  ) |>
+  mutate(YEAR = as.factor(YEAR))
 
 # the full year covariate has 19 groups
 paper_covariates |> pull(YEAR) |> unique() |> length()
@@ -2321,9 +2307,14 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 ```
 
-#### Ancestry group vs percent European 
+### Ancestry group vs percent European 
 
 ```{r select_rep_ancestry}
+
+paper_covariates <-
+  paper_covariates |>
+  mutate(ancestry_group = factor(ancestry_group)) |>
+  mutate(percent_euro_group = factor(percent_euro_group))
 
 paper_covariates |> pull(ancestry_group) |> unique() |> length()
 
@@ -2348,7 +2339,7 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 ```
 
-#### Publisher group 
+### Publisher group 
 
 ```{r select_rep_publisher}
 
@@ -2401,7 +2392,7 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 ```
 
-#### Journal and Condition Information
+### Journal and Condition Information
 
 ```{r select_rep_journal}
 
@@ -2446,16 +2437,28 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 # two year citness is highly skewed, can we get the same information by grouping into quartiles?
 
-paper_covariates <-
+journal_quantile <-
   paper_covariates |>
+  distinct(journal, two_yr_citedness) |>
   mutate(log_two_year_citedness = log(two_yr_citedness + 1)) |>
   mutate(two_yr_citedness_quartile = 
            case_when(
-             log_two_year_citedness < quantile(log_two_year_citedness, 0.25) ~ "Q1",
-             log_two_year_citedness < quantile(log_two_year_citedness, 0.5) ~ "Q2",
-             log_two_year_citedness < quantile(log_two_year_citedness, 0.75) ~ "Q3",
+             log_two_year_citedness < quantile(log_two_year_citedness, 
+                                               0.25) ~ "Q1",
+             log_two_year_citedness < quantile(log_two_year_citedness,
+                                               0.5) ~ "Q2",
+             log_two_year_citedness < quantile(log_two_year_citedness, 
+                                               0.75) ~ "Q3",
              TRUE ~ "Q4"
            ))
+
+
+paper_covariates <-
+  left_join(
+  paper_covariates,
+  journal_quantile,
+  by = c("journal", "two_yr_citedness")
+  )
 
 
 run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
@@ -2485,7 +2488,7 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 ```
 
-#### Full text source
+### Full text source
 
 ```{r select_rep_fulltext_source}
 
@@ -2533,7 +2536,7 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 ```
 
 
-### Reducing the covariates to a representative set (from different groups)
+## Reducing the covariates to a representative set (from different groups)
 
 
 ```{r reduce_covariates}
@@ -2561,12 +2564,13 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 # similarly, publisher_supergroup explains no more than 2% of independent variance per PC (usually less than 1%), so exclude.
 
+# same as  meta_analysis, explaining very little independent variance <3% per PC
+
 covariate_terms <- c(
   "pub_year_group",
   "ancestry_group",
   "two_yr_citedness_quartile",
-  "lancet_condition_group",
-  "meta_analysis"
+  "lancet_condition_group"
 )
 
 run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
@@ -2667,7 +2671,7 @@ bind_rows(
 
 # Create the training and validation sets
 
-### Training set
+## Training set
 
 ```{r get_training_sample}
 
@@ -2681,7 +2685,7 @@ paper_covariates  |>
   group_by(lancet_condition_group,
            ancestry_group,
            pub_year_group) |>
-  summarise(n = n()) |>
+  summarise(n = n(), .groups = "drop") |>
   nrow()
 
 training_sample =  paper_covariates |>
@@ -2714,12 +2718,17 @@ writeLines(
 
 ```{r create_validation_set}
 
-# now let's select a random ~ 20% of the training set to be the validation set
+# now let's select a random set of papers for the validation set
+# the number of papers in the validation set should be ~ 20% of the training set
 
-0.2 * length(training_sample)
+0.2 * length(training_sample) # ~ 19 papers
 
-validation_set <- sample(as.character(training_sample), 
-                         size = 19)
+validation_set <-
+paper_covariates  |>
+  distinct(PUBMED_ID) |>
+  filter(!PUBMED_ID %in% training_sample) |>
+  slice_sample(n = 19, replace = FALSE) |>
+  pull(PUBMED_ID)
 
 writeLines(
   as.character(validation_set),
