@@ -12,20 +12,35 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # for evaluating bash chunks
 knitr::opts_chunk$set(engine.opts = list(bash = "-l"))
-Sys.setenv(PATH = paste(Sys.getenv("PATH"),
-                        dirname(Sys.getenv("PLINK")),
-                        dirname(Sys.getenv("PLINK2")),
-                        sep = ":"))
 
 ```
 
 # Processing full-text .xml in to section .txt files
+
+```{bash rename_help}
+
+# file used to rename extracted methods/results/intro files from PMCIDs to PMIDs, so that they can be matched to the GWAS Catalog data
+
+europe_pmc_conv=output/fulltexts/pmid_to_pmcid_mapping.csv
+
+awk -F',' 'NR > 1 && $2 ~ /^PMC/ {
+    gsub(/"/, "", $1)
+    gsub(/"/, "", $2)
+    if ($1 != "") print $2, $1
+}' "$europe_pmc_conv" > output/fulltexts/pmc_to_pmid.txt
+
+head output/fulltexts/pmc_to_pmid.txt
+
+```
 
 ## Extracting methods sections
 
 ```{bash extract_methods_sections, eval = T, results = 'hide'}
 
 source spacyr_venv/bin/activate
+
+rm -rf output/methods
+mkdir -p output/methods
 
 # use bash script to extract methods sections from all full text xmls, and save to output/fulltexts/methods
 # don't apply to archived directory
@@ -45,17 +60,6 @@ done
 
 shopt -s nullglob
 
-europe_pmc_conv=output/fulltexts/pmid_to_pmcid_mapping.csv
-
-awk -F',' 'NR > 1 && $2 ~ /^PMC/ {
-    gsub(/"/, "", $1)
-    gsub(/"/, "", $2)
-    if ($1 != "") print $2, $1
-}' "$europe_pmc_conv" > /tmp/pmc_to_pmid.txt
-
-head /tmp/pmc_to_pmid.txt
-
-
 for f in output/methods/PMC*_methods*.txt; do
     filename=$(basename "$f")
 
@@ -67,7 +71,7 @@ for f in output/methods/PMC*_methods*.txt; do
         suffix="_methods.txt"
     fi
 
-    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' /tmp/pmc_to_pmid.txt)
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' output/fulltexts/pmc_to_pmid.txt)
 
     if [[ -z "$pmid" ]]; then
         echo "No PMID mapping: $f"
@@ -134,6 +138,9 @@ print("% of total PMIDs with methods sections extracted:")
 
 source spacyr_venv/bin/activate
 
+rm -rf output/results
+mkdir -p output/results
+
 # use bash script to extract results sections from all full text xmls, and save to output/fulltexts/results
 # don't apply to archived directory
 for dir in output/fulltexts/*/; do
@@ -162,7 +169,7 @@ for f in output/results/PMC*_results*.txt; do
         suffix="_results.txt"
     fi
 
-    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' /tmp/pmc_to_pmid.txt)
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' output/fulltexts/pmc_to_pmid.txt)
 
     if [[ -z "$pmid" ]]; then
         echo "No PMID mapping: $f"
@@ -216,8 +223,11 @@ print("% of total PMIDs with full results sections extracted")
 
 source spacyr_venv/bin/activate
 
+rm -rf output/intros
+mkdir -p output/intros
+
 # use bash script to extract methods sections from all full text xmls, and save to output/fulltexts/intros
-# don't apply to archived directory
+# don't apply to archived directories
 for dir in output/fulltexts/*/; do
   [[ "$dir" == "output/fulltexts/archived/" ]] && continue
   
@@ -249,7 +259,7 @@ for f in output/intros/PMC*_intro*.txt; do
         suffix="_intro.txt"
     fi
 
-    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' /tmp/pmc_to_pmid.txt)
+    pmid=$(awk -v p="$pmcid" '$1 == p {print $2; exit}' output/fulltexts/pmc_to_pmid.txt)
 
     if [[ -z "$pmid" ]]; then
         echo "No PMID mapping: $f"
