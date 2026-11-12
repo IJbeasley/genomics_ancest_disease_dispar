@@ -92,6 +92,7 @@ def cosine_similarity_matrix(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
 def run_similarity_analysis(
     label: str,
+    output: str,
     cohort_path: str,
     non_cohort_path: str,
     figure_save_path: str,
@@ -140,10 +141,41 @@ def run_similarity_analysis(
 
     # Plot histogram comparing best similarities
     plt.figure(figsize=(10, 6))
-    plt.hist(cohort_best_similarity, bins=50, alpha=0.6, label='Cohort sentences', color='steelblue', edgecolor='black')
-    plt.hist(best_similarity, bins=50, alpha=0.6, label='Non-cohort sentences', color='salmon', edgecolor='black')
-    plt.axvline(np.median(cohort_best_similarity), color='steelblue', linestyle='--', linewidth=2, label=f'Cohort median: {np.median(cohort_best_similarity):.3f}')
-    plt.axvline(np.median(best_similarity), color='salmon', linestyle='--', linewidth=2, label=f'Non-cohort median: {np.median(best_similarity):.3f}')
+    plt.hist(cohort_best_similarity, 
+             bins=50, 
+             alpha=0.6, 
+             label='Cohort sentences', 
+             color='steelblue', 
+             edgecolor='black')
+             
+    plt.hist(best_similarity, 
+             bins=50, 
+             alpha=0.6, 
+             label='Non-cohort sentences', 
+             color='salmon', 
+             edgecolor='black')
+             
+    plt.axvline(np.median(cohort_best_similarity), 
+               color='steelblue', 
+               linestyle='--',
+               linewidth=2, 
+               label=f'Cohort median: {np.median(cohort_best_similarity):.3f}')
+      
+    plt.axvline(np.median(best_similarity), 
+                color='salmon', 
+                linestyle='--', 
+                linewidth=2, 
+                label=f'Non-cohort median: {np.median(best_similarity):.3f}')
+                
+                
+    threshold = np.percentile(cohort_best_similarity, percentile_threshold)
+    
+    plt.axvline(threshold, 
+                color='black', 
+                linestyle='--', 
+                linewidth=2, 
+                label=f'Non-cohort selection threshold {threshold:.3f}')
+                
     plt.xlabel('Best Similarity to Cohort Sentences')
     plt.ylabel('Frequency')
     plt.title(f'Distribution of Best Similarity Scores to Cohort Sentences ({label})')
@@ -214,7 +246,7 @@ def run_similarity_analysis(
         print(f"{i+1}. {cohort_sentences[i]} (similarity: {cohort_best_similarity[i]:.3f})")
 
     # save hard negatives to file
-    hard_negatives_output_file = f"output/doccano/hard_negatives_{label}.json"
+    hard_negatives_output_file = f"output/doccano/{output}"
     with open(hard_negatives_output_file, 'w', encoding='utf-8') as out:
         json.dump(hard_negatives.tolist(), out, ensure_ascii=False, indent=2)
     print(f"\n[{label}] Hard negatives saved to {hard_negatives_output_file}")
@@ -223,10 +255,16 @@ def run_similarity_analysis(
 def parse_args():
     parser = OptionParser()
     parser.add_option(
+        "-o",
+        "--output",
+        dest="output",
+        help="Output filenames",
+    )
+    parser.add_option(
         "-l",
         "--label",
         dest="label",
-        help="Label used in logs and output filenames",
+        help="Label used in figure",
     )
     parser.add_option(
         "-c",
@@ -277,6 +315,7 @@ if __name__ == "__main__":
     opts = parse_args()
     run_similarity_analysis(
         opts.label,
+        opts.output,
         opts.cohort_path,
         opts.non_cohort_path,
         opts.figure_save_path,
