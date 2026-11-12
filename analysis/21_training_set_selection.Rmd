@@ -979,7 +979,7 @@ journal_names |>
 # Get journal metadata from OpenAlex (ISSN, publisher, etc.) for all journals in the GWAS Catalog
 source(here::here("code/journal_meta/get_openalex_journal_info.R"))
 
-# all 295 of your journals, cached to output/journal_meta/openalex_journals.csv
+# all 295 of your journals
 journal_meta <- get_journals_info(unique(journal_names$JOURNAL))
 
 journal_names <-
@@ -2485,7 +2485,6 @@ run_compare_plot_r2(abstract_embeddings = abstract_embeddings,
 
 # yes, they appear to be relatively independent, so we can keep both for downstream analyses
 
-
 ```
 
 ### Full text source
@@ -2668,7 +2667,6 @@ bind_rows(
 
 ```
 
-
 # Create the training and validation sets
 
 ## Training set
@@ -2677,6 +2675,7 @@ bind_rows(
 
 set.seed(500)
 
+# number of stratified groups to sample from
 paper_covariates  |>
   select(PUBMED_ID,
            all_of(covariate_terms)
@@ -2694,12 +2693,14 @@ training_sample =  paper_covariates |>
          ) |>
   distinct() 
 
+# from each group sample 2 papers (without replacement) to create the training set
+# if there are fewer than 2 papers in a group, sample all of them
 training_sample <-
 training_sample |>
   group_by(lancet_condition_group,
            ancestry_group,
            pub_year_group) |>
-  slice_sample(n = 1,
+  slice_sample(n = 2,
                replace = FALSE) |>
   pull(PUBMED_ID)
 
