@@ -190,35 +190,14 @@ get_journal_info <- function(journal, use_nlm = TRUE) {
 }
 
 # ---------------------------------------------------------------------------
-# Batch version with an on-disk cache (safe to re-run / interrupt)
+# Batch version: many journals in, one row per unique journal out
 # ---------------------------------------------------------------------------
-get_journals_info <- function(journals,
-                              cache_path = here::here("output/journal_meta/openalex_journals.csv"),
-                              use_nlm = TRUE) {
-  dir.create(dirname(cache_path), showWarnings = FALSE, recursive = TRUE)
+get_journals_info <- function(journals, use_nlm = TRUE) {
+  todo <- unique(journals)
+  message(length(todo), " journals to fetch")
 
-  cached <- if (file.exists(cache_path)) {
-    data.table::fread(cache_path, colClasses = "character")
-  } else {
-    tibble::tibble(journal = character())
-  }
-
-  todo <- setdiff(unique(journals), cached$journal)
-  message(length(todo), " journals to fetch (", nrow(cached), " cached)")
-
-  if (length(todo) > 0) {
-    fetched <- map_dfr(seq_along(todo), function(i) {
-      if (i %% 25 == 0) message("  ", i, "/", length(todo))
-      get_journal_info(todo[i], use_nlm = use_nlm)
-    })
-    out <- bind_rows(mutate(cached, across(everything(), as.character)),
-                     mutate(fetched, across(everything(), as.character)))
-    data.table::fwrite(out, cache_path)
-  } else {
-    out <- cached
-  }
-
-  out |>
-    filter(journal %in% journals) |>
-    type.convert(as.is = TRUE)
+  map_dfr(seq_along(todo), function(i) {
+    if (i %% 25 == 0) message("  ", i, "/", length(todo))
+    get_journal_info(todo[i], use_nlm = use_nlm)
+  })
 }
