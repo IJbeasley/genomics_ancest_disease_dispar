@@ -987,6 +987,11 @@ left_join(journal_names,
           journal_meta |> rename(JOURNAL = journal),
           by = "JOURNAL")
 
+# missing OpenAlex fields come back as NA; treat them as "" so the manual fixes below match
+journal_names <-
+  journal_names |>
+  mutate(across(c(publisher, country_code), ~ dplyr::coalesce(.x, "")))
+
 journal_names <-
   journal_names |>
   mutate(publisher = case_when(
@@ -2165,7 +2170,7 @@ run_compare_plot_r2 <- function(abstract_embeddings,
   
   print(
   plot_pc_r2(results_pc_r2,
-             paste0("Results embeddings: R² of each factor on the top",
+             paste0("Results embeddings: R² of each factor on the top ",
                     n_pcs,
                     " PCs")
              )
@@ -2226,41 +2231,6 @@ if(return_tables) {
 }
 }
 
-
-
-# PERMANOVA can flag a factor because groups differ in spread rather than in
-# location; check that for the categorical factors
-check_dispersion <- function(d, 
-                             covars, 
-                             permutations = 50,
-                             min_n = 3) {
-  
-  # get classes of covariates 
-  covar_class <- lapply(abs_data$covars, 
-                        class) 
-  
-  covar_class <- purrr::keep(covar_class, 
-                             ~.x == "factor") 
-  
-  purrr::map_dfr(names(covar_class), 
-                 function(v) {
-                   
-    g <- forcats::fct_recode(as.factor(covars[[v]]), NULL = "")  # "" -> NA
-    g[g %in% names(which(table(g) < min_n))] <- NA               # drop tiny groups
-    g <- droplevels(g)
-
-    if (nlevels(g) < 2) {
-      return(tibble::tibble(factor = v, n_groups = nlevels(g),
-                            n_used = sum(!is.na(g)), dispersion_p = NA_real_))
-    }
-    keep_i <- !is.na(g)
-    bd <- betadisper(as.dist(as.matrix(d)[keep_i, keep_i]), 
-                     droplevels(g[keep_i]))               
-    tibble::tibble(factor = v,
-                   dispersion_p = permutest(bd, 
-                                            permutations = permutations)$tab$`Pr(>F)`[1])
-  })
-}
 
 ```
 
@@ -2720,15 +2690,16 @@ writeLines(
 ```{r create_validation_set}
 
 # now let's select a random set of papers for the validation set
-# the number of papers in the validation set should be ~ 20% of the training set
+# the number of papers in the validation set should be ~ 35% of the training set
 
-0.2 * length(training_sample) # ~ 19 papers
+ceiling(0.35 * length(training_sample))
 
 validation_set <-
 paper_covariates  |>
   distinct(PUBMED_ID) |>
   filter(!PUBMED_ID %in% training_sample) |>
-  slice_sample(n = 19, replace = FALSE) |>
+  slice_sample(n = ceiling(0.35 * length(training_sample)), 
+               replace = FALSE) |>
   pull(PUBMED_ID)
 
 writeLines(
