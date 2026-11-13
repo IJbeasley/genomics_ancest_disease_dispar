@@ -1,0 +1,114 @@
+Bootstrap: docker
+From: gcc:4.9
+
+# Ab3P (abbreviation definition detector) + its NCBITextLib dependency.
+#
+# Base image rationale: Ab3P and NCBITextLib were written against gcc 4.8 on
+# CentOS 6. gcc:4.9 defaults to -std=gnu++98, which avoids the string-literal
+# -> char* errors and the std::complex name collision that newer toolchains
+# raise in this code. Building on a modern compiler is possible but requires
+# source patches; see the notes at the bottom of this file.
+
+%labels
+    Description  Ab3P abbreviation definition detector (NCBI)
+    Paper        Sohn S, Comeau DC, Kim W, Wilbur WJ. BMC Bioinformatics 2008;9:402
+    Upstream     https://github.com/ncbi-nlp/Ab3P
+
+%post
+    set -eu
+
+    NCBITEXTLIB_DIR=/opt/NCBITextLib
+    AB3P_DIR=/opt/Ab3P
+
+    # --- dependency: NCBITextLib -------------------------------------------
+    git clone https://github.com/ncbi-nlp/NCBITextLib.git "$NCBITEXTLIB_DIR"
+    cd "$NCBITEXTLIB_DIR/lib"
+    make
+    test -f "$NCBITEXTLIB_DIR/lib/libText.a" || {
+        echo "ERROR: libText.a was not produced" >&2
+        exit 1
+    }
+
+    # --- Ab3P ---------------------------------------------------------------
+    git clone https://github.com/ncbi-nlp/Ab3P.git "$AB3P_DIR"
+    cd "$AB3P_DIR"
+
+    # Point both Makefiles at NCBITextLib (main dir + lib dir, per the README).
+    sed -i "s|^ *NCBITEXTLIB *=.*|NCBITEXTLIB=$NCBITEXTLIB_DIR|" Makefile lib/Makefile
+    if grep -q 'location of NCBITextLib' Makefile lib/Makefile; then
+        echo "ERROR: NCBITEXTLIB placeholder still present; check Makefile format" >&2
+        exit 1
+    fi
+
+    make
+    test -f "$AB3P_DIR/identify_abbr" || {
+        echo "ERROR: identify_abbr was not built" >&2
+        exit 1
+    }
+
+    # --- runtime working directory ------------------------------------------
+    # identify_abbr locates its data via a path_Ab3P file in the CWD, holding
+    # the path to WordData with a trailing slash. Ship a fixed directory so the
+    # tool can be invoked from anywhere on the host.
+    mkdir -p /opt/ab3p-run
+    echo "$AB3P_DIR/WordData/" > /opt/ab3p-run/path_Ab3P
+
+    cat > /usr/local/bin/ab3p <<'WRAPPER'
+#!/bin/sh
+# Usage: ab3p <text_file>
+# Prints each input line followed by any "sf|lf|precision" pairs found.
+set -eu
+if [ $# -ne 1 ]; then
+    echo "Usage: ab3p <text_file>" >&2
+    exit 2
+fi
+case "$1" in
+    /*) input="$1" ;;
+    *)  input="$PWD/$1" ;;
+esac
+if [ ! -r "$input" ]; then
+    echo "ab3p: cannot read $input" >&2
+    exit 1
+fi
+cd /opt/ab3p-run
+exec /opt/Ab3P/identify_abbr "$input"
+WRAPPER
+    chmod 755 /usr/local/bin/ab3p
+
+    # --- smoke test ---------------------------------------------------------
+    printf 'Fanconi anemia (FA) is a genetic disease.\n' > /tmp/smoke.txt
+    if ! ab3p /tmp/smoke.txt | grep -q 'FA|Fanconi anemia'; then
+        echo "ERROR: smoke test failed; WordData likely did not load" >&2
+        exit 1
+    fi
+    rm -f /tmp/smoke.txt
+
+%environment
+    export LC_ALL=C
+    export AB3P_HOME=/opt/Ab3P
+
+%runscript
+    exec /usr/local/bin/ab3p "$@"
+
+%test
+    # Full gold-standard check: should print nothing and exit 0.
+    cd /opt/Ab3P
+    ./identify_abbr MED1250_unlabeled | diff identify_abbr-out -
+
+%help
+    Ab3P identifies abbreviation (short form) / definition (long form) pairs
+    in biomedical text, one input line at a time.
+
+        apptainer run ab3p.sif abstracts.txt
+        apptainer exec ab3p.sif ab3p abstracts.txt
+
+    Output format, with pairs indented under the line they came from:
+
+        <input line>
+          sf|lf|precision
+
+    Bind-mount any input outside your current directory, e.g.
+        apptainer run -B /scratch/data ab3p.sif /scratch/data/abstracts.txt
+
+    The annotated gold standard shipped with Ab3P is inside the image at
+    /opt/Ab3P/MED1250_labeled.
