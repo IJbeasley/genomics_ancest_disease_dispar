@@ -6,19 +6,29 @@ From: python:3.12.12-slim-bookworm
 
 %post
     set -e
+    export DEBIAN_FRONTEND=noninteractive
     apt-get update && apt-get install -y --no-install-recommends \
         build-essential git ca-certificates \
         && rm -rf /var/lib/apt/lists/*
+
     pip install --no-cache-dir --upgrade pip
-    # CPU-only wheels for torch (skip this line if you don't use torch)
-    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-    pip install --no-cache-dir -r /opt/requirements.txt
+
+    # 1. CPU-only torch, pinned to the versions in the requirements file
+    pip install --no-cache-dir torch==2.10.0 torchvision==0.25.0 \
+        --index-url https://download.pytorch.org/whl/cpu
+
+    # 2. Everything else, without the torch lines so pip can't swap in a CUDA build
+    grep -viE '^(torch|torchvision)==' /opt/requirements.txt > /opt/requirements-notorch.txt
+    pip install --no-cache-dir -r /opt/requirements-notorch.txt
+
+    # 3. Stop the build if torch was replaced or dependencies conflict
+    python -c "import torch; assert '+cpu' in torch.__version__, torch.__version__"
+    pip check || true
 
 %environment
     export LC_ALL=C.UTF-8
     export PYTHONNOUSERSITE=1
     export PYTHONUNBUFFERED=1
-    # Match threads to the CPUs Slurm gives you (defaults to 1 outside a job)
     export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
     export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
     export OPENBLAS_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
@@ -28,3 +38,5 @@ From: python:3.12.12-slim-bookworm
 
 %test
     python --version
+    python -c "import torch, spacy, scispacy, transformers; print('torch', torch.__version__, '| spacy', spacy.__version__)"
+    python -c "import spacy; spacy.load('en_core_sci_sm'); spacy.load('en_core_web_sm'); print('models ok')"
