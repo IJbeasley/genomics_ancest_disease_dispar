@@ -17,13 +17,28 @@ From: python:3.12.12-slim-bookworm
     pip install --no-cache-dir torch==2.10.0 torchvision==0.25.0 \
         --index-url https://download.pytorch.org/whl/cpu
 
-    # 2. Everything else, without the torch lines so pip can't swap in a CUDA build
+    # 2. Everything else from the frozen list, exactly as-is (no re-resolving)
     grep -viE '^(torch|torchvision)==' /opt/requirements.txt > /opt/requirements-notorch.txt
-    pip install --no-cache-dir -r /opt/requirements-notorch.txt
+    pip install --no-cache-dir --no-deps -r /opt/requirements-notorch.txt
 
-    # 3. Stop the build if torch was replaced or dependencies conflict
+    # 3. Fail if torch isn't the CPU build; report (but don't fail on) known conflicts
     python -c "import torch; assert '+cpu' in torch.__version__, torch.__version__"
-    pip check || true
+    pip check || true    # expected: spacy-transformers vs transformers
+
+    # 4. Bake Hugging Face models into the image (PyTorch weights only)
+    export HF_HOME=/opt/hf_cache
+    python -c "
+from huggingface_hub import snapshot_download
+models = [
+    'microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext',
+    'microsoft/BiomedNLP-BiomedBERT-large-uncased-abstract',
+    'bioformers/bioformer-8L',
+    'bioformers/bioformer-16L',
+]
+for m in models:
+    snapshot_download(m, allow_patterns=['*.json', '*.txt', '*.safetensors', '*.bin', 'tokenizer*', '*.model'])
+"
+    chmod -R a+rX /opt/hf_cache
 
 %environment
     export LC_ALL=C.UTF-8
@@ -32,6 +47,10 @@ From: python:3.12.12-slim-bookworm
     export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
     export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
     export OPENBLAS_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+    export HF_HOME=/opt/hf_cache
+    export HF_HUB_OFFLINE=1
+    export TRANSFORMERS_OFFLINE=1
+    export HF_DATASETS_CACHE=/tmp/hf_datasets
 
 %runscript
     exec python "$@"
@@ -39,4 +58,5 @@ From: python:3.12.12-slim-bookworm
 %test
     python --version
     python -c "import torch, spacy, scispacy, transformers; print('torch', torch.__version__, '| spacy', spacy.__version__)"
-    python -c "import spacy; spacy.load('en_core_sci_sm'); spacy.load('en_core_web_sm'); print('models ok')"
+    python -c "import spacy; spacy.load('en_core_sci_sm'); spacy.load('en_core_web_sm'); print('spacy models ok')"
+    python -c "from transformers import AutoTokenizer, AutoModel; m='bioformers/bioformer-8L'; AutoTokenizer.from_pretrained(m); AutoModel.from_pretrained(m); print('hf offline ok')"
