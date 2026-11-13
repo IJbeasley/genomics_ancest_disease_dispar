@@ -1,0 +1,724 @@
+---
+title: "Setting up training set"
+author: "Isobel Beasley"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+
+```{r load_packages,  message=FALSE, warning=FALSE}
+
+library(dplyr)
+library(purrr)
+library(jsonlite)
+library(tidyr)
+library(lubridate)
+library(stringr)
+library(rentrez)
+library(xml2)
+
+Sys.setenv(RUN_TAG = "Nov_12_2026")
+
+```
+
+# Get PMIDs of training papers 
+
+```{r gwas_cat_load_preprocess, message=FALSE}
+
+# get only relevant disease studies
+gwas_study_info <- data.table::fread(here::here("output/icd_map/gwas_study_gbd_causes.csv"))
+
+gwas_study_info = gwas_study_info |>
+  dplyr::rename_with(~ gsub(" ", "_", .x))
+
+gwas_study_info = 
+  gwas_study_info |>
+  filter(include == T)
+
+gwas_study_info <-
+  gwas_study_info |>
+  filter(cause != "")
+
+gwas_study_info  <-
+gwas_study_info |>
+  filter(cause != "Stroke") 
+
+# all pmids
+all_pmids <- gwas_study_info$PUBMED_ID |> unique()
+
+# training sample pmids
+training_pmids <- readLines(here::here("output/gwas_cat/training_set_pmids_v2.txt"))
+
+length(training_pmids)
+
+```
+
+
+# Process relevant training text into jsonl format for doccano
+
+Functions to process / prepare text into jsonl format
+
+```{r process_text_to_jsonl_fns}
+
+# generic function to set json/jsonl file name
+set_file_name <- function(date = Sys.getenv("RUN_TAG"),
+                          # format(Sys.Date(), 
+                          #        "%b %d %Y"), # get today's date in format "Nov 4 2024"
+                          file_type,
+                          paper_set = "training",
+                          article_section) {
+  
+  file_name <-
+  paste0("output/doccano/",
+         paper_set, "_",
+         article_section, "_",
+         stringr::str_replace_all(date, " ", "_"),
+         ".", file_type)
+  
+  return(file_name)
+  
+}
+
+# for e.g. 
+set_file_name(file_type = "jsonl", 
+              article_section = "title")
+ 
+
+# read/load relevant sentences from a section (abstracts, methods, results, intros) for a set of PMIDs
+# won't work for titles 
+read_section_sentences <- function(section,
+                                   pmids) {
+  
+  
+    stopifnot(section %in% c("abstracts",
+                           "methods",
+                           "results",
+                           "intros")
+            )
+
+  sentences_path <- here::here(paste0(
+   "output", "/",
+   section, "/",
+   section, "_sentences", "/"
+  ))
+  
+  stopifnot(dir.exists(sentences_path))
+
+  sentences_files <- list.files(sentences_path,
+                                pattern = "*.json",
+                                full.names = FALSE
+  ) |>
+    sort()
+
+  sentences_pmids <-
+  stringr::str_extract(sentences_files,
+                           pattern = "^\\d+(?=_)")
+
+  sentences_files <- sentences_files[sentences_pmids %in% pmids]
+
+  sentences <- sapply(sentences_files,
+                    function(file) {
+                      json_data <- fromJSON(here::here(paste0(sentences_path,
+                                                              file)))
+
+                      sentences_lines <- json_data[json_data != ""]
+
+                    }
+  )
+
+  return(sentences)
+
+}
+
+
+set_entrez_key(Sys.getenv('NCBI_API_KEY'))
+
+get_pubmed_titles <- function(pmids, 
+                                 batch_size = 200, 
+                                 verbose = TRUE) {
+  
+  n <- length(pmids)
+  
+  titles <- setNames(rep("MISSING", 
+                            n), 
+                        pmids
+                        )  # initialize result
+  
+  # Split PMIDs into batches
+  batches <- split(pmids, 
+                   ceiling(seq_along(pmids)/batch_size)
+                   )
+  
+  for(i in seq_along(batches)) {
+    
+    batch_pmids <- batches[[i]]
+    
+    if(verbose) message(sprintf("Fetching batch %d of %d (%d PMIDs)...", 
+                                i, 
+                                length(batches), 
+                                length(batch_pmids)
+                                )
+                        )
+    
+    # Fetch XML
+    xml_data <- entrez_fetch(db = "pubmed", 
+                             id = paste(batch_pmids, 
+                                        collapse = ","), 
+                             rettype = "xml", 
+                             parsed = FALSE
+                             )
+    
+    doc <- read_xml(xml_data)
+    articles <- xml_find_all(doc, ".//PubmedArticle")
+    
+    for(article in articles) {
+      
+      pmid_node <- xml_find_first(article, 
+                                  ".//PMID")
+      
+      pmid <- xml_text(pmid_node)
+      
+      
+      title_nodes <- xml_find_all(article, 
+                                     ".//MedlineCitation/Article/ArticleTitle")
+      
+      if(length(title_nodes) > 0) {
+        titles[pmid] <- paste(xml_text(title_nodes), 
+                                 collapse = " ")
+      }
+    }
+  }
+  
+  return(titles)
+}
+
+
+section_to_jsonl <- function(section,
+                             pmids,
+                             paper_set = "training",
+                             run_tag = Sys.getenv("RUN_TAG")) {
+
+  stopifnot(section %in% c("title",
+                           "abstracts",
+                           "methods",
+                           "results",
+                           "intros")
+            )
+
+  pmids <- unique(as.character(pmids))
+
+  sentences <- if (section == "title") {
+    get_pubmed_titles(pmids)
+  } else {
+    read_section_sentences(section, pmids)
+  }
+
+  json_list_sentences <-
+    purrr::imap(sentences,
+                function(sentences,
+                         file_name) {
+                  
+                  if(section == "title") {
+                     
+                     df <- data.frame(source_file = "title",
+                                      text = sentences,
+                                      pubmed_id = file_name)
+                  } else {
+
+                     df <- data.frame(source_file = file_name,
+                                      text = sentences)
+                     
+                     df <- mutate(df,
+                               pubmed_id = stringr::str_extract(source_file,
+                                                                pattern = "^\\d+(?=_)"
+                                                                )
+                               )
+                  }
+                  
+                  df  <- mutate(df,
+                                label = list(list()))
+
+                  return(df)
+                }
+    )
+
+  json_file = here::here(set_file_name(file_type = "json",
+                                       paper_set = paper_set,
+                                       article_section = section))
+
+
+  jsonl_file = here::here(set_file_name(file_type = "jsonl",
+                                        paper_set = paper_set,
+                                        article_section = section))
+  
+  writeLines(toJSON(json_list_sentences,
+                    auto_unbox = TRUE,
+                    pretty = TRUE),
+             json_file)
+
+  json_data <- fromJSON(json_file,
+                        simplifyVector = FALSE)
+
+  json_rows <- unlist(json_data,
+                      recursive = FALSE)
+
+  # Open connection to JSONL file
+  con <- file(jsonl_file, "w")
+
+  # Loop over each element (object) and write as one line
+  for (i in seq_along(json_rows)) {
+    writeLines(toJSON(json_rows[[i]],
+                      auto_unbox = TRUE),
+               con)
+  }
+
+  close(con)
+  
+  print(paste0("JSONL file created for section: ", 
+               section, " at: ", 
+               fs::path_rel(jsonl_file,
+                            start = here::here())
+  ))
+
+}
+
+```
+
+## Extract text from relevant articles 
+
+### Article titles
+
+```{r process_training_article_titles, eval=FALSE}
+
+section_to_jsonl(section = "title",
+                 pmids = training_pmids,
+                 paper_set = "training"
+                 )
+
+```
+
+### Abstracts
+
+```{r process_training_abstracts, eval=FALSE}
+
+section_to_jsonl(section = "abstracts",
+                 pmids = training_pmids,
+                 paper_set = "training"
+                 )
+
+```
+
+
+### Methods
+
+```{r process_training_methods, eval=FALSE}
+
+section_to_jsonl(section = "methods",
+                 pmids = training_pmids,
+                 paper_set = "training"
+                 )
+
+```
+
+### Results
+
+```{r process_training_results, eval=FALSE}
+
+section_to_jsonl(section = "results",
+                 pmids = training_pmids,
+                 paper_set = "training"
+                 )
+
+```
+
+### Introductions 
+
+```{r process_training_intros, eval=FALSE}
+
+section_to_jsonl(section = "intros",
+                 pmids = training_pmids,
+                 paper_set = "training"
+                 )
+```
+
+### Combine training examples into a single jsonl file
+
+Concatenate training examples, and deduplicate based on pubmed_id and text, keeping the first occurrence of each unique combination, and reassigning ids.)
+
+deduplicate is needed because in many cases where methods, results and introduction sections can't be identified from the xml file, the whole text is used as a fallback, which can lead to duplicate sentences across sections.
+
+```{bash combine_training_examples, eval =FALSE}
+
+cd output/doccano
+
+# combine training examples into a single jsonl file
+# create new sentence id numbers 
+jq -c  '.' \
+  training_title_${RUN_TAG}.jsonl \
+  training_abstracts_${RUN_TAG}.jsonl \
+  training_methods_${RUN_TAG}.jsonl \
+  training_results_${RUN_TAG}.jsonl \
+  training_intros_${RUN_TAG}.jsonl \
+| jq -c -s 'to_entries | map(.value + {orig_id: .value.id, id: (.key + 1)}) | .[]' \
+  > combined_training_${RUN_TAG}.jsonl
+
+# add source_section field based on source_file 
+# source_section identifies the section of the article from which the sentence was extracted, e.g. title, abstract, methods, results, introduction, or full text (unknown section)
+jq '
+  . + {
+    source_section:
+      (if (.source_file | test("main"; "i")) then "full text (unknown section)"
+       elif (.source_file | test("methods"; "i")) then "methods"
+       elif (.source_file | test("results"; "i")) then "results"
+       elif (.source_file | test("abstract"; "i")) then "abstract"
+       elif (.source_file | test("title"; "i")) then "title"
+       elif (.source_file | test("intro"; "i")) then "introduction"
+       else null
+       end)
+  }
+' combined_training_${RUN_TAG}.jsonl > combined_training_edit_${RUN_TAG}.jsonl
+  
+# deduplicate combined training examples based on pubmed_id and text, keeping the first occurrence of each unique combination, and reassigning ids
+jq -c -s '
+  reduce .[] as $r ({seen: {}, out: []};
+    ($r.pubmed_id + "\u0000" + $r.text) as $k
+    | if .seen[$k] then . else .seen[$k] = true | .out += [$r] end)
+  | .out
+  | to_entries | map(.value + {orig_id: .value.id, id: (.key + 1)}) | .[]
+' combined_training_edit_${RUN_TAG}.jsonl > combined_training_dedup_${RUN_TAG}.jsonl
+
+# remove source_file and orig_id fields from combined_training_dedup.jsonl
+jq -c 'del(.source_file)' combined_training_dedup_${RUN_TAG}.jsonl > combined_training_dedup_simple_${RUN_TAG}.jsonl
+
+jq -c 'del(.orig_id)' combined_training_dedup_simple_${RUN_TAG}.jsonl > combined_training_dedup_${RUN_TAG}.jsonl
+
+rm combined_training_dedup_simple_${RUN_TAG}.jsonl
+rm combined_training_${RUN_TAG}.jsonl
+
+wc -l combined_training_edit_${RUN_TAG}.jsonl combined_training_dedup_${RUN_TAG}.jsonl
+
+rm combined_training_edit_${RUN_TAG}.jsonl
+
+```
+
+```{bash basic_initial_annot}
+
+# initial annotation of combined training examples
+wc -l output/doccano/combined_training_dedup_${RUN_TAG}_annotated.jsonl
+
+```
+
+## Reduce/simplify training set
+
+```{bash reduce_training_set}
+
+cd output/doccano
+
+# separate into examples without labels and examples with labels
+
+IN=combined_training_dedup_${RUN_TAG}_annotated.jsonl
+
+# At least one G_COHORT label
+jq -c 'select((.label // []) | length > 0)' "$IN" > combined_training_annotated_with_labels_${RUN_TAG}.jsonl
+
+# No labels
+jq -c 'select((.label // []) | length == 0)' "$IN" > combined_training_annotated_no_labels_${RUN_TAG}.jsonl
+
+wc -l combined_training_annotated_with_labels_${RUN_TAG}.jsonl \
+      combined_training_annotated_no_labels_${RUN_TAG}.jsonl \
+      "$IN"
+
+# convert to json
+for f in combined_training_annotated_with_labels_${RUN_TAG}.jsonl combined_training_annotated_no_labels_${RUN_TAG}.jsonl; do
+  jq -s '.' "$f" > "${f%.jsonl}.json"
+done      
+
+jq -s 'map(.text)' \
+combined_training_annotated_with_labels_${RUN_TAG}.jsonl > combined_training_cohort_sentences_${RUN_TAG}.json
+
+jq -s 'map(.text)' \
+combined_training_annotated_no_labels_${RUN_TAG}.jsonl  > combined_training_non_cohort_sentences_${RUN_TAG}.json
+
+```
+
+#### Identify hard negatives (non-cohort sentences that are similar to cohort sentences)
+
+Firstly, let's identify these by grep search of annotated entities. 
+
+```{r identify_negs_by_grep}
+
+annotated_training_sentences <- stream_in(file(here::here(
+  paste0("output/doccano/combined_training_annotated_with_labels_",
+         Sys.getenv("RUN_TAG"), 
+         ".jsonl"))
+  )
+)
+
+annotated_training_sentences_long <- annotated_training_sentences |>
+  mutate(label = map(label, ~{
+    if (length(.x) == 0) return(NULL)
+    as.data.frame(.x) |>
+      setNames(c("start", "end", "label"))
+  })) |>
+  tidyr::unnest(label, keep_empty = T) |>
+  mutate(across(c(start, end), as.integer))
+
+annotated_training_sentences_entities <-
+annotated_training_sentences_long |> 
+  mutate(entity_text = stringr::str_sub(text, 
+                                        start + 1, 
+                                        end)) |>
+  mutate(entity_text = ifelse(is.na(entity_text), 
+                              "", 
+                              entity_text))
+
+grep_entities <-
+annotated_training_sentences_entities |>
+  # order grep_entities by length, and then alphabetically
+  dplyr::arrange(nchar(entity_text), entity_text) |>
+  pull(entity_text) |>
+  unique()
+
+length(grep_entities)
+
+grep_entities_pattern <- paste0("\\b(", 
+                                paste(str_escape(grep_entities), 
+                                      collapse = "|"), 
+                                ")\\b")
+
+annotated_training_sentences_no_labels <- stream_in(file(here::here(
+  paste0("output/doccano/combined_training_annotated_no_labels_",
+         Sys.getenv("RUN_TAG"), 
+         ".jsonl"))
+  )
+)
+
+matched_sentences <- annotated_training_sentences_no_labels |>
+                     dplyr::filter(
+                       str_detect(text, 
+                                  pattern = grep_entities_pattern)
+                     )
+                       
+matched_sentences |>
+  nrow()
+
+json_file = here::here(set_file_name(file_type = "json", 
+                                     article_section = "hard_negatives_matched_grep"))
+
+writeLines(toJSON(matched_sentences,
+                  auto_unbox = TRUE,
+                  pretty = TRUE),
+           json_file)
+
+```
+
+Secondly, let's identify hard negatives by sentence embeddings and cosine similarity.
+
+```{bash identify_negs_by_embeddings}
+
+source  spacyr_venv/bin/activate
+
+doccano_dir=output/doccano
+
+python3 code/extract_text/sentence_embeddings.py \
+        --label "Combined (title, abstracts, methods, results)" \
+        --output "training_hard_negatives_semantic_similarity_${RUN_TAG}.json" \
+        --cohort_path "output/doccano/combined_training_cohort_sentences_${RUN_TAG}.json" \
+        --non_cohort_path "output/doccano/combined_training_non_cohort_sentences_${RUN_TAG}.json" \
+        --figure_save_path "output/doccano/combined_training_sentence_similarity.png" \
+        --p 50
+
+             
+jq -nc \
+  --slurpfile c  "${doccano_dir}/combined_training_cohort_sentences_${RUN_TAG}.json" \
+  --slurpfile h1 "${doccano_dir}/training_hard_negatives_semantic_similarity_${RUN_TAG}.json" \
+  --slurpfile h2 "${doccano_dir}/training_hard_negatives_matched_grep_${RUN_TAG}.json" '
+  ($c[0] + $h1[0] + $h2[0]
+    | map(if type == "string" then . else .text end
+          | select(type == "string")
+          | {(.): true})
+    | add) as $keep
+  | inputs
+  | select($keep[.text // ""])
+' "${doccano_dir}/combined_training_dedup_annotated_${RUN_TAG}.jsonl" |
+awk '!seen[$0]++' > "${doccano_dir}/training_set.jsonl"      
+
+echo "Total number of selected training sentences"
+wc -l ${doccano_dir}/training_set.jsonl
+
+echo "Number of selected training sentences, by type"
+jq 'length' ${doccano_dir}/combined_training_cohort_sentences_${RUN_TAG}.json \
+      ${doccano_dir}/training_hard_negatives_semantic_similarity_${RUN_TAG}.json \
+      ${doccano_dir}/training_hard_negatives_matched_grep_${RUN_TAG}.json
+
+echo "Out of total possible training sentences"
+jq 'length' ${doccano_dir}/combined_training_cohort_sentences_${RUN_TAG}.json \
+             ${doccano_dir}/combined_training_non_cohort_sentences_${RUN_TAG}.json
+        
+# ~35% of total possible sentences are selected
+
+```
+
+
+# Extract validation text
+
+```{r load_validation_pmids}
+
+val_pmids <- readLines(here::here("output/gwas_cat/validation_set_pmids.txt"))
+
+length(val_pmids)
+
+```
+
+
+## Article titles
+
+```{r process_article_titles_validation}
+
+section_to_jsonl(section = "title",
+                 pmids = val_pmids,
+                 paper_set = "validation"
+                 )
+
+```
+
+## Abstracts
+
+```{r process_abstracts_validation}
+
+section_to_jsonl(section = "abstracts",
+                 pmids = val_pmids,
+                 paper_set = "validation"
+                 )
+```
+
+## Methods 
+
+```{r process_methods_validation}
+
+section_to_jsonl(section = "methods",
+                 pmids = val_pmids,
+                 paper_set = "validation"
+                 )
+
+```
+
+## Results 
+
+```{r process_results_validation}
+
+section_to_jsonl(section = "results",
+                 pmids = val_pmids,
+                 paper_set = "validation"
+                 )
+
+```
+
+## Introductions 
+
+```{r process_intros_validation}
+
+section_to_jsonl(section = "intros",
+                 pmids = val_pmids,
+                 paper_set = "validation"
+                 )
+
+```
+
+
+## Combine validation text: 
+
+```{bash}
+
+cd output/doccano
+
+# combine training examples into a single jsonl file
+# create new sentence id numbers 
+jq -c  '.' \
+  validation_title_${RUN_TAG}.jsonl \
+  validation_abstracts_${RUN_TAG}.jsonl \
+  validation_methods_${RUN_TAG}.jsonl \
+  validation_results_${RUN_TAG}.jsonl \
+  validation_intros_${RUN_TAG}.jsonl \
+| jq -c -s 'to_entries | map(.value + {orig_id: .value.id, id: (.key + 1)}) | .[]' \
+  > combined_validation_${RUN_TAG}.jsonl
+
+# source_section identifies the section of the article from which the sentence was extracted, e.g. title, abstracts, methods, results, introduction, or full text (unknown section)
+jq '
+  . + {
+    source_section:
+      (if (.source_file | test("main"; "i")) then "full text (unknown section)"
+       elif (.source_file | test("methods"; "i")) then "methods"
+       elif (.source_file | test("results"; "i")) then "results"
+       elif (.source_file | test("abstract"; "i")) then "abstract"
+       elif (.source_file | test("title"; "i")) then "title"
+       elif (.source_file | test("intro"; "i")) then "introduction"
+       else null
+       end)
+  }
+' combined_validation_${RUN_TAG}.jsonl > combined_validation_edit_${RUN_TAG}.jsonl
+  
+# deduplicate combined validation examples based on pubmed_id and text, keeping the first occurrence of each unique combination, and reassigning ids
+jq -c -s '
+  reduce .[] as $r ({seen: {}, out: []};
+    ($r.pubmed_id + "\u0000" + $r.text) as $k
+    | if .seen[$k] then . else .seen[$k] = true | .out += [$r] end)
+  | .out
+  | to_entries | map(.value + {orig_id: .value.id, id: (.key + 1)}) | .[]
+' combined_validation_edit_${RUN_TAG}.jsonl > combined_validation_dedup_${RUN_TAG}.jsonl
+
+
+# remove source_file and orig_id fields from combined_validation_dedup.jsonl
+jq -c 'del(.source_file)' \
+combined_validation_dedup_${RUN_TAG}.jsonl > combined_validation_dedup_simple_${RUN_TAG}.jsonl
+
+jq -c 'del(.orig_id)' \
+combined_validation_dedup_simple_${RUN_TAG}.jsonl > combined_validation_dedup_${RUN_TAG}.jsonl
+
+rm combined_validation_dedup_simple_${RUN_TAG}.jsonl
+rm combined_validation_${RUN_TAG}.jsonl
+
+wc -l combined_validation_edit_${RUN_TAG}.jsonl combined_validation_dedup_${RUN_TAG}.jsonl
+
+rm combined_validation_edit_${RUN_TAG}.jsonl
+
+```
+
+
+# Extract test text 
+
+```{r}
+
+test_pmids <- all_pmids[!all_pmids %in% c(training_pmids, val_pmids)]
+
+length(test_pmids)
+
+section_to_jsonl(section = "title",
+                 pmids = test_pmids,
+                 paper_set = "test"
+                 )
+
+section_to_jsonl(section = "abstracts",
+                 pmids = test_pmids,
+                 paper_set = "test"
+                 )
+
+section_to_jsonl(section = "methods",
+                 pmids = test_pmids,
+                 paper_set = "test"
+                 )
+
+section_to_jsonl(section = "results",
+                 pmids = test_pmids,
+                 paper_set = "test"
+                 )
+
+section_to_jsonl(section = "intros",
+                 pmids = test_pmids,
+                 paper_set = "test"
+                 )
+
+```
