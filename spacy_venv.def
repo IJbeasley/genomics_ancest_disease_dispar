@@ -7,22 +7,24 @@ From: python:3.12.12-slim-bookworm
 %post
     set -e
     export DEBIAN_FRONTEND=noninteractive
+    export PIP_ROOT_USER_ACTION=ignore
     apt-get update && apt-get install -y --no-install-recommends \
         build-essential git ca-certificates \
         && rm -rf /var/lib/apt/lists/*
 
     pip install --no-cache-dir --upgrade pip
 
-    # 1. CPU-only torch, pinned to the versions in the requirements file
+    # 1. CUDA torch (bundles CUDA runtime + cuDNN as nvidia-* wheels, plus triton)
+    CUDA_TAG=cu126
     pip install --no-cache-dir torch==2.10.0 torchvision==0.25.0 \
-        --index-url https://download.pytorch.org/whl/cpu
+        --index-url https://download.pytorch.org/whl/${CUDA_TAG}
 
     # 2. Everything else from the frozen list, exactly as-is (no re-resolving)
     grep -viE '^(torch|torchvision)==' /opt/requirements.txt > /opt/requirements-notorch.txt
     pip install --no-cache-dir --no-deps -r /opt/requirements-notorch.txt
 
-    # 3. Fail if torch isn't the CPU build; report (but don't fail on) known conflicts
-    python -c "import torch; assert '+cpu' in torch.__version__, torch.__version__"
+    # 3. Fail if torch isn't a CUDA build (the build node has no GPU, so check the build, not the device)
+    python -c "import torch; assert torch.version.cuda, 'torch is CPU-only: ' + torch.__version__; print('torch', torch.__version__, 'CUDA', torch.version.cuda)"
     pip check || true    # expected: spacy-transformers vs transformers
 
     # 4. Bake Hugging Face models into the image (PyTorch weights only)
@@ -57,6 +59,6 @@ for m in models:
 
 %test
     python --version
-    python -c "import torch, spacy, scispacy, transformers; print('torch', torch.__version__, '| spacy', spacy.__version__)"
+    python -c "import torch, spacy, scispacy, transformers; print('torch', torch.__version__, 'CUDA build', torch.version.cuda, '| spacy', spacy.__version__)"
     python -c "import spacy; spacy.load('en_core_sci_sm'); spacy.load('en_core_web_sm'); print('spacy models ok')"
     python -c "from transformers import AutoTokenizer, AutoModel; m='bioformers/bioformer-8L'; AutoTokenizer.from_pretrained(m); AutoModel.from_pretrained(m); print('hf offline ok')"
