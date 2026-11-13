@@ -30,7 +30,7 @@ parser.add_argument(
 parser.add_argument(
     "--entity_types",
     type=str,
-    default="COHORT",
+    default="G_COHORT",
     help="Comma-separated list of entity types for NER (default: COHORT)"
 )
 parser.add_argument(
@@ -127,6 +127,18 @@ def normalize_record(example):
         else:
             example[key] = str(value)
 
+    # Doccano export fields: keep them, with defaults so older files still load
+    try:
+        example["id"] = int(example.get("id", -1))
+    except (TypeError, ValueError):
+        example["id"] = -1
+    example["source_section"] = str(example.get("source_section") or "")
+
+    # Drop any keys not declared in `features` (Dataset.from_list errors on them)
+    for key in list(example.keys()):
+        if key not in FEATURE_KEYS:
+            example.pop(key)
+
     new_label = []
     for label in example.get("label", []):
         if isinstance(label, (list, tuple)) and len(label) >= 3:
@@ -142,8 +154,11 @@ features = Features({
     "date": Value("string"),
     "country": Value("string"),
     "gwas_cat_cohort_label": Value("string"),
-    "label": Sequence(Sequence(Value("string")))  # optional, if you want to keep
+    "label": Sequence(Sequence(Value("string"))),  # optional, if you want to keep
+    "id": Value("int64"),
+    "source_section": Value("string"),
 })
+FEATURE_KEYS = set(features.keys())
 
 if not args_parsed.skip_training:
   
@@ -184,8 +199,8 @@ if not args_parsed.skip_training:
        from sklearn.model_selection import StratifiedGroupKFold
        import numpy as np
 
-       # Create binary stratification target: whether sample has any COHORT labels
-       stratify_target = np.array([1 if any(label[2] == "COHORT" for label in example.get("label", [])) else 0
+       # Create binary stratification target: whether sample has any G_COHORT labels
+       stratify_target = np.array([1 if any(label[2] == "G_COHORT" for label in example.get("label", [])) else 0
                            for example in train_data])
        groups = np.array([example.get("pubmed_id", -1) for example in train_data])
 
