@@ -1,5 +1,6 @@
 from datasets import Dataset, Features, Value, Sequence
 from transformers import AutoTokenizer, AutoModelForTokenClassification, AutoConfig, TrainingArguments, Trainer, DataCollatorForTokenClassification, EarlyStoppingCallback
+from seqeval.metrics import classification_report, accuracy_score
 from torch import tensor
 import warnings
 import transformers 
@@ -60,7 +61,10 @@ parser.add_argument(
     "bioformers/bioformer-16L" \
     "--- BioBERT options:  https://huggingface.co/collections/dmis-lab/biobert ---"
     "dmis-lab/biobert-large-cased-v1.1" \
-    " dmis-lab/biobert-base-cased-v1.1"
+    "dmis-lab/biobert-base-cased-v1.1"
+    "---BioLinkBERT options ---" \
+    "michiyasunaga/BioLinkBERT-large" \
+    "michiyasunaga/BioLinkBERT-base" 
 )
 parser.add_argument(
     "--test_path",
@@ -339,8 +343,24 @@ else:
     output_prefix = "validation"
 
 # 6. Metrics
-metric = evaluate.load("seqeval")
+class _SeqevalMetric:
+    """Offline stand-in for evaluate.load('seqeval'); same output keys."""
+    def compute(self, predictions, references, **kwargs):
+        rep = classification_report(references, predictions, output_dict=True)
+        out = {
+            k: {"precision": v["precision"], "recall": v["recall"],
+                "f1": v["f1-score"], "number": v["support"]}
+            for k, v in rep.items() if not k.endswith("avg")
+        }
+        out["overall_precision"] = rep["micro avg"]["precision"]
+        out["overall_recall"]    = rep["micro avg"]["recall"]
+        out["overall_f1"]        = rep["micro avg"]["f1-score"]
+        out["overall_accuracy"]  = accuracy_score(references, predictions)
+        return out
 
+metric = _SeqevalMetric()
+
+#metric = evaluate.load("seqeval")
 
 def compute_metrics(p):
     predictions, label = p
